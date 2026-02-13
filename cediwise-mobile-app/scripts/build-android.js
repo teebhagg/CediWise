@@ -28,7 +28,7 @@ const outputPath = path.join(outputDir, `CediWise-${version}.apk`);
 
 // Run EAS build
 execSync(
-  `eas build --profile production --platform android --local --output "${outputPath}"`,
+  `eas build --profile production --platform android --local --non-interactive --output "${outputPath}"`,
   { stdio: "inherit" }
 );
 

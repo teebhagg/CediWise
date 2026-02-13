@@ -1,0 +1,26 @@
+import { Text, View } from 'react-native';
+import { Card } from '../../Card';
+import { PrimaryButton } from '../../PrimaryButton';
+
+interface ApplyVitalsCardProps {
+  visible: boolean;
+  onApply: () => Promise<void>;
+}
+
+export function ApplyVitalsCard({ visible, onApply }: ApplyVitalsCardProps) {
+  if (!visible) return null;
+
+  return (
+    <Card className="mb-4">
+      <Text className="text-white text-base font-semibold">Apply your vitals to Budget</Text>
+      <Text className="text-muted-foreground text-xs mt-1">
+        We&apos;ll use your saved vitals to set your cycle, allocation, wants categories, and
+        income sources.
+      </Text>
+
+      <View className="mt-3.5">
+        <PrimaryButton onPress={onApply}>Apply now</PrimaryButton>
+      </View>
+    </Card>
+  );
+}

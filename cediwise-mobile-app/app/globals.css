@@ -1,0 +1,134 @@
+@import "tailwindcss";
+@import "uniwind";
+
+@import "heroui-native/styles";
+
+/* Include components directory (Expo Router: app/ is entry, components/ is sibling) */
+@source "../components";
+@source "../node_modules/heroui-native/lib";
+
+/*
+ * Tailwind v3 / NativeWind parity
+ * - Same design tokens and semantic colors as before
+ * - v3 compatibility: ring 3px default, default border color, so classNames behave like NativeWind
+ */
+@theme {
+  --radius: 2.25rem;
+  --radius-none: 0px;
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+  --radius-2xl: calc(var(--radius) + 12px);
+  --radius-full: 9999px;
+
+  /* Button Colors */
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  /* Tailwind v3 compatibility (v4 changed ring to 1px and border default) */
+  --default-ring-width: 3px;
+  --default-ring-color: var(--color-blue-500);
+
+  /* Semantic colors: always dark (matches previous NativeWind :root) */
+  --color-background: rgb(0 0 0);
+  --color-foreground: rgb(255 255 255);
+  --color-card: rgb(21 21 24);
+  --color-card-foreground: rgb(255 255 255);
+  --color-popover: rgb(40 40 42);
+  --color-popover-foreground: rgb(255 255 255);
+  --color-primary: rgb(29 111 61);
+  --color-primary-foreground: rgb(255 255 255);
+  --color-secondary: rgb(100 211 254);
+  --color-secondary-foreground: rgb(255 255 255);
+  --color-muted: rgb(70 70 73);
+  --color-muted-foreground: rgb(142 142 147);
+  --color-accent: rgb(16 185 129);
+  --color-accent-foreground: rgb(255 255 255);
+  --color-destructive: rgb(254 67 54);
+  --color-destructive-foreground: rgb(255 255 255);
+  --color-border: rgb(40 40 42);
+  --color-input: rgb(55 55 57);
+  --color-ring: rgb(40 40 42);
+
+  /* Pin Tailwind v3 palette for exact NativeWind look (slate, emerald, red, orange, blue, amber, rose, sky) */
+  --color-slate-200: #e2e8f0;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-red-300: #fca5a5;
+  --color-red-500: #ef4444;
+  --color-orange-400: #fb923c;
+  --color-orange-500: #f97316;
+  --color-blue-500: #3b82f6;
+  --color-amber-500: #f59e0b;
+  --color-rose-500: #f43f5e;
+  --color-rose-600: #e11d48;
+  --color-sky-500: #0ea5e9;
+  --color-gray-200: #e5e7eb;
+  --color-gray-400: #9ca3af;
+}
+
+/* Semantic colors: light/dark themes (Tailwind 4 @layer theme + @variant) */
+@layer theme {
+  :root {
+    @variant dark {
+      --color-background: rgb(0 0 0);
+      --color-foreground: rgb(255 255 255);
+      --color-card: rgb(21 21 24);
+      --color-card-foreground: rgb(255 255 255);
+      --color-popover: rgb(40 40 42);
+      --color-popover-foreground: rgb(255 255 255);
+      --color-primary: rgb(29 111 61);
+      --color-primary-foreground: rgb(255 255 255);
+      --color-secondary: rgb(100 211 254);
+      --color-secondary-foreground: rgb(255 255 255);
+      --color-muted: rgb(70 70 73);
+      --color-muted-foreground: rgb(142 142 147);
+      --color-accent: rgb(16 185 129);
+      --color-accent-foreground: rgb(255 255 255);
+      --color-destructive: rgb(254 67 54);
+      --color-destructive-foreground: rgb(255 255 255);
+      --color-border: rgb(40 40 42);
+      --color-input: rgb(55 55 57);
+      --color-ring: rgb(40 40 42);
+      --accent: #10b981; /* emerald-500 */
+      --accent-foreground: #ffffff; /* text color on accent */
+    }
+    @variant light {
+      --color-background: rgb(0 0 0);
+      --color-foreground: rgb(255 255 255);
+      --color-card: rgb(21 21 24);
+      --color-card-foreground: rgb(255 255 255);
+      --color-popover: rgb(40 40 42);
+      --color-popover-foreground: rgb(255 255 255);
+      --color-primary: rgb(29 111 61);
+      --color-primary-foreground: rgb(255 255 255);
+      --color-secondary: rgb(100 211 254);
+      --color-secondary-foreground: rgb(255 255 255);
+      --color-muted: rgb(70 70 73);
+      --color-muted-foreground: rgb(142 142 147);
+      --color-accent: rgb(16 185 129);
+      --color-accent-foreground: rgb(255 255 255);
+      --color-destructive: rgb(254 67 54);
+      --color-destructive-foreground: rgb(255 255 255);
+      --color-border: rgb(40 40 42);
+      --color-input: rgb(55 55 57);
+      --color-ring: rgb(40 40 42);
+      --accent: #10b981; /* emerald-500 */
+      --accent-foreground: #ffffff; /* text color on accent */
+    }
+  }
+}
+
+*,
+*::before,
+*::after {
+  border-radius: var(--radius);
+}

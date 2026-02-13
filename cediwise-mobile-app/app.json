@@ -1,0 +1,65 @@
+{
+  "expo": {
+    "name": "CediWise",
+    "slug": "cediwise-mobile-app",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "icon": "./assets/images/logo/cediwise-smooth-light-logo.png",
+    "scheme": "cediwisemobileapp",
+    "updates": {
+      "enabled": false
+    },
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.cediwise.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logo/cediwise-smooth-light-logo.png",
+        "backgroundColor": "#000000"
+      },
+      "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "pan",
+      "predictiveBackGestureEnabled": false,
+      "package": "com.cediwise.app",
+      "googleServicesFile": "./google-services.json"
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/logo/cediwise-smooth-light-logo.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/logo/cediwise-transparent-emerald-logo.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#000000",
+          "dark": {
+            "backgroundColor": "#000000"
+          }
+        }
+      ],
+      "@react-native-firebase/app"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a250eaa5-7771-45ab-8dd4-43d9613a1971"
+      }
+    },
+    "owner": "joshua.ansah"
+  }
+}

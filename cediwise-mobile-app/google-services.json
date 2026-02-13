@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "758685762731",
+    "project_id": "cediwise-gh",
+    "storage_bucket": "cediwise-gh.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:758685762731:android:92178f7988fb8e466963ee",
+        "android_client_info": {
+          "package_name": "com.cediwise.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "758685762731-0sj8anjt6e0895gpjv9jrconsd0v4dl9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.cediwise.app",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "758685762731-vth88pqkptkh9i8gnmv9st6eu6c37bmc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.cediwise.app",
+            "certificate_hash": "45aff4f18f2fce77c22a559d859109519b30128c"
+          }
+        },
+        {
+          "client_id": "758685762731-vh9reoikjerbsu8pbcigndi29tdb7fp9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBvaascd056MI4tt-9Ki92_ZHtmhD_M85Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "758685762731-vh9reoikjerbsu8pbcigndi29tdb7fp9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -6,6 +6,9 @@
 # Website uses releases/latest to get CediWise-{version}.apk for download.
 name: Build Android APK & Release
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [main]

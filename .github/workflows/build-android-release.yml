@@ -1,4 +1,5 @@
-# Build Android APK via EAS and publish to GitHub Releases.
+# Build Android APK via EAS (local) and publish to GitHub Releases.
+# Uses EAS --local to avoid cloud build credits. Prunes old release assets (keeps last 3).
 # Required secrets: EXPO_TOKEN, EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_KEY,
 #   EXPO_PUBLIC_SUPABASE_ANON_KEY, FIREBASE_PROJECT_ID
 # Trigger: push to main, push tag v*, or manual workflow_dispatch.
@@ -103,30 +104,28 @@ jobs:
           fs.writeFileSync('eas.json', JSON.stringify(eas, null, 2));
           "
 
-      - name: EAS Build
+      - name: EAS Build (local)
         working-directory: ${{ env.MOBILE_APP_DIR }}
-        run: eas build --profile production --platform android --non-interactive
+        run: |
+          mkdir -p ../dist
+          eas build --profile production --platform android --local --non-interactive --output ../dist
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_KEY }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
 
-      - name: Get artifact URL
-        id: artifact
-        working-directory: ${{ env.MOBILE_APP_DIR }}
+      - name: Prepare APK for release
         run: |
-          BUILD_JSON=$(eas build:list --platform android --limit 1 --status finished --non-interactive --json 2>/dev/null || echo "[]")
-          ARTIFACT_URL=$(echo "$BUILD_JSON" | jq -r '.[0].artifacts.buildUrl // .[0].buildUrl // empty')
-          if [ -z "$ARTIFACT_URL" ]; then
-            echo "Could not get artifact URL. Build output may contain the URL."
-            eas build:list --platform android --limit 1
+          VERSION="${{ needs.check-version.outputs.version }}"
+          mkdir -p dist
+          APK=$(ls dist/build-*.apk 2>/dev/null || ls dist/*.apk 2>/dev/null | head -1)
+          if [ -z "$APK" ]; then
+            echo "No APK found in dist/"
             exit 1
           fi
-          echo "url=$ARTIFACT_URL" >> $GITHUB_OUTPUT
-
-      - name: Download APK
-        run: |
-          mkdir -p dist
-          VERSION="${{ needs.check-version.outputs.version }}"
-          curl -L -o "dist/CediWise-${VERSION}.apk" "${{ steps.artifact.outputs.url }}"
+          cp "$APK" "dist/CediWise-${VERSION}.apk"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -138,3 +137,16 @@ jobs:
           draft: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prune old release assets (keep last 3)
+        continue-on-error: true
+        run: |
+          RELEASES=$(gh api "repos/${{ github.repository }}/releases" -q '[.[] | {id: .id, assets: [.assets[]? | .id]}]')
+          echo "$RELEASES" | jq -c '.[3:][]' 2>/dev/null | while read -r release; do
+            ASSET_IDS=$(echo "$release" | jq -r '.assets[]? // empty')
+            for asset_id in $ASSET_IDS; do
+              [ -n "$asset_id" ] && gh api -X DELETE "repos/${{ github.repository }}/releases/assets/$asset_id" && echo "Deleted asset $asset_id"
+            done
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

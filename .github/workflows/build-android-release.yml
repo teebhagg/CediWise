@@ -41,25 +41,23 @@ jobs:
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           fi
 
-      - name: Check if version increased (push to main only)
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Determine should_build
         id: check
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          LATEST_TAG=$(gh release view --json tagName -q .tagName 2>/dev/null || echo "v0.0.0")
-          LATEST_VER="${LATEST_TAG#v}"
-          if [ "$(printf '%s\n' "$LATEST_VER" "$VERSION" | sort -V | tail -1)" = "$VERSION" ] && [ "$LATEST_VER" != "$VERSION" ]; then
-            echo "should_build=true" >> $GITHUB_OUTPUT
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            VERSION="${{ steps.version.outputs.version }}"
+            LATEST_TAG=$(gh release view --json tagName -q .tagName 2>/dev/null || echo "v0.0.0")
+            LATEST_VER="${LATEST_TAG#v}"
+            if [ "$(printf '%s\n' "$LATEST_VER" "$VERSION" | sort -V | tail -1)" = "$VERSION" ] && [ "$LATEST_VER" != "$VERSION" ]; then
+              echo "should_build=true" >> $GITHUB_OUTPUT
+            else
+              echo "should_build=false" >> $GITHUB_OUTPUT
+            fi
           else
-            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo "should_build=true" >> $GITHUB_OUTPUT
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set should_build for tag/manual
-        if: github.event_name == 'push' && github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
-        id: check
-        run: echo "should_build=true" >> $GITHUB_OUTPUT
 
   build:
     needs: check-version

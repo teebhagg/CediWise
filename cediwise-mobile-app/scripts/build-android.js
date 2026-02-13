@@ -32,21 +32,40 @@ execSync(
   { stdio: "inherit" }
 );
 
-// Find and rename the APK
+// Find and rename the APK (if needed)
 const files = fs.readdirSync(outputDir);
-const apkFile = files.find((f) => f.endsWith(".apk") && f.startsWith("build-"));
+const expectedName = `CediWise-${version}.apk`;
+const expectedPath = path.join(outputDir, expectedName);
 
-if (apkFile) {
-  const oldPath = path.join(outputDir, apkFile);
-  const newName = `CediWise-${version}.apk`;
-  const newPath = path.join(outputDir, newName);
-
-  fs.renameSync(oldPath, newPath);
-  console.log(`\nRenamed to: ${newName}`);
-  console.log(`Full path: ${newPath}`);
+// EAS may output directly as CediWise-{version}.apk when --output is a file path
+if (fs.existsSync(expectedPath)) {
+  console.log(`\nBuild complete: ${expectedName}`);
+  console.log(`Full path: ${expectedPath}`);
 } else {
-  console.warn(
-    "\nNo build-*.apk found in output directory. Build may have failed."
+  // Otherwise look for build-*.apk and rename
+  const apkFile = files.find(
+    (f) => f.endsWith(".apk") && f.startsWith("build-")
   );
-  process.exit(1);
+  if (apkFile) {
+    const oldPath = path.join(outputDir, apkFile);
+    fs.renameSync(oldPath, expectedPath);
+    console.log(`\nRenamed to: ${expectedName}`);
+    console.log(`Full path: ${expectedPath}`);
+  } else {
+    // Fallback: any .apk in output dir
+    const anyApk = files.find((f) => f.endsWith(".apk"));
+    if (anyApk) {
+      const oldPath = path.join(outputDir, anyApk);
+      if (anyApk !== expectedName) {
+        fs.renameSync(oldPath, expectedPath);
+        console.log(`\nRenamed to: ${expectedName}`);
+      }
+      console.log(`Full path: ${expectedPath}`);
+    } else {
+      console.warn(
+        "\nNo APK found in output directory. Build may have failed."
+      );
+      process.exit(1);
+    }
+  }
 }

@@ -1,13 +1,10 @@
-import { buttonVariants } from '@/components/ui/button'
-import { useLatestApkUrl } from '@/hooks/useLatestApkUrl'
-import { cn } from '@/lib/utils'
 import { SmartPhone01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { motion } from 'framer-motion'
+import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 export function Hero() {
-  const { url } = useLatestApkUrl()
-
   return (
     <section className="relative min-h-screen overflow-hidden bg-[#0A0A0A]">
       {/* Background Gradients */}
@@ -61,9 +58,9 @@ export function Hero() {
                 Get it on Android
               </a> */}
               <a
-                href={url ?? '#'}
-                target={url ? '_blank' : undefined}
-                rel={url ? 'noopener noreferrer' : undefined}
+                href="/api/download-latest-apk"
+                target="_blank"
+                rel="noopener noreferrer"
                 className={cn(
                   buttonVariants({ size: 'lg' }),
                   'h-14 gap-2 rounded-xl bg-primary px-8 text-base font-semibold text-primary-foreground hover:bg-primary/90',
@@ -81,7 +78,7 @@ export function Hero() {
           <div className="relative flex items-center justify-center w-full max-w-2xl h-full">
             {/* Left Image (Behind) */}
             <div className="absolute left-[12%] z-0 w-[28%] transition-transform hover:translate-x-[-10px] hover:-rotate-2">
-              <div className="aspect-9/19 overflow-hidden rounded-2xl shadow-xl opacity-90">
+              <div className="aspect-9/19 overflow-hidden shadow-xl opacity-90">
                 <img
                   src="/assets/img_3.png"
                   alt="Feature Preview"
@@ -92,7 +89,7 @@ export function Hero() {
 
             {/* Right Image (Behind) */}
             <div className="absolute right-[12%] z-0 w-[28%] transition-transform hover:translate-x-[10px] hover:rotate-2">
-              <div className="aspect-9/19 overflow-hidden rounded-2xl shadow-xl opacity-90">
+              <div className="aspect-9/19 overflow-hidden shadow-xl opacity-90">
                 <img
                   src="/assets/img_4.png"
                   alt="Analytics View"
@@ -103,7 +100,7 @@ export function Hero() {
 
             {/* Main Phone (Center) */}
             <div className="relative z-10 w-[38%] transition-transform hover:scale-[1.05]">
-              <div className="aspect-9/19 overflow-hidden rounded-[2.5rem] shadow-2xl">
+              <div className="aspect-9/19 overflow-hidden shadow-2xl">
                 <img
                   src="/assets/img_1.png"
                   alt="CediWise App Interface"

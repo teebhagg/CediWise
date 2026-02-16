@@ -1,15 +1,12 @@
 'use client'
 
-import { buttonVariants } from '@/components/ui/button'
-import { useLatestApkUrl } from '@/hooks/useLatestApkUrl'
-import { cn } from '@/lib/utils'
 import { ArrowRight01Icon, SmartPhone01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { motion } from 'framer-motion'
+import { cn } from '@/lib/utils'
+import { buttonVariants } from '@/components/ui/button'
 
 export function BottomCTA() {
-  const { url } = useLatestApkUrl()
-
   return (
     <section className="relative overflow-hidden py-24 lg:py-40">
       {/* Background Glows */}
@@ -83,9 +80,9 @@ export function BottomCTA() {
               <motion.a
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                href={url ?? '#'}
-                target={url ? '_blank' : undefined}
-                rel={url ? 'noopener noreferrer' : undefined}
+                href="/api/download-latest-apk"
+                target="_blank"
+                rel="noopener noreferrer"
                 className={cn(
                   buttonVariants({ size: 'lg' }),
                   'h-16 gap-3 rounded-2xl bg-primary px-8 text-lg font-bold text-black transition-all hover:bg-primary/90',

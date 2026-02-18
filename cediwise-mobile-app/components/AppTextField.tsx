@@ -1,10 +1,14 @@
-import { useState } from 'react';
-import { Text, TextInput, TextInputProps, View } from 'react-native';
 import { FieldError, Input, Label, TextField } from 'heroui-native';
+import { useState } from 'react';
+import { TextInputProps, View } from 'react-native';
 
 const PLACEHOLDER_COLOR = 'rgba(148,163,184,0.6)';
 
 export type AppTextFieldProps = Omit<TextInputProps, 'style'> & {
+  /* Prefix icon */
+  prefixIcon?: React.ReactNode;
+  /* Suffix icon */
+  suffixIcon?: React.ReactNode;
   /** Label shown above the input (e.g. "Name", "Amount (GHS)") */
   label?: string;
   /** Error message shown below the input; when set, input border shows error state */
@@ -16,6 +20,8 @@ export type AppTextFieldProps = Omit<TextInputProps, 'style'> & {
 };
 
 export function AppTextField({
+  prefixIcon,
+  suffixIcon,
   label,
   error,
   containerClassName,
@@ -35,12 +41,19 @@ export function AppTextField({
 
   return (
     <TextField>
+      {prefixIcon && <View className="absolute left-3 top-1/2 -translate-y-1/2">{prefixIcon}</View>}
       <Label>{label}</Label>
+      {suffixIcon && <View className="absolute right-3 top-1/2 -translate-y-1/2">{suffixIcon}</View>}
       <Input
-        value={rest.value}
-        onChangeText={rest.onChangeText}
-        placeholder={rest.placeholder}
-        returnKeyType="done"
+        {...rest}
+        onFocus={(e) => {
+          setFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          onBlur?.(e);
+        }}
         placeholderTextColor="rgba(148,163,184,0.6)"
         className={`rounded-[18px] focus:ring-0 focus:${borderClass}`}
       />

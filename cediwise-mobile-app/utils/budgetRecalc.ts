@@ -3,6 +3,10 @@ import {
   type CategoryLimitInput,
 } from "../calculators/category-weights";
 import type { BudgetBucket, BudgetCycle, BudgetState } from "../types/budget";
+import {
+  blendAllocation,
+  getHistoricalAvgByCategory,
+} from "./allocationBlending";
 import { computeGhanaTax2026Monthly } from "./ghanaTax";
 
 /**
@@ -54,11 +58,22 @@ export function recalculateBudgetFromAllocations(
     );
   }
 
+  const historical = getHistoricalAvgByCategory(state, activeCycle.id);
+
   const nextCategories = state.categories.map((c) => {
     if (c.cycleId !== activeCycle.id) return c;
     if (c.manualOverride) return c;
-    const limit = limitsByBucketAndName.get(`${c.bucket}:${c.name}`);
-    if (limit == null) return c;
+    const templateLimit = limitsByBucketAndName.get(`${c.bucket}:${c.name}`);
+    if (templateLimit == null) return c;
+
+    const hist = historical.get(`${c.bucket}:${c.name}`);
+    const limit = blendAllocation(
+      templateLimit,
+      hist?.avgSpent ?? null,
+      hist?.variance ?? 0,
+      hist?.cycleCount ?? 0
+    );
+
     return {
       ...c,
       limitAmount: limit,

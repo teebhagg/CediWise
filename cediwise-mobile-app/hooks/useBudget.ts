@@ -18,6 +18,10 @@ import type {
   IncomeSourceType,
 } from "../types/budget";
 import { logActivity } from "../utils/activityLog";
+import {
+  blendAllocation,
+  getHistoricalAvgByCategory,
+} from "../utils/allocationBlending";
 import { hydrateBudgetStateFromRemote } from "../utils/budgetHydrate";
 import { recalculateBudgetFromAllocations } from "../utils/budgetRecalc";
 import {
@@ -448,6 +452,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       };
 
       const limitByKey = new Map<string, number>();
+      const historical = getHistoricalAvgByCategory(current);
+
       for (const bucket of ["needs", "wants", "savings"] as const) {
         const names =
           bucket === "needs"
@@ -466,7 +472,16 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           inputs,
           lifeStage ?? null
         );
-        limits.forEach((amt, name) => limitByKey.set(`${bucket}:${name}`, amt));
+        limits.forEach((templateLimit, name) => {
+          const hist = historical.get(`${bucket}:${name}`);
+          const blended = blendAllocation(
+            templateLimit,
+            hist?.avgSpent ?? null,
+            hist?.variance ?? 0,
+            hist?.cycleCount ?? 0
+          );
+          limitByKey.set(`${bucket}:${name}`, blended);
+        });
       }
 
       const categories: BudgetCategory[] = allNames.map(

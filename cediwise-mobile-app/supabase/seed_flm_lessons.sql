@@ -1,0 +1,155 @@
+-- Seed: Financial Literacy Module lessons (MOD-01, MOD-02, MOD-03, MOD-07)
+-- Run after 2026-02-16_flm_tables.sql
+
+insert into public.lessons (id, title, module, difficulty, duration_minutes, languages, tags, content_url, calculator_id, sources, verified_by, version, last_updated)
+values
+  -- MOD-01: Budgeting Basics
+  (
+    'mod01-budgeting-01',
+    'Build Your First Monthly Budget',
+    'MOD-01',
+    'beginner',
+    12,
+    '{en}',
+    '{"budget", "saving", "planning"}',
+    '/content/mod01/budgeting-01.md',
+    'budget-builder-v1',
+    '[{"organization": "Bank of Ghana", "snapshot_id": "bog-finlit-202601"}]',
+    '{"name": "Jane Doe", "credential": "Chartered Accountant (GH)"}',
+    '1.0.0',
+    '2026-01-15'
+  ),
+  (
+    'mod01-budgeting-02',
+    'The 50/30/20 Rule Explained',
+    'MOD-01',
+    'beginner',
+    10,
+    '{en}',
+    '{"budget", "needs", "wants", "savings"}',
+    '/content/mod01/budgeting-02.md',
+    null,
+    '[{"organization": "Bank of Ghana", "snapshot_id": "bog-finlit-202601"}]',
+    null,
+    '1.0.0',
+    '2026-01-15'
+  ),
+  (
+    'mod01-budgeting-03',
+    'Tracking Your Spending',
+    'MOD-01',
+    'beginner',
+    15,
+    '{en}',
+    '{"budget", "tracking", "expenses"}',
+    '/content/mod01/budgeting-03.md',
+    null,
+    '[]',
+    null,
+    '1.0.0',
+    '2026-01-15'
+  ),
+  -- MOD-02: Savings & Emergency Funds
+  (
+    'mod02-savings-01',
+    'Why You Need an Emergency Fund',
+    'MOD-02',
+    'beginner',
+    10,
+    '{en}',
+    '{"savings", "emergency", "safety"}',
+    '/content/mod02/savings-01.md',
+    'savings-goal-v1',
+    '[{"organization": "Bank of Ghana", "snapshot_id": "bog-finlit-202601"}]',
+    null,
+    '1.0.0',
+    '2026-01-15'
+  ),
+  (
+    'mod02-savings-02',
+    'How Much to Save: The 3–6 Month Rule',
+    'MOD-02',
+    'beginner',
+    8,
+    '{en}',
+    '{"savings", "emergency", "rule"}',
+    '/content/mod02/savings-02.md',
+    null,
+    '[]',
+    null,
+    '1.0.0',
+    '2026-01-15'
+  ),
+  -- MOD-03: Digital Payments & Mobile Money
+  (
+    'mod03-mobile-money-01',
+    'Understanding Mobile Money in Ghana',
+    'MOD-03',
+    'beginner',
+    12,
+    '{en}',
+    '{"mobile money", "mtn", "vodafone", "airtel"}',
+    '/content/mod03/mobile-money-01.md',
+    null,
+    '[{"organization": "Bank of Ghana", "snapshot_id": "bog-finlit-202601"}]',
+    null,
+    '1.0.0',
+    '2026-01-15'
+  ),
+  (
+    'mod03-mobile-money-02',
+    'Staying Safe with Mobile Money',
+    'MOD-03',
+    'beginner',
+    10,
+    '{en}',
+    '{"mobile money", "security", "fraud"}',
+    '/content/mod03/mobile-money-02.md',
+    null,
+    '[]',
+    null,
+    '1.0.0',
+    '2026-01-15'
+  ),
+  -- MOD-07: Consumer Protection & Fraud
+  (
+    'mod07-fraud-01',
+    'Spotting Financial Fraud',
+    'MOD-07',
+    'beginner',
+    10,
+    '{en}',
+    '{"fraud", "scams", "protection"}',
+    '/content/mod07/fraud-01.md',
+    null,
+    '[{"organization": "Bank of Ghana", "snapshot_id": "bog-finlit-202601"}]',
+    null,
+    '1.0.0',
+    '2026-01-15'
+  ),
+  (
+    'mod07-fraud-02',
+    'Your Rights as a Consumer',
+    'MOD-07',
+    'beginner',
+    8,
+    '{en}',
+    '{"consumer", "rights", "complaints"}',
+    '/content/mod07/fraud-02.md',
+    null,
+    '[]',
+    null,
+    '1.0.0',
+    '2026-01-15'
+  )
+on conflict (id) do update set
+  title = excluded.title,
+  module = excluded.module,
+  difficulty = excluded.difficulty,
+  duration_minutes = excluded.duration_minutes,
+  content_url = excluded.content_url,
+  calculator_id = excluded.calculator_id,
+  sources = excluded.sources,
+  verified_by = excluded.verified_by,
+  version = excluded.version,
+  last_updated = excluded.last_updated;

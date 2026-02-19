@@ -1,0 +1,1551 @@
+{
+  "mod01-budgeting-01": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "callout_stat",
+        "content": "Only 32% of Ghanaians are considered financially literate, despite 96% having access to financial services.",
+        "source": {
+          "label": "Ministry of Finance Ghana — FLEC Launch 2024",
+          "url": "https://mofep.gov.gh"
+        }
+      },
+      {
+        "type": "text",
+        "content": "A budget is a plan for your money. It tells your money where to go instead of wondering where it went. With a budget, you spend on what matters and save for the future."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Why Budget?"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Control: You decide where your money goes — not habit or impulse. Once you have a budget, you spend with intention and save more easily."
+      },
+      {
+        "type": "text",
+        "content": "Budgeting reduces money stress, helps you reach goals like building an emergency fund, starting a business, or paying school fees — and keeps you out of debt."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "The Basics"
+      },
+      {
+        "type": "text",
+        "content": "Your income is what you earn. Your expenses are what you spend. A budget balances the two."
+      },
+      {
+        "type": "example",
+        "title": "Kofi's Simple Budget",
+        "content": "Kofi earns GHS 2,400/month net. He spends GHS 1,200 on needs, GHS 600 on wants, and saves GHS 600. Income (GHS 2,400) − Expenses (GHS 1,800) = Savings (GHS 600). His budget is balanced."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Step 1: Know Your Income"
+      },
+      {
+        "type": "text",
+        "content": "Write down all money you receive each month: salary or wages, side jobs, allowances, or any regular income. Use your net income — the amount after tax and deductions — if you are employed."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Step 2: List Your Expenses"
+      },
+      {
+        "type": "table",
+        "caption": "Expense Categories",
+        "headers": [
+          "Category",
+          "Examples",
+          "Target %"
+        ],
+        "rows": [
+          [
+            "Needs",
+            "Rent, food, transport, utilities, school fees",
+            "50%"
+          ],
+          [
+            "Wants",
+            "Entertainment, eating out, new clothes",
+            "30%"
+          ],
+          [
+            "Savings",
+            "Emergency fund, investments, goals",
+            "20%"
+          ]
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Step 3: Compare and Adjust"
+      },
+      {
+        "type": "text",
+        "content": "Add up all your expenses. Compare the total to your income."
+      },
+      {
+        "type": "callout_warning",
+        "content": "If expenses exceed income, you are going into debt. Cut wants first, then look for cheaper alternatives for needs. Do not cut savings entirely — even GHS 50 per month adds up."
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "cta_link",
+        "label": "Build your first monthly budget",
+        "destination": "feature://budget-builder-v1",
+        "description": "Use the Budget Builder to plan your income and expenses using the 50/30/20 rule as a starting point."
+      },
+      {
+        "type": "callout_stat",
+        "content": "Budgeting is the foundation of all other financial literacy skills. Users who create a budget are 3× more likely to have an emergency fund.",
+        "source": {
+          "label": "Bank of Ghana Financial Literacy Programme",
+          "url": "https://www.bog.gov.gh"
+        }
+      }
+    ]
+  },
+  "mod01-budgeting-02": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "The 50/30/20 rule is a simple, proven method to split your monthly income into three buckets: Needs, Wants, and Savings."
+      },
+      {
+        "type": "table",
+        "caption": "The 50/30/20 Rule",
+        "headers": [
+          "Category",
+          "Share",
+          "Examples"
+        ],
+        "rows": [
+          [
+            "Needs",
+            "50%",
+            "Rent, food, transport, utilities, healthcare"
+          ],
+          [
+            "Wants",
+            "30%",
+            "Entertainment, hobbies, eating out, new clothes"
+          ],
+          [
+            "Savings",
+            "20%",
+            "Emergency fund, T-Bills, investments, goals"
+          ]
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Why It Works"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Needs first: You cover essentials before anything else. Wants are allowed — so you can enjoy life without guilt. Savings are built-in before you spend on extras."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Example: Ama's Budget"
+      },
+      {
+        "type": "example",
+        "title": "Ama's Monthly 50/30/20",
+        "content": "Ama earns GHS 3,200/month net.\n• Needs (50%): GHS 1,600 — rent GHS 800, food GHS 500, transport GHS 300\n• Wants (30%): GHS 960 — eating out GHS 400, entertainment GHS 300, clothing GHS 260\n• Savings (20%): GHS 640 — emergency fund GHS 320, T-Bill GHS 320"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Is 50/30/20 Right for Ghana?"
+      },
+      {
+        "type": "text",
+        "content": "It is a guide, not a law. Life in Ghana often means adjusting the percentages:"
+      },
+      {
+        "type": "comparison",
+        "left": {
+          "label": "High rent / one income",
+          "points": [
+            "Needs may reach 60–65%",
+            "Reduce wants to 15–20%",
+            "Keep savings at 15–20%",
+            "Revisit when rent decreases"
+          ]
+        },
+        "right": {
+          "label": "Irregular income (SME/trader)",
+          "points": [
+            "Use 3-month average income",
+            "Build a larger emergency fund",
+            "Save more in high months",
+            "Reduce wants in low months"
+          ]
+        }
+      },
+      {
+        "type": "callout_tip",
+        "content": "Start with what you can. Even a 5% savings rate is better than zero. Increase by 1–2% each month until you reach 20%."
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "callout_stat",
+        "content": "People who follow a spending plan — even a simple one — save an average of 18% more per year than those without one.",
+        "source": {
+          "label": "Bank of Ghana Financial Literacy Programme",
+          "url": "https://www.bog.gov.gh"
+        }
+      }
+    ]
+  },
+  "mod01-budgeting-03": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "You cannot improve what you do not measure. Tracking your spending shows where your money really goes — and most people are surprised by what they find."
+      },
+      {
+        "type": "callout_stat",
+        "content": "Studies show that people who track spending reduce unnecessary expenses by an average of 15% within the first month.",
+        "source": {
+          "label": "Bank of Ghana Financial Literacy Programme",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "How to Track Your Spending"
+      },
+      {
+        "type": "table",
+        "caption": "Tracking Methods Compared",
+        "headers": [
+          "Method",
+          "Best For",
+          "Effort"
+        ],
+        "rows": [
+          [
+            "Notebook or phone notes",
+            "Any phone, no data needed",
+            "Low"
+          ],
+          [
+            "MoMo transaction history",
+            "Mobile money users",
+            "Very low"
+          ],
+          [
+            "CediWise Budget tracker",
+            "Automatic categories",
+            "Low"
+          ],
+          [
+            "Bank statement review",
+            "Banked employees",
+            "Medium"
+          ]
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Categories That Add Up Fast"
+      },
+      {
+        "type": "callout_warning",
+        "content": "Small, frequent purchases are the biggest budget killers. Transport (trotro, Uber), airtime, data, and chop-bar meals can easily exceed 25% of income without feeling like it."
+      },
+      {
+        "type": "example",
+        "title": "Yaa's Hidden Spending",
+        "content": "Yaa earns GHS 1,800/month. She thought she spent GHS 200/month on food outside. After tracking for 2 weeks, she found she spent GHS 420 — chop bar lunches at GHS 15/day added up to GHS 315 alone. By packing lunch 3 days/week she saved GHS 180/month."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Review Weekly"
+      },
+      {
+        "type": "text",
+        "content": "Every week, total your spending by category and compare to your budget. Under budget? Put the extra into savings. Over budget? Cut that category next week."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Track for at least one full month. After that you will know your real spending patterns and can set a realistic budget that you can actually stick to."
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "cta_link",
+        "label": "Track expenses in CediWise",
+        "destination": "feature://budget-builder",
+        "description": "Log your expenses by category and see where your money is going in real time."
+      }
+    ]
+  },
+  "mod07-fraud-01": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "callout_stat",
+        "content": "Financial fraud cost Ghanaian consumers an estimated GHS 200 million in 2023 across mobile money, investment, and banking scams.",
+        "source": {
+          "label": "Bank of Ghana Fraud Report 2023",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "text",
+        "content": "Fraudsters are sophisticated and persistent. But every scam follows the same psychological patterns. Once you know them, you can spot and avoid them."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Universal Red Flags"
+      },
+      {
+        "type": "table",
+        "caption": "The 5 Red Flags of Financial Fraud",
+        "headers": [
+          "Red Flag",
+          "What It Looks Like"
+        ],
+        "rows": [
+          [
+            "Urgency",
+            "'Act now or lose your money' — pressure to decide immediately"
+          ],
+          [
+            "Secrecy",
+            "'Don't tell anyone' — isolation from trusted advice"
+          ],
+          [
+            "Too good to be true",
+            "High returns with no risk — promises of 20%+ monthly"
+          ],
+          [
+            "Unsolicited contact",
+            "Unknown caller or message offering a deal or prize"
+          ],
+          [
+            "Upfront payment",
+            "Asking you to pay to receive money or a prize"
+          ]
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Common Scam Types in Ghana"
+      },
+      {
+        "type": "callout_warning",
+        "content": "Investment Scams: Any scheme promising 20%+ monthly returns is almost certainly a Ponzi scheme or fraud. Only invest with SEC-Ghana licensed firms. Verify at sec.gov.gh."
+      },
+      {
+        "type": "example",
+        "title": "The 'Double Your Money' Scam",
+        "content": "Esi was approached on WhatsApp by someone promising to 'double any amount in 48 hours using forex trading.' She invested GHS 500. The operator sent her GHS 1,000 back — encouraging her to invest GHS 5,000. When she did, the operator disappeared. This is a classic advance-fee Ponzi: early returns are paid with later victims' money."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "How to Protect Yourself"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Verify before you trust: 1) Check investment firms at sec.gov.gh. 2) Confirm bank messages by calling the official number on the back of your card. 3) Never rush a financial decision. 4) Ask a trusted family member or financial advisor before investing."
+      },
+      {
+        "type": "callout_law",
+        "content": "Investment schemes must be registered with the Securities and Exchange Commission Ghana (SEC). Operating an unregistered scheme is illegal under the Securities Industry Act, 2016 (Act 929).",
+        "source": {
+          "label": "Securities Industry Act 2016 (Act 929)",
+          "url": "https://sec.gov.gh"
+        }
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "If You Are Scammed"
+      },
+      {
+        "type": "text",
+        "content": "1. Contact your bank or mobile money provider immediately to reverse or freeze the transaction if possible.\n2. Report to the Ghana Police Service CID Fraud Unit.\n3. Report investment fraud to the Securities and Exchange Commission Ghana.\n4. Warn friends and family — scammers reuse the same victims' contact lists."
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "glossary_term",
+        "term": "Ponzi Scheme",
+        "definition": "A fraudulent investment scheme that pays returns to existing investors using money from new investors, rather than from genuine profit. Ponzi schemes inevitably collapse when new investor money runs out. They are illegal in Ghana under the Securities Industry Act 2016.",
+        "source": {
+          "label": "Securities and Exchange Commission Ghana",
+          "url": "https://sec.gov.gh"
+        }
+      }
+    ]
+  },
+  "mod07-fraud-02": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "As a user of financial services in Ghana, you have legal rights that protect you. Knowing these rights helps you get fair treatment and take action when something goes wrong."
+      },
+      {
+        "type": "callout_law",
+        "content": "Ghana's consumer financial protection framework includes the Banks and Specialised Deposit-Taking Institutions Act 2016 (Act 930), Payment Systems and Services Act 2019 (Act 987), and the Bank of Ghana's Consumer Protection Directives.",
+        "source": {
+          "label": "Bank of Ghana — Consumer Protection",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Your Key Rights"
+      },
+      {
+        "type": "table",
+        "caption": "Financial Consumer Rights in Ghana",
+        "headers": [
+          "Right",
+          "What It Means"
+        ],
+        "rows": [
+          [
+            "Right to clear information",
+            "Terms, fees, and interest rates must be disclosed before you sign or pay"
+          ],
+          [
+            "Right to fair treatment",
+            "No discrimination based on gender, religion, or location"
+          ],
+          [
+            "Right to complain",
+            "Every regulated institution must have a complaints process"
+          ],
+          [
+            "Right to data privacy",
+            "Your personal and financial data cannot be shared without consent"
+          ],
+          [
+            "Right to redress",
+            "You can escalate unresolved complaints to the Bank of Ghana"
+          ]
+        ]
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Where to Complain"
+      },
+      {
+        "type": "comparison",
+        "left": {
+          "label": "First: Contact your provider",
+          "points": [
+            "Visit branch or call helpline",
+            "Submit written complaint",
+            "Keep reference number",
+            "Allow 5–10 business days"
+          ]
+        },
+        "right": {
+          "label": "Escalate if unresolved",
+          "points": [
+            "Bank of Ghana (banks/MoMo)",
+            "SEC Ghana (investments)",
+            "NIC Ghana (insurance)",
+            "Ghana Police CID (fraud)"
+          ]
+        }
+      },
+      {
+        "type": "callout_tip",
+        "content": "Always keep records: save receipts, SMS confirmations, and screenshots. Note dates, amounts, and the names of agents or officers you speak with. This documentation is essential if you need to escalate."
+      },
+      {
+        "type": "example",
+        "title": "Kofi's Successful Complaint",
+        "content": "Kofi was charged twice for a bill payment. He: 1) Reported it to MTN customer care with the transaction reference. 2) MTN promised a refund within 5 days but nothing happened. 3) Kofi escalated to the Bank of Ghana Consumer Affairs helpline (0302 666 174). 4) BoG opened an inquiry. MTN refunded GHS 120 within 48 hours."
+      },
+      {
+        "type": "callout_stat",
+        "content": "The Bank of Ghana resolved over 4,800 consumer complaints in 2023, recovering GHS 15 million for consumers. Most cases were resolved within 30 days of escalation.",
+        "source": {
+          "label": "Bank of Ghana Annual Report 2023",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "glossary_term",
+        "term": "Ghana Deposit Protection Corporation (GDPC)",
+        "definition": "A government body that insures deposits held at licensed banks in Ghana. If a bank fails, GDPC protects each depositor's balance up to GHS 20,000. Established under the Ghana Deposit Protection Act, 2016 (Act 931).",
+        "source": {
+          "label": "Ghana Deposit Protection Corporation",
+          "url": "https://gdpc.gov.gh"
+        }
+      }
+    ]
+  },
+  "mod01-savings-01": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Saving in Ghana spans from traditional susu groups to modern bank accounts. Understanding both helps you choose the right option for your goals and lifestyle."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "What is Susu?"
+      },
+      {
+        "type": "text",
+        "content": "Susu is a rotating savings group (ROSCA) where members contribute a fixed amount regularly and take turns receiving the lump sum. It has been used in Ghana for generations and builds discipline through peer accountability."
+      },
+      {
+        "type": "comparison",
+        "left": {
+          "label": "Susu (informal)",
+          "points": [
+            "No bank account needed",
+            "Peer accountability",
+            "Lump sum on your turn",
+            "No interest earned",
+            "No GDPC protection"
+          ]
+        },
+        "right": {
+          "label": "Bank savings",
+          "points": [
+            "Requires account",
+            "Self-discipline",
+            "Access anytime",
+            "Earns interest",
+            "GDPC protected up to GHS 20,000"
+          ]
+        }
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "When to Use Each"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Use susu when you need a structured way to save without easy access to temptation. Use a bank when you want interest, safety, and flexibility. Many Ghanaians use both — susu for short-term goals, bank for emergency fund."
+      },
+      {
+        "type": "example",
+        "title": "Abena's Approach",
+        "content": "Abena saves GHS 100/week in a susu group for school fees (lump sum in December). She also keeps GHS 2,000 in a bank savings account for emergencies. Both serve different purposes."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod01-savings-02": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "callout_stat",
+        "content": "In Ghana, over 60% of households have experienced a financial shock (medical bills, job loss, or emergency travel) in the past two years with no savings buffer.",
+        "source": {
+          "label": "Bank of Ghana Financial Stability Report",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "text",
+        "content": "An emergency fund is money set aside specifically for unexpected events. It is your financial safety net — the difference between a crisis and an inconvenience."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "What Counts as an Emergency?"
+      },
+      {
+        "type": "comparison",
+        "left": {
+          "label": "Real emergencies",
+          "points": [
+            "Medical bills or hospital",
+            "Job loss or income drop",
+            "Urgent home or car repairs",
+            "Family crisis or funeral",
+            "Unexpected travel"
+          ]
+        },
+        "right": {
+          "label": "Not emergencies",
+          "points": [
+            "New phone or gadget",
+            "Holiday or vacation",
+            "Sale or discount deal",
+            "Entertainment plans",
+            "Clothes or fashion"
+          ]
+        }
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Why It Matters in Ghana"
+      },
+      {
+        "type": "callout_warning",
+        "content": "Without an emergency fund, most Ghanaians turn to high-cost borrowing: mobile loans, susu advances, or informal moneylenders — which can charge 30–100% annual interest. An emergency fund makes these unnecessary."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "How Much Do You Need?"
+      },
+      {
+        "type": "text",
+        "content": "The target is 3 to 6 months of essential expenses. Start small — even GHS 500 is a meaningful buffer. Build it incrementally over time."
+      },
+      {
+        "type": "example",
+        "title": "Abena's Emergency Fund Goal",
+        "content": "Abena's monthly essentials: rent GHS 600, food GHS 400, transport GHS 200 = GHS 1,200/month.\n3-month target: GHS 3,600 | 6-month target: GHS 7,200\nShe saves GHS 300/month → reaches her 3-month fund in 12 months."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Where to Keep It"
+      },
+      {
+        "type": "table",
+        "caption": "Emergency Fund Storage Options",
+        "headers": [
+          "Option",
+          "Access Speed",
+          "Discipline Risk",
+          "Interest"
+        ],
+        "rows": [
+          [
+            "Separate MoMo wallet",
+            "Instant",
+            "Medium",
+            "Low"
+          ],
+          [
+            "Bank savings account",
+            "Same day",
+            "Low (harder to access)",
+            "Low–Medium"
+          ],
+          [
+            "91-day T-Bill",
+            "91 days",
+            "Low (locked)",
+            "High"
+          ],
+          [
+            "Susu group",
+            "End of cycle",
+            "Low",
+            "None"
+          ]
+        ]
+      },
+      {
+        "type": "callout_tip",
+        "content": "Keep 1–2 months of expenses in a separate, easily accessible account. Put the rest in a short-term T-Bill for better returns while maintaining a buffer."
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "cta_link",
+        "label": "Plan your emergency fund",
+        "destination": "feature://savings-goal",
+        "description": "Use the Savings Goal Planner to calculate how long it will take to reach your target."
+      }
+    ]
+  },
+  "mod02-tax-01": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "The Ghana Revenue Authority (GRA) is Ghana's national tax authority. Every taxpayer — individuals, businesses, and organisations — must register with GRA and obtain a Tax Identification Number (TIN)."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Your TIN is required to open a bank account, register a business, obtain a passport, or clear goods at customs. Apply online at gra.gov.gh or visit any GRA office."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod02-tax-02": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "PAYE (Pay As You Earn) is Ghana's income tax system. Your employer deducts tax from your salary each month based on graduated bands and remits it to GRA. Understanding the bands helps you verify your payslip."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Use the PAYE/SSNIT calculator in CediWise to estimate your take-home pay and understand how deductions work."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod02-tax-03": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "SSNIT manages Ghana's mandatory Tier 1 pension. Both you (5.5%) and your employer (13%) contribute from your gross salary. SSNIT provides a monthly pension from age 60, invalidity benefits, and survivor benefits."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Your SSNIT number is for life. Keep your contribution records — they determine your pension amount at retirement."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod02-tax-04": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "GRA offers several tax reliefs that reduce your taxable income — and therefore your PAYE. Common reliefs include personal relief, child education relief, and disability relief. You must apply to benefit."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Check the GRA website for the full list of reliefs and how to claim them. Many employees miss out because they never apply."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod02-tax-05": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "VAT (Value Added Tax) applies to most goods and services in Ghana at a unified rate. SME owners with turnover above GHS 200,000 per year must register for VAT with GRA and charge it on taxable supplies."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "VAT registration brings compliance obligations but also allows you to reclaim VAT on business inputs. Get professional advice before registering."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod03-invest-01": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Every investment carries risk. Generally, higher potential returns come with higher risk. Understanding the risk-return spectrum helps you choose investments that match your goals and comfort level."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "T-Bills are low risk, low return. Shares are higher risk, higher potential return. Diversification — spreading your money across different assets — reduces overall risk."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod03-invest-02": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Treasury Bills (T-Bills) are short-term government debt. The Bank of Ghana issues 91-day, 182-day, and 364-day T-Bills. You buy at a discount and receive face value at maturity — the difference is your return."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "T-Bills are among the safest investments in Ghana. Use the T-Bill Simulator in CediWise to estimate returns."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod03-invest-03": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Government bonds are longer-term debt instruments (2 years or more) that pay regular coupon interest. Unlike T-Bills, bonds provide periodic income. The Government of Ghana issues bonds through the Bank of Ghana."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Bonds are suitable for investors who want steady income and can lock away funds for several years."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod03-invest-04": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Mutual funds pool money from many investors and invest in a mix of T-Bills, bonds, and equities. Licensed fund managers in Ghana (e.g. Databank, FirstBanC) offer funds regulated by the SEC."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Always verify that a fund manager is licensed with SEC Ghana before investing. Unlicensed schemes are often fraud."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod03-invest-05": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "The Ghana Stock Exchange (GSE) is where shares of listed companies are bought and sold. Investing in shares means owning a part of the company. Returns come from price appreciation and dividends."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "You need a licensed stockbroker to buy shares on the GSE. Never invest through unlicensed individuals or WhatsApp groups."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod03-invest-06": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Insurance protects you from financial loss — medical bills, vehicle damage, death, or property loss. In Ghana, insurance is regulated by the National Insurance Commission (NIC). Premiums are the regular payments you make."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Verify any insurer with NIC before buying a policy. Common products include motor, health, life, and business insurance."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod04-mobile-01": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "callout_stat",
+        "content": "Ghana recorded over 650 million mobile money transactions in 2023, totalling more than GHS 1.2 trillion — the highest volume in West Africa.",
+        "source": {
+          "label": "Bank of Ghana Payment Systems Report 2023",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "text",
+        "content": "Mobile money has fundamentally changed how Ghanaians send, receive, save, and pay for things. You no longer need a bank account to access financial services."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Main Providers in Ghana"
+      },
+      {
+        "type": "table",
+        "caption": "Ghana Mobile Money Providers",
+        "headers": [
+          "Provider",
+          "Network",
+          "USSD Code",
+          "Regulated By"
+        ],
+        "rows": [
+          [
+            "MTN MoMo",
+            "MTN Ghana",
+            "*170#",
+            "Bank of Ghana"
+          ],
+          [
+            "Vodafone Cash",
+            "Vodafone Ghana",
+            "*110#",
+            "Bank of Ghana"
+          ],
+          [
+            "AirtelTigo Money",
+            "AirtelTigo",
+            "*500#",
+            "Bank of Ghana"
+          ]
+        ]
+      },
+      {
+        "type": "callout_law",
+        "content": "All mobile money providers in Ghana are licensed and regulated by the Bank of Ghana under the Payment Systems and Services Act, 2019 (Act 987). Your funds are protected by BoG regulations.",
+        "source": {
+          "label": "Payment Systems and Services Act 2019 (Act 987)",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "What You Can Do with Mobile Money"
+      },
+      {
+        "type": "text",
+        "content": "Mobile money wallets allow you to: send money to family and friends instantly, pay bills (ECG, Ghana Water, DSTV, school fees), buy airtime and data, pay for goods at shops and markets, save directly in your wallet, and access short-term mobile loans."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "How to Get Started"
+      },
+      {
+        "type": "example",
+        "title": "Registering for MoMo",
+        "content": "1. Visit any MTN MoMo agent with your Ghana Card (or Voter ID).\n2. The agent registers your number and creates your wallet.\n3. Set your personal PIN — do not share it with anyone, including the agent.\n4. Cash in by handing cash to the agent or transferring from your bank app.\n5. You are ready to send, pay, and save."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Fees to Know"
+      },
+      {
+        "type": "table",
+        "caption": "Typical MTN MoMo Fee Schedule (illustrative)",
+        "headers": [
+          "Transaction Type",
+          "Typical Fee"
+        ],
+        "rows": [
+          [
+            "MoMo to MoMo (same network)",
+            "GHS 0.50 – GHS 2.00"
+          ],
+          [
+            "Cash out at agent",
+            "GHS 0.50 – GHS 3.50"
+          ],
+          [
+            "Bank transfer",
+            "GHS 1.00 – GHS 5.00"
+          ],
+          [
+            "Bill payment",
+            "Free – GHS 1.00"
+          ],
+          [
+            "Airtime purchase",
+            "Free"
+          ]
+        ]
+      },
+      {
+        "type": "callout_tip",
+        "content": "Fees change periodically. Always check the current fee schedule on your provider's USSD menu (*170# for MTN) or their official website before large transactions."
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "glossary_term",
+        "term": "Mobile Money Wallet",
+        "definition": "A digital account linked to your phone number that allows you to store, send, and receive money electronically. Regulated by the Bank of Ghana. Not the same as a bank account, but provides many of the same basic services.",
+        "source": {
+          "label": "Bank of Ghana — Mobile Money Guidelines",
+          "url": "https://www.bog.gov.gh"
+        }
+      }
+    ]
+  },
+  "mod04-mobile-02": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "callout_stat",
+        "content": "Mobile money fraud losses in Ghana exceeded GHS 40 million in 2023. The Bank of Ghana received over 12,000 fraud complaints related to mobile money.",
+        "source": {
+          "label": "Bank of Ghana Annual Report 2023",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "text",
+        "content": "Mobile money is convenient, but it is also a target for fraudsters. Knowing the common scams and how to protect yourself is essential."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "The Golden Rule"
+      },
+      {
+        "type": "callout_warning",
+        "content": "Your PIN and OTP are yours alone. No legitimate employee of MTN, Vodafone, AirtelTigo, or any bank will ever ask for your PIN or OTP. Ever. If anyone asks — it is a scam."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Common Scams in Ghana"
+      },
+      {
+        "type": "table",
+        "caption": "Mobile Money Scam Types",
+        "headers": [
+          "Scam",
+          "How It Works",
+          "What to Do"
+        ],
+        "rows": [
+          [
+            "'Please call me back'",
+            "Caller hangs up; you call a premium-rate number",
+            "Never call back unknown numbers"
+          ],
+          [
+            "Fake promotion win",
+            "'You've won! Send GHS 50 to claim your prize.'",
+            "Ignore — real wins never require payment"
+          ],
+          [
+            "Impersonation",
+            "Fake BoG/MTN agent asks for PIN/OTP by call or SMS",
+            "Hang up. Call official number to verify"
+          ],
+          [
+            "'Help me' request",
+            "Stranger asks you to receive then forward money",
+            "Refuse — you may be used for fraud"
+          ],
+          [
+            "SIM swap fraud",
+            "Scammer transfers your number to their SIM",
+            "Alert your provider immediately if SIM stops working"
+          ]
+        ]
+      },
+      {
+        "type": "example",
+        "title": "How Abena Almost Lost GHS 2,000",
+        "content": "Abena received an SMS: 'Congratulations! You have won GHS 5,000 in the MTN Loyalty Draw. To claim, dial *170# and send GHS 100 as a processing fee to 024XXXXXXX.' She almost sent the money, but called her sister first who told her it was a scam. MTN confirmed they never charge fees to claim prizes."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "If You Are Scammed"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Act immediately: 1) Call your mobile money provider's fraud line (MTN: 0244300000, Vodafone: 100). 2) Change your PIN right away. 3) Report to the police if a large sum was lost. 4) Warn friends and family about the same scam."
+      },
+      {
+        "type": "callout_law",
+        "content": "Under the Electronic Transactions Act 2008 (Act 772), mobile money fraud is a criminal offence in Ghana. Perpetrators face fines and imprisonment. Report all fraud to your provider and, for large amounts, to the Ghana Police Service.",
+        "source": {
+          "label": "Electronic Transactions Act 2008 (Act 772)",
+          "url": "https://www.moc.gov.gh"
+        }
+      },
+      {
+        "type": "divider"
+      },
+      {
+        "type": "glossary_term",
+        "term": "OTP (One-Time Password)",
+        "definition": "A temporary, single-use code sent to your phone via SMS to verify your identity during a transaction. It is valid for only a few minutes and should NEVER be shared with anyone.",
+        "source": {
+          "label": "Bank of Ghana — Consumer Protection Guidelines",
+          "url": "https://www.bog.gov.gh"
+        }
+      }
+    ]
+  },
+  "mod04-mobile-03": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Mobile money wallets can hold savings, and some providers offer interest. Bank savings accounts also earn interest and are protected by GDPC. Compare access, interest rates, and safety before deciding."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "For emergency funds, keep 1–2 months in instant-access (MoMo or bank). Put the rest in a bank savings or short T-Bill for better returns."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod04-mobile-04": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Digital credit — loans via mobile money (e.g. MTN Qwick Loan) — is convenient but can be expensive. Interest rates of 8–15% per month are common. Borrow only what you can repay on time."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Before taking digital credit, calculate the total repayment. A GHS 500 loan at 10%/month costs GHS 50 in interest if repaid in one month."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod05-sme-01": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Mixing personal and business money is one of the biggest mistakes SME owners make. It leads to unclear profitability, tax problems, and personal liability if the business fails. Open a separate business account from day one."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Use one account for business income and expenses only. Pay yourself a salary or draw, and keep personal spending separate."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod05-sme-02": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Cash flow is the movement of money in and out of your business. Many profitable businesses fail because they run out of cash — they cannot pay suppliers or staff when payments are delayed. Track and forecast cash flow weekly."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Use the Cash Flow Tool in CediWise to project when money comes in and when it goes out. Plan for slow months."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod05-sme-03": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Pricing for profit means covering all your costs — materials, labour, overhead, and your time — plus a margin. Underpricing is a common SME mistake that leads to burnout and business failure."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Calculate your cost per unit, add your desired margin, and test the market. It is easier to lower prices than to raise them."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod05-sme-04": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Business credit — loans, overdrafts, or supplier credit — can help you grow. Banks and microfinance institutions offer SME loans. Understand interest rates, repayment terms, and collateral requirements before borrowing."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Use the Loan Amortization calculator to see total repayment and monthly instalments. Compare offers from multiple lenders."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod05-sme-05": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "SMEs must comply with GRA requirements: register for TIN, file tax returns, and if turnover exceeds thresholds, register for VAT. Non-compliance leads to penalties and limits access to formal credit."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Hire an accountant or use GRA's simplified schemes for small businesses. Compliance builds credibility with banks and partners."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod05-sme-06": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Business insurance protects against losses from fire, theft, liability, or key person death. The National Insurance Commission (NIC) regulates insurers. Choose products that match your business risks."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Start with essential cover: fire, theft, and public liability. Add key person insurance if the business depends on one or two people."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod06-retirement-01": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "The earlier you start saving for retirement, the more time compound interest has to grow your money. Delaying by 10 years can mean half the retirement fund. Start with whatever you can afford."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Even GHS 100/month in a Tier 3 pension from age 25 can grow to a meaningful sum by 60. The key is starting early."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod06-retirement-02": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "SSNIT Tier 1 is mandatory. Tier 2 is your employer's occupational scheme. Maximising both means ensuring contributions are correct, understanding your benefit statement, and planning for the lump sum at retirement."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Request your SSNIT statement annually. Check that your employer is remitting both your and their contributions on time."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod06-retirement-03": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Tier 3 is a voluntary personal pension. You contribute extra beyond Tier 1 and 2, and get 16.5% tax relief on contributions. NPRA-licensed fund managers offer Tier 3 products."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Tier 3 is ideal if you want to retire with more than SSNIT and Tier 2 will provide. The tax relief makes it attractive."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod06-retirement-04": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Beyond pensions, you can build retirement wealth through T-Bills, bonds, property, or business. These 'non-pension' assets give you flexibility and diversification. Plan how they fit with your pension income."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Diversify: do not put all retirement savings in one asset. T-Bills for stability, property for growth, business for income."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod06-retirement-05": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Succession planning ensures your assets go to the right people when you die. A will is the legal document that states your wishes. Without one, Ghana's intestacy laws determine who inherits — which may not match your intentions."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Consult a lawyer to draft a will. Update it when your family or assets change. Keep a copy with someone you trust."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod07-fraud-03": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "text",
+        "content": "Your financial data — account numbers, PINs, transaction history — is valuable to fraudsters. Protect it: never share PINs or OTPs, use strong passwords, and be wary of phishing emails or fake websites."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Points"
+      },
+      {
+        "type": "callout_tip",
+        "content": "Banks and mobile money providers will never ask for your PIN or OTP by phone, email, or SMS. Anyone who does is a fraudster."
+      },
+      {
+        "type": "text",
+        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  }
+}

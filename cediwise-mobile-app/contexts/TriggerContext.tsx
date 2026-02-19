@@ -8,7 +8,6 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 type TriggerContextValue = {
   setViewedModuleId: (moduleId: string | undefined) => void;
   setHasVatTransaction: (value: boolean) => void;
-  showHomeIntro: () => void;
 };
 
 const TriggerContext = createContext<TriggerContextValue | null>(null);
@@ -18,14 +17,9 @@ export function TriggerProvider({ children }: { children: React.ReactNode }) {
   const { state: budgetState, totals: budgetTotals } = useBudget(user?.id);
   const [viewedModuleId, setViewedModuleIdState] = useState<string | undefined>();
   const [hasVatTransaction, setHasVatTransaction] = useState(false);
-  const [forceHomeIntro, setForceHomeIntro] = useState(false);
 
   const setViewedModuleId = useCallback((id: string | undefined) => {
     setViewedModuleIdState(id);
-  }, []);
-
-  const showHomeIntro = useCallback(() => {
-    setForceHomeIntro(true);
   }, []);
 
   const context: Parameters<typeof useTriggers>[0] = useMemo(
@@ -35,7 +29,7 @@ export function TriggerProvider({ children }: { children: React.ReactNode }) {
       needsAmount: budgetTotals?.needsLimit ?? 0,
       viewedModuleId,
       hasVatTransaction,
-      forceHomeIntro,
+      enableTriggers: false,
     }),
     [
       budgetState?.incomeSources?.length,
@@ -43,7 +37,6 @@ export function TriggerProvider({ children }: { children: React.ReactNode }) {
       budgetTotals?.needsLimit,
       viewedModuleId,
       hasVatTransaction,
-      forceHomeIntro,
     ]
   );
 
@@ -54,9 +47,6 @@ export function TriggerProvider({ children }: { children: React.ReactNode }) {
   const handleDismiss = useCallback(() => {
     if (pendingTrigger) {
       dismissTrigger(pendingTrigger);
-      if (pendingTrigger === "CTX_HOME_INTRO") {
-        setForceHomeIntro(false);
-      }
     }
   }, [pendingTrigger, dismissTrigger]);
 
@@ -64,15 +54,12 @@ export function TriggerProvider({ children }: { children: React.ReactNode }) {
     if (pendingTrigger && config) {
       onLearnMore(pendingTrigger, config.ctaRoute);
       dismissTrigger(pendingTrigger);
-      if (pendingTrigger === "CTX_HOME_INTRO") {
-        setForceHomeIntro(false);
-      }
     }
   }, [pendingTrigger, config, onLearnMore, dismissTrigger]);
 
   const value = useMemo(
-    () => ({ setViewedModuleId, setHasVatTransaction, showHomeIntro }),
-    [setViewedModuleId, showHomeIntro]
+    () => ({ setViewedModuleId, setHasVatTransaction }),
+    [setViewedModuleId]
   );
 
   return (
@@ -93,6 +80,6 @@ export function TriggerProvider({ children }: { children: React.ReactNode }) {
 
 export function useTriggerContext() {
   const ctx = useContext(TriggerContext);
-  if (!ctx) return { setViewedModuleId: () => { }, setHasVatTransaction: () => { }, showHomeIntro: () => { } };
+  if (!ctx) return { setViewedModuleId: () => { }, setHasVatTransaction: () => { } };
   return ctx;
 }

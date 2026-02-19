@@ -22,8 +22,8 @@ import {
   Text,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LessonScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
@@ -99,7 +99,14 @@ export default function LessonScreen() {
       if (!lessonId || !lesson?.module) return;
 
       const passed = score >= 0.5;
-      await saveProgress(lessonId, passed, score);
+      const saved = await saveProgress(lessonId, passed, score);
+      if (!saved) {
+        showError(
+          "Couldn't save progress",
+          "Check your connection and try again."
+        );
+        return;
+      }
       trackQuizAttempt(lessonId, lesson.module, correctCount, quizQuestions.length);
 
       if (passed) {
@@ -132,7 +139,14 @@ export default function LessonScreen() {
   const handleMarkComplete = useCallback(async () => {
     if (!lessonId) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    await saveProgress(lessonId, true);
+    const saved = await saveProgress(lessonId, true);
+    if (!saved) {
+      showError(
+        "Couldn't save progress",
+        "Check your connection and try again."
+      );
+      return;
+    }
 
     if (lesson?.id && lesson?.module) {
       const timeSpentSeconds = Math.floor(

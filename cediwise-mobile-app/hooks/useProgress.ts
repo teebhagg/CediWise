@@ -52,7 +52,7 @@ export function useProgress() {
 
   const saveProgress = useCallback(
     async (lessonId: string, completed: boolean, quizScore?: number) => {
-      if (!user?.id || !supabase) return;
+      if (!user?.id || !supabase) return false;
 
       try {
         const payload = {
@@ -71,8 +71,10 @@ export function useProgress() {
 
         if (error) throw error;
         await loadProgress();
+        return true;
       } catch {
         // Silent fail for offline
+        return false;
       }
     },
     [user?.id, loadProgress]

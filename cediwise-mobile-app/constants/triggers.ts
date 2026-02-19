@@ -1,5 +1,4 @@
 export type TriggerId =
-  | "CTX_HOME_INTRO"
   | "CTX_SALARY_FIRST"
   | "CTX_LOW_SAVINGS"
   | "CTX_TBILL_VIEW"
@@ -14,14 +13,6 @@ export type TriggerConfig = {
 };
 
 export const TRIGGER_CONFIGS: Record<TriggerId, TriggerConfig> = {
-  CTX_HOME_INTRO: {
-    id: "CTX_HOME_INTRO",
-    title: "Welcome to CediWise!",
-    message:
-      "Your personal finance companion for smarter money management. Track expenses, build budgets, and learn financial literacy—all in one place.",
-    ctaLabel: "Start Learning",
-    ctaRoute: "/literacy/MOD-01",
-  },
   CTX_SALARY_FIRST: {
     id: "CTX_SALARY_FIRST",
     title: "You logged your first income!",

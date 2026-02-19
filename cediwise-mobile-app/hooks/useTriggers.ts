@@ -10,7 +10,7 @@ export type TriggerContext = {
   needsAmount: number;
   viewedModuleId?: string;
   hasVatTransaction?: boolean;
-  forceHomeIntro?: boolean;
+  enableTriggers?: boolean;
 };
 
 export function useTriggers(context: TriggerContext) {
@@ -66,12 +66,7 @@ export function useTriggers(context: TriggerContext) {
   );
 
   const evaluateTriggers = useCallback(() => {
-    // Force home intro for testing (always show, ignore dismissal)
-    if (context.forceHomeIntro) {
-      setPendingTrigger("CTX_HOME_INTRO");
-      return;
-    }
-
+    if (!context.enableTriggers) return;
     if (!dismissedLoaded) return;
     if (hasShownThisSession.current) return;
 

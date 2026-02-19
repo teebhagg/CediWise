@@ -7,6 +7,7 @@
  * FR-SRC-007: tapping a term opens a bottom sheet with full definition
  */
 
+import { AppTextField } from "@/components/AppTextField";
 import { BackButton } from "@/components/BackButton";
 import { GlassBottomSheet } from "@/components/GlassBottomSheet";
 import {
@@ -14,6 +15,7 @@ import {
   getGlossarySections,
   type GlossaryTerm,
 } from "@/constants/glossary";
+import { useAppToast } from "@/hooks/useAppToast";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { BookMarked, ChevronRight, ExternalLink, Search, X } from "lucide-react-native";
@@ -28,9 +30,8 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { AppTextField } from "@/components/AppTextField";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // ─── Glossary Term Card ───────────────────────────────────────────────────────
 
@@ -76,6 +77,23 @@ function TermDetailModal({
   term: GlossaryTerm | null;
   onClose: () => void;
 }) {
+  const { showError } = useAppToast();
+
+  const handleOpenSource = useCallback(async () => {
+    const url = term?.source?.url;
+    if (!url) return;
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (!supported) {
+        showError("Link not supported", "Unable to open this source.");
+        return;
+      }
+      await Linking.openURL(url);
+    } catch {
+      showError("Link failed", "Unable to open this source.");
+    }
+  }, [term?.source?.url, showError]);
+
   if (!term) return null;
 
   return (
@@ -129,9 +147,7 @@ function TermDetailModal({
           {term.source && (
             <Pressable
               style={styles.sheetSource}
-              onPress={() => {
-                if (term.source?.url) Linking.openURL(term.source.url);
-              }}
+              onPress={handleOpenSource}
             >
               <Text style={styles.sheetSourceLabel}>Source: {term.source.label}</Text>
               {term.source.url && <ExternalLink size={13} color="#64748b" />}
@@ -195,20 +211,20 @@ export default function GlossaryScreen() {
       {/* Search bar */}
       <View style={styles.searchWrap}>
         {/* <View style={styles.searchBar}> */}
-          <AppTextField
-            prefixIcon={<Search size={16} color="#64748b" />}
-            suffixIcon={query.length > 0 && (
-              <Pressable onPress={clearSearch} hitSlop={8}>
-                <X size={15} color="#64748b" />
-              </Pressable>
-            )}
-            placeholder="Search terms..."
-            value={query}
-            onChangeText={setQuery}
-            returnKeyType="search"
-            autoCorrect={true}
-            autoCapitalize="none"
-          />
+        <AppTextField
+          prefixIcon={<Search size={16} color="#64748b" />}
+          suffixIcon={query.length > 0 && (
+            <Pressable onPress={clearSearch} hitSlop={8}>
+              <X size={15} color="#64748b" />
+            </Pressable>
+          )}
+          placeholder="Search terms..."
+          value={query}
+          onChangeText={setQuery}
+          returnKeyType="search"
+          autoCorrect={true}
+          autoCapitalize="none"
+        />
         {/* </View> */}
       </View>
 

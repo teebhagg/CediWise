@@ -1,4 +1,4 @@
-import type { LessonContent, LessonSection } from "@/types/literacy";
+import type { LessonContent, LessonSection, StructuredLesson } from "@/types/literacy";
 import Markdown from "@ronradtke/react-native-markdown-display";
 import React, { memo } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -69,6 +69,76 @@ const markdownStyles = {
   td: { padding: 8, borderTopWidth: 1, borderTopColor: "rgba(71,85,105,0.3)" },
 };
 
+// ─── Validation helpers ───────────────────────────────────────────────────────
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function isLessonSection(section: unknown): section is LessonSection {
+  if (!isRecord(section) || typeof section.type !== "string") return false;
+
+  switch (section.type) {
+    case "text":
+      return typeof section.content === "string";
+    case "heading":
+      return (
+        typeof section.content === "string" &&
+        (section.level === 1 || section.level === 2 || section.level === 3)
+      );
+    case "divider":
+      return true;
+    case "callout_stat":
+    case "callout_tip":
+    case "callout_warning":
+    case "callout_law":
+      return typeof section.content === "string";
+    case "table":
+      return (
+        isStringArray(section.headers) &&
+        Array.isArray(section.rows) &&
+        section.rows.every(isStringArray)
+      );
+    case "example":
+      return (
+        typeof section.title === "string" &&
+        typeof section.content === "string"
+      );
+    case "comparison":
+      return (
+        isRecord(section.left) &&
+        isRecord(section.right) &&
+        typeof section.left.label === "string" &&
+        isStringArray(section.left.points) &&
+        typeof section.right.label === "string" &&
+        isStringArray(section.right.points)
+      );
+    case "cta_link":
+      return (
+        typeof section.label === "string" &&
+        typeof section.destination === "string"
+      );
+    case "glossary_term":
+      return (
+        typeof section.term === "string" &&
+        typeof section.definition === "string"
+      );
+    default:
+      return false;
+  }
+}
+
+function isStructuredLesson(content: unknown): content is StructuredLesson {
+  if (!isRecord(content)) return false;
+  if (content.schema_version !== "1.0") return false;
+  if (!Array.isArray(content.sections)) return false;
+  return content.sections.every(isLessonSection);
+}
+
 // ─── Section renderer ─────────────────────────────────────────────────────────
 
 function renderSection(section: LessonSection, index: number): React.ReactNode {
@@ -119,7 +189,11 @@ function renderSection(section: LessonSection, index: number): React.ReactNode {
       return <GlossaryTermInline key={index} section={section} />;
 
     default:
-      return null;
+      return (
+        <Text key={index} style={sectionStyles.unknown}>
+          Unsupported content block.
+        </Text>
+      );
   }
 }
 
@@ -142,10 +216,18 @@ function LessonContentRendererInner({ content }: LessonContentRendererProps) {
   }
 
   // Structured JSON lesson
+  if (isStructuredLesson(content)) {
+    return (
+      <View style={sectionStyles.container}>
+        {content.sections.map((section, idx) => renderSection(section, idx))}
+      </View>
+    );
+  }
+
   return (
-    <View style={sectionStyles.container}>
-      {content.sections.map((section, idx) => renderSection(section, idx))}
-    </View>
+    <Text style={sectionStyles.empty}>
+      Content format error. Please refresh.
+    </Text>
   );
 }
 
@@ -199,5 +281,11 @@ const sectionStyles = StyleSheet.create({
     fontFamily: "Figtree-Regular",
     textAlign: "center",
     marginTop: 24,
+  },
+  unknown: {
+    fontSize: 14,
+    color: "#94a3b8",
+    fontFamily: "Figtree-Regular",
+    marginVertical: 4,
   },
 });

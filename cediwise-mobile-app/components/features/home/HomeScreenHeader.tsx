@@ -48,7 +48,7 @@ function HomeScreenHeaderInner({
   return (
     <View className="px-5 pt-3 mb-6 flex flex-row items-start justify-between">
       <View className="gap-3 flex-1">
-        <Text className="text-white text-3xl font-bold" numberOfLines={2}>
+        <Text className="text-white text-[28px] font-bold" numberOfLines={2}>
           {title}
         </Text>
         <Text className="text-muted-foreground text-sm mt-1">{subtitle}</Text>

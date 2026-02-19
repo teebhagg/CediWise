@@ -23,7 +23,7 @@ export function BudgetScreenHeader({
   return (
     <View className="px-5 pt-3 mb-6 flex flex-row items-start justify-between">
       <View className="gap-3">
-        <Text className="text-white text-3xl font-bold">Budget</Text>
+        <Text className="text-white text-[28px] font-bold">Budget</Text>
         <Text className="text-muted-foreground text-sm mt-1">
           Needs / Wants / Savings — payday-based.
         </Text>

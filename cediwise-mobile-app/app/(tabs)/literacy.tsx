@@ -162,7 +162,7 @@ function SearchResults({ query }: { query: string }) {
 // ─── Main Tab Screen ──────────────────────────────────────────────────────────
 
 export default function LiteracyScreen() {
-  const { loading } = useLessons();
+  const { loading, error, refetch } = useLessons();
   const { isCompleted } = useProgress();
   const [query, setQuery] = useState("");
   const inputRef = useRef<TextInput>(null);
@@ -184,38 +184,17 @@ export default function LiteracyScreen() {
         <Text style={styles.headerSubtitle}>
           Financial literacy tailored for Ghana
         </Text>
-      </Animated.View>
-
-      {/* Search bar */}
-      <Animated.View
-        entering={FadeInDown.delay(80).duration(300).springify()}
-        style={styles.searchWrap}
-      >
-        <View style={styles.searchBar}>
-          <Search size={16} color="#64748b" />
-          <TextInput
-            ref={inputRef}
-            style={styles.searchInput}
-            placeholder='Search lessons, terms… try "momo" or "pension"'
-            placeholderTextColor="#475569"
-            value={query}
-            onChangeText={setQuery}
-            returnKeyType="search"
-            autoCorrect={false}
-            autoCapitalize="none"
-          />
-          {isSearching && (
-            <Pressable onPress={clearSearch} hitSlop={8}>
-              <X size={15} color="#64748b" />
+        {error && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorText}>
+              Content is showing offline fallback. Tap to retry.
+            </Text>
+            <Pressable onPress={refetch} hitSlop={8}>
+              <Text style={styles.errorRetry}>Retry</Text>
             </Pressable>
-          )}
-        </View>
+          </View>
+        )}
       </Animated.View>
-
-      {/* Content switches between search results and home view */}
-      {isSearching ? (
-        <SearchResults query={query.trim()} />
-      ) : (
         <ScrollView
           style={styles.homeScroll}
           contentContainerStyle={styles.homeContent}
@@ -277,7 +256,6 @@ export default function LiteracyScreen() {
             })
           )}
         </ScrollView>
-      )}
     </SafeAreaView>
   );
 }
@@ -391,6 +369,30 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Figtree-Regular",
     color: "#475569",
+  },
+  errorBanner: {
+    marginTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.35)",
+    backgroundColor: "rgba(239,68,68,0.08)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "Figtree-Regular",
+    color: "#fca5a5",
+  },
+  errorRetry: {
+    fontSize: 12,
+    fontFamily: "Figtree-Bold",
+    color: "#fecaca",
   },
   loadingState: {
     paddingTop: 40,

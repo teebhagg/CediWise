@@ -7,11 +7,13 @@
  * FR-ACC-006: icon (✓/✗) accompanies colour — never colour alone
  */
 
+import { PrimaryButton } from "@/components/PrimaryButton";
 import type { QuizQuestion } from "@/types/literacy";
 import * as Haptics from "expo-haptics";
 import { CheckCircle2, Lightbulb, XCircle } from "lucide-react-native";
 import React, { memo, useCallback, useState } from "react";
 import {
+  Pressable,
   StyleSheet,
   Text,
   View,
@@ -24,7 +26,6 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
-import { PrimaryButton } from "@/components/PrimaryButton";
 
 const OPTION_LETTERS = ["A", "B", "C", "D"];
 
@@ -236,13 +237,14 @@ const OptionRow = memo(function OptionRow({
     <Animated.View
       entering={FadeInDown.delay(index * 50).springify()}
     >
-      <PrimaryButton
+      <Pressable
         onPress={onPress}
-        style={[
+        style={({ pressed }) => [
           styles.option,
           state === "correct" && styles.optionCorrect,
           state === "wrong" && styles.optionWrong,
           state === "selected" && styles.optionSelected,
+          pressed && styles.optionPressed,
         ]}
       >
         {/* Letter badge */}
@@ -272,7 +274,7 @@ const OptionRow = memo(function OptionRow({
         >
           {text}
         </Text>
-      </PrimaryButton>
+      </Pressable>
     </Animated.View>
   );
 });
@@ -375,6 +377,7 @@ const styles = StyleSheet.create({
   optionLetterWrong: { color: "#fff" },
   optionText: {
     flex: 1,
+    minWidth: 0,
     fontSize: 14,
     fontFamily: "Figtree-Regular",
     color: "#cbd5e1",

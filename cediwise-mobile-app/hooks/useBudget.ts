@@ -2,6 +2,10 @@ import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DeviceEventEmitter } from "react-native";
 
+import {
+  computeWeightedCategoryLimits,
+  type CategoryLimitInput,
+} from "../calculators/category-weights";
 import type {
   BudgetBucket,
   BudgetCategory,
@@ -161,6 +165,9 @@ export type UseBudgetReturn = {
     wantsPct?: number;
     savingsPct?: number;
     interests?: string[];
+    /** Fixed amounts from vitals (e.g. Rent, ECG) for obligation-first allocation */
+    fixedAmountsByCategory?: Record<string, number>;
+    lifeStage?: "student" | "young_professional" | "family" | "retiree" | null;
   }) => Promise<void>;
   addIncomeSource: (params: {
     name: string;
@@ -376,12 +383,21 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       wantsPct = 0.3,
       savingsPct = 0.2,
       interests,
+      fixedAmountsByCategory,
+      lifeStage,
     }: {
       paydayDay: number;
       needsPct?: number;
       wantsPct?: number;
       savingsPct?: number;
       interests?: string[];
+      fixedAmountsByCategory?: Record<string, number>;
+      lifeStage?:
+        | "student"
+        | "young_professional"
+        | "family"
+        | "retiree"
+        | null;
     }) => {
       if (!userId) return;
       const current = state ?? createEmptyBudgetState(userId);
@@ -405,15 +421,20 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         updatedAt: createdAt,
       };
 
-      // Prefer explicit interests (from Vitals), else fall back to what we already have cached.
       const seeded = seedCategories(interests ?? current.prefs?.interests);
+      const needsList = [...seeded.needs];
+      if (
+        fixedAmountsByCategory?.["Debt Payments"] &&
+        !needsList.includes("Debt Payments")
+      ) {
+        needsList.push("Debt Payments");
+      }
       const allNames: { bucket: BudgetBucket; name: string }[] = [
-        ...seeded.needs.map((name) => ({ bucket: "needs" as const, name })),
+        ...needsList.map((name) => ({ bucket: "needs" as const, name })),
         ...seeded.wants.map((name) => ({ bucket: "wants" as const, name })),
         ...seeded.savings.map((name) => ({ bucket: "savings" as const, name })),
       ];
 
-      // Distribute bucket totals based on current income if available; otherwise 0 limits until income set
       const monthlyNetIncome = current.incomeSources.reduce((sum, src) => {
         if (src.type === "primary" && src.applyDeductions) {
           return sum + computeGhanaTax2026Monthly(src.amount).netTakeHome;
@@ -425,29 +446,46 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         wants: monthlyNetIncome * wantsPct,
         savings: monthlyNetIncome * savingsPct,
       };
-      const counts: Record<BudgetBucket, number> = {
-        needs: seeded.needs.length,
-        wants: seeded.wants.length,
-        savings: seeded.savings.length,
-      };
+
+      const limitByKey = new Map<string, number>();
+      for (const bucket of ["needs", "wants", "savings"] as const) {
+        const names =
+          bucket === "needs"
+            ? needsList
+            : bucket === "wants"
+            ? seeded.wants
+            : seeded.savings;
+        const inputs: CategoryLimitInput[] = names.map((name) => ({
+          name,
+          bucket,
+          fixedAmount: fixedAmountsByCategory?.[name],
+          manualOverride: false,
+        }));
+        const limits = computeWeightedCategoryLimits(
+          bucketTotals[bucket],
+          inputs,
+          lifeStage ?? null
+        );
+        limits.forEach((amt, name) => limitByKey.set(`${bucket}:${name}`, amt));
+      }
 
       const categories: BudgetCategory[] = allNames.map(
         ({ bucket, name }, index) => {
-          const per =
-            counts[bucket] > 0 ? bucketTotals[bucket] / counts[bucket] : 0;
+          const limitAmount = limitByKey.get(`${bucket}:${name}`) ?? 0;
+          const isFixed = (fixedAmountsByCategory?.[name] ?? 0) > 0;
           return {
             id: uuidv4(),
             userId,
             cycleId,
             bucket,
             name,
-            limitAmount: Math.max(0, Math.round(per * 100) / 100),
+            limitAmount: Math.max(0, Math.round(limitAmount * 100) / 100),
             isCustom: false,
             parentId: null,
             sortOrder: index,
             suggestedLimit: null,
             isArchived: false,
-            manualOverride: false,
+            manualOverride: isFixed,
             createdAt,
             updatedAt: createdAt,
           };
@@ -460,6 +498,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           ...current.prefs,
           paydayDay,
           ...(Array.isArray(interests) ? { interests } : {}),
+          ...(lifeStage != null ? { lifeStage } : {}),
         },
         cycles: [cycle, ...current.cycles.filter((c) => c.id !== cycleId)],
         categories: [
@@ -539,49 +578,13 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       };
 
       const nextIncomeSources = [source, ...current.incomeSources];
-
-      // If a cycle exists, recompute per-category limits immediately so the UI matches
-      // the new income (same behavior as edit/delete income source).
+      const tempState: BudgetState = {
+        ...current,
+        incomeSources: nextIncomeSources,
+      };
+      const recalculated = recalculateBudgetFromAllocations(tempState);
+      const nextCategories = recalculated.categories;
       const activeCycleId = activeCycle?.id ?? current.cycles[0]?.id;
-      const nextCategories = (() => {
-        if (!activeCycleId || !activeCycle) return current.categories;
-
-        const monthlyNetIncome = nextIncomeSources.reduce((sum, src) => {
-          if (src.type === "primary" && src.applyDeductions) {
-            return sum + computeGhanaTax2026Monthly(src.amount).netTakeHome;
-          }
-          return sum + src.amount;
-        }, 0);
-
-        const bucketTotals: Record<BudgetBucket, number> = {
-          needs: monthlyNetIncome * activeCycle.needsPct,
-          wants: monthlyNetIncome * activeCycle.wantsPct,
-          savings: monthlyNetIncome * activeCycle.savingsPct,
-        };
-
-        const cycleCats = current.categories.filter(
-          (c) => c.cycleId === activeCycleId
-        );
-        const counts: Record<BudgetBucket, number> = {
-          needs: cycleCats.filter((c) => c.bucket === "needs").length,
-          wants: cycleCats.filter((c) => c.bucket === "wants").length,
-          savings: cycleCats.filter((c) => c.bucket === "savings").length,
-        };
-
-        return current.categories.map((c) => {
-          if (c.cycleId !== activeCycleId) return c;
-          if (c.manualOverride) return c;
-          const per =
-            counts[c.bucket] > 0
-              ? bucketTotals[c.bucket] / counts[c.bucket]
-              : 0;
-          return {
-            ...c,
-            limitAmount: Math.max(0, Math.round(per * 100) / 100),
-            updatedAt: now,
-          };
-        });
-      })();
 
       const next: BudgetState = {
         ...current,
@@ -658,47 +661,13 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         };
       });
 
-      // Recompute current-cycle category limits (per user choice)
+      const tempState: BudgetState = {
+        ...current,
+        incomeSources: updatedIncome,
+      };
+      const recalculated = recalculateBudgetFromAllocations(tempState);
+      const nextCategories = recalculated.categories;
       const activeCycleId = activeCycle?.id ?? current.cycles[0]?.id;
-      const nextCategories = (() => {
-        if (!activeCycleId || !activeCycle) return current.categories;
-
-        const monthlyNetIncome = updatedIncome.reduce((sum, src) => {
-          if (src.type === "primary" && src.applyDeductions) {
-            return sum + computeGhanaTax2026Monthly(src.amount).netTakeHome;
-          }
-          return sum + src.amount;
-        }, 0);
-
-        const bucketTotals: Record<BudgetBucket, number> = {
-          needs: monthlyNetIncome * activeCycle.needsPct,
-          wants: monthlyNetIncome * activeCycle.wantsPct,
-          savings: monthlyNetIncome * activeCycle.savingsPct,
-        };
-
-        const cycleCats = current.categories.filter(
-          (c) => c.cycleId === activeCycleId
-        );
-        const counts: Record<BudgetBucket, number> = {
-          needs: cycleCats.filter((c) => c.bucket === "needs").length,
-          wants: cycleCats.filter((c) => c.bucket === "wants").length,
-          savings: cycleCats.filter((c) => c.bucket === "savings").length,
-        };
-
-        return current.categories.map((c) => {
-          if (c.cycleId !== activeCycleId) return c;
-          if (c.manualOverride) return c;
-          const per =
-            counts[c.bucket] > 0
-              ? bucketTotals[c.bucket] / counts[c.bucket]
-              : 0;
-          return {
-            ...c,
-            limitAmount: Math.max(0, Math.round(per * 100) / 100),
-            updatedAt: now,
-          };
-        });
-      })();
 
       const next: BudgetState = {
         ...current,
@@ -762,47 +731,12 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         (s) => s.id !== incomeSourceId
       );
 
-      // Recompute current-cycle category limits (per user choice)
-      const nextCategories = (() => {
-        if (!activeCycleId || !activeCycle) return current.categories;
-
-        const monthlyNetIncome = nextIncome.reduce((sum, src) => {
-          if (src.type === "primary" && src.applyDeductions) {
-            return sum + computeGhanaTax2026Monthly(src.amount).netTakeHome;
-          }
-          return sum + src.amount;
-        }, 0);
-
-        const bucketTotals: Record<BudgetBucket, number> = {
-          needs: monthlyNetIncome * activeCycle.needsPct,
-          wants: monthlyNetIncome * activeCycle.wantsPct,
-          savings: monthlyNetIncome * activeCycle.savingsPct,
-        };
-
-        const cycleCats = current.categories.filter(
-          (c) => c.cycleId === activeCycleId
-        );
-        const counts: Record<BudgetBucket, number> = {
-          needs: cycleCats.filter((c) => c.bucket === "needs").length,
-          wants: cycleCats.filter((c) => c.bucket === "wants").length,
-          savings: cycleCats.filter((c) => c.bucket === "savings").length,
-        };
-
-        const now = new Date().toISOString();
-        return current.categories.map((c) => {
-          if (c.cycleId !== activeCycleId) return c;
-          if (c.manualOverride) return c;
-          const per =
-            counts[c.bucket] > 0
-              ? bucketTotals[c.bucket] / counts[c.bucket]
-              : 0;
-          return {
-            ...c,
-            limitAmount: Math.max(0, Math.round(per * 100) / 100),
-            updatedAt: now,
-          };
-        });
-      })();
+      const tempState: BudgetState = {
+        ...current,
+        incomeSources: nextIncome,
+      };
+      const recalculated = recalculateBudgetFromAllocations(tempState);
+      const nextCategories = recalculated.categories;
 
       const next: BudgetState = {
         ...current,

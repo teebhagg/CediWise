@@ -2,8 +2,11 @@
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
-  roots: ["<rootDir>/calculators"],
-  testMatch: ["**/__tests__/**/*.test.ts"],
+  roots: ["<rootDir>"],
+  moduleNameMapper: {
+    "^@/(.*)$": "<rootDir>/$1",
+  },
+  testMatch: ["**/calculators/__tests__/**/*.test.ts"],
   collectCoverageFrom: [
     "calculators/**/*.ts",
     "!calculators/index.ts",

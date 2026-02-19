@@ -38,7 +38,7 @@ export function BudgetScreenHeader({
             <Text className="text-red-300 font-medium text-xs">Sync pending: {pendingCount}</Text>
           </Pressable>
         ) : null}
-        {showResetButton && (
+        {showResetButton && pendingCount === 0 && (
           <Pressable
             onPress={onResetPress}
             className="flex-row gap-2 py-3 items-center justify-between border border-orange-500/30 rounded-full px-4 active:opacity-70 right-16"

@@ -11,22 +11,53 @@ export interface SpendingInsight {
   suggestion?: string;
 }
 
+export type AdvisorRecommendation = {
+  id: string;
+  type: string;
+  priority: 'high' | 'medium' | 'low';
+  title: string;
+  message: string;
+  actionLabel?: string;
+  amount?: number;
+  context?: string;
+};
+
 interface BudgetSpendingInsightsCardProps {
   visible: boolean;
   loading: boolean;
   insights: SpendingInsight[] | null;
+  advisorRecommendations?: AdvisorRecommendation[] | null;
 }
 
 export function BudgetSpendingInsightsCard({
   visible,
   loading,
   insights,
+  advisorRecommendations,
 }: BudgetSpendingInsightsCardProps) {
   if (!visible) return null;
 
   return (
     <Card className="">
       <Text className="text-white text-base font-semibold mb-2">Spending insights</Text>
+      {advisorRecommendations && advisorRecommendations.length > 0 ? (
+        <View className="gap-2.5 mb-3">
+          {advisorRecommendations.slice(0, 2).map((rec) => (
+            <View
+              key={rec.id}
+              className={`p-3 rounded-xl border ${rec.priority === 'high'
+                  ? 'bg-red-500/10 border-red-500/20'
+                  : rec.priority === 'medium'
+                    ? 'bg-amber-500/10 border-amber-500/20'
+                    : 'bg-emerald-500/10 border-emerald-500/20'
+                }`}
+            >
+              <Text className="text-slate-200 font-medium text-sm">{rec.title}</Text>
+              <Text className="text-slate-400 text-xs mt-1">{rec.message}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
       {loading ? (
         <Text className="text-slate-400 text-[13px]">Loading…</Text>
       ) : insights && insights.length > 0 ? (
@@ -35,10 +66,10 @@ export function BudgetSpendingInsightsCard({
             <View
               key={insight.categoryId}
               className={`flex-row justify-between items-center py-3.5 px-3.5 rounded-[1.5rem] border ${insight.status === 'over'
-                  ? 'bg-red-500/10 border-red-500/20'
-                  : insight.status === 'near'
-                    ? 'bg-amber-500/10 border-amber-500/20'
-                    : 'bg-slate-400/5 border-slate-400/10'
+                ? 'bg-red-500/10 border-red-500/20'
+                : insight.status === 'near'
+                  ? 'bg-amber-500/10 border-amber-500/20'
+                  : 'bg-slate-400/5 border-slate-400/10'
                 }`}
             >
               <View className="flex-1">
@@ -50,28 +81,28 @@ export function BudgetSpendingInsightsCard({
               <View className="items-end">
                 <Text
                   className={`text-sm font-semibold ${insight.status === 'over'
-                      ? 'text-red-300'
-                      : insight.status === 'near'
-                        ? 'text-amber-300'
-                        : 'text-slate-400'
+                    ? 'text-red-300'
+                    : insight.status === 'near'
+                      ? 'text-amber-300'
+                      : 'text-slate-400'
                     }`}
                 >
                   ₵{formatCurrency(insight.spent)} / ₵{formatCurrency(insight.limit)}
                 </Text>
                 <View
                   className={`mt-1 px-1.5 py-0.5 rounded-md ${insight.status === 'over'
-                      ? 'bg-red-500/20'
-                      : insight.status === 'near'
-                        ? 'bg-amber-500/20'
-                        : 'bg-emerald-500/15'
+                    ? 'bg-red-500/20'
+                    : insight.status === 'near'
+                      ? 'bg-amber-500/20'
+                      : 'bg-emerald-500/15'
                     }`}
                 >
                   <Text
                     className={`text-[11px] font-medium capitalize ${insight.status === 'over'
-                        ? 'text-red-300'
-                        : insight.status === 'near'
-                          ? 'text-amber-300'
-                          : 'text-emerald-300'
+                      ? 'text-red-300'
+                      : insight.status === 'near'
+                        ? 'text-amber-300'
+                        : 'text-emerald-300'
                       }`}
                   >
                     {insight.status}

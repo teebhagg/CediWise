@@ -16,6 +16,7 @@ export type ProfileVitals = {
 
   rent: number;
   tithe_remittance: number;
+  debt_obligations: number;
   utilities_mode: UtilitiesMode;
   utilities_total: number;
   utilities_ecg: number;
@@ -178,6 +179,7 @@ export async function fetchProfileVitalsRemote(
         "side_income",
         "rent",
         "tithe_remittance",
+        "debt_obligations",
         "utilities_mode",
         "utilities_total",
         "utilities_ecg",
@@ -213,6 +215,7 @@ export async function fetchProfileVitalsRemote(
 
     rent: Number((data as any).rent ?? 0) || 0,
     tithe_remittance: Number((data as any).tithe_remittance ?? 0) || 0,
+    debt_obligations: Number((data as any).debt_obligations ?? 0) || 0,
     utilities_mode:
       (data as any).utilities_mode === "precise" ? "precise" : "general",
     utilities_total: Number((data as any).utilities_total ?? 0) || 0,

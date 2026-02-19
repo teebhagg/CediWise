@@ -9,6 +9,10 @@ import {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import {
+  computeBudgetHealthScore,
+  generateAdvisorRecommendations,
+} from "../../../calculators/budget-advisor";
 import { useAuth } from "../../../hooks/useAuth";
 import { useBudget } from "../../../hooks/useBudget";
 import { usePersonalizationStatus } from "../../../hooks/usePersonalizationStatus";
@@ -20,6 +24,7 @@ import {
   getSpendingInsights,
   type SpendingInsight,
 } from "../../../utils/spendingPatterns";
+import { DEFAULT_MIN_LIVING_BUFFER } from "../vitals/utils";
 
 export function useBudgetScreenState() {
   const router = useRouter();
@@ -122,6 +127,13 @@ export function useBudgetScreenState() {
   const [spendingInsights, setSpendingInsights] = useState<
     SpendingInsight[] | null
   >(null);
+  const [advisorRecommendations, setAdvisorRecommendations] = useState<
+    import("../../../calculators/budget-advisor").AdvisorRecommendation[] | null
+  >(null);
+  const [budgetHealthScore, setBudgetHealthScore] = useState<{
+    score: number;
+    summary: string;
+  } | null>(null);
   const [spendingInsightsLoading, setSpendingInsightsLoading] = useState(false);
 
   useEffect(() => {
@@ -185,7 +197,11 @@ export function useBudgetScreenState() {
     const netIncome = Math.max(0, netSalary + v.side_income);
     const fixedCosts = Math.max(
       0,
-      v.rent + v.tithe_remittance + v.utilities_total
+      v.rent +
+        v.tithe_remittance +
+        v.debt_obligations +
+        v.utilities_total +
+        DEFAULT_MIN_LIVING_BUFFER
     );
     const ratio = netIncome > 0 ? fixedCosts / netIncome : null;
     return { v, netIncome, fixedCosts, ratio };
@@ -229,6 +245,8 @@ export function useBudgetScreenState() {
       !state?.transactions
     ) {
       setSpendingInsights(null);
+      setAdvisorRecommendations(null);
+      setBudgetHealthScore(null);
       return;
     }
     let cancelled = false;
@@ -244,7 +262,50 @@ export function useBudgetScreenState() {
       state.transactions
     )
       .then((insights) => {
-        if (!cancelled) setSpendingInsights(insights);
+        if (!cancelled) {
+          setSpendingInsights(insights);
+          const recs = generateAdvisorRecommendations(
+            insights.map((i) => ({
+              categoryId: i.categoryId,
+              categoryName: i.categoryName,
+              spent: i.spent,
+              limit: i.limit,
+              avgSpent: i.avgSpent,
+              trend: i.trend,
+              variance: i.variance,
+              confidence: i.confidence,
+            })),
+            totals
+              ? {
+                  needsSpent: totals.spentByBucket.needs,
+                  wantsSpent: totals.spentByBucket.wants,
+                  savingsSpent: totals.spentByBucket.savings,
+                  needsLimit: totals.needsLimit,
+                  wantsLimit: totals.wantsLimit,
+                  savingsLimit: totals.savingsLimit,
+                }
+              : undefined
+          );
+          setAdvisorRecommendations(recs);
+          if (totals) {
+            const overCount = insights.filter(
+              (i) => i.spent > i.limit && i.limit > 0
+            ).length;
+            const health = computeBudgetHealthScore({
+              needsSpent: totals.spentByBucket.needs,
+              wantsSpent: totals.spentByBucket.wants,
+              savingsSpent: totals.spentByBucket.savings,
+              needsLimit: totals.needsLimit,
+              wantsLimit: totals.wantsLimit,
+              savingsLimit: totals.savingsLimit,
+              categoriesOver: overCount,
+              categoriesTotal: insights.length,
+            });
+            setBudgetHealthScore(health);
+          } else {
+            setBudgetHealthScore(null);
+          }
+        }
       })
       .catch(() => {
         if (!cancelled) setSpendingInsights(null);
@@ -255,7 +316,7 @@ export function useBudgetScreenState() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, activeCycleId, cycleCategories, state?.transactions]);
+  }, [user?.id, activeCycleId, cycleCategories, state?.transactions, totals]);
 
   const needsOverLimitFor = useMemo(() => {
     if (!state || !activeCycleId) return () => false;
@@ -524,6 +585,8 @@ export function useBudgetScreenState() {
       setBucketOpen,
       spendingInsights,
       spendingInsightsLoading,
+      advisorRecommendations,
+      budgetHealthScore,
     },
     modals: {
       showTxModal,

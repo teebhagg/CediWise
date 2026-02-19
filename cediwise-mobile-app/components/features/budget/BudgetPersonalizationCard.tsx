@@ -75,7 +75,7 @@ export function BudgetPersonalizationCard({
           </View>
           {ratio !== null ? (
             <Text className="text-slate-500 text-xs">
-              Fixed costs are {(ratio * 100).toFixed(0)}% of net income.
+              Fixed costs are {(ratio * 100).toFixed(0)}% of net income. Your budget uses weighted allocation for smarter category limits.
             </Text>
           ) : (
             <Text className="text-slate-500 text-xs">

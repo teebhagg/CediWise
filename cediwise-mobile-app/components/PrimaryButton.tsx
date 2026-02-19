@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { Button } from 'heroui-native';
 import { ReactNode } from 'react';
-import { ActivityIndicator } from 'react-native';
+import { ActivityIndicator, Text } from 'react-native';
 
 type Props = {
   children: ReactNode;
@@ -52,7 +52,9 @@ export function PrimaryButton({
           {children}
         </Button.Label>
       ) : (
-        children
+        <Text>
+          {children}
+        </Text>
       )}
     </Button>
   );

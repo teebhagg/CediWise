@@ -5,6 +5,7 @@ import { BudgetAllocationCard } from '@/components/features/budget/BudgetAllocat
 import { BudgetCategoriesCard } from '@/components/features/budget/BudgetCategoriesCard';
 import { BudgetCurrentCycleCard } from '@/components/features/budget/BudgetCurrentCycleCard';
 import { BudgetExpensesCard } from '@/components/features/budget/BudgetExpensesCard';
+import { BudgetHealthScoreCard } from '@/components/features/budget/BudgetHealthScoreCard';
 import { BudgetIncomeSourcesCard } from '@/components/features/budget/BudgetIncomeSourcesCard';
 import { BudgetModals } from '@/components/features/budget/BudgetModals';
 import { BudgetPendingSyncCard } from '@/components/features/budget/BudgetPendingSyncCard';
@@ -42,12 +43,27 @@ export default function BudgetScreen() {
     const wantsPct = typeof v.wants_pct === 'number' ? v.wants_pct : 0.3;
     const savingsPct = typeof v.savings_pct === 'number' ? v.savings_pct : 0.2;
 
+    const fixedAmountsByCategory: Record<string, number> = {};
+    if (v.rent > 0) fixedAmountsByCategory['Rent'] = v.rent;
+    if (v.tithe_remittance > 0) fixedAmountsByCategory['Tithes/Church'] = v.tithe_remittance;
+    if (v.debt_obligations > 0) fixedAmountsByCategory['Debt Payments'] = v.debt_obligations;
+    if (v.utilities_total > 0) {
+      if (v.utilities_mode === 'precise') {
+        if (v.utilities_ecg > 0) fixedAmountsByCategory['ECG'] = v.utilities_ecg;
+        if (v.utilities_water > 0) fixedAmountsByCategory['Ghana Water'] = v.utilities_water;
+      } else {
+        fixedAmountsByCategory['ECG'] = Math.round(v.utilities_total * 0.6);
+        fixedAmountsByCategory['Ghana Water'] = Math.round(v.utilities_total * 0.4);
+      }
+    }
+
     await budget.setupBudget({
       paydayDay: payday,
       needsPct,
       wantsPct,
       savingsPct,
       interests: v.interests ?? [],
+      fixedAmountsByCategory: Object.keys(fixedAmountsByCategory).length > 0 ? fixedAmountsByCategory : undefined,
     });
 
     if (v.stable_salary > 0) {
@@ -154,6 +170,22 @@ export default function BudgetScreen() {
                 onEditCycle={() => modals.setShowEditCycleModal(true)}
               />
 
+              <BudgetHealthScoreCard
+                visible={
+                  !!ui.budgetHealthScore &&
+                  derived.cycleIsSet &&
+                  derived.hasIncomeSources
+                }
+                score={ui.budgetHealthScore?.score ?? 0}
+                label={
+                  (ui.budgetHealthScore?.score ?? 0) >= 75
+                    ? 'On track'
+                    : (ui.budgetHealthScore?.score ?? 0) >= 50
+                      ? 'Needs attention'
+                      : 'At risk'
+                }
+                summary={ui.budgetHealthScore?.summary}
+              />
               <BudgetSpendingInsightsCard
                 visible={
                   derived.cycleIsSet &&
@@ -162,6 +194,7 @@ export default function BudgetScreen() {
                 }
                 loading={ui.spendingInsightsLoading}
                 insights={ui.spendingInsights}
+                advisorRecommendations={ui.advisorRecommendations}
               />
 
               <BudgetIncomeSourcesCard

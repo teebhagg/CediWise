@@ -201,9 +201,10 @@ export default function BudgetQueueScreen() {
   const keyExtractor = useCallback((item: BudgetMutation) => item.id, []);
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-background">
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: 'black' }} className="flex-1 bg-background">
       <View className="px-5 py-3 flex-row items-center justify-between">
         <View>
+        <BackButton />
           <Text className="text-white text-2xl font-bold" style={queueStyles.title}>
             Sync Queue
           </Text>
@@ -211,7 +212,6 @@ export default function BudgetQueueScreen() {
             Pending items retry until they save.
           </Text>
         </View>
-        <BackButton />
       </View>
 
       <View className="px-5 flex-1">

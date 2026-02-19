@@ -1,6 +1,6 @@
 import { StepFixedExpenses, StepGoal, StepIncome, StepInterests, StepLifeStage } from "@/components/features/vitals/Steps";
 import type { Draft, StepErrors } from "@/components/features/vitals/types";
-import { clampDay, computeStrategy, getNetPreview, strategyToPercents, toMoney } from "@/components/features/vitals/utils";
+import { clampDay, computeIntelligentStrategy, getNetPreview, strategyToPercents, toMoney } from "@/components/features/vitals/utils";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -52,6 +52,7 @@ function makeDefaultDraft(): Draft {
     paydayDay: "25",
     rent: "",
     titheRemittance: "",
+    debtObligations: "",
     utilitiesMode: "general",
     utilitiesTotal: "",
     utilitiesECG: "",
@@ -347,6 +348,7 @@ export default function VitalsWizard() {
       const sideIncome = toMoney(draft.sideIncome);
       const rent = toMoney(draft.rent);
       const titheRemittance = toMoney(draft.titheRemittance);
+      const debtObligations = toMoney(draft.debtObligations);
       const utilitiesTotal =
         draft.utilitiesMode === "precise"
           ? toMoney(draft.utilitiesECG) + toMoney(draft.utilitiesWater)
@@ -355,19 +357,35 @@ export default function VitalsWizard() {
       const utilitiesWater = toMoney(draft.utilitiesWater);
       const paydayDay = clampDay(draft.paydayDay) ?? 25;
 
-      const computedAuto = computeStrategy({
+      const computedIntelligent = computeIntelligentStrategy({
         stableSalary,
         autoTax: draft.autoTax,
         sideIncome,
         rent,
         titheRemittance,
+        debtObligations,
         utilitiesTotal,
+        lifeStage: draft.lifeStage,
+        dependentsCount: Math.max(0, parseInt(draft.dependentsCount, 10) || 0),
+        incomeFrequency: draft.incomeFrequency,
+        spendingStyle: draft.spendingStyle,
+        financialPriority: draft.financialPriority,
       });
-      const computed = {
-        ...computedAuto,
-        strategy: draft.strategyChoice,
-        ...strategyToPercents(draft.strategyChoice),
-      };
+      const userOverride =
+        draft.strategyChoice === "survival" || draft.strategyChoice === "aggressive";
+      const computed = userOverride
+        ? {
+          ...computedIntelligent,
+          strategy: draft.strategyChoice,
+          ...strategyToPercents(draft.strategyChoice),
+        }
+        : {
+          ...computedIntelligent,
+          strategy: computedIntelligent.strategy,
+          needsPct: computedIntelligent.needsPct,
+          wantsPct: computedIntelligent.wantsPct,
+          savingsPct: computedIntelligent.savingsPct,
+        };
 
       // 1) Persist personalization profile (offline-first via existing queue + immediate attempt)
       const createdAt = new Date().toISOString();
@@ -381,6 +399,7 @@ export default function VitalsWizard() {
         side_income: sideIncome,
         rent,
         tithe_remittance: titheRemittance,
+        debt_obligations: debtObligations,
         utilities_mode: draft.utilitiesMode,
         utilities_total: utilitiesTotal,
         utilities_ecg: utilitiesECG,
@@ -417,6 +436,7 @@ export default function VitalsWizard() {
         side_income: sideIncome,
         rent,
         tithe_remittance: titheRemittance,
+        debt_obligations: debtObligations,
         utilities_mode: draft.utilitiesMode,
         utilities_total: utilitiesTotal,
         utilities_ecg: utilitiesECG,
@@ -435,13 +455,28 @@ export default function VitalsWizard() {
         prefs: { ...state.prefs, interests: draft.interests },
       });
 
-      // 3) Apply strategy to budgeting (offline-first)
+      // 3) Apply strategy to budgeting (offline-first) with obligation-first allocation
+      const fixedAmountsByCategory: Record<string, number> = {};
+      if (rent > 0) fixedAmountsByCategory["Rent"] = rent;
+      if (utilitiesTotal > 0) {
+        if (draft.utilitiesMode === "precise") {
+          if (utilitiesECG > 0) fixedAmountsByCategory["ECG"] = utilitiesECG;
+          if (utilitiesWater > 0) fixedAmountsByCategory["Ghana Water"] = utilitiesWater;
+        } else {
+          fixedAmountsByCategory["ECG"] = Math.round(utilitiesTotal * 0.6);
+          fixedAmountsByCategory["Ghana Water"] = Math.round(utilitiesTotal * 0.4);
+        }
+      }
+      if (titheRemittance > 0) fixedAmountsByCategory["Tithes/Church"] = titheRemittance;
+      if (debtObligations > 0) fixedAmountsByCategory["Debt Payments"] = debtObligations;
       await budget.setupBudget({
         paydayDay,
         needsPct: computed.needsPct,
         wantsPct: computed.wantsPct,
         savingsPct: computed.savingsPct,
         interests: draft.interests,
+        fixedAmountsByCategory: Object.keys(fixedAmountsByCategory).length > 0 ? fixedAmountsByCategory : undefined,
+        lifeStage: draft.lifeStage,
       });
 
       // Income sources

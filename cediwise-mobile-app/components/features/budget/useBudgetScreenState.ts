@@ -21,6 +21,10 @@ import type { BudgetBucket } from "../../../types/budget";
 import { checkCategoryLimitImpact } from "../../../utils/allocationExceeded";
 import { computeGhanaTax2026Monthly } from "../../../utils/ghanaTax";
 import {
+  analyzeAndSuggestReallocation,
+  type ReallocationSuggestion,
+} from "../../../utils/reallocationEngine";
+import {
   getSpendingInsights,
   type SpendingInsight,
 } from "../../../utils/spendingPatterns";
@@ -184,6 +188,66 @@ export function useBudgetScreenState() {
     );
     return sorted[0] ?? null;
   }, [state?.cycles]);
+
+  const previousCycle = useMemo(() => {
+    const sorted = [...(state?.cycles ?? [])].sort(
+      (a, b) =>
+        new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+    );
+    return sorted[1] ?? null;
+  }, [state?.cycles]);
+
+  const reallocationSuggestion = useMemo((): ReallocationSuggestion | null => {
+    if (!previousCycle) {
+      if (__DEV__ && (state?.cycles?.length ?? 0) >= 1) {
+        console.log(
+          "[Reallocation] No previous cycle – need at least 2 cycles"
+        );
+      }
+      return null;
+    }
+    if (!totals || totals.monthlyNetIncome <= 0) {
+      if (__DEV__) {
+        console.log(
+          "[Reallocation] No income – monthlyNetIncome:",
+          totals?.monthlyNetIncome ?? 0
+        );
+      }
+      return null;
+    }
+    if (!state?.transactions?.length) {
+      if (__DEV__) {
+        console.log("[Reallocation] No transactions in state");
+      }
+      return null;
+    }
+    if (activeCycle?.reallocationApplied) {
+      if (__DEV__) console.log("[Reallocation] Already applied for this cycle");
+      return null;
+    }
+    const prevTxCount = state.transactions.filter(
+      (t) => t.cycleId === previousCycle.id
+    ).length;
+    if (prevTxCount === 0 && __DEV__) {
+      console.log("[Reallocation] Previous cycle has no transactions");
+    }
+    const suggestion = analyzeAndSuggestReallocation(
+      previousCycle,
+      state.transactions,
+      totals.monthlyNetIncome
+    );
+    if (__DEV__ && !suggestion.shouldReallocate) {
+      console.log(
+        "[Reallocation] Engine returned shouldReallocate=false (need both >8% overspend and >12% underspend by bucket)"
+      );
+    }
+    return suggestion.shouldReallocate ? suggestion : null;
+  }, [
+    previousCycle,
+    totals,
+    state?.transactions,
+    activeCycle?.reallocationApplied,
+  ]);
 
   const cycleIsSet = !!state?.prefs?.paydayDay && !!activeCycleId;
   const hasIncomeSources = (state?.incomeSources?.length ?? 0) > 0;
@@ -538,8 +602,10 @@ export function useBudgetScreenState() {
       addCategory,
       deleteCategory,
       updateCategoryLimit,
+      updateCycleAllocation,
       updateCycleDay,
       resetBudget,
+      recalculateBudget,
       syncNow,
       reload,
     },
@@ -562,6 +628,7 @@ export function useBudgetScreenState() {
     derived: {
       activeCycleId,
       activeCycle,
+      previousCycle,
       cycleIsSet,
       hasIncomeSources,
       vitalsSummary,
@@ -573,6 +640,7 @@ export function useBudgetScreenState() {
       syncPillLabel,
       incomeAccentColors,
       incomeToggleChevronStyle,
+      reallocationSuggestion,
     },
     ui: {
       filter,

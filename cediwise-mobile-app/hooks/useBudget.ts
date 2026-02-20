@@ -220,7 +220,8 @@ export type UseBudgetReturn = {
   updateCycleDay: (nextPaydayDay: number) => Promise<void>;
   updateCycleAllocation: (
     cycleId: string,
-    allocation: { needsPct: number; wantsPct: number; savingsPct: number }
+    allocation: { needsPct: number; wantsPct: number; savingsPct: number },
+    options?: { reallocationReason?: string }
   ) => Promise<void>;
   insertDebt: (params: {
     name: string;
@@ -1174,18 +1175,24 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
   const updateCycleAllocation = useCallback(
     async (
       cycleId: string,
-      allocation: { needsPct: number; wantsPct: number; savingsPct: number }
+      allocation: { needsPct: number; wantsPct: number; savingsPct: number },
+      options?: { reallocationReason?: string }
     ) => {
       if (!userId) return;
       const current = state ?? createEmptyBudgetState(userId);
       const cycle = current.cycles.find((c) => c.id === cycleId);
       if (!cycle) return;
       const now = new Date().toISOString();
+      const isReallocation = !!options?.reallocationReason;
       const updatedCycle: BudgetCycle = {
         ...cycle,
         needsPct: allocation.needsPct,
         wantsPct: allocation.wantsPct,
         savingsPct: allocation.savingsPct,
+        reallocationApplied: isReallocation ? true : cycle.reallocationApplied,
+        reallocationReason: isReallocation
+          ? options.reallocationReason ?? null
+          : cycle.reallocationReason,
         updatedAt: now,
       };
       const next: BudgetState = {
@@ -1200,17 +1207,25 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         id: makeQueueId(),
         userId,
         createdAt: now,
-        kind: "upsert_cycle",
-        payload: {
-          id: updatedCycle.id,
-          user_id: userId,
-          start_date: updatedCycle.startDate,
-          end_date: updatedCycle.endDate,
-          payday_day: updatedCycle.paydayDay,
-          needs_pct: updatedCycle.needsPct,
-          wants_pct: updatedCycle.wantsPct,
-          savings_pct: updatedCycle.savingsPct,
-        },
+        kind: isReallocation ? "apply_reallocation" : "upsert_cycle",
+        payload: isReallocation
+          ? {
+              cycle_id: cycleId,
+              needs_pct: updatedCycle.needsPct,
+              wants_pct: updatedCycle.wantsPct,
+              savings_pct: updatedCycle.savingsPct,
+              reallocation_reason: options!.reallocationReason,
+            }
+          : {
+              id: updatedCycle.id,
+              user_id: userId,
+              start_date: updatedCycle.startDate,
+              end_date: updatedCycle.endDate,
+              payday_day: updatedCycle.paydayDay,
+              needs_pct: updatedCycle.needsPct,
+              wants_pct: updatedCycle.wantsPct,
+              savings_pct: updatedCycle.savingsPct,
+            },
       });
     },
     [enqueueAndTry, persistState, state, userId]

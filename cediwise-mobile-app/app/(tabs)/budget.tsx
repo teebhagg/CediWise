@@ -10,6 +10,7 @@ import { BudgetIncomeSourcesCard } from '@/components/features/budget/BudgetInco
 import { BudgetModals } from '@/components/features/budget/BudgetModals';
 import { BudgetPendingSyncCard } from '@/components/features/budget/BudgetPendingSyncCard';
 import { BudgetPersonalizationCard } from '@/components/features/budget/BudgetPersonalizationCard';
+import { BudgetReallocationBanner } from '@/components/features/budget/BudgetReallocationBanner';
 import { BudgetScreenHeader } from '@/components/features/budget/BudgetScreenHeader';
 import { BudgetSetupCycleCard } from '@/components/features/budget/BudgetSetupCycleCard';
 import { BudgetSpendingInsightsCard } from '@/components/features/budget/BudgetSpendingInsightsCard';
@@ -186,6 +187,27 @@ export default function BudgetScreen() {
                 }
                 summary={ui.budgetHealthScore?.summary}
               />
+              <BudgetReallocationBanner
+                visible={
+                  !!derived.reallocationSuggestion &&
+                  !!derived.activeCycleId &&
+                  !!derived.activeCycle &&
+                  derived.hasIncomeSources
+                }
+                suggestion={derived.reallocationSuggestion ?? null}
+                onApply={async () => {
+                  const s = derived.reallocationSuggestion;
+                  if (!s?.changes || !derived.activeCycleId) return;
+                  await budget.updateCycleAllocation(
+                    derived.activeCycleId,
+                    s.changes,
+                    { reallocationReason: s.reason }
+                  );
+                  await budget.recalculateBudget();
+                  await budget.reload();
+                }}
+              />
+
               <BudgetSpendingInsightsCard
                 visible={
                   derived.cycleIsSet &&

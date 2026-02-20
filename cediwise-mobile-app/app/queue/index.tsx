@@ -46,6 +46,8 @@ function kindLabel(kind: string) {
       return 'Delete income source';
     case 'reset_budget':
       return 'Reset budget';
+    case 'apply_reallocation':
+      return 'Reallocation';
     default:
       return kind;
   }
@@ -204,7 +206,7 @@ export default function BudgetQueueScreen() {
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: 'black' }} className="flex-1 bg-background">
       <View className="px-5 py-3 flex-row items-center justify-between">
         <View>
-        <BackButton />
+          <BackButton />
           <Text className="text-white text-2xl font-bold" style={queueStyles.title}>
             Sync Queue
           </Text>

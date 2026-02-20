@@ -4,8 +4,10 @@
  * Generates personalized recommendations based on spending patterns,
  * budget adherence, and user profile. Behavioral nudge-oriented messages.
  * Phase 2: Context-aware thresholds, impact scoring, deduplication.
+ * Phase 4: Message templates, robustness, performance.
  */
 
+import { MESSAGES } from "./advisorMessages";
 import {
   getDaysRemainingInCycle,
   getUrgencyMultiplier,
@@ -83,6 +85,12 @@ function getImportance(categoryName: string): number {
   return CATEGORY_IMPORTANCE[categoryName] ?? 1.0;
 }
 
+/** Phase 4.2: Guard against NaN, Infinity, negative in calculations */
+function safeNum(n: number): number {
+  if (typeof n !== "number" || !Number.isFinite(n) || n < 0) return 0;
+  return n;
+}
+
 /** Phase 2.1 / 2.3: Calculate impact score for prioritization */
 function calculateImpact(
   rec: AdvisorRecommendation,
@@ -154,16 +162,21 @@ export function generateAdvisorRecommendations(
     : 30;
   const categoryOverByBucket = new Map<string, string[]>();
 
+  // Phase 4.3: Early exit for empty inputs
+  if (insights.length === 0) return [];
+
   for (const ins of insights) {
-    const utilization = ins.limit > 0 ? ins.spent / ins.limit : 0;
+    const spent = safeNum(ins.spent);
+    const limit = safeNum(ins.limit);
+    if (limit < THRESHOLDS.MIN_LIMIT_FOR_ALERTS) continue;
+    const utilization = limit > 0 ? spent / limit : 0;
     const bucket = ins.bucket ?? "wants";
     const nearThreshold = THRESHOLDS.NEAR_LIMIT[bucket];
     const underspendThreshold = THRESHOLDS.UNDERSPEND[bucket];
-    if (ins.limit < THRESHOLDS.MIN_LIMIT_FOR_ALERTS) continue;
 
     // Overspend - high priority
-    if (ins.spent > ins.limit) {
-      const over = ins.spent - ins.limit;
+    if (spent > limit) {
+      const over = spent - limit;
       const key = `over-${ins.categoryId}`;
       if (!seen.has(key)) {
         seen.add(key);
@@ -174,12 +187,8 @@ export function generateAdvisorRecommendations(
           id: key,
           type: "overspend",
           priority: "high",
-          title: `${ins.categoryName} over limit`,
-          message: `You've exceeded your ${
-            ins.categoryName
-          } limit by ₵${formatNum(
-            over
-          )}. Consider reducing spending in other wants categories next cycle.`,
+          title: MESSAGES.overspend.title(ins.categoryName),
+          message: MESSAGES.overspend.message(ins.categoryName, over),
           amount: over,
           context: ins.categoryName,
           actionableAmount: over,
@@ -192,22 +201,18 @@ export function generateAdvisorRecommendations(
     // Near limit - warning (bucket-specific threshold)
     else if (utilization >= nearThreshold && utilization < 1) {
       const key = `near-${ins.categoryId}`;
-      const remaining = ins.limit - ins.spent;
+      const remaining = limit - spent;
       if (!seen.has(key)) {
         seen.add(key);
         recs.push({
           id: key,
           type: "warning",
           priority: "medium",
-          title: `Approaching ${ins.categoryName} limit`,
+          title: MESSAGES.nearLimit.title(ins.categoryName),
           message:
             daysRemaining <= 7
-              ? `You have ₵${formatNum(
-                  remaining
-                )} left with ${daysRemaining} days remaining. Spend carefully.`
-              : `You have ₵${formatNum(
-                  remaining
-                )} left. Spend carefully to stay on track.`,
+              ? MESSAGES.nearLimit.messageShort(remaining, daysRemaining)
+              : MESSAGES.nearLimit.messageDefault(remaining),
           amount: remaining,
           context: ins.categoryName,
           actionLabel: "View spending",
@@ -221,22 +226,20 @@ export function generateAdvisorRecommendations(
     else if (
       underspendThreshold !== null &&
       utilization < underspendThreshold &&
-      (ins.avgSpent ?? 0) > 0 &&
-      ins.spent < (ins.avgSpent ?? 0) * 0.7 &&
+      safeNum(ins.avgSpent ?? 0) > 0 &&
+      spent < safeNum(ins.avgSpent ?? 0) * 0.7 &&
       (ins.confidence === undefined || ins.confidence >= 0.4)
     ) {
       const key = `underspend-${ins.categoryId}`;
-      const saved = ins.limit - ins.spent;
+      const saved = limit - spent;
       if (!seen.has(key) && saved > THRESHOLDS.MIN_LIMIT_FOR_ALERTS) {
         seen.add(key);
         recs.push({
           id: key,
           type: "underspend",
           priority: "low",
-          title: `You saved on ${ins.categoryName}`,
-          message: `You spent ₵${formatNum(
-            saved
-          )} less than budgeted. Consider moving this to your Emergency Fund or a savings goal.`,
+          title: MESSAGES.underspend.title(ins.categoryName),
+          message: MESSAGES.underspend.message(saved),
           amount: saved,
           context: ins.categoryName,
           actionLabel: "Reallocate",
@@ -255,8 +258,8 @@ export function generateAdvisorRecommendations(
           id: key,
           type: "warning",
           priority: "medium",
-          title: `${ins.categoryName} trending up`,
-          message: `Your spending in ${ins.categoryName} has been increasing. Watch this category to avoid overspending.`,
+          title: MESSAGES.trendUp.title(ins.categoryName),
+          message: MESSAGES.trendUp.message(ins.categoryName),
           context: ins.categoryName,
           _utilization: utilization,
         });
@@ -274,24 +277,34 @@ export function generateAdvisorRecommendations(
   }
   for (const [, bucketInsights] of byBucket) {
     const overspent = bucketInsights.filter(
-      (i) => i.limit >= THRESHOLDS.MIN_LIMIT_FOR_ALERTS && i.spent > i.limit
-    );
-    const underspent = bucketInsights.filter(
       (i) =>
-        i.limit >= THRESHOLDS.MIN_LIMIT_FOR_ALERTS &&
-        i.spent < i.limit &&
-        i.limit - i.spent > THRESHOLDS.MIN_LIMIT_FOR_ALERTS
+        safeNum(i.limit) >= THRESHOLDS.MIN_LIMIT_FOR_ALERTS &&
+        safeNum(i.spent) > safeNum(i.limit)
     );
+    const underspent = bucketInsights.filter((i) => {
+      const il = safeNum(i.limit);
+      const isp = safeNum(i.spent);
+      return (
+        il >= THRESHOLDS.MIN_LIMIT_FOR_ALERTS &&
+        isp < il &&
+        il - isp > THRESHOLDS.MIN_LIMIT_FOR_ALERTS
+      );
+    });
     for (const over of overspent) {
-      const overAmt = over.spent - over.limit;
+      const overAmt = safeNum(over.spent) - safeNum(over.limit);
       const key = `cat-realloc-${over.categoryId}`;
       if (seen.has(key)) continue;
       // Pick best underspent source: most headroom
       const bestUnder = underspent
         .filter((u) => u.categoryId !== over.categoryId)
-        .sort((a, b) => b.limit - b.spent - (a.limit - a.spent))[0];
+        .sort(
+          (a, b) =>
+            safeNum(b.limit) -
+            safeNum(b.spent) -
+            (safeNum(a.limit) - safeNum(a.spent))
+        )[0];
       if (!bestUnder) continue;
-      const underRoom = bestUnder.limit - bestUnder.spent;
+      const underRoom = safeNum(bestUnder.limit) - safeNum(bestUnder.spent);
       const moveAmt = Math.min(overAmt, underRoom, 500);
       if (moveAmt < THRESHOLDS.MIN_LIMIT_FOR_ALERTS) continue;
       seen.add(key);
@@ -299,10 +312,12 @@ export function generateAdvisorRecommendations(
         id: key,
         type: "category_reallocate",
         priority: "medium",
-        title: "Move budget within bucket",
-        message: `Move ₵${formatNum(moveAmt)} from ${
-          bestUnder.categoryName
-        } to ${over.categoryName} to cover overspend.`,
+        title: MESSAGES.categoryReallocate.title(),
+        message: MESSAGES.categoryReallocate.message(
+          moveAmt,
+          bestUnder.categoryName,
+          over.categoryName
+        ),
         amount: moveAmt,
         context: over.categoryName,
         sourceCategory: bestUnder.categoryName,
@@ -315,19 +330,22 @@ export function generateAdvisorRecommendations(
 
   // Phase 3.2: Smart limit adjustment suggestions
   for (const ins of insights) {
-    if (ins.limit < THRESHOLDS.MIN_LIMIT_FOR_ALERTS) continue;
-    const utilization = ins.limit > 0 ? ins.spent / ins.limit : 0;
-    const avgSpent = ins.avgSpent ?? 0;
+    const il = safeNum(ins.limit);
+    const isp = safeNum(ins.spent);
+    if (il < THRESHOLDS.MIN_LIMIT_FOR_ALERTS) continue;
+    const utilization = il > 0 ? isp / il : 0;
+    const avgSpent = safeNum(ins.avgSpent ?? 0);
     const confidence = ins.confidence ?? 0;
 
-    if (ins.spent > ins.limit && avgSpent > 0 && confidence >= 0.4) {
-      const over = ins.spent - ins.limit;
+    if (isp > il && avgSpent > 0 && confidence >= 0.4) {
+      const over = isp - il;
       const suggestedIncrease = Math.max(
         over,
-        Math.round((avgSpent - ins.limit) * 1.05)
+        Math.round((avgSpent - il) * 1.05)
       );
       if (suggestedIncrease <= 0) continue;
-      const newLimit = ins.limit + Math.min(suggestedIncrease, ins.limit * 0.3);
+      const newLimit = il + Math.min(suggestedIncrease, il * 0.3);
+      const roundedNew = Math.round(newLimit);
       const key = `limit-increase-${ins.categoryId}`;
       if (!seen.has(key)) {
         seen.add(key);
@@ -335,16 +353,14 @@ export function generateAdvisorRecommendations(
           id: key,
           type: "limit_adjustment",
           priority: "medium",
-          title: `Consider increasing ${ins.categoryName} limit`,
-          message: `You've consistently spent more than your ${
-            ins.categoryName
-          } limit. Consider raising it to ₵${formatNum(Math.round(newLimit))}.`,
-          amount: Math.round(newLimit) - ins.limit,
+          title: MESSAGES.limitIncrease.title(ins.categoryName),
+          message: MESSAGES.limitIncrease.message(ins.categoryName, roundedNew),
+          amount: roundedNew - il,
           context: ins.categoryName,
           actionLabel: "Update limit",
-          actionableAmount: Math.round(newLimit) - ins.limit,
-          suggestedLimit: Math.round(newLimit),
-          currentLimit: ins.limit,
+          actionableAmount: roundedNew - il,
+          suggestedLimit: roundedNew,
+          currentLimit: il,
           categoryId: ins.categoryId,
           canAutoApply: true,
           _utilization: utilization,
@@ -353,16 +369,16 @@ export function generateAdvisorRecommendations(
     } else if (
       utilization < 0.5 &&
       avgSpent > 0 &&
-      ins.spent < avgSpent * 0.7 &&
+      isp < avgSpent * 0.7 &&
       confidence >= 0.4
     ) {
-      const saved = ins.limit - ins.spent;
+      const saved = il - isp;
       if (saved < THRESHOLDS.MIN_LIMIT_FOR_ALERTS) continue;
       const suggestedLimit = Math.max(
         THRESHOLDS.MIN_LIMIT_FOR_ALERTS,
         Math.round(avgSpent * 1.1)
       );
-      if (suggestedLimit >= ins.limit) continue;
+      if (suggestedLimit >= il) continue;
       const key = `limit-decrease-${ins.categoryId}`;
       if (!seen.has(key)) {
         seen.add(key);
@@ -370,16 +386,14 @@ export function generateAdvisorRecommendations(
           id: key,
           type: "limit_adjustment",
           priority: "low",
-          title: `Consider reducing ${ins.categoryName} limit`,
-          message: `You're spending less than budgeted. Consider reducing the limit to ₵${formatNum(
-            suggestedLimit
-          )} and moving the difference to savings.`,
-          amount: ins.limit - suggestedLimit,
+          title: MESSAGES.limitDecrease.title(ins.categoryName),
+          message: MESSAGES.limitDecrease.message(suggestedLimit),
+          amount: il - suggestedLimit,
           context: ins.categoryName,
           actionLabel: "Update limit",
-          actionableAmount: ins.limit - suggestedLimit,
+          actionableAmount: il - suggestedLimit,
           suggestedLimit,
-          currentLimit: ins.limit,
+          currentLimit: il,
           categoryId: ins.categoryId,
           canAutoApply: true,
           _utilization: utilization,
@@ -390,39 +404,37 @@ export function generateAdvisorRecommendations(
 
   // Bucket-level overspend summary (Phase 2.3: dedup with category context)
   if (bucketTotals) {
-    if (bucketTotals.needsSpent > bucketTotals.needsLimit) {
-      const over = bucketTotals.needsSpent - bucketTotals.needsLimit;
+    const needsOver =
+      safeNum(bucketTotals.needsSpent) - safeNum(bucketTotals.needsLimit);
+    if (needsOver > 0) {
       if (!seen.has("bucket-needs")) {
         seen.add("bucket-needs");
         recs.push({
           id: "bucket-needs",
           type: "overspend",
           priority: "high",
-          title: "Needs bucket over budget",
-          message: `Essential spending exceeded by ₵${formatNum(
-            over
-          )}. Review your needs categories—you may need to adjust next cycle.`,
-          amount: over,
+          title: MESSAGES.bucketNeeds.title(),
+          message: MESSAGES.bucketNeeds.message(needsOver),
+          amount: needsOver,
           context: "Needs",
-          actionableAmount: over,
+          actionableAmount: needsOver,
         });
       }
     }
-    if (bucketTotals.wantsSpent > bucketTotals.wantsLimit) {
-      const over = bucketTotals.wantsSpent - bucketTotals.wantsLimit;
+    const wantsOver =
+      safeNum(bucketTotals.wantsSpent) - safeNum(bucketTotals.wantsLimit);
+    if (wantsOver > 0) {
       if (!seen.has("bucket-wants")) {
         seen.add("bucket-wants");
         recs.push({
           id: "bucket-wants",
           type: "overspend",
           priority: "high",
-          title: "Wants bucket over budget",
-          message: `Discretionary spending exceeded by ₵${formatNum(
-            over
-          )}. Try cutting back on non-essentials next month.`,
-          amount: over,
+          title: MESSAGES.bucketWants.title(),
+          message: MESSAGES.bucketWants.message(wantsOver),
+          amount: wantsOver,
           context: "Wants",
-          actionableAmount: over,
+          actionableAmount: wantsOver,
         });
       }
     }
@@ -460,12 +472,6 @@ export function generateAdvisorRecommendations(
     const { _utilization, _daysRemaining, ...rest } = r;
     return rest;
   });
-}
-
-function formatNum(n: number): string {
-  return Math.round(n)
-    .toString()
-    .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 export type BudgetHealthInput = {

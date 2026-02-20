@@ -50,6 +50,29 @@ describe("generateAdvisorRecommendations", () => {
     expect(underspend).toBeUndefined();
   });
 
+  it("Phase 4: returns empty for empty insights", () => {
+    expect(generateAdvisorRecommendations([])).toEqual([]);
+  });
+
+  it("Phase 4: handles invalid/edge insight values without crashing", () => {
+    const recs = generateAdvisorRecommendations([
+      {
+        categoryId: "1",
+        categoryName: "Test",
+        spent: NaN,
+        limit: 100,
+      },
+      {
+        categoryId: "2",
+        categoryName: "Valid",
+        spent: 500,
+        limit: 400,
+      },
+    ]);
+    // Should skip NaN insight, still produce rec for valid
+    expect(recs.some((r) => r.context === "Valid")).toBe(true);
+  });
+
   it("sorts by priority", () => {
     const recs = generateAdvisorRecommendations([
       { categoryId: "1", categoryName: "A", spent: 500, limit: 400 },

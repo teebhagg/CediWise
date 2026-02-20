@@ -33,8 +33,13 @@ import {
   loadBudgetState,
   saveBudgetState,
 } from "../utils/budgetStorage";
-import { flushBudgetQueue, trySyncMutation } from "../utils/budgetSync";
+import {
+  flushBudgetQueue,
+  syncCycleDirect,
+  trySyncMutation,
+} from "../utils/budgetSync";
 import { computeGhanaTax2026Monthly } from "../utils/ghanaTax";
+import { calculateRollover } from "../utils/reallocationEngine";
 import { uuidv4 } from "../utils/uuid";
 
 function makeQueueId() {
@@ -75,6 +80,47 @@ export function computePaydayCycle(today: Date, paydayDay: number) {
   const end = new Date(nextPayday);
   end.setDate(end.getDate() - 1);
   return { start, end };
+}
+
+function addMonths(date: Date, months: number): Date {
+  const day = date.getDate();
+  const result = new Date(date);
+  result.setDate(1);
+  result.setMonth(result.getMonth() + months);
+  const lastDay = lastDayOfMonth(result.getFullYear(), result.getMonth());
+  result.setDate(Math.min(day, lastDay));
+  return result;
+}
+
+/**
+ * Compute next cycle from previous: start = prevEnd + 1, same duration as prev.
+ * Weekly/bi-weekly use days; monthly+ use calendar months.
+ */
+function computeNextCycleFromPrevious(
+  prevStartDate: string,
+  prevEndDate: string,
+  useMonths: boolean
+): { start: Date; end: Date } {
+  const prevStart = new Date(prevStartDate);
+  const prevEnd = new Date(prevEndDate);
+
+  const newStart = new Date(prevEnd);
+  newStart.setDate(newStart.getDate() + 1);
+
+  if (useMonths) {
+    const durationDays =
+      Math.round((prevEnd.getTime() - prevStart.getTime()) / 86400000) + 1;
+    const durationMonths = Math.max(1, Math.round(durationDays / 30.44));
+    const periodEnd = addMonths(newStart, durationMonths);
+    periodEnd.setDate(periodEnd.getDate() - 1);
+    return { start: newStart, end: periodEnd };
+  }
+
+  const durationDays =
+    Math.round((prevEnd.getTime() - prevStart.getTime()) / 86400000) + 1;
+  const newEnd = new Date(newStart);
+  newEnd.setDate(newEnd.getDate() + durationDays - 1);
+  return { start: newStart, end: newEnd };
 }
 
 function categoryToPayload(cat: BudgetCategory): Record<string, unknown> {
@@ -173,6 +219,35 @@ export type UseBudgetReturn = {
     fixedAmountsByCategory?: Record<string, number>;
     lifeStage?: "student" | "young_professional" | "family" | "retiree" | null;
   }) => Promise<void>;
+  computeNewCyclePreview: () => {
+    rollover: { needs: number; wants: number; savings: number };
+    savingsCategories: { id: string; name: string }[];
+    nextCycleStart: string;
+    nextCycleEnd: string;
+    durationDays: number;
+    durationUnit: "days" | "months";
+    durationMonths?: number;
+    paydayDay: number;
+  } | null;
+  createNewCycleFromPreview: (
+    preview: {
+      rollover: { needs: number; wants: number; savings: number };
+      savingsCategories: { id: string; name: string }[];
+      nextCycleStart: string;
+      nextCycleEnd: string;
+      durationDays: number;
+      durationUnit?: "days" | "months";
+      durationMonths?: number;
+      paydayDay: number;
+    },
+    allocations: Record<string, number>,
+    overrides?: {
+      durationDays?: number;
+      durationMonths?: number;
+      paydayDay?: number;
+    }
+  ) => Promise<{ newCycleId: string } | null>;
+  createNewCycleImmediate: () => Promise<{ newCycleId: string } | null>;
   addIncomeSource: (params: {
     name: string;
     type: IncomeSourceType;
@@ -566,6 +641,328 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     },
     [enqueueAndTry, persistState, state, userId]
   );
+
+  /**
+   * Compute new cycle preview (rollover + destinations + cycle options) WITHOUT creating.
+   * Use this to show the modal before creation. Returns null only when no prev cycle or no income.
+   */
+  const computeNewCyclePreview = useCallback((): {
+    rollover: { needs: number; wants: number; savings: number };
+    savingsCategories: { id: string; name: string }[];
+    nextCycleStart: string;
+    nextCycleEnd: string;
+    durationDays: number;
+    durationUnit: "days" | "months";
+    durationMonths?: number;
+    paydayDay: number;
+  } | null => {
+    if (!userId) return null;
+    const current = state ?? createEmptyBudgetState(userId);
+    const prevCycle = activeCycle ?? current.cycles[0];
+    if (!prevCycle) return null;
+
+    const monthlyNetIncome = current.incomeSources.reduce((sum, src) => {
+      if (src.type === "primary" && src.applyDeductions) {
+        return sum + computeGhanaTax2026Monthly(src.amount).netTakeHome;
+      }
+      return sum + src.amount;
+    }, 0);
+    if (monthlyNetIncome <= 0) return null;
+
+    const rollover = calculateRollover(
+      prevCycle,
+      current.transactions,
+      monthlyNetIncome
+    );
+    const totalRollover = rollover.needs + rollover.wants + rollover.savings;
+
+    const prevCategories = current.categories.filter(
+      (c) => c.cycleId === prevCycle.id
+    );
+    const savingsCats = prevCategories.filter((c) => c.bucket === "savings");
+    const savingsCategories =
+      totalRollover > 0 && savingsCats.length > 0
+        ? savingsCats.map((c) => ({ id: uuidv4(), name: c.name }))
+        : [];
+
+    const durationDays =
+      Math.round(
+        (new Date(prevCycle.endDate).getTime() -
+          new Date(prevCycle.startDate).getTime()) /
+          86400000
+      ) + 1;
+    const useMonths = durationDays > 14;
+    const { start, end } = computeNextCycleFromPrevious(
+      prevCycle.startDate,
+      prevCycle.endDate,
+      useMonths
+    );
+    const actualDurationDays =
+      Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
+    const durationMonths = useMonths
+      ? Math.max(1, Math.round(durationDays / 30.44))
+      : undefined;
+
+    return {
+      rollover,
+      savingsCategories,
+      nextCycleStart: toISODate(start),
+      nextCycleEnd: toISODate(end),
+      durationDays: actualDurationDays,
+      durationUnit: useMonths ? ("months" as const) : ("days" as const),
+      durationMonths: useMonths ? durationMonths : undefined,
+      paydayDay: prevCycle.paydayDay,
+    };
+  }, [activeCycle, state, userId]);
+
+  /**
+   * Create cycle + categories with rollover baked into savings limits.
+   * Call this after user confirms in the modal.
+   * overrides.durationDays and overrides.paydayDay let the user edit before creating.
+   */
+  const createNewCycleFromPreview = useCallback(
+    async (
+      preview: {
+        rollover: { needs: number; wants: number; savings: number };
+        savingsCategories: { id: string; name: string }[];
+        nextCycleStart: string;
+        nextCycleEnd: string;
+        durationDays: number;
+        durationUnit?: "days" | "months";
+        durationMonths?: number;
+        paydayDay: number;
+      },
+      allocations: Record<string, number>,
+      overrides?: {
+        durationDays?: number;
+        durationMonths?: number;
+        paydayDay?: number;
+      }
+    ): Promise<{ newCycleId: string } | null> => {
+      if (!userId) return null;
+      const current = state ?? createEmptyBudgetState(userId);
+      const prevCycle = activeCycle ?? current.cycles[0];
+      if (!prevCycle) return null;
+
+      const monthlyNetIncome = current.incomeSources.reduce((sum, src) => {
+        if (src.type === "primary" && src.applyDeductions) {
+          return sum + computeGhanaTax2026Monthly(src.amount).netTakeHome;
+        }
+        return sum + src.amount;
+      }, 0);
+      if (monthlyNetIncome <= 0) return null;
+
+      const { rollover } = preview;
+      const savingsIdByName = new Map<string, string>();
+      preview.savingsCategories.forEach((s) =>
+        savingsIdByName.set(s.name, s.id)
+      );
+
+      const paydayDay = overrides?.paydayDay ?? preview.paydayDay;
+      const start = new Date(preview.nextCycleStart);
+      let end: Date;
+      const useMonths =
+        overrides?.durationMonths != null ||
+        (preview.durationUnit === "months" &&
+          (preview.durationMonths ?? 0) >= 1);
+      const monthsVal =
+        overrides?.durationMonths ?? preview.durationMonths ?? 1;
+      if (useMonths) {
+        const periodEnd = addMonths(start, Math.max(1, monthsVal));
+        end = new Date(periodEnd);
+        end.setDate(end.getDate() - 1);
+      } else {
+        const durationDays = overrides?.durationDays ?? preview.durationDays;
+        end = new Date(start);
+        end.setDate(end.getDate() + Math.max(1, durationDays) - 1);
+      }
+
+      const baseTime = Date.now();
+      const cycleId = uuidv4();
+      const cycleCreatedAt = new Date(baseTime - 1).toISOString();
+      const cycle: BudgetCycle = {
+        id: cycleId,
+        userId,
+        startDate: toISODate(start),
+        endDate: toISODate(end),
+        paydayDay,
+        needsPct: prevCycle.needsPct,
+        wantsPct: prevCycle.wantsPct,
+        savingsPct: prevCycle.savingsPct,
+        rolloverFromPrevious: rollover,
+        reallocationApplied: false,
+        createdAt: cycleCreatedAt,
+        updatedAt: cycleCreatedAt,
+      };
+
+      const prevCategories = current.categories.filter(
+        (c) => c.cycleId === prevCycle.id
+      );
+      const catCreatedAt = new Date(baseTime).toISOString();
+      const categories: BudgetCategory[] = prevCategories.map((cat, idx) => {
+        const newId =
+          cat.bucket === "savings"
+            ? savingsIdByName.get(cat.name) ?? uuidv4()
+            : uuidv4();
+        const add = cat.bucket === "savings" ? allocations[newId] ?? 0 : 0;
+        return {
+          ...cat,
+          id: newId,
+          cycleId,
+          limitAmount: cat.limitAmount + add,
+          createdAt: new Date(baseTime + idx + 1).toISOString(),
+          updatedAt: catCreatedAt,
+        };
+      });
+
+      const next: BudgetState = {
+        ...current,
+        cycles: [cycle, ...current.cycles],
+        categories: [
+          ...categories,
+          ...current.categories.filter((c) => c.cycleId !== cycleId),
+        ],
+      };
+      await persistState(next);
+
+      const cyclePayload = {
+        id: cycle.id,
+        user_id: userId,
+        start_date: cycle.startDate,
+        end_date: cycle.endDate,
+        payday_day: paydayDay,
+        needs_pct: cycle.needsPct,
+        wants_pct: cycle.wantsPct,
+        savings_pct: cycle.savingsPct,
+        rollover_from_previous: rollover,
+      };
+      const cycleResult = await syncCycleDirect(cyclePayload);
+      if (!cycleResult.ok) {
+        throw new Error(cycleResult.error ?? "Failed to sync cycle");
+      }
+
+      for (const cat of categories) {
+        await enqueueMutation(userId, {
+          id: makeQueueId(),
+          userId,
+          createdAt: cat.createdAt,
+          kind: "upsert_category",
+          payload: categoryToPayload(cat),
+        });
+      }
+      await flushBudgetQueue(userId);
+      await refreshQueue();
+
+      return { newCycleId: cycleId };
+    },
+    [activeCycle, persistState, state, userId, refreshQueue]
+  );
+
+  /**
+   * Create new cycle immediately (no rollover modal). For no-rollover or no-savings-cats case.
+   */
+  const createNewCycleImmediate = useCallback(async () => {
+    if (!userId) return null;
+    const current = state ?? createEmptyBudgetState(userId);
+    const prevCycle = activeCycle ?? current.cycles[0];
+    if (!prevCycle) return null;
+
+    const prevCategories = current.categories.filter(
+      (c) => c.cycleId === prevCycle.id
+    );
+
+    const baseTime = Date.now();
+    const cycleId = uuidv4();
+    const cycleCreatedAt = new Date(baseTime - 1).toISOString();
+    const monthlyNetIncome = current.incomeSources.reduce((sum, src) => {
+      if (src.type === "primary" && src.applyDeductions) {
+        return sum + computeGhanaTax2026Monthly(src.amount).netTakeHome;
+      }
+      return sum + src.amount;
+    }, 0);
+    const rollover =
+      monthlyNetIncome > 0
+        ? calculateRollover(prevCycle, current.transactions, monthlyNetIncome)
+        : { needs: 0, wants: 0, savings: 0 };
+
+    const paydayDay = prevCycle.paydayDay;
+    const durationDays =
+      Math.round(
+        (new Date(prevCycle.endDate).getTime() -
+          new Date(prevCycle.startDate).getTime()) /
+          86400000
+      ) + 1;
+    const useMonths = durationDays > 14;
+    const { start, end } = computeNextCycleFromPrevious(
+      prevCycle.startDate,
+      prevCycle.endDate,
+      useMonths
+    );
+
+    const cycle: BudgetCycle = {
+      id: cycleId,
+      userId,
+      startDate: toISODate(start),
+      endDate: toISODate(end),
+      paydayDay,
+      needsPct: prevCycle.needsPct,
+      wantsPct: prevCycle.wantsPct,
+      savingsPct: prevCycle.savingsPct,
+      rolloverFromPrevious: rollover,
+      reallocationApplied: false,
+      createdAt: cycleCreatedAt,
+      updatedAt: cycleCreatedAt,
+    };
+
+    const catCreatedAt = new Date(baseTime).toISOString();
+    const categories: BudgetCategory[] = prevCategories.map((cat, idx) => ({
+      ...cat,
+      id: uuidv4(),
+      cycleId,
+      createdAt: new Date(baseTime + idx + 1).toISOString(),
+      updatedAt: catCreatedAt,
+    }));
+
+    const next: BudgetState = {
+      ...current,
+      cycles: [cycle, ...current.cycles],
+      categories: [
+        ...categories,
+        ...current.categories.filter((c) => c.cycleId !== cycleId),
+      ],
+    };
+    await persistState(next);
+
+    const cyclePayload = {
+      id: cycle.id,
+      user_id: userId,
+      start_date: cycle.startDate,
+      end_date: cycle.endDate,
+      payday_day: paydayDay,
+      needs_pct: cycle.needsPct,
+      wants_pct: cycle.wantsPct,
+      savings_pct: cycle.savingsPct,
+      rollover_from_previous: rollover,
+    };
+    const cycleResult = await syncCycleDirect(cyclePayload);
+    if (!cycleResult.ok) {
+      throw new Error(cycleResult.error ?? "Failed to sync cycle");
+    }
+
+    for (const cat of categories) {
+      await enqueueMutation(userId, {
+        id: makeQueueId(),
+        userId,
+        createdAt: cat.createdAt,
+        kind: "upsert_category",
+        payload: categoryToPayload(cat),
+      });
+    }
+    await flushBudgetQueue(userId);
+    await refreshQueue();
+
+    return { newCycleId: cycleId };
+  }, [activeCycle, persistState, state, userId, refreshQueue]);
 
   const addIncomeSource = useCallback(
     async ({
@@ -1412,6 +1809,9 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     updateCycleAllocation,
     insertDebt,
     resetBudget,
+    computeNewCyclePreview,
+    createNewCycleFromPreview,
+    createNewCycleImmediate,
     syncNow,
     hydrateFromRemote,
     recalculateBudget,

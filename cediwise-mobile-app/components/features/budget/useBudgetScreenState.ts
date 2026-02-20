@@ -28,6 +28,7 @@ import {
   getSpendingInsights,
   type SpendingInsight,
 } from "../../../utils/spendingPatterns";
+import { supabase } from "../../../utils/supabase";
 import { DEFAULT_MIN_LIVING_BUFFER } from "../vitals/utils";
 
 export function useBudgetScreenState() {
@@ -54,6 +55,9 @@ export function useBudgetScreenState() {
     updateCycleAllocation,
     insertDebt,
     resetBudget,
+    computeNewCyclePreview,
+    createNewCycleFromPreview,
+    createNewCycleImmediate,
     hydrateFromRemote,
     recalculateBudget,
     reload,
@@ -139,6 +143,34 @@ export function useBudgetScreenState() {
     summary: string;
   } | null>(null);
   const [spendingInsightsLoading, setSpendingInsightsLoading] = useState(false);
+  const [enableAutoReallocation, setEnableAutoReallocation] = useState(true);
+
+  const fetchEnableAutoReallocation = useCallback(async () => {
+    if (!user?.id || !supabase) return;
+    const { data } = await supabase
+      .from("profiles")
+      .select("enable_auto_reallocation")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (data && typeof (data as any).enable_auto_reallocation === "boolean") {
+      setEnableAutoReallocation((data as any).enable_auto_reallocation);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    void fetchEnableAutoReallocation();
+  }, [fetchEnableAutoReallocation]);
+
+  const [pendingRollover, setPendingRollover] = useState<{
+    rollover: { needs: number; wants: number; savings: number };
+    savingsCategories: { id: string; name: string }[];
+    nextCycleStart: string;
+    nextCycleEnd: string;
+    durationDays: number;
+    durationUnit: "days" | "months";
+    durationMonths?: number;
+    paydayDay: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -173,6 +205,7 @@ export function useBudgetScreenState() {
     ],
   }));
 
+  // ─── Active Cycle: Get the most recent cycle ─────────────────────────────────────
   const activeCycleId = useMemo(() => {
     const sorted = [...(state?.cycles ?? [])].sort(
       (a, b) =>
@@ -251,6 +284,9 @@ export function useBudgetScreenState() {
 
   const cycleIsSet = !!state?.prefs?.paydayDay && !!activeCycleId;
   const hasIncomeSources = (state?.incomeSources?.length ?? 0) > 0;
+  // ─── Active Cycle: Check if the cycle has ended: "endDate + "T23:59:59" means 11:59:59 PM of the end date" ─────────────────────────────────────
+  const cycleHasEnded =
+    !!activeCycle && new Date() > new Date(activeCycle.endDate + "T23:59:59");
 
   const vitalsSummary = useMemo(() => {
     const v = profileVitals.vitals;
@@ -428,8 +464,11 @@ export function useBudgetScreenState() {
       await syncNow();
       await hydrateFromRemote({ force: true });
       await profileVitals.refresh();
+      await fetchEnableAutoReallocation();
       await reload();
       await recalculateBudget();
+    } catch {
+      // ignore
     } finally {
       // Ensure spinner is visible for at least 500ms so users see feedback
       const elapsed = Date.now() - start;
@@ -582,6 +621,33 @@ export function useBudgetScreenState() {
     setPendingCategoryAction(null);
   }, []);
 
+  const handleStartNewCycle = useCallback(async () => {
+    const preview = computeNewCyclePreview();
+    if (!preview) {
+      await createNewCycleImmediate();
+      await reload();
+      return;
+    }
+    setPendingRollover(preview);
+  }, [computeNewCyclePreview, createNewCycleImmediate, reload]);
+
+  const handleRolloverConfirm = useCallback(
+    async (
+      allocations: Record<string, number>,
+      overrides?: {
+        durationDays?: number;
+        durationMonths?: number;
+        paydayDay?: number;
+      }
+    ) => {
+      if (!pendingRollover) return;
+      await createNewCycleFromPreview(pendingRollover, allocations, overrides);
+      setPendingRollover(null);
+      await reload();
+    },
+    [pendingRollover, createNewCycleFromPreview, reload]
+  );
+
   return {
     router,
     user,
@@ -630,6 +696,7 @@ export function useBudgetScreenState() {
       activeCycle,
       previousCycle,
       cycleIsSet,
+      cycleHasEnded,
       hasIncomeSources,
       vitalsSummary,
       allocationTitle,
@@ -641,6 +708,7 @@ export function useBudgetScreenState() {
       incomeAccentColors,
       incomeToggleChevronStyle,
       reallocationSuggestion,
+      enableAutoReallocation,
     },
     ui: {
       filter,
@@ -655,6 +723,8 @@ export function useBudgetScreenState() {
       spendingInsightsLoading,
       advisorRecommendations,
       budgetHealthScore,
+      pendingRollover,
+      setPendingRollover,
     },
     modals: {
       showTxModal,
@@ -692,6 +762,8 @@ export function useBudgetScreenState() {
       handleCloseAllocationExceeded,
       handleAddCategory,
       handleUpdateCategoryLimit,
+      handleStartNewCycle,
+      handleRolloverConfirm,
     },
   };
 }

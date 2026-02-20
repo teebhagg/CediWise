@@ -2,7 +2,7 @@
   "expo": {
     "name": "CediWise",
     "slug": "cediwise-mobile-app",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "orientation": "portrait",
     "icon": "./assets/images/logo/cediwise-smooth-light-logo.png",
     "scheme": "cediwisemobileapp",

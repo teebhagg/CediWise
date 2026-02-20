@@ -1,7 +1,7 @@
-import { Text, View } from 'react-native';
+import { CheckCircle2, InfoIcon, XCircleIcon } from 'lucide-react-native';
+import { Pressable, Text, View } from 'react-native';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { Card } from '../../Card';
-import { XCircleIcon, CheckCircle2, InfoIcon } from 'lucide-react-native';
 
 export interface SpendingInsight {
   categoryId: string;
@@ -21,6 +21,11 @@ export type AdvisorRecommendation = {
   actionLabel?: string;
   amount?: number;
   context?: string;
+  /** Phase 3.2: for limit_adjustment - apply suggested limit */
+  categoryId?: string;
+  suggestedLimit?: number;
+  currentLimit?: number;
+  canAutoApply?: boolean;
 };
 
 interface BudgetSpendingInsightsCardProps {
@@ -28,6 +33,8 @@ interface BudgetSpendingInsightsCardProps {
   loading: boolean;
   insights: SpendingInsight[] | null;
   advisorRecommendations?: AdvisorRecommendation[] | null;
+  /** Phase 3.2: when user taps "Update limit" on a limit_adjustment rec */
+  onApplyLimitAdjustment?: (rec: AdvisorRecommendation) => void;
 }
 
 export function BudgetSpendingInsightsCard({
@@ -35,6 +42,7 @@ export function BudgetSpendingInsightsCard({
   loading,
   insights,
   advisorRecommendations,
+  onApplyLimitAdjustment,
 }: BudgetSpendingInsightsCardProps) {
   if (!visible) return null;
 
@@ -47,19 +55,31 @@ export function BudgetSpendingInsightsCard({
             <View
               key={rec.id}
               className={`p-4 rounded-sm border ${rec.priority === 'high'
-                  ? 'bg-red-500/10 border-red-500/20'
-                  : rec.priority === 'medium'
-                    ? 'bg-amber-500/10 border-amber-500/20'
-                    : 'bg-emerald-500/10 border-emerald-500/20'
+                ? 'bg-red-500/10 border-red-500/20'
+                : rec.priority === 'medium'
+                  ? 'bg-amber-500/10 border-amber-500/20'
+                  : 'bg-emerald-500/10 border-emerald-500/20'
                 }`}
             >
-              <View className="flex-row items-center gap-2">
-                <Text className={`${rec.priority === 'high' ? 'text-red-300' : rec.priority === 'medium' ? 'text-amber-300' : 'text-emerald-300'} font-medium text-sm`}>{rec.title}</Text>
-                <View>
-                  {rec.priority === 'high' ? <XCircleIcon size={20} color="red" /> : rec.priority === 'medium' ? <InfoIcon size={20} color="amber" /> : <CheckCircle2 size={20} color="emerald" />}
+              <View className="flex-row items-center justify-between gap-2">
+                <View className="flex-1">
+                  <View className="flex-row items-center gap-2">
+                    <Text className={`${rec.priority === 'high' ? 'text-red-300' : rec.priority === 'medium' ? 'text-amber-300' : 'text-emerald-300'} font-medium text-sm`}>{rec.title}</Text>
+                    <View>
+                      {rec.priority === 'high' ? <XCircleIcon size={20} color="red" /> : rec.priority === 'medium' ? <InfoIcon size={20} color="amber" /> : <CheckCircle2 size={20} color="emerald" />}
+                    </View>
+                  </View>
+                  <Text className="text-slate-400 text-xs mt-1">{rec.message}</Text>
                 </View>
+                {rec.actionLabel && rec.canAutoApply && onApplyLimitAdjustment ? (
+                  <Pressable
+                    onPress={() => onApplyLimitAdjustment(rec)}
+                    className="px-3 py-1.5 rounded-md bg-emerald-500/20 border border-emerald-500/40 active:opacity-80"
+                  >
+                    <Text className="text-emerald-300 text-xs font-medium">{rec.actionLabel}</Text>
+                  </Pressable>
+                ) : null}
               </View>
-              <Text className="text-slate-400 text-xs mt-1">{rec.message}</Text>
             </View>
           ))}
         </View>

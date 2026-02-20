@@ -29,7 +29,14 @@ export type SpendingInsightInput = {
 
 export type AdvisorRecommendation = {
   id: string;
-  type: "underspend" | "overspend" | "reallocate" | "goal_progress" | "warning";
+  type:
+    | "underspend"
+    | "overspend"
+    | "reallocate"
+    | "goal_progress"
+    | "warning"
+    | "limit_adjustment"
+    | "category_reallocate";
   priority: "high" | "medium" | "low";
   title: string;
   message: string;
@@ -43,6 +50,12 @@ export type AdvisorRecommendation = {
   sourceCategory?: string;
   targetCategory?: string;
   canAutoApply?: boolean;
+  /** Phase 3.2: suggested limit for limit_adjustment */
+  suggestedLimit?: number;
+  /** Phase 3.2: current limit for limit_adjustment */
+  currentLimit?: number;
+  /** Phase 3.2: category id for limit_adjustment (to apply change) */
+  categoryId?: string;
   /** For impact scoring */
   _utilization?: number;
   _daysRemaining?: number;
@@ -251,6 +264,130 @@ export function generateAdvisorRecommendations(
     }
   }
 
+  // Phase 3.1.3: Category-level reallocation within same bucket
+  const byBucket = new Map<BudgetBucket, SpendingInsightInput[]>();
+  for (const ins of insights) {
+    const b = ins.bucket ?? "wants";
+    const list = byBucket.get(b) ?? [];
+    list.push(ins);
+    byBucket.set(b, list);
+  }
+  for (const [, bucketInsights] of byBucket) {
+    const overspent = bucketInsights.filter(
+      (i) => i.limit >= THRESHOLDS.MIN_LIMIT_FOR_ALERTS && i.spent > i.limit
+    );
+    const underspent = bucketInsights.filter(
+      (i) =>
+        i.limit >= THRESHOLDS.MIN_LIMIT_FOR_ALERTS &&
+        i.spent < i.limit &&
+        i.limit - i.spent > THRESHOLDS.MIN_LIMIT_FOR_ALERTS
+    );
+    for (const over of overspent) {
+      const overAmt = over.spent - over.limit;
+      const key = `cat-realloc-${over.categoryId}`;
+      if (seen.has(key)) continue;
+      // Pick best underspent source: most headroom
+      const bestUnder = underspent
+        .filter((u) => u.categoryId !== over.categoryId)
+        .sort((a, b) => b.limit - b.spent - (a.limit - a.spent))[0];
+      if (!bestUnder) continue;
+      const underRoom = bestUnder.limit - bestUnder.spent;
+      const moveAmt = Math.min(overAmt, underRoom, 500);
+      if (moveAmt < THRESHOLDS.MIN_LIMIT_FOR_ALERTS) continue;
+      seen.add(key);
+      recs.push({
+        id: key,
+        type: "category_reallocate",
+        priority: "medium",
+        title: "Move budget within bucket",
+        message: `Move ₵${formatNum(moveAmt)} from ${
+          bestUnder.categoryName
+        } to ${over.categoryName} to cover overspend.`,
+        amount: moveAmt,
+        context: over.categoryName,
+        sourceCategory: bestUnder.categoryName,
+        targetCategory: over.categoryName,
+        actionableAmount: moveAmt,
+        canAutoApply: false,
+      });
+    }
+  }
+
+  // Phase 3.2: Smart limit adjustment suggestions
+  for (const ins of insights) {
+    if (ins.limit < THRESHOLDS.MIN_LIMIT_FOR_ALERTS) continue;
+    const utilization = ins.limit > 0 ? ins.spent / ins.limit : 0;
+    const avgSpent = ins.avgSpent ?? 0;
+    const confidence = ins.confidence ?? 0;
+
+    if (ins.spent > ins.limit && avgSpent > 0 && confidence >= 0.4) {
+      const over = ins.spent - ins.limit;
+      const suggestedIncrease = Math.max(
+        over,
+        Math.round((avgSpent - ins.limit) * 1.05)
+      );
+      if (suggestedIncrease <= 0) continue;
+      const newLimit = ins.limit + Math.min(suggestedIncrease, ins.limit * 0.3);
+      const key = `limit-increase-${ins.categoryId}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        recs.push({
+          id: key,
+          type: "limit_adjustment",
+          priority: "medium",
+          title: `Consider increasing ${ins.categoryName} limit`,
+          message: `You've consistently spent more than your ${
+            ins.categoryName
+          } limit. Consider raising it to ₵${formatNum(Math.round(newLimit))}.`,
+          amount: Math.round(newLimit) - ins.limit,
+          context: ins.categoryName,
+          actionLabel: "Update limit",
+          actionableAmount: Math.round(newLimit) - ins.limit,
+          suggestedLimit: Math.round(newLimit),
+          currentLimit: ins.limit,
+          categoryId: ins.categoryId,
+          canAutoApply: true,
+          _utilization: utilization,
+        });
+      }
+    } else if (
+      utilization < 0.5 &&
+      avgSpent > 0 &&
+      ins.spent < avgSpent * 0.7 &&
+      confidence >= 0.4
+    ) {
+      const saved = ins.limit - ins.spent;
+      if (saved < THRESHOLDS.MIN_LIMIT_FOR_ALERTS) continue;
+      const suggestedLimit = Math.max(
+        THRESHOLDS.MIN_LIMIT_FOR_ALERTS,
+        Math.round(avgSpent * 1.1)
+      );
+      if (suggestedLimit >= ins.limit) continue;
+      const key = `limit-decrease-${ins.categoryId}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        recs.push({
+          id: key,
+          type: "limit_adjustment",
+          priority: "low",
+          title: `Consider reducing ${ins.categoryName} limit`,
+          message: `You're spending less than budgeted. Consider reducing the limit to ₵${formatNum(
+            suggestedLimit
+          )} and moving the difference to savings.`,
+          amount: ins.limit - suggestedLimit,
+          context: ins.categoryName,
+          actionLabel: "Update limit",
+          actionableAmount: ins.limit - suggestedLimit,
+          suggestedLimit,
+          currentLimit: ins.limit,
+          categoryId: ins.categoryId,
+          canAutoApply: true,
+          _utilization: utilization,
+        });
+      }
+    }
+  }
+
   // Bucket-level overspend summary (Phase 2.3: dedup with category context)
   if (bucketTotals) {
     if (bucketTotals.needsSpent > bucketTotals.needsLimit) {
@@ -291,7 +428,24 @@ export function generateAdvisorRecommendations(
     }
   }
 
-  const deduped = deduplicateRecommendations(recs, categoryOverByBucket);
+  // Phase 3.2: Prefer limit_adjustment over generic overspend for same category
+  const limitIncreaseCatIds = new Set(
+    recs
+      .filter(
+        (r) =>
+          r.type === "limit_adjustment" &&
+          r.categoryId &&
+          (r.suggestedLimit ?? 0) > (r.currentLimit ?? 0)
+      )
+      .map((r) => r.categoryId as string)
+  );
+  const filtered = recs.filter((r) => {
+    if (r.type !== "overspend") return true;
+    const m = r.id.match(/^over-(.+)$/);
+    return !m || !limitIncreaseCatIds.has(m[1]);
+  });
+
+  const deduped = deduplicateRecommendations(filtered, categoryOverByBucket);
 
   // Phase 2.3: Sort by impact, take top 5
   const withImpact = deduped.map((r) => ({

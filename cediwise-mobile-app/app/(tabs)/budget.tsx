@@ -237,6 +237,17 @@ export default function BudgetScreen() {
                 loading={ui.spendingInsightsLoading}
                 insights={ui.spendingInsights}
                 advisorRecommendations={ui.advisorRecommendations}
+                onApplyLimitAdjustment={(rec) => {
+                  if (rec.categoryId && rec.context != null && rec.currentLimit != null) {
+                    modals.setEditingLimit({
+                      id: rec.categoryId,
+                      name: rec.context,
+                      current: rec.currentLimit,
+                      suggestedLimit: rec.suggestedLimit,
+                    });
+                    modals.setShowEditLimitModal(true);
+                  }
+                }}
               />
 
               <BudgetIncomeSourcesCard

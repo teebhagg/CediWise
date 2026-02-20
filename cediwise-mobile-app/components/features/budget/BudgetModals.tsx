@@ -29,6 +29,8 @@ interface EditingLimit {
   id: string;
   name: string;
   current: number;
+  /** Phase 3.2: Pre-filled from advisor limit_adjustment */
+  suggestedLimit?: number;
 }
 
 interface BudgetModalsProps {
@@ -260,7 +262,8 @@ export function BudgetModals({
         categoryName={editingLimit?.name ?? 'Category'}
         currentLimit={editingLimit?.current ?? 0}
         suggestedLimit={
-          editingLimit && spendingInsights?.length
+          editingLimit?.suggestedLimit ??
+          (editingLimit && spendingInsights?.length
             ? (() => {
               const insight = spendingInsights.find((i) => i.categoryId === editingLimit.id);
               if (!insight || insight.avgSpent <= 0) return null;
@@ -271,7 +274,7 @@ export function BudgetModals({
                 editingLimit.current
               );
             })()
-            : null
+            : null)
         }
         onClose={() => {
           setShowEditLimitModal(false);

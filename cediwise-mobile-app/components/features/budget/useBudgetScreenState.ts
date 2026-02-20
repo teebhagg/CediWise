@@ -107,6 +107,8 @@ export function useBudgetScreenState() {
     id: string;
     name: string;
     current: number;
+    /** Phase 3.2: Pre-filled from advisor limit_adjustment */
+    suggestedLimit?: number;
   } | null>(null);
   const [showEditLimitModal, setShowEditLimitModal] = useState(false);
   const [showEditCycleModal, setShowEditCycleModal] = useState(false);

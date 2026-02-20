@@ -1,5 +1,7 @@
 import type { BudgetBucket, BudgetCategory } from '../../../types/budget';
 import type { AllocationExceededResult } from '../../../utils/allocationExceeded';
+import type { SpendingInsight } from '../../../utils/spendingPatterns';
+import { computeSuggestedLimit } from '../../../utils/spendingPatternsLogic';
 import { AddCustomCategoryModal } from '../../AddCustomCategoryModal';
 import { AllocationExceededModal } from '../../AllocationExceededModal';
 import { BudgetTransactionModal } from '../../BudgetTransactionModal';
@@ -76,6 +78,7 @@ interface BudgetModalsProps {
   showEditLimitModal: boolean;
   setShowEditLimitModal: (v: boolean) => void;
   onUpdateCategoryLimit: (id: string, nextLimit: number) => Promise<void>;
+  spendingInsights?: SpendingInsight[] | null;
 
   allocationExceededResult: AllocationExceededResult | null;
   showAllocationExceededModal: boolean;
@@ -125,6 +128,7 @@ export function BudgetModals({
   showEditLimitModal,
   setShowEditLimitModal,
   onUpdateCategoryLimit,
+  spendingInsights,
   allocationExceededResult,
   showAllocationExceededModal,
   setShowAllocationExceededModal,
@@ -255,6 +259,20 @@ export function BudgetModals({
         visible={showEditLimitModal}
         categoryName={editingLimit?.name ?? 'Category'}
         currentLimit={editingLimit?.current ?? 0}
+        suggestedLimit={
+          editingLimit && spendingInsights?.length
+            ? (() => {
+              const insight = spendingInsights.find((i) => i.categoryId === editingLimit.id);
+              if (!insight || insight.avgSpent <= 0) return null;
+              return computeSuggestedLimit(
+                insight.avgSpent,
+                insight.variance ?? 0,
+                insight.trend,
+                editingLimit.current
+              );
+            })()
+            : null
+        }
         onClose={() => {
           setShowEditLimitModal(false);
           setEditingLimit(null);

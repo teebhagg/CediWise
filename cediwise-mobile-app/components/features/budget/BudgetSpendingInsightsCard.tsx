@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { Card } from '../../Card';
+import { XCircleIcon, CheckCircle2, InfoIcon } from 'lucide-react-native';
 
 export interface SpendingInsight {
   categoryId: string;
@@ -45,14 +46,19 @@ export function BudgetSpendingInsightsCard({
           {advisorRecommendations.slice(0, 2).map((rec) => (
             <View
               key={rec.id}
-              className={`p-3 rounded-xl border ${rec.priority === 'high'
+              className={`p-4 rounded-sm border ${rec.priority === 'high'
                   ? 'bg-red-500/10 border-red-500/20'
                   : rec.priority === 'medium'
                     ? 'bg-amber-500/10 border-amber-500/20'
                     : 'bg-emerald-500/10 border-emerald-500/20'
                 }`}
             >
-              <Text className="text-slate-200 font-medium text-sm">{rec.title}</Text>
+              <View className="flex-row items-center gap-2">
+                <Text className={`${rec.priority === 'high' ? 'text-red-300' : rec.priority === 'medium' ? 'text-amber-300' : 'text-emerald-300'} font-medium text-sm`}>{rec.title}</Text>
+                <View>
+                  {rec.priority === 'high' ? <XCircleIcon size={20} color="red" /> : rec.priority === 'medium' ? <InfoIcon size={20} color="amber" /> : <CheckCircle2 size={20} color="emerald" />}
+                </View>
+              </View>
               <Text className="text-slate-400 text-xs mt-1">{rec.message}</Text>
             </View>
           ))}

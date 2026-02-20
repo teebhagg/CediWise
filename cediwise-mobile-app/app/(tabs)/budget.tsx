@@ -337,6 +337,7 @@ export default function BudgetScreen() {
         showEditLimitModal={modals.showEditLimitModal}
         setShowEditLimitModal={modals.setShowEditLimitModal}
         onUpdateCategoryLimit={modals.handleUpdateCategoryLimit}
+        spendingInsights={ui.spendingInsights}
         allocationExceededResult={modals.allocationExceededResult}
         showAllocationExceededModal={modals.showAllocationExceededModal}
         setShowAllocationExceededModal={modals.setShowAllocationExceededModal}

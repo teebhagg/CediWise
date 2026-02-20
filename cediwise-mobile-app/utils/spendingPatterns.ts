@@ -6,12 +6,18 @@ import type {
 import { log } from "./logger";
 import {
   computeConfidence,
+  computeSuggestedLimit,
   determineTrend,
   shouldSuggestUnderspend,
 } from "./spendingPatternsLogic";
 import { supabase } from "./supabase";
 
-export { computeConfidence, determineTrend, shouldSuggestUnderspend };
+export {
+  computeConfidence,
+  computeSuggestedLimit,
+  determineTrend,
+  shouldSuggestUnderspend,
+};
 
 /**
  * Calculate spending patterns for a category across multiple cycles
@@ -75,6 +81,7 @@ export async function calculateSpendingPatternForCategory(
 export async function calculateAllSpendingPatterns(
   userId: string
 ): Promise<void> {
+  if (!supabase) return;
   try {
     // Get last 6 cycles
     const { data: cycles, error: cyclesError } = await supabase
@@ -110,9 +117,8 @@ export async function calculateAllSpendingPatterns(
     if (!categories) return;
 
     // Calculate patterns for each category
-    const patterns: Array<
-      Omit<SpendingPattern, "id" | "createdAt" | "updatedAt">
-    > = [];
+    const patterns: Omit<SpendingPattern, "id" | "createdAt" | "updatedAt">[] =
+      [];
 
     for (const category of categories) {
       const pattern = await calculateSpendingPatternForCategory(
@@ -161,6 +167,7 @@ export async function getSuggestedCategoryLimit(
   userId: string,
   categoryId: string
 ): Promise<number | null> {
+  if (!supabase) return null;
   try {
     const { data: pattern, error } = await supabase
       .from("spending_patterns")
@@ -173,10 +180,13 @@ export async function getSuggestedCategoryLimit(
 
     if (error || !pattern) return null;
 
-    // Suggested limit = average + 10% buffer
-    const suggestedLimit = pattern.avg_spent * 1.1;
-
-    return Math.round(suggestedLimit * 100) / 100; // Round to 2 decimals
+    const suggested = computeSuggestedLimit(
+      pattern.avg_spent,
+      pattern.variance ?? 0,
+      (pattern.trend as SpendingTrend) || "stable",
+      0
+    );
+    return suggested;
   } catch (error) {
     log.error("Failed to get suggested limit:", error);
     return null;
@@ -207,6 +217,7 @@ export async function getSpendingInsights(
   categories: { id: string; name: string; limitAmount: number }[],
   transactions: BudgetTransaction[]
 ): Promise<SpendingInsight[]> {
+  if (!supabase) return [];
   const insights: SpendingInsight[] = [];
 
   try {

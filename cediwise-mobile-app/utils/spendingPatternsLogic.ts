@@ -111,3 +111,38 @@ export function shouldSuggestUnderspend(
   const zScore = avgSpent > 0 && stdDev > 0 ? (avgSpent - spent) / stdDev : 0;
   return zScore >= UNDERSPEND_VOLATILITY_RATIO;
 }
+
+/**
+ * Phase 1.3: Compute suggested category limit from spending pattern.
+ * Adjusts buffer based on variance and trend.
+ */
+export function computeSuggestedLimit(
+  avgSpent: number,
+  variance: number,
+  trend: SpendingTrend,
+  currentLimit: number
+): number {
+  if (avgSpent <= 0) return currentLimit;
+
+  let buffer = 1.1;
+
+  if (variance > 0 && avgSpent > 0) {
+    const cv = variance / avgSpent;
+    if (cv > 0.3) buffer = 1.2;
+  }
+
+  if (trend === "increasing") {
+    buffer *= 1.05;
+  } else if (trend === "decreasing") {
+    buffer *= 0.95;
+  }
+
+  const suggested = avgSpent * buffer;
+  const maxIncrease = currentLimit * 1.2;
+  const capped = Math.min(
+    suggested,
+    currentLimit > 0 ? maxIncrease : suggested
+  );
+
+  return Math.max(0, Math.round(capped * 100) / 100);
+}

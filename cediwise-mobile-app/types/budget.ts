@@ -67,6 +67,8 @@ export type BudgetTransaction = {
 export type BudgetProfilePrefs = {
   paydayDay?: number;
   interests?: string[];
+  /** For weighted category allocation */
+  lifeStage?: "student" | "young_professional" | "family" | "retiree" | null;
 };
 
 export type BudgetState = {

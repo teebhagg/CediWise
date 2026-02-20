@@ -74,11 +74,11 @@ export function analyzeAndSuggestReallocation(
     const diff = spent - limit;
     const percentage = limit > 0 ? diff / limit : 0;
 
-    if (diff > 0 && percentage > 0.1) {
-      // Overspent by more than 10%
+    if (diff > 0 && percentage > 0.08) {
+      // Overspent by more than 8%
       overspentBuckets.push({ bucket, amount: diff, percentage });
-    } else if (diff < 0 && percentage < -0.15) {
-      // Underspent by more than 15%
+    } else if (diff < 0 && percentage < -0.12) {
+      // Underspent by more than 12%
       underspentBuckets.push({
         bucket,
         amount: Math.abs(diff),

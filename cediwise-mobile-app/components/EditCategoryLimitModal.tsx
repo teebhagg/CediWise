@@ -1,15 +1,18 @@
 import * as Haptics from 'expo-haptics';
 import { Button, Dialog } from 'heroui-native';
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BlurView } from 'expo-blur';
 import { AppTextField } from './AppTextField';
+import { ArrowUpRightIcon } from 'lucide-react-native';
 
 type Props = {
   visible: boolean;
   categoryName: string;
   currentLimit: number;
+  /** Phase 1.3: Suggested limit from spending history (optional) */
+  suggestedLimit?: number | null;
   onClose: () => void;
   onSave: (nextLimit: number) => void;
 };
@@ -18,6 +21,7 @@ export function EditCategoryLimitModal({
   visible,
   categoryName,
   currentLimit,
+  suggestedLimit,
   onClose,
   onSave,
 }: Props) {
@@ -96,6 +100,24 @@ export function EditCategoryLimitModal({
                   returnKeyType="done"
                   error={error ?? undefined}
                 />
+                {suggestedLimit != null &&
+                  suggestedLimit > 0 &&
+                  suggestedLimit !== currentLimit && (
+                    <Pressable
+                      onPress={() => {
+                        setValue(String(suggestedLimit));
+                        setError(undefined);
+                      }}
+                      className="flex-row items-center justify-between mt-2 py-3 px-4 rounded-[24px] bg-emerald-500/15 border border-emerald-500/30"
+                    >
+                      <Text className="text-emerald-400 w-auto flex-1 text-sm font-medium">
+                        Use suggested: ₵{suggestedLimit.toLocaleString()} (from your spending)
+                      </Text>
+                      {/* <View className="w-10 h-10 flex items-center justify-center bg-emerald-500/15 rounded-full"> */}
+                        <ArrowUpRightIcon size={24} color="#1B6B3A" />
+                      {/* </View> */}
+                    </Pressable>
+                  )}
               </View>
 
               <Button variant="primary" onPress={handleSave} className="mt-1.5 h-12 rounded-full bg-emerald-500">

@@ -4,6 +4,7 @@ export { BudgetAllocationCard } from "./BudgetAllocationCard";
 export { BudgetCategoriesCard } from "./BudgetCategoriesCard";
 export { BudgetCurrentCycleCard } from "./BudgetCurrentCycleCard";
 export { BudgetExpensesCard } from "./BudgetExpensesCard";
+export { BudgetHealthScoreCard } from "./BudgetHealthScoreCard";
 export { BudgetIncomeSourcesCard } from "./BudgetIncomeSourcesCard";
 export { BudgetModals } from "./BudgetModals";
 export { BudgetPendingSyncCard } from "./BudgetPendingSyncCard";

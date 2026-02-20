@@ -19,7 +19,7 @@ import type {
   StepErrors,
   UpdateDraft,
 } from "./types";
-import { computeStrategy, strategyToPercents, toMoney } from "./utils";
+import { computeIntelligentStrategy, strategyToPercents, toMoney } from "./utils";
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
@@ -435,6 +435,17 @@ export const StepFixedExpenses = memo(function StepFixedExpenses({
           />
         </AnimatedView>
 
+        <AnimatedView entering={FadeInUp.duration(220).delay(350)}>
+          <LabeledTextInput
+            label="Debt repayments (GHS)"
+            keyboardType="decimal-pad"
+            returnKeyType="done"
+            inputAccessoryViewID={keyboardAccessoryId}
+            value={draft.debtObligations}
+            onChangeText={(v) => updateDraft({ debtObligations: v })}
+          />
+        </AnimatedView>
+
         <AnimatedView entering={FadeInUp.duration(220).delay(400)}>
           <Text
             style={{
@@ -704,23 +715,40 @@ export const StepGoal = memo(function StepGoal({ draft, error, updateDraft }: St
             const sideIncome = toMoney(draft.sideIncome);
             const rent = toMoney(draft.rent);
             const titheRemittance = toMoney(draft.titheRemittance);
+            const debtObligations = toMoney(draft.debtObligations);
             const utilitiesTotal =
               draft.utilitiesMode === "precise"
                 ? toMoney(draft.utilitiesECG) + toMoney(draft.utilitiesWater)
                 : toMoney(draft.utilitiesTotal);
-            const computedAuto = computeStrategy({
+            const computedIntelligent = computeIntelligentStrategy({
               stableSalary,
               autoTax: draft.autoTax,
               sideIncome,
               rent,
               titheRemittance,
+              debtObligations,
               utilitiesTotal,
+              lifeStage: draft.lifeStage,
+              dependentsCount: Math.max(0, parseInt(draft.dependentsCount, 10) || 0),
+              incomeFrequency: draft.incomeFrequency,
+              spendingStyle: draft.spendingStyle,
+              financialPriority: draft.financialPriority,
             });
-            const chosen = {
-              ...computedAuto,
-              strategy: draft.strategyChoice,
-              ...strategyToPercents(draft.strategyChoice),
-            };
+            const userOverride =
+              draft.strategyChoice === "survival" || draft.strategyChoice === "aggressive";
+            const chosen = userOverride
+              ? {
+                ...computedIntelligent,
+                strategy: draft.strategyChoice,
+                ...strategyToPercents(draft.strategyChoice),
+              }
+              : {
+                ...computedIntelligent,
+                strategy: computedIntelligent.strategy,
+                needsPct: computedIntelligent.needsPct,
+                wantsPct: computedIntelligent.wantsPct,
+                savingsPct: computedIntelligent.savingsPct,
+              };
             return (
               <View
                 style={{

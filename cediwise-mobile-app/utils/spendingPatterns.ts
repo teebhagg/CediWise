@@ -4,7 +4,20 @@ import type {
   SpendingTrend,
 } from "@/types/budget";
 import { log } from "./logger";
+import {
+  computeConfidence,
+  computeSuggestedLimit,
+  determineTrend,
+  shouldSuggestUnderspend,
+} from "./spendingPatternsLogic";
 import { supabase } from "./supabase";
+
+export {
+  computeConfidence,
+  computeSuggestedLimit,
+  determineTrend,
+  shouldSuggestUnderspend,
+};
 
 /**
  * Calculate spending patterns for a category across multiple cycles
@@ -17,35 +30,39 @@ export async function calculateSpendingPatternForCategory(
 ): Promise<Omit<SpendingPattern, "id" | "createdAt" | "updatedAt"> | null> {
   if (cycleIds.length === 0) return null;
 
-  // Get transactions for this category across all cycles
   const categoryTransactions = transactions.filter(
     (t) => t.categoryId === categoryId && cycleIds.includes(t.cycleId)
   );
 
   if (categoryTransactions.length === 0) return null;
 
-  // Group by cycle and sum
   const spentByCycle: Record<string, number> = {};
   for (const tx of categoryTransactions) {
     spentByCycle[tx.cycleId] = (spentByCycle[tx.cycleId] || 0) + tx.amount;
   }
 
-  const amounts = Object.values(spentByCycle);
+  // Preserve chronological order (oldest first) for trend calculation
+  const chronologicalIds =
+    cycleIds.length > 0 && cycleIds.length <= 6
+      ? [...cycleIds].reverse()
+      : cycleIds.slice(-6).reverse();
+  const amounts = chronologicalIds
+    .map((cid) => spentByCycle[cid] ?? 0)
+    .filter((a) => a >= 0);
 
-  // Calculate average
-  const avgSpent = amounts.reduce((sum, amt) => sum + amt, 0) / amounts.length;
+  const n = amounts.length;
+  const avgSpent = n > 0 ? amounts.reduce((sum, amt) => sum + amt, 0) / n : 0;
 
-  // Calculate variance (standard deviation)
-  const variance = Math.sqrt(
-    amounts.reduce((sum, amt) => sum + Math.pow(amt - avgSpent, 2), 0) /
-      amounts.length
-  );
+  const variance =
+    n > 1
+      ? Math.sqrt(
+          amounts.reduce((sum, amt) => sum + Math.pow(amt - avgSpent, 2), 0) / n
+        )
+      : 0;
 
-  // Determine trend (simple linear regression or comparison of recent vs old)
-  const trend = determineTrend(amounts);
+  const trend = determineTrend(amounts, variance, avgSpent);
 
-  // Use most recent cycle as the reference
-  const mostRecentCycleId = cycleIds[cycleIds.length - 1];
+  const mostRecentCycleId = cycleIds[0] ?? cycleIds[cycleIds.length - 1];
 
   return {
     userId,
@@ -59,35 +76,12 @@ export async function calculateSpendingPatternForCategory(
 }
 
 /**
- * Determine spending trend from historical amounts
- */
-function determineTrend(amounts: number[]): SpendingTrend {
-  if (amounts.length < 2) return "stable";
-
-  // Compare recent half to older half
-  const midpoint = Math.floor(amounts.length / 2);
-  const olderHalf = amounts.slice(0, midpoint);
-  const recentHalf = amounts.slice(midpoint);
-
-  const olderAvg =
-    olderHalf.reduce((sum, amt) => sum + amt, 0) / olderHalf.length;
-  const recentAvg =
-    recentHalf.reduce((sum, amt) => sum + amt, 0) / recentHalf.length;
-
-  const changeRatio = recentAvg / olderAvg;
-
-  // 10% threshold
-  if (changeRatio > 1.1) return "increasing";
-  if (changeRatio < 0.9) return "decreasing";
-  return "stable";
-}
-
-/**
  * Calculate all spending patterns for a user
  */
 export async function calculateAllSpendingPatterns(
   userId: string
 ): Promise<void> {
+  if (!supabase) return;
   try {
     // Get last 6 cycles
     const { data: cycles, error: cyclesError } = await supabase
@@ -123,9 +117,8 @@ export async function calculateAllSpendingPatterns(
     if (!categories) return;
 
     // Calculate patterns for each category
-    const patterns: Array<
-      Omit<SpendingPattern, "id" | "createdAt" | "updatedAt">
-    > = [];
+    const patterns: Omit<SpendingPattern, "id" | "createdAt" | "updatedAt">[] =
+      [];
 
     for (const category of categories) {
       const pattern = await calculateSpendingPatternForCategory(
@@ -174,6 +167,7 @@ export async function getSuggestedCategoryLimit(
   userId: string,
   categoryId: string
 ): Promise<number | null> {
+  if (!supabase) return null;
   try {
     const { data: pattern, error } = await supabase
       .from("spending_patterns")
@@ -186,10 +180,13 @@ export async function getSuggestedCategoryLimit(
 
     if (error || !pattern) return null;
 
-    // Suggested limit = average + 10% buffer
-    const suggestedLimit = pattern.avg_spent * 1.1;
-
-    return Math.round(suggestedLimit * 100) / 100; // Round to 2 decimals
+    const suggested = computeSuggestedLimit(
+      pattern.avg_spent,
+      pattern.variance ?? 0,
+      (pattern.trend as SpendingTrend) || "stable",
+      0
+    );
+    return suggested;
   } catch (error) {
     log.error("Failed to get suggested limit:", error);
     return null;
@@ -197,7 +194,7 @@ export async function getSuggestedCategoryLimit(
 }
 
 /**
- * Get spending insights for the current cycle
+ * Get spending insights for the current cycle (Phase 1.1: variance & confidence)
  */
 export type SpendingInsight = {
   categoryId: string;
@@ -208,18 +205,22 @@ export type SpendingInsight = {
   trend: SpendingTrend;
   status: "over" | "near" | "under";
   suggestion?: string;
+  /** Standard deviation of spending across cycles */
+  variance?: number;
+  /** 0–1 reliability of pattern for recommendations */
+  confidence?: number;
 };
 
 export async function getSpendingInsights(
   userId: string,
   currentCycleId: string,
-  categories: Array<{ id: string; name: string; limitAmount: number }>,
+  categories: { id: string; name: string; limitAmount: number }[],
   transactions: BudgetTransaction[]
 ): Promise<SpendingInsight[]> {
+  if (!supabase) return [];
   const insights: SpendingInsight[] = [];
 
   try {
-    // Get patterns for all categories
     const { data: patterns, error } = await supabase
       .from("spending_patterns")
       .select("*")
@@ -232,7 +233,6 @@ export async function getSpendingInsights(
     );
 
     for (const category of categories) {
-      // Calculate spent in current cycle
       const spent = transactions
         .filter(
           (t) => t.categoryId === category.id && t.cycleId === currentCycleId
@@ -240,14 +240,22 @@ export async function getSpendingInsights(
         .reduce((sum, t) => sum + t.amount, 0);
 
       const pattern = patternsMap.get(category.id);
-      const avgSpent = pattern?.avg_spent || 0;
+      const avgSpent = pattern?.avg_spent ?? 0;
+      const variance = pattern?.variance ?? 0;
       const trend = (pattern?.trend as SpendingTrend) || "stable";
 
-      // Determine status
+      const confidence = computeConfidence(
+        pattern && avgSpent > 0 ? 3 : 0,
+        variance,
+        avgSpent,
+        pattern?.last_calculated_at
+      );
+
       let status: SpendingInsight["status"] = "under";
       let suggestion: string | undefined;
 
-      const utilization = spent / category.limitAmount;
+      const utilization =
+        category.limitAmount > 0 ? spent / category.limitAmount : 0;
 
       if (spent > category.limitAmount) {
         status = "over";
@@ -256,7 +264,10 @@ export async function getSpendingInsights(
       } else if (utilization > 0.85) {
         status = "near";
         suggestion = "You're close to your limit. Spend carefully.";
-      } else if (utilization < 0.5 && spent < avgSpent * 0.7) {
+      } else if (
+        utilization < 0.5 &&
+        shouldSuggestUnderspend(spent, avgSpent, variance, category.limitAmount)
+      ) {
         status = "under";
         suggestion =
           "You're spending less than usual. Consider reducing this category's limit.";
@@ -271,10 +282,11 @@ export async function getSpendingInsights(
         trend,
         status,
         suggestion,
+        variance,
+        confidence,
       });
     }
 
-    // Sort by status (over > near > under)
     insights.sort((a, b) => {
       const order = { over: 0, near: 1, under: 2 };
       return order[a.status] - order[b.status];

@@ -28,6 +28,7 @@ export type Draft = {
   // Fixed expenses
   rent: string;
   titheRemittance: string;
+  debtObligations: string;
   utilitiesMode: UtilitiesMode;
   utilitiesTotal: string;
   utilitiesECG: string;

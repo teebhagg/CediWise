@@ -1,9 +1,18 @@
+import {
+  computeWeightedCategoryLimits,
+  type CategoryLimitInput,
+} from "../calculators/category-weights";
 import type { BudgetBucket, BudgetCycle, BudgetState } from "../types/budget";
+import {
+  blendAllocation,
+  getHistoricalAvgByCategory,
+} from "./allocationBlending";
 import { computeGhanaTax2026Monthly } from "./ghanaTax";
 
 /**
- * Recalculate category limits from current allocations (e.g. 50/30/20).
- * Only updates categories where manualOverride === false; user-intended amounts are preserved.
+ * Recalculate category limits from current allocations using weighted distribution.
+ * Categories with manualOverride are preserved. Uses intelligent weights so Rent
+ * gets more than Trash, etc., instead of equal split.
  */
 export function recalculateBudgetFromAllocations(
   state: BudgetState
@@ -27,21 +36,47 @@ export function recalculateBudgetFromAllocations(
   const cycleCats = state.categories.filter(
     (c) => c.cycleId === activeCycle.id
   );
-  const counts: Record<BudgetBucket, number> = {
-    needs: cycleCats.filter((c) => c.bucket === "needs").length,
-    wants: cycleCats.filter((c) => c.bucket === "wants").length,
-    savings: cycleCats.filter((c) => c.bucket === "savings").length,
-  };
 
   const now = new Date().toISOString();
+  const limitsByBucketAndName = new Map<string, number>();
+
+  for (const bucket of ["needs", "wants", "savings"] as const) {
+    const bucketCats = cycleCats.filter((c) => c.bucket === bucket);
+    const inputs: CategoryLimitInput[] = bucketCats.map((c) => ({
+      name: c.name,
+      bucket,
+      fixedAmount: undefined,
+      manualOverride: c.manualOverride,
+    }));
+    const limits = computeWeightedCategoryLimits(
+      bucketTotals[bucket],
+      inputs,
+      state.prefs?.lifeStage ?? null
+    );
+    limits.forEach((amt, name) =>
+      limitsByBucketAndName.set(`${bucket}:${name}`, amt)
+    );
+  }
+
+  const historical = getHistoricalAvgByCategory(state, activeCycle.id);
+
   const nextCategories = state.categories.map((c) => {
     if (c.cycleId !== activeCycle.id) return c;
-    if (c.manualOverride) return c; // Preserve user-intended amount
-    const per =
-      counts[c.bucket] > 0 ? bucketTotals[c.bucket] / counts[c.bucket] : 0;
+    if (c.manualOverride) return c;
+    const templateLimit = limitsByBucketAndName.get(`${c.bucket}:${c.name}`);
+    if (templateLimit == null) return c;
+
+    const hist = historical.get(`${c.bucket}:${c.name}`);
+    const limit = blendAllocation(
+      templateLimit,
+      hist?.avgSpent ?? null,
+      hist?.variance ?? 0,
+      hist?.cycleCount ?? 0
+    );
+
     return {
       ...c,
-      limitAmount: Math.max(0, Math.round(per * 100) / 100),
+      limitAmount: limit,
       updatedAt: now,
     };
   });

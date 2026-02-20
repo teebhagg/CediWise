@@ -33,6 +33,23 @@ describe("generateAdvisorRecommendations", () => {
     expect(underspend).toBeDefined();
   });
 
+  it("Phase 2: does not suggest underspend for needs bucket", () => {
+    const recs = generateAdvisorRecommendations([
+      {
+        categoryId: "1",
+        categoryName: "Rent",
+        bucket: "needs",
+        spent: 50,
+        limit: 500,
+        avgSpent: 400,
+        confidence: 0.8,
+        variance: 10,
+      },
+    ]);
+    const underspend = recs.find((r) => r.type === "underspend");
+    expect(underspend).toBeUndefined();
+  });
+
   it("sorts by priority", () => {
     const recs = generateAdvisorRecommendations([
       { categoryId: "1", categoryName: "A", spent: 500, limit: 400 },

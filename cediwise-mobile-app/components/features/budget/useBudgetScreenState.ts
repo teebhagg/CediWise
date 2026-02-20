@@ -364,10 +364,12 @@ export function useBudgetScreenState() {
       .then((insights) => {
         if (!cancelled) {
           setSpendingInsights(insights);
+          const catById = new Map(cycleCategories.map((c) => [c.id, c]));
           const recs = generateAdvisorRecommendations(
             insights.map((i) => ({
               categoryId: i.categoryId,
               categoryName: i.categoryName,
+              bucket: catById.get(i.categoryId)?.bucket,
               spent: i.spent,
               limit: i.limit,
               avgSpent: i.avgSpent,
@@ -384,13 +386,44 @@ export function useBudgetScreenState() {
                   wantsLimit: totals.wantsLimit,
                   savingsLimit: totals.savingsLimit,
                 }
-              : undefined
+              : undefined,
+            { cycleEndDate: activeCycle?.endDate }
           );
           setAdvisorRecommendations(recs);
           if (totals) {
             const overCount = insights.filter(
               (i) => i.spent > i.limit && i.limit > 0
             ).length;
+            const overDetails = insights
+              .filter((i) => i.spent > i.limit && i.limit > 0)
+              .map((i) => ({
+                categoryName: i.categoryName,
+                overAmount: i.spent - i.limit,
+              }));
+            const overTrends = overDetails.length
+              ? insights.filter((i) => i.spent > i.limit).map((i) => i.trend)
+              : [];
+            const overspendTrend = overTrends.includes("increasing")
+              ? "increasing"
+              : overTrends.includes("decreasing")
+              ? "decreasing"
+              : undefined;
+            const savingsInsights = insights.filter((i) =>
+              catById.get(i.categoryId)
+                ? catById.get(i.categoryId)!.bucket === "savings"
+                : false
+            );
+            const savingsTrend = savingsInsights.some(
+              (i) => i.trend === "increasing"
+            )
+              ? "increasing"
+              : savingsInsights.some((i) => i.trend === "decreasing")
+              ? "decreasing"
+              : undefined;
+            const savingsConsistent =
+              totals.savingsLimit > 0 &&
+              totals.spentByBucket.savings >= totals.savingsLimit * 0.8;
+
             const health = computeBudgetHealthScore({
               needsSpent: totals.spentByBucket.needs,
               wantsSpent: totals.spentByBucket.wants,
@@ -400,6 +433,11 @@ export function useBudgetScreenState() {
               savingsLimit: totals.savingsLimit,
               categoriesOver: overCount,
               categoriesTotal: insights.length,
+              categoryOverDetails:
+                overDetails.length > 0 ? overDetails : undefined,
+              overspendTrend,
+              savingsTrend,
+              savingsConsistent,
             });
             setBudgetHealthScore(health);
           } else {
@@ -416,7 +454,14 @@ export function useBudgetScreenState() {
     return () => {
       cancelled = true;
     };
-  }, [user?.id, activeCycleId, cycleCategories, state?.transactions, totals]);
+  }, [
+    user?.id,
+    activeCycleId,
+    activeCycle,
+    cycleCategories,
+    state?.transactions,
+    totals,
+  ]);
 
   const needsOverLimitFor = useMemo(() => {
     if (!state || !activeCycleId) return () => false;

@@ -2,7 +2,6 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
-import { Card } from '../../Card';
 
 interface BudgetToolsCardProps {
   visible: boolean;
@@ -18,34 +17,24 @@ export function BudgetToolsCard({ visible }: BudgetToolsCardProps) {
     router.push(path);
   };
 
+  const links: { path: '/recurring-expenses' | '/debt-dashboard' | '/budget-templates'; label: string }[] = [
+    { path: '/recurring-expenses', label: 'Recurring' },
+    { path: '/debt-dashboard', label: 'Debt' },
+    { path: '/budget-templates', label: 'Templates' },
+  ];
+
   return (
-    <Card className="">
-      <Text className="text-white text-base font-semibold mb-3">Budget tools</Text>
-      <View>
+    <View className="flex-row flex-wrap gap-2">
+      {links.map(({ path, label }) => (
         <Pressable
-          onPress={() => handlePress('/recurring-expenses')}
-          className="py-3 flex-row items-center justify-between"
+          key={path}
+          onPress={() => handlePress(path)}
+          className="flex-row items-center gap-1.5 px-3 py-2 rounded-full bg-slate-500/15 border border-slate-400/25 active:bg-slate-500/25"
         >
-          <Text className="text-slate-200 font-medium text-[15px]">Recurring Expenses</Text>
-          <ChevronRight color="#94A3B8" size={16} />
+          <Text className="text-slate-200 font-medium text-sm">{label}</Text>
+          <ChevronRight color="#94A3B8" size={14} />
         </Pressable>
-        <View className="h-px bg-slate-400/20" />
-        <Pressable
-          onPress={() => handlePress('/debt-dashboard')}
-          className="py-3 flex-row items-center justify-between"
-        >
-          <Text className="text-slate-200 font-medium text-[15px]">Debt Dashboard</Text>
-          <ChevronRight color="#94A3B8" size={16} />
-        </Pressable>
-        <View className="h-px bg-slate-400/20" />
-        <Pressable
-          onPress={() => handlePress('/budget-templates')}
-          className="py-3 flex-row items-center justify-between"
-        >
-          <Text className="text-slate-200 font-medium text-[15px]">Budget Templates</Text>
-          <ChevronRight color="#94A3B8" size={16} />
-        </Pressable>
-      </View>
-    </Card>
+      ))}
+    </View>
   );
 }

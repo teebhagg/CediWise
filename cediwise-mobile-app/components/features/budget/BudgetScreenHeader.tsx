@@ -1,5 +1,6 @@
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { RotateCw } from 'lucide-react-native';
+import { Settings } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 import { InlineSyncPill } from '../../BudgetLoading';
 
@@ -7,16 +8,14 @@ interface BudgetScreenHeaderProps {
   syncPillVisible: boolean;
   syncPillLabel: string;
   pendingCount: number;
-  showResetButton: boolean;
-  onResetPress: () => void;
+  showSettingsButton?: boolean;
 }
 
 export function BudgetScreenHeader({
   syncPillVisible,
   syncPillLabel,
   pendingCount,
-  showResetButton,
-  onResetPress,
+  showSettingsButton = true,
 }: BudgetScreenHeaderProps) {
   const router = useRouter();
 
@@ -28,23 +27,27 @@ export function BudgetScreenHeader({
           Needs / Wants / Savings — payday-based.
         </Text>
       </View>
-      <View className="flex flex-col items-center gap-2">
+      <View className="flex flex-row items-center gap-2">
         <InlineSyncPill className="right-8" visible={syncPillVisible} label={syncPillLabel} />
         {pendingCount > 0 ? (
           <Pressable
             onPress={() => router.push('/queue')}
-            className="px-3 py-2 rounded-full bg-rose-500/15 border border-rose-500/30 right-16"
+            className="px-3 py-2 rounded-full bg-rose-500/15 border border-rose-500/30"
           >
-            <Text className="text-red-300 font-medium text-xs">Sync pending: {pendingCount}</Text>
+            <Text className="text-red-300 font-medium text-xs">Sync: {pendingCount}</Text>
           </Pressable>
         ) : null}
-        {showResetButton && pendingCount === 0 && (
+        {showSettingsButton && (
           <Pressable
-            onPress={onResetPress}
-            className="flex-row gap-2 py-3 items-center justify-between border border-orange-500/30 rounded-full px-4 active:opacity-70 right-16"
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { });
+              router.push('/budget/settings');
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Budget settings"
+            className="w-10 h-10 rounded-full justify-center items-center bg-slate-500/20 border border-slate-400/25 active:bg-slate-500/30"
           >
-            <RotateCw size={16} color="#FFA500" />
-            <Text className="text-orange-400 font-medium">Reset Budget</Text>
+            <Settings size={20} color="#94A3B8" />
           </Pressable>
         )}
       </View>

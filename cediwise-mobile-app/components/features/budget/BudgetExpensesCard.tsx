@@ -8,8 +8,6 @@ import { ChevronRight, Plus } from 'lucide-react-native';
 import { Text, View } from 'react-native';
 import { BucketChip } from './BucketChip';
 
-const BUDGET_EXPENSES_PREVIEW_COUNT = 5;
-
 interface BudgetExpensesCardProps {
   visible: boolean;
   activeCycleId: string | null;
@@ -19,6 +17,8 @@ interface BudgetExpensesCardProps {
   categories: { id: string; name: string }[];
   onLogExpense: () => void;
   onShowMore?: () => void;
+  /** Max transactions to show before "See all" (default 5) */
+  previewCount?: number;
 }
 
 export function BudgetExpensesCard({
@@ -30,11 +30,12 @@ export function BudgetExpensesCard({
   categories,
   onLogExpense,
   onShowMore,
+  previewCount = 5,
 }: BudgetExpensesCardProps) {
   if (!visible) return null;
 
-  const preview = transactions.slice(0, BUDGET_EXPENSES_PREVIEW_COUNT);
-  const hasMore = transactions.length > BUDGET_EXPENSES_PREVIEW_COUNT;
+  const preview = transactions.slice(0, previewCount);
+  const hasMore = transactions.length > previewCount;
 
   return (
     <Card className="">

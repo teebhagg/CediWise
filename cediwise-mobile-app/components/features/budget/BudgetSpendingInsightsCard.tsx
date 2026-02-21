@@ -35,6 +35,10 @@ interface BudgetSpendingInsightsCardProps {
   advisorRecommendations?: AdvisorRecommendation[] | null;
   /** Phase 3.2: when user taps "Update limit" on a limit_adjustment rec */
   onApplyLimitAdjustment?: (rec: AdvisorRecommendation) => void;
+  /** Max advisor recs to show (default 2). Omit or pass Infinity for all. */
+  maxRecommendations?: number;
+  /** Max insights to show (default 5). Omit or pass Infinity for all. */
+  maxInsights?: number;
 }
 
 export function BudgetSpendingInsightsCard({
@@ -43,15 +47,20 @@ export function BudgetSpendingInsightsCard({
   insights,
   advisorRecommendations,
   onApplyLimitAdjustment,
+  maxRecommendations = 2,
+  maxInsights = 5,
 }: BudgetSpendingInsightsCardProps) {
   if (!visible) return null;
+
+  const recs = advisorRecommendations?.slice(0, maxRecommendations) ?? [];
+  const insightList = insights?.slice(0, maxInsights) ?? [];
 
   return (
     <Card className="">
       <Text className="text-white text-base font-semibold mb-2">Spending insights</Text>
-      {advisorRecommendations && advisorRecommendations.length > 0 ? (
+      {recs.length > 0 ? (
         <View className="gap-2.5 mb-3">
-          {advisorRecommendations.slice(0, 2).map((rec) => (
+          {recs.map((rec) => (
             <View
               key={rec.id}
               className={`p-4 rounded-sm border ${rec.priority === 'high'
@@ -86,9 +95,9 @@ export function BudgetSpendingInsightsCard({
       ) : null}
       {loading ? (
         <Text className="text-slate-400 text-[13px]">Loading…</Text>
-      ) : insights && insights.length > 0 ? (
+      ) : insightList.length > 0 ? (
         <View className="gap-2.5">
-          {insights.slice(0, 5).map((insight) => (
+          {insightList.map((insight) => (
             <View
               key={insight.categoryId}
               className={`flex-row justify-between items-center py-3.5 px-3.5 rounded-[1.5rem] border ${insight.status === 'over'

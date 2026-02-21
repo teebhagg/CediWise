@@ -1,14 +1,14 @@
-import { StepFixedExpenses, StepGoal, StepIncome, StepInterests, StepLifeStage } from "@/components/features/vitals/Steps";
+import { StepFixedExpenses, StepGoal, StepIncome, StepInterests, StepLifeStage, StepWelcome } from "@/components/features/vitals/Steps";
 import type { Draft, StepErrors } from "@/components/features/vitals/types";
-import { clampDay, computeIntelligentStrategy, getNetPreview, strategyToPercents, toMoney } from "@/components/features/vitals/utils";
+import { clampDay, computeIntelligentStrategy, getNetPreview, strategyToPercents, toMoney, toMonthlySalary } from "@/components/features/vitals/utils";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
+  LayoutChangeEvent,
+  Pressable,
+  StyleSheet,
   Text,
   useWindowDimensions,
   View,
@@ -20,10 +20,12 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { KeyboardAwareScrollView } from "@/components/KeyboardAwareScrollView";
 import { KeyboardDoneAccessory } from "@/components/KeyboardDoneAccessory";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
@@ -35,6 +37,7 @@ import { trySyncMutation } from "@/utils/budgetSync";
 import { isOnline } from "@/utils/connectivity";
 import { vitalsDraftKey, writePersonalizationStatusCache, writeProfileVitalsCache } from "@/utils/profileVitals";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Button, Separator } from "heroui-native";
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
@@ -75,14 +78,21 @@ export default function VitalsWizard() {
   const noUser = !authLoading && !user?.id;
   const budget = useBudget(user?.id);
 
-  const totalSteps = 5;
+  const totalSteps = 6;
   const [draft, setDraft] = useState<Draft>(makeDefaultDraft());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const transition = useSharedValue(1);
   const direction = useSharedValue<1 | -1>(1);
+  const containerHeight = useSharedValue(480);
   const outgoingStepRef = useRef<number | null>(null);
+  const scrollViewRef = useRef<any>(null);
+  const [showValidationHint, setShowValidationHint] = useState(false);
+  const insets = useSafeAreaInsets();
+
+  // Reserve space so scroll content can scroll above the bottom bar (button row + optional link + padding)
+  const bottomBarHeight = 16 + 48 + 10 + (draft.step > 0 && draft.step < totalSteps - 1 && !editMode ? 48 : 0) + Math.max(16, insets.bottom);
 
   const progress = useSharedValue(0);
 
@@ -144,7 +154,9 @@ export default function VitalsWizard() {
               : prev.strategyChoice,
           step:
             typeof parsed.step === "number"
-              ? Math.max(0, Math.min(totalSteps - 1, parsed.step))
+              ? parsed.step <= 4
+                ? Math.min(5, parsed.step + 1)
+                : Math.min(5, parsed.step)
               : prev.step,
         }));
       } catch {
@@ -165,108 +177,130 @@ export default function VitalsWizard() {
   }));
 
   const title = useMemo(() => {
+    if (editMode && draft.step > 0) {
+      switch (draft.step) {
+        case 1: return "Income & Jobs";
+        case 2: return "Life Stage & Context";
+        case 3: return "Fixed Expenses";
+        case 4: return "Interests & Wants";
+        case 5: return "Goal Setting";
+        default: return "Update your profile";
+      }
+    }
     switch (draft.step) {
       case 0:
-        return "Income & Jobs";
+        return "Welcome";
       case 1:
-        return "Life Stage & Context";
+        return "Income & Jobs";
       case 2:
-        return "Fixed Expenses";
+        return "Life Stage & Context";
       case 3:
-        return "Interests & Wants";
+        return "Fixed Expenses";
       case 4:
+        return "Interests & Wants";
+      case 5:
         return "Goal Setting";
       default:
-        return "Vitals";
+        return editMode ? "Update your profile" : "Vitals";
     }
-  }, [draft.step]);
+  }, [draft.step, editMode]);
 
   const stepErrors: StepErrors = useMemo(() => {
     const e: Record<string, string> = {};
-    if (draft.step === 0) {
-      if (toMoney(draft.stableSalary) <= 0) e.stableSalary = "Required";
-      if (clampDay(draft.paydayDay) === null) e.paydayDay = "Enter 1–31";
+    if (draft.step === 1) {
+      if (toMoney(draft.stableSalary) <= 0) e.stableSalary = "Enter your salary";
+      if (clampDay(draft.paydayDay) === null) e.paydayDay = "Enter a day between 1 and 31";
     }
-    // Step 1 = Life Stage (no required fields)
-    if (draft.step === 2) {
-      // Rent is optional (not everyone rents)
+    if (draft.step === 3) {
       const total =
         draft.utilitiesMode === "precise"
           ? toMoney(draft.utilitiesECG) + toMoney(draft.utilitiesWater)
           : toMoney(draft.utilitiesTotal);
-      if (total <= 0) e.utilities = "Required";
+      if (total <= 0) e.utilities = "Enter utilities amount (or 0 if none)";
     }
-    if (draft.step === 4) {
-      if (!draft.primaryGoal) e.goal = "Pick a goal";
+    if (draft.step === 5) {
+      if (!draft.primaryGoal) e.goal = "Select a primary goal";
     }
     return e;
   }, [draft]);
 
-  /** Full validation for all required steps (0, 2, 4). Used for Finish button and submit. */
+  /** Full validation for all required steps. Used for Finish button and submit. */
   const allStepsErrors: StepErrors = useMemo(() => {
     const e: Record<string, string> = {};
-    if (toMoney(draft.stableSalary) <= 0) e.stableSalary = "Required";
-    if (clampDay(draft.paydayDay) === null) e.paydayDay = "Enter 1–31";
+    if (toMoney(draft.stableSalary) <= 0) e.stableSalary = "Enter your salary";
+    if (clampDay(draft.paydayDay) === null) e.paydayDay = "Enter a day between 1 and 31";
     const utilitiesTotal =
       draft.utilitiesMode === "precise"
         ? toMoney(draft.utilitiesECG) + toMoney(draft.utilitiesWater)
         : toMoney(draft.utilitiesTotal);
-    if (utilitiesTotal <= 0) e.utilities = "Required";
-    if (!draft.primaryGoal) e.goal = "Pick a goal";
+    if (utilitiesTotal <= 0) e.utilities = "Enter utilities amount (or 0 if none)";
+    if (!draft.primaryGoal) e.goal = "Select a primary goal";
     return e;
   }, [draft]);
 
   const canContinue = Object.keys(stepErrors).length === 0;
-  const canFinish = draft.step === totalSteps - 1 && Object.keys(allStepsErrors).length === 0;
+  const canFinish = draft.step === 5 && Object.keys(allStepsErrors).length === 0;
 
-  const netPreview = useMemo(() => getNetPreview(draft.stableSalary), [draft.stableSalary]);
+  const netPreview = useMemo(
+    () => getNetPreview(draft.stableSalary, draft.incomeFrequency),
+    [draft.stableSalary, draft.incomeFrequency]
+  );
 
   const animateStepChange = useCallback(
     (nextStep: number, dir: "forward" | "back") => {
       outgoingStepRef.current = draft.step;
-      // forward = +1 (enter from right), back = -1 (enter from left)
       direction.value = dir === "forward" ? 1 : -1;
       transition.value = 0;
-      transition.value = withTiming(
-        1,
-        { duration: 260, easing: Easing.out(Easing.cubic) },
-        () => {
-          runOnJS(clearOutgoing)();
-        }
-      );
+      transition.value = withSpring(1, {
+        damping: 22,
+        stiffness: 180,
+        overshootClamping: false,
+      }, (finished) => {
+        if (finished) runOnJS(clearOutgoing)();
+      });
     },
     [clearOutgoing, direction, draft.step, transition]
   );
 
   const outgoingStyle = useAnimatedStyle(() => {
     const t = transition.value;
-    const scale = interpolate(t, [0, 1], [1, 0.9], Extrapolate.CLAMP);
-    const opacity = interpolate(t, [0, 1], [1, 0], Extrapolate.CLAMP);
+    // Fade out with subtle scale/slide
+    const opacity = interpolate(t, [0, 0.6], [1, 0], Extrapolate.CLAMP);
+    const scale = interpolate(t, [0, 1], [1, 0.96], Extrapolate.CLAMP);
     const translateX =
       direction.value === 1
-        ? interpolate(
-          t,
-          [0, 1],
-          [0, -Math.min(32, width * 0.08)],
-          Extrapolate.CLAMP
-        )
-        : interpolate(
-          t,
-          [0, 1],
-          [0, Math.min(32, width * 0.08)],
-          Extrapolate.CLAMP
-        );
+        ? interpolate(t, [0, 1], [0, -16], Extrapolate.CLAMP)
+        : interpolate(t, [0, 1], [0, 16], Extrapolate.CLAMP);
     return { opacity, transform: [{ translateX }, { scale }] };
-  }, [direction, transition, width]);
+  }, [direction, transition]);
 
   const incomingStyle = useAnimatedStyle(() => {
     const t = transition.value;
-    const startX = width * direction.value;
-    const translateX = interpolate(t, [0, 1], [startX, 0], Extrapolate.CLAMP);
-    const scale = interpolate(t, [0, 1], [1.1, 1.0], Extrapolate.CLAMP);
-    const opacity = interpolate(t, [0, 1], [0, 1], Extrapolate.CLAMP);
+    // Fade in with subtle slide
+    const opacity = interpolate(t, [0.2, 0.8], [0, 1], Extrapolate.CLAMP);
+    const translateX = interpolate(
+      t,
+      [0, 1],
+      [direction.value * 24, 0],
+      Extrapolate.CLAMP
+    );
+    const scale = interpolate(t, [0, 1], [0.98, 1], Extrapolate.CLAMP);
     return { opacity, transform: [{ translateX }, { scale }] };
-  }, [direction, transition, width]);
+  }, [direction, transition]);
+
+  const containerStyle = useAnimatedStyle(() => ({
+    height: containerHeight.value,
+  }));
+
+  const onStepLayout = useCallback((e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    if (h > 0) {
+      containerHeight.value = withSpring(Math.max(200, h), {
+        damping: 20,
+        stiffness: 200,
+      });
+    }
+  }, [containerHeight]);
 
   const updateDraft = useCallback(
     (patch: Partial<Draft>) => {
@@ -301,10 +335,19 @@ export default function VitalsWizard() {
     [persistDraft]
   );
 
+  useEffect(() => {
+    if (editMode && draft.step === 0) {
+      updateDraft({ step: 1 });
+    }
+  }, [editMode, draft.step, updateDraft]);
+
   const goNext = useCallback(async () => {
     Keyboard.dismiss();
     setError(null);
+    setShowValidationHint(false);
     if (!canContinue) {
+      setShowValidationHint(true);
+      scrollViewRef.current?.scrollTo({ y: 120, animated: true });
       try {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       } catch {
@@ -315,11 +358,12 @@ export default function VitalsWizard() {
     const nextStep = Math.min(totalSteps - 1, draft.step + 1);
     updateDraft({ step: nextStep });
     animateStepChange(nextStep, "forward");
-  }, [animateStepChange, canContinue, draft.step, updateDraft]);
+  }, [animateStepChange, canContinue, draft.step, totalSteps, updateDraft]);
 
   const goBack = useCallback(() => {
     Keyboard.dismiss();
     setError(null);
+    setShowValidationHint(false);
     const nextStep = Math.max(0, draft.step - 1);
     updateDraft({ step: nextStep });
     animateStepChange(nextStep, "back");
@@ -333,18 +377,28 @@ export default function VitalsWizard() {
       // ignore
     }
     await writePersonalizationStatusCache(user.id, false, { skippedVitals: true });
-    router.replace("/(tabs)");
+    router.replace("/(tabs)/budget");
   }, [user?.id]);
 
   const handleFinish = useCallback(async () => {
     Keyboard.dismiss();
     if (!user?.id) return;
-    if (Object.keys(allStepsErrors).length > 0) return;
+    if (Object.keys(allStepsErrors).length > 0) {
+      setShowValidationHint(true);
+      scrollViewRef.current?.scrollTo({ y: 120, animated: true });
+      try {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      } catch {
+        // ignore
+      }
+      return;
+    }
     setError(null);
     setLoading(true);
 
     try {
-      const stableSalary = toMoney(draft.stableSalary);
+      const rawSalary = toMoney(draft.stableSalary);
+      const stableSalary = toMonthlySalary(rawSalary, draft.incomeFrequency);
       const sideIncome = toMoney(draft.sideIncome);
       const rent = toMoney(draft.rent);
       const titheRemittance = toMoney(draft.titheRemittance);
@@ -508,7 +562,7 @@ export default function VitalsWizard() {
         // ignore
       }
 
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/budget");
     } catch (e) {
       const offline = !(await isOnline());
       const message = offline
@@ -526,7 +580,8 @@ export default function VitalsWizard() {
   }, [allStepsErrors, budget, draft, user?.id]);
 
   const currentStepNode = () => {
-    if (draft.step === 0) {
+    if (draft.step === 0) return <StepWelcome />;
+    if (draft.step === 1) {
       return (
         <StepIncome
           draft={draft}
@@ -537,10 +592,8 @@ export default function VitalsWizard() {
         />
       );
     }
-    if (draft.step === 1) {
-      return <StepLifeStage draft={draft} updateDraft={updateDraft} />;
-    }
-    if (draft.step === 2) {
+    if (draft.step === 2) return <StepLifeStage draft={draft} updateDraft={updateDraft} />;
+    if (draft.step === 3) {
       return (
         <StepFixedExpenses
           draft={draft}
@@ -550,7 +603,7 @@ export default function VitalsWizard() {
         />
       );
     }
-    if (draft.step === 3) {
+    if (draft.step === 4) {
       return <StepInterests interests={draft.interests} onToggleInterest={toggleInterest} />;
     }
     return <StepGoal draft={draft} error={error} updateDraft={updateDraft} />;
@@ -559,7 +612,8 @@ export default function VitalsWizard() {
   const outgoingNode = () => {
     const s = outgoingStepRef.current;
     if (s === null) return null;
-    if (s === 0) {
+    if (s === 0) return <StepWelcome />;
+    if (s === 1) {
       return (
         <StepIncome
           draft={draft}
@@ -570,10 +624,8 @@ export default function VitalsWizard() {
         />
       );
     }
-    if (s === 1) {
-      return <StepLifeStage draft={draft} updateDraft={updateDraft} />;
-    }
-    if (s === 2) {
+    if (s === 2) return <StepLifeStage draft={draft} updateDraft={updateDraft} />;
+    if (s === 3) {
       return (
         <StepFixedExpenses
           draft={draft}
@@ -583,7 +635,7 @@ export default function VitalsWizard() {
         />
       );
     }
-    if (s === 3) {
+    if (s === 4) {
       return <StepInterests interests={draft.interests} onToggleInterest={toggleInterest} />;
     }
     return <StepGoal draft={draft} error={error} updateDraft={updateDraft} />;
@@ -630,17 +682,19 @@ export default function VitalsWizard() {
         />
       </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior="padding"
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 80}
-      >
-        <ScrollView
-          contentContainerStyle={{ paddingBottom: 140 }}
-          keyboardShouldPersistTaps="handled"
-          className="px-5 py-4"
+      <View style={{ flex: 1 }}>
+        {/* Header with Skip in top-right */}
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            paddingHorizontal: 20,
+            paddingTop: 12,
+            paddingBottom: 4,
+          }}
         >
-          <View style={{ marginBottom: 14 }}>
+          <View style={{ flex: 1 }}>
             <Text style={{ color: "#9CA3AF", fontFamily: "Figtree-Medium", fontSize: 12, letterSpacing: 0.8, textTransform: "uppercase" }}>
               Step {draft.step + 1} of {totalSteps}
             </Text>
@@ -648,50 +702,98 @@ export default function VitalsWizard() {
               {title}
             </Text>
           </View>
+          {showSkip ? (
+            <Button
+              variant="outline"
+              size="sm"
+              onPress={async () => {
+                try {
+                  await Haptics.selectionAsync();
+                } catch {
+                  // ignore
+                }
+                await handleSkip();
+              }}
+              style={{ paddingVertical: 8, paddingHorizontal: 12, marginTop: 4 }}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Text style={{ color: "#94A3B8", fontFamily: "Figtree-Medium", fontSize: 15 }}>
+                Skip
+              </Text>
+            </Button>
+          ) : null}
+        </View>
 
-          {/* Slide/scale transition stack */}
-          <View style={{ minHeight: 520 }}>
+        <Separator className="mt-4 mx-4" />
+
+        <KeyboardAwareScrollView
+          ref={scrollViewRef}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: bottomBarHeight }}
+          className="px-5 py-4"
+        >
+          {showValidationHint && draft.step > 0 && (draft.step === 5 ? !canFinish : !canContinue) && (
+            <Text
+              style={{
+                color: "#FCA5A5",
+                fontFamily: "Figtree-Regular",
+                fontSize: 13,
+                marginBottom: 12,
+              }}
+            >
+              Complete required fields above to continue.
+            </Text>
+          )}
+
+          {/* Slide/scale transition stack - height adapts to step content */}
+          <Animated.View style={[containerStyle]}>
             {outgoingStepRef.current !== null ? (
-              <Animated.View style={[{ position: "absolute", left: 0, right: 0, top: 0 }, outgoingStyle]}>
+              <Animated.View
+                style={[StyleSheet.absoluteFill, outgoingStyle]}
+                accessibilityElementsHidden
+              >
                 {outgoingNode()}
               </Animated.View>
             ) : null}
 
-            <Animated.View style={[{ position: "absolute", left: 0, right: 0, top: 0 }, incomingStyle]}>
+            <Animated.View
+              style={[{ position: "absolute", left: 0, right: 0, top: 0 }, incomingStyle]}
+              onLayout={onStepLayout}
+            >
               {currentStepNode()}
             </Animated.View>
-          </View>
-        </ScrollView>
+          </Animated.View>
+        </KeyboardAwareScrollView>
 
-        {/* Floating controls */}
+        {/* iOS: ensure every keyboard has a Done/Close control */}
+        <KeyboardDoneAccessory accessoryId={keyboardAccessoryId} />
+
+        {/* Bottom bar - in normal flow, never shrink */}
         <View
           style={{
-            position: "absolute",
-            left: 16,
-            right: 16,
-            bottom: 16,
+            flexShrink: 0,
+            paddingHorizontal: 16,
+            paddingTop: 16,
+            paddingBottom: Math.max(16, insets.bottom),
             gap: 10,
+            backgroundColor: "#000000",
+            borderTopWidth: 1,
+            borderTopColor: "rgba(255,255,255,0.06)",
           }}
         >
-          {showSkip ? (
-            <SecondaryButton onPress={handleSkip} style={{ minHeight: 44 }}>
-              Skip (use general plan)
-            </SecondaryButton>
-          ) : null}
-
           <View style={{ flexDirection: "row", gap: 10 }}>
             <SecondaryButton
-              onPress={draft.step === 0 ? () => router.replace("/(tabs)") : goBack}
+              onPress={draft.step === 0 ? () => router.replace("/(tabs)/budget") : goBack}
               style={{ flex: 1 }}
             >
-              {draft.step === 0 ? "Later" : "Back"}
+              {draft.step === 0 ? "I'll do this later" : "Back"}
             </SecondaryButton>
 
             {draft.step < totalSteps - 1 ? (
               <PrimaryButton
                 onPress={goNext}
-                disabled={!canContinue}
-                style={{ flex: 1, opacity: canContinue ? 1 : 0.3 }}
+                disabled={!canContinue && draft.step > 0}
+                style={{ flex: 1, opacity: canContinue || draft.step === 0 ? 1 : 0.5 }}
               >
                 Next
               </PrimaryButton>
@@ -699,18 +801,41 @@ export default function VitalsWizard() {
               <PrimaryButton
                 onPress={handleFinish}
                 loading={loading}
-                disabled={!canFinish || loading}
-                style={{ flex: 1, opacity: canFinish ? 1 : 0.3 }}
+                disabled={loading}
+                style={{ flex: 1, opacity: canFinish ? 1 : 0.5 }}
               >
-                Finish
+                {editMode ? "Save changes" : "Finish"}
               </PrimaryButton>
             )}
           </View>
-        </View>
 
-        {/* iOS: ensure every keyboard has a Done/Close control */}
-        <KeyboardDoneAccessory accessoryId={keyboardAccessoryId} />
-      </KeyboardAvoidingView>
+          {draft.step > 0 && draft.step < totalSteps - 1 && !editMode ? (
+            <Pressable
+              onPress={() => {
+                void persistDraft(draft);
+                router.replace("/(tabs)/budget");
+              }}
+              style={{
+                alignSelf: "center",
+                paddingVertical: 12,
+                paddingHorizontal: 16,
+                marginTop: 8,
+              }}
+            >
+              <Text
+                style={{
+                  color: "#64748B",
+                  fontFamily: "Figtree-Regular",
+                  fontSize: 12,
+                  textDecorationLine: "underline",
+                }}
+              >
+                Save and continue later
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
     </SafeAreaView>
   );
 }

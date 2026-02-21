@@ -33,7 +33,7 @@ export function BudgetPersonalizationCard({
           <View className="flex-1">
             <Text className="text-white text-base font-semibold">Personalize your budget</Text>
             <Text className="text-muted-foreground text-xs mt-1">
-              Answer a few vitals to auto-pick the best plan (or skip anytime).
+              Get a personalized budget in 2 minutes (or skip anytime).
             </Text>
           </View>
           <PrimaryButton onPress={() => router.push('/vitals')} className="h-11 px-4">

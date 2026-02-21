@@ -1,6 +1,7 @@
+import { createFileRoute } from '@tanstack/react-router'
 import { ContentPageLayout } from '@/components/layout/ContentPageLayout'
 import { Footer } from '@/components/layout/Footer'
-import { createFileRoute } from '@tanstack/react-router'
+import { createPageHead } from '@/lib/seo'
 
 export const Route = createFileRoute('/privacy')({
   component: PrivacyPage,

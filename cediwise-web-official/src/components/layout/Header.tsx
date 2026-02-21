@@ -1,16 +1,17 @@
 'use client'
 
-import { AnimatePresence, motion } from 'framer-motion'
-import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { MenuVertical } from '@/components/ui/menu-vertical'
 import { cn } from '@/lib/utils'
+import { Link } from '@tanstack/react-router'
+import { AnimatePresence, motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
 
 const navItems = [
-  { label: 'Salary & Tax', href: '#salary' },
-  { label: 'Budgeting', href: '#budgeting' },
-  { label: 'SME Ledger', href: '#ledger' },
-  { label: 'Financial Literacy', href: '#literacy' },
+  { label: 'Salary & Tax', to: '/salary-calculator' },
+  { label: 'Budgeting', to: '/budgeting-tool' },
+  { label: 'SME Ledger', to: '/sme-ledger' },
+  { label: 'Financial Literacy', to: '/financial-literacy' },
 ]
 
 export function Header() {
@@ -47,18 +48,21 @@ export function Header() {
           {/* Desktop Left Nav */}
           <div className="hidden flex-1 items-center gap-10 lg:flex">
             {navItems.slice(0, 2).map((item) => (
-              <a
+              <Link
                 key={item.label}
-                href={item.href}
+                to={item.to}
                 className="group relative text-sm font-medium text-zinc-400 transition-colors hover:text-white"
               >
                 {item.label}
                 <span className="absolute -bottom-1 left-0 h-px w-0 bg-primary transition-all duration-300 group-hover:w-full" />
-              </a>
+              </Link>
             ))}
           </div>
 
-          <div className="absolute left-5 lg:left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95">
+          <Link
+            to="/"
+            className="absolute left-5 lg:left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95"
+          >
             <div className="flex items-center justify-center gap-2.5 backdrop-blur-md">
               <img
                 src="/cediwise-smooth-light-logo.png"
@@ -66,26 +70,32 @@ export function Header() {
                 className="h-10 w-auto"
               />
             </div>
-          </div>
+          </Link>
 
           {/* Desktop Right Nav & CTA */}
           <div className="hidden flex-1 items-center justify-end gap-10 lg:flex">
             {navItems.slice(2).map((item) => (
-              <a
+              <Link
                 key={item.label}
-                href={item.href}
+                to={item.to}
                 className="group relative text-sm font-medium text-zinc-400 transition-colors hover:text-white"
               >
                 {item.label}
                 <span className="absolute -bottom-1 left-0 h-px w-0 bg-primary transition-all duration-300 group-hover:w-full" />
-              </a>
+              </Link>
             ))}
-            <Button
-              size="sm"
-              className="h-10 rounded-xl bg-primary px-6 text-sm font-bold text-black shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all hover:scale-105 hover:bg-primary/90 active:scale-95"
+            <a
+              href="/api/download-latest-apk"
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              Get Started
-            </Button>
+              <Button
+                size="sm"
+                className="h-10 rounded-xl bg-primary px-6 text-sm font-bold text-black shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all hover:scale-105 hover:bg-primary/90 active:scale-95"
+              >
+                Get Started
+              </Button>
+            </a>
           </div>
 
           {/* Mobile Burger (Framer Component Style) */}
@@ -168,13 +178,27 @@ export function Header() {
               </div>
 
               <div className="flex flex-col gap-8">
-                <MenuVertical menuItems={navItems} skew={10} />
+                <MenuVertical
+                  menuItems={navItems.map(({ label, to }) => ({
+                    label,
+                    href: to,
+                  }))}
+                  skew={10}
+                  onNavigate={() => setIsOpen(false)}
+                />
               </div>
 
               <div className="mt-12 px-10">
-                <Button className="h-16 w-full max-w-sm rounded-[2rem] bg-primary text-xl font-bold text-black shadow-lg">
-                  Install App
-                </Button>
+                <a
+                  href="/api/download-latest-apk"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Button className="h-16 w-full max-w-sm rounded-[2rem] bg-primary text-xl font-bold text-black shadow-lg">
+                    Install App
+                  </Button>
+                </a>
               </div>
             </motion.div>
           </>

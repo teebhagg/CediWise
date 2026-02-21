@@ -46,8 +46,9 @@
 CediWise/
 ├── assets/                    # Shared images (banner, logo)
 ├── cediwise-mobile-app/       # Expo React Native app (Android, iOS)
-├── cediwise-web-official/     # TanStack Start web app
+├── cediwise-web-official/     # TanStack Start web app (landing, legal, feature pages)
 ├── supabase/                  # Edge functions (auth, OTP)
+├── LICENSE                    # MIT License
 └── .github/                   # CI/CD (Android builds)
 ```
 
@@ -98,6 +99,22 @@ npm run dev
 
 ---
 
+## Web App Pages
+
+The official web app includes:
+
+- **Product**: [Salary Calculator](https://cediwise.app/salary-calculator) • [Budgeting Tool](https://cediwise.app/budgeting-tool) • [SME Ledger](https://cediwise.app/sme-ledger) • [Financial Literacy](https://cediwise.app/financial-literacy)
+- **Company**: [About Us](https://cediwise.app/about) • [Contact](https://cediwise.app/contact)
+- **Legal**: [Privacy Policy](https://cediwise.app/privacy) • [Terms of Service](https://cediwise.app/terms)
+
+---
+
+## License
+
+This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
 <p align="center">
-  <sub>Built for Ghana • Offline-first • High-contrast UI</sub>
+  <sub>Built for Ghana by <a href="https://joshua-ansah.vercel.app">Joshua Ansah</a> • Offline-first • High-contrast UI</sub>
 </p>

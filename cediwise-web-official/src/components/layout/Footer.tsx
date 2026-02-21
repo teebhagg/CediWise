@@ -7,25 +7,26 @@ import {
   TwitterIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
+import { Link } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
 
 const footerLinks = [
   {
     title: 'Product',
     links: [
-      { name: 'Salary Calculator', href: '#salary' },
-      { name: 'Budgeting Tool', href: '#budgeting' },
-      { name: 'SME Ledger', href: '#ledger' },
-      { name: 'Financial Literacy', href: '#literacy' },
+      { name: 'Salary Calculator', href: '/salary-calculator' },
+      { name: 'Budgeting Tool', href: '/budgeting-tool' },
+      { name: 'SME Ledger', href: '/sme-ledger' },
+      { name: 'Financial Literacy', href: '/financial-literacy' },
     ],
   },
   {
     title: 'Company',
     links: [
-      { name: 'About Us', href: '#about' },
-      { name: 'Contact', href: '#contact' },
-      { name: 'Privacy Policy', href: '#privacy' },
-      { name: 'Terms of Service', href: '#terms' },
+      { name: 'About Us', href: '/about' },
+      { name: 'Contact', href: '/contact' },
+      { name: 'Privacy Policy', href: '/privacy' },
+      { name: 'Terms of Service', href: '/terms' },
     ],
   },
 ]
@@ -78,12 +79,12 @@ export function Footer() {
               <ul className="space-y-4">
                 {section.links.map((link) => (
                   <li key={link.name}>
-                    <a
-                      href={link.href}
+                    <Link
+                      to={link.href}
                       className="text-zinc-400 text-sm hover:text-primary transition-colors duration-300"
                     >
                       {link.name}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>

@@ -1,6 +1,5 @@
 import { CalendarClock } from "lucide-react-native";
 import { Pressable, Text, View } from "react-native";
-import { Card } from "../../Card";
 
 function formatCycleRange(startDate: string, endDate: string): string {
   const start = new Date(startDate);
@@ -35,7 +34,7 @@ export function StartNewCycleCard({
   if (!visible) return null;
 
   return (
-    <Card className="">
+    <View className="rounded-xl border-l-4 border-l-amber-500 bg-amber-500/10 px-4 py-3">
       <View className="flex-row items-start gap-3">
         <View className="mt-0.5 p-2 rounded-full bg-amber-500/20 border border-amber-500/30">
           <CalendarClock size={18} color="#F59E0B" />
@@ -57,6 +56,6 @@ export function StartNewCycleCard({
           </Pressable>
         </View>
       </View>
-    </Card>
+    </View>
   );
 }

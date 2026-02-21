@@ -1,7 +1,6 @@
 import { useRouter } from 'expo-router';
 import { RefreshCcw } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
-import { Card } from '../../Card';
 
 interface BudgetPendingSyncCardProps {
   visible: boolean;
@@ -14,7 +13,7 @@ export function BudgetPendingSyncCard({ visible, onRetry }: BudgetPendingSyncCar
   if (!visible) return null;
 
   return (
-    <Card className="">
+    <View className="rounded-xl border-l-4 border-l-rose-500 bg-rose-500/10 px-4 py-3">
       <View className="flex-row items-center justify-between">
         <View className="flex-1">
           <Text className="text-white text-base font-semibold">
@@ -35,6 +34,6 @@ export function BudgetPendingSyncCard({ visible, onRetry }: BudgetPendingSyncCar
       <Pressable onPress={() => router.push('/queue')} className="mt-3">
         <Text className="text-slate-400 text-xs">View sync queue →</Text>
       </Pressable>
-    </Card>
+    </View>
   );
 }

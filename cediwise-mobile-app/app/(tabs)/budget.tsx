@@ -1,19 +1,15 @@
 import { BudgetLoadingSkeleton } from '@/components/BudgetLoading';
 import { Card } from '@/components/Card';
 import { ApplyVitalsCard } from '@/components/features/budget/ApplyVitalsCard';
-import { BudgetAllocationCard } from '@/components/features/budget/BudgetAllocationCard';
-import { BudgetCategoriesCard } from '@/components/features/budget/BudgetCategoriesCard';
-import { BudgetCurrentCycleCard } from '@/components/features/budget/BudgetCurrentCycleCard';
 import { BudgetExpensesCard } from '@/components/features/budget/BudgetExpensesCard';
-import { BudgetHealthScoreCard } from '@/components/features/budget/BudgetHealthScoreCard';
-import { BudgetIncomeSourcesCard } from '@/components/features/budget/BudgetIncomeSourcesCard';
 import { BudgetModals } from '@/components/features/budget/BudgetModals';
+import { BudgetOverviewCard } from '@/components/features/budget/BudgetOverviewCard';
 import { BudgetPendingSyncCard } from '@/components/features/budget/BudgetPendingSyncCard';
 import { BudgetPersonalizationCard } from '@/components/features/budget/BudgetPersonalizationCard';
+import { BudgetQuickActions } from '@/components/features/budget/BudgetQuickActions';
 import { BudgetReallocationBanner } from '@/components/features/budget/BudgetReallocationBanner';
 import { BudgetScreenHeader } from '@/components/features/budget/BudgetScreenHeader';
 import { BudgetSetupCycleCard } from '@/components/features/budget/BudgetSetupCycleCard';
-import { BudgetSpendingInsightsCard } from '@/components/features/budget/BudgetSpendingInsightsCard';
 import { BudgetToolsCard } from '@/components/features/budget/BudgetToolsCard';
 import { StartNewCycleCard } from '@/components/features/budget/StartNewCycleCard';
 import { useBudgetScreenState } from '@/components/features/budget/useBudgetScreenState';
@@ -66,7 +62,8 @@ export default function BudgetScreen() {
       wantsPct,
       savingsPct,
       interests: v.interests ?? [],
-      fixedAmountsByCategory: Object.keys(fixedAmountsByCategory).length > 0 ? fixedAmountsByCategory : undefined,
+      fixedAmountsByCategory:
+        Object.keys(fixedAmountsByCategory).length > 0 ? fixedAmountsByCategory : undefined,
     });
 
     if (v.stable_salary > 0) {
@@ -90,13 +87,16 @@ export default function BudgetScreen() {
   };
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: 'black' }} className="flex-1 bg-background">
+    <SafeAreaView
+      edges={['top']}
+      style={{ flex: 1, backgroundColor: 'black' }}
+      className="flex-1 bg-background"
+    >
       <BudgetScreenHeader
         syncPillVisible={budget.isSyncing || refreshing || budget.retryIn !== null}
         syncPillLabel={derived.syncPillLabel}
         pendingCount={budget.pendingCount}
-        showResetButton={!!user && !(budget.isSyncing || refreshing)}
-        onResetPress={() => modals.setShowResetConfirm(true)}
+        showSettingsButton={!!user}
       />
 
       <ScrollView
@@ -106,11 +106,13 @@ export default function BudgetScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => {
-              onRefresh().then(() => {
-                showSuccess('Sync successful', 'Your budget has been synced successfully');
-              }).catch(() => {
-                showError('Error', 'Failed to sync budget');
-              });
+              onRefresh()
+                .then(() => {
+                  showSuccess('Sync successful', 'Your budget has been synced successfully');
+                })
+                .catch(() => {
+                  showError('Error', 'Failed to sync budget');
+                });
             }}
             tintColor="#22C55E"
             colors={['#22C55E']}
@@ -119,14 +121,14 @@ export default function BudgetScreen() {
         }
       >
         <View className="gap-4 mb-6">
+          {/* Onboarding: Personalize first (new users who haven't done vitals) */}
           <BudgetPersonalizationCard
             showCta={!!user && !personalization.isLoading && !personalization.setupCompleted}
-            showSummary={!!user && !!derived.vitalsSummary}
-            vitalsSummary={derived.vitalsSummary}
+            showSummary={false}
+            vitalsSummary={null}
           />
 
-          <BudgetToolsCard visible={!!user && derived.cycleIsSet} />
-
+          {/* Alert zone */}
           <StartNewCycleCard
             visible={
               !!user &&
@@ -179,31 +181,6 @@ export default function BudgetScreen() {
                 />
               ) : null}
 
-              {!derived.cycleHasEnded ? (
-                <BudgetCurrentCycleCard
-                  cycle={derived.activeCycle}
-                  cycleIsSet={derived.cycleIsSet}
-                  onEditCycle={() => modals.setShowEditCycleModal(true)}
-                />
-              ) : null}
-
-              <BudgetHealthScoreCard
-                visible={
-                  !derived.cycleHasEnded &&
-                  !!ui.budgetHealthScore &&
-                  derived.cycleIsSet &&
-                  derived.hasIncomeSources
-                }
-                score={ui.budgetHealthScore?.score ?? 0}
-                label={
-                  (ui.budgetHealthScore?.score ?? 0) >= 75
-                    ? 'On track'
-                    : (ui.budgetHealthScore?.score ?? 0) >= 50
-                      ? 'Needs attention'
-                      : 'At risk'
-                }
-                summary={ui.budgetHealthScore?.summary}
-              />
               <BudgetReallocationBanner
                 visible={
                   !derived.cycleHasEnded &&
@@ -227,103 +204,33 @@ export default function BudgetScreen() {
                 }}
               />
 
-              <BudgetSpendingInsightsCard
-                visible={
-                  !derived.cycleHasEnded &&
-                  derived.cycleIsSet &&
-                  !!derived.activeCycleId &&
-                  derived.cycleCategories.length > 0
-                }
-                loading={ui.spendingInsightsLoading}
-                insights={ui.spendingInsights}
-                advisorRecommendations={ui.advisorRecommendations}
-                onApplyLimitAdjustment={(rec) => {
-                  if (rec.categoryId && rec.context != null && rec.currentLimit != null) {
-                    modals.setEditingLimit({
-                      id: rec.categoryId,
-                      name: rec.context,
-                      current: rec.currentLimit,
-                      suggestedLimit: rec.suggestedLimit,
-                    });
-                    modals.setShowEditLimitModal(true);
-                  }
-                }}
-              />
-
-              <BudgetIncomeSourcesCard
-                cycleIsSet={derived.cycleIsSet}
-                showIncomeForm={ui.showIncomeForm}
-                incomeToggleChevronStyle={derived.incomeToggleChevronStyle}
-                onToggleIncomeForm={ui.toggleIncomeForm}
-                incomeName={form.incomeName}
-                setIncomeName={form.setIncomeName}
-                incomeType={form.incomeType}
-                setIncomeType={form.setIncomeType}
-                incomeAmount={form.incomeAmount}
-                setIncomeAmount={form.setIncomeAmount}
-                applyDeductions={form.applyDeductions}
-                setApplyDeductions={form.setApplyDeductions}
-                incomeSources={budget.state?.incomeSources ?? []}
-                incomeAccentColors={derived.incomeAccentColors}
-                onAddIncome={async () => {
-                  const amt = parseFloat(form.incomeAmount) || 0;
-                  await budget.addIncomeSource({
-                    name: form.incomeName,
-                    type: form.incomeType,
-                    amount: amt,
-                    applyDeductions: form.applyDeductions,
-                  });
-                  form.setIncomeAmount('');
-                }}
-                onEditIncome={(src) => {
-                  modals.setIncomeToEdit({
-                    id: src.id,
-                    name: src.name,
-                    type: src.type,
-                    amount: src.amount,
-                    applyDeductions: src.applyDeductions,
-                  });
-                  modals.setShowEditIncomeModal(true);
-                }}
-                onDeleteIncome={(src) => {
-                  modals.setIncomeToDelete(src);
-                  modals.setShowDeleteIncomeConfirm(true);
-                }}
-              />
-
-              <BudgetAllocationCard
+              <BudgetOverviewCard
                 visible={
                   !derived.cycleHasEnded &&
                   !!budget.totals &&
                   derived.hasIncomeSources
                 }
-                allocationTitle={derived.allocationTitle}
+                cycle={derived.activeCycle}
                 totals={budget.totals}
+                healthScore={ui.budgetHealthScore?.score ?? null}
+                healthLabel={
+                  (ui.budgetHealthScore?.score ?? 0) >= 75
+                    ? 'On track'
+                    : (ui.budgetHealthScore?.score ?? 0) >= 50
+                      ? 'Needs attention'
+                      : 'At risk'
+                }
+                healthSummary={ui.budgetHealthScore?.summary}
               />
 
-              <BudgetCategoriesCard
+              <BudgetQuickActions
                 visible={
                   !derived.cycleHasEnded &&
-                  derived.cycleCategories.length > 0 &&
+                  derived.cycleIsSet &&
                   derived.hasIncomeSources
                 }
-                categoriesOpen={ui.categoriesOpen}
-                onToggleCategories={() => ui.setCategoriesOpen((v) => !v)}
-                bucketOpen={ui.bucketOpen}
-                setBucketOpen={ui.setBucketOpen}
-                categoriesByBucket={derived.categoriesByBucket}
-                activeCycleId={derived.activeCycleId}
-                transactions={budget.state?.transactions ?? []}
-                totals={budget.totals}
-                onEditLimit={(cat) => {
-                  modals.setEditingLimit(cat);
-                  modals.setShowEditLimitModal(true);
-                }}
-                onDeleteCategory={(cat) => {
-                  modals.setCategoryToDelete(cat);
-                  modals.setShowDeleteCategoryConfirm(true);
-                }}
-                onAddCustomCategory={() => modals.setShowAddCustomCategoryModal(true)}
+                onLogExpense={() => modals.setShowTxModal(true)}
+                disabledLogExpense={!derived.activeCycleId}
               />
 
               <BudgetExpensesCard
@@ -335,7 +242,10 @@ export default function BudgetScreen() {
                 categories={derived.cycleCategories.map((c) => ({ id: c.id, name: c.name }))}
                 onLogExpense={() => modals.setShowTxModal(true)}
                 onShowMore={() => router.push('/expenses')}
+                previewCount={3}
               />
+
+              <BudgetToolsCard visible={!!user && derived.cycleIsSet} />
             </>
           )}
         </View>
@@ -389,7 +299,8 @@ export default function BudgetScreen() {
             name: next.name ?? modals.incomeToEdit.name,
             type: next.type ?? modals.incomeToEdit.type,
             amount: next.amount ?? modals.incomeToEdit.amount,
-            applyDeductions: next.applyDeductions ?? modals.incomeToEdit.applyDeductions,
+            applyDeductions:
+              next.applyDeductions ?? modals.incomeToEdit.applyDeductions,
           });
           await budget.reload();
         }}
@@ -426,7 +337,7 @@ export default function BudgetScreen() {
         nextCycleStart={ui.pendingRollover?.nextCycleStart ?? ''}
         nextCycleEnd={ui.pendingRollover?.nextCycleEnd ?? ''}
         durationDays={ui.pendingRollover?.durationDays ?? 30}
-        durationUnit={ui.pendingRollover?.durationUnit ?? "months"}
+        durationUnit={ui.pendingRollover?.durationUnit ?? 'months'}
         durationMonths={ui.pendingRollover?.durationMonths ?? 1}
         paydayDay={ui.pendingRollover?.paydayDay ?? 1}
         onClose={() => ui.setPendingRollover(null)}

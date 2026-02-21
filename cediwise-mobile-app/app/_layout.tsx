@@ -78,6 +78,7 @@ export default function RootLayout() {
                       <Stack.Screen name="profile" options={{ headerShown: false }} />
                       <Stack.Screen name="queue" options={{ headerShown: false }} />
                       <Stack.Screen name="vitals" options={{ headerShown: false }} />
+                      <Stack.Screen name="budget" options={{ headerShown: false }} />
                       <Stack.Screen name="budget-templates" options={{ headerShown: false }} />
                       <Stack.Screen name="debt-dashboard" options={{ headerShown: false }} />
                       <Stack.Screen name="recurring-expenses" options={{ headerShown: false }} />

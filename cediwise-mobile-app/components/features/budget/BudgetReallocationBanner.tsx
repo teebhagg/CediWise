@@ -1,6 +1,5 @@
 import { RotateCcw } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
-import { Card } from '../../Card';
 import type { ReallocationSuggestion } from '../../../utils/reallocationEngine';
 import { formatAllocation, formatReallocationDetails } from '../../../utils/reallocationEngine';
 
@@ -25,7 +24,7 @@ export function BudgetReallocationBanner({
   const detailsStr = formatReallocationDetails(suggestion);
 
   return (
-    <Card className="">
+    <View className="rounded-xl border-l-4 border-l-amber-500 bg-amber-500/10 px-4 py-3">
       <View className="flex-col items-start gap-3">
         <View className="flex-row items-center gap-2">
           <View className="mt-0.5 p-2 rounded-full bg-amber-500/20 border border-amber-500/30">
@@ -51,6 +50,6 @@ export function BudgetReallocationBanner({
           </View>
         </View>
       </View>
-    </Card>
+    </View>
   );
 }

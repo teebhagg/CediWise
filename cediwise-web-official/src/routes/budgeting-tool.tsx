@@ -1,19 +1,17 @@
 import { FeatureInsightLayout } from '@/components/features/FeatureInsightLayout'
+import { createPageHead } from '@/lib/seo'
 import { ChartLineDataIcon } from '@hugeicons/core-free-icons'
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/budgeting-tool')({
   component: BudgetingToolPage,
-  head: () => ({
-    meta: [
-      { title: 'Budgeting Tool — CediWise' },
-      {
-        name: 'description',
-        content:
-          'Category-based budgets with spent vs. remaining progress. Stay on track without the headache of spreadsheets.',
-      },
-    ],
-  }),
+  head: () =>
+    createPageHead({
+      path: '/budgeting-tool',
+      title: 'Budgeting Tool',
+      description:
+        'Category-based budgets with spent vs. remaining progress. Stay on track without the headache of spreadsheets.',
+    }),
 })
 
 const highlights = [

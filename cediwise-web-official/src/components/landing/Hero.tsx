@@ -1,8 +1,8 @@
+import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { SmartPhone01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { motion } from 'framer-motion'
-import { buttonVariants } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
 
 export function Hero() {
   return (
@@ -81,7 +81,7 @@ export function Hero() {
               <div className="aspect-9/19 overflow-hidden shadow-xl opacity-90">
                 <img
                   src="/assets/img_3.png"
-                  alt="Feature Preview"
+                  alt="CediWise SME Ledger and expense tracking screenshot"
                   className="h-full w-full object-cover"
                 />
               </div>
@@ -92,7 +92,7 @@ export function Hero() {
               <div className="aspect-9/19 overflow-hidden shadow-xl opacity-90">
                 <img
                   src="/assets/img_4.png"
-                  alt="Analytics View"
+                  alt="CediWise financial literacy and analytics dashboard"
                   className="h-full w-full object-cover"
                 />
               </div>
@@ -103,7 +103,7 @@ export function Hero() {
               <div className="aspect-9/19 overflow-hidden shadow-2xl">
                 <img
                   src="/assets/img_1.png"
-                  alt="CediWise App Interface"
+                  alt="CediWise salary calculator and budgeting app interface"
                   className="h-full w-full object-cover"
                 />
               </div>

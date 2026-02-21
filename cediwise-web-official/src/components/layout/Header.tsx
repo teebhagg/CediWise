@@ -61,6 +61,7 @@ export function Header() {
 
           <Link
             to="/"
+            aria-label="CediWise home"
             className="absolute left-5 lg:left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95"
           >
             <div className="flex items-center justify-center gap-2.5 backdrop-blur-md">

@@ -1,6 +1,7 @@
 'use client'
 
 import { Footer } from '@/components/layout/Footer'
+import { createPageHead } from '@/lib/seo'
 import {
   ArrowLeft01Icon,
   CallIcon,
@@ -8,21 +9,18 @@ import {
   MessageQuestionIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
 
 export const Route = createFileRoute('/contact')({
   component: ContactPage,
-  head: () => ({
-    meta: [
-      { title: 'Contact — CediWise' },
-      {
-        name: 'description',
-        content:
-          'Get in touch with the CediWise team. Questions, feedback, or support — we’d love to hear from you.',
-      },
-    ],
-  }),
+  head: () =>
+    createPageHead({
+      path: '/contact',
+      title: 'Contact',
+      description:
+        "Get in touch with the CediWise team. Questions, feedback, or support — we’d love to hear from you.",
+    }),
 })
 
 const contactMethods = [

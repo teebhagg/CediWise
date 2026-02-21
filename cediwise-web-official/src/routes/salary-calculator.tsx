@@ -1,19 +1,17 @@
 import { FeatureInsightLayout } from '@/components/features/FeatureInsightLayout'
+import { createPageHead } from '@/lib/seo'
 import { CreditCardIcon } from '@hugeicons/core-free-icons'
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/salary-calculator')({
   component: SalaryCalculatorPage,
-  head: () => ({
-    meta: [
-      { title: 'Salary Calculator — CediWise' },
-      {
-        name: 'description',
-        content:
-          'Calculate SSNIT, PAYE, and net take-home for Ghana. Know exactly what stays in your pocket after all deductions.',
-      },
-    ],
-  }),
+  head: () =>
+    createPageHead({
+      path: '/salary-calculator',
+      title: 'Salary Calculator',
+      description:
+        'Calculate SSNIT, PAYE, and net take-home for Ghana. Know exactly what stays in your pocket after all deductions.',
+    }),
 })
 
 const highlights = [

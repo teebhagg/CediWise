@@ -4,16 +4,13 @@ import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/privacy')({
   component: PrivacyPage,
-  head: () => ({
-    meta: [
-      { title: 'Privacy Policy — CediWise' },
-      {
-        name: 'description',
-        content:
-          'CediWise Privacy Policy. Learn how we collect, use, and protect your personal information.',
-      },
-    ],
-  }),
+  head: () =>
+    createPageHead({
+      path: '/privacy',
+      title: 'Privacy Policy',
+      description:
+        'CediWise Privacy Policy. Learn how we collect, use, and protect your personal information.',
+    }),
 })
 
 function PrivacyPage() {

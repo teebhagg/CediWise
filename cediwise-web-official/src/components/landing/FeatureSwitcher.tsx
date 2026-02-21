@@ -1,5 +1,6 @@
 'use client'
 
+import { cn } from '@/lib/utils'
 import {
   Book04Icon,
   ChartLineDataIcon,
@@ -10,7 +11,6 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react'
 import { motion, useInView } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
-import { cn } from '@/lib/utils'
 
 const features = [
   {
@@ -99,7 +99,7 @@ export function FeatureSwitcher() {
                 <div className="relative h-full w-full overflow-hidden rounded-2xl">
                   <img
                     src={feature.image}
-                    alt={feature.title}
+                    alt={`CediWise ${feature.title} feature screenshot`}
                     className="h-full mx-auto object-cover"
                   />
                   {/* <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" /> */}

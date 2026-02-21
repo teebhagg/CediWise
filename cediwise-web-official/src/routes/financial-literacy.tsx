@@ -1,19 +1,17 @@
 import { FeatureInsightLayout } from '@/components/features/FeatureInsightLayout'
+import { createPageHead } from '@/lib/seo'
 import { Book04Icon } from '@hugeicons/core-free-icons'
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/financial-literacy')({
   component: FinancialLiteracyPage,
-  head: () => ({
-    meta: [
-      { title: 'Financial Literacy — CediWise' },
-      {
-        name: 'description',
-        content:
-          'Level up your money game with curated tips and insights. Built to help every Ghanaian worker build wealth.',
-      },
-    ],
-  }),
+  head: () =>
+    createPageHead({
+      path: '/financial-literacy',
+      title: 'Financial Literacy',
+      description:
+        'Level up your money game with curated tips and insights. Built to help every Ghanaian worker build wealth.',
+    }),
 })
 
 const highlights = [

@@ -1,19 +1,17 @@
 import { FeatureInsightLayout } from '@/components/features/FeatureInsightLayout'
+import { createPageHead } from '@/lib/seo'
 import { Invoice02Icon } from '@hugeicons/core-free-icons'
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/sme-ledger')({
   component: SMELedgerPage,
-  head: () => ({
-    meta: [
-      { title: 'SME Ledger — CediWise' },
-      {
-        name: 'description',
-        content:
-          'Sales and expenses with automatic 20% VAT calculations. Get alerted as you approach the GHS 750K VAT threshold.',
-      },
-    ],
-  }),
+  head: () =>
+    createPageHead({
+      path: '/sme-ledger',
+      title: 'SME Ledger',
+      description:
+        'Sales and expenses with automatic 20% VAT calculations. Get alerted as you approach the GHS 750K VAT threshold.',
+    }),
 })
 
 const highlights = [

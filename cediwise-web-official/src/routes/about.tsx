@@ -2,6 +2,7 @@
 
 import { Footer } from '@/components/layout/Footer'
 import { buttonVariants } from '@/components/ui/button'
+import { createPageHead } from '@/lib/seo'
 import { cn } from '@/lib/utils'
 import {
   ArrowLeft01Icon,
@@ -14,16 +15,13 @@ import { motion } from 'framer-motion'
 
 export const Route = createFileRoute('/about')({
   component: AboutPage,
-  head: () => ({
-    meta: [
-      { title: 'About Us — CediWise' },
-      {
-        name: 'description',
-        content:
-          'CediWise is a project by Joshua Ansah to address financial illiteracy in Ghana and help Ghanaians save, plan, and invest for a rainy day.',
-      },
-    ],
-  }),
+  head: () =>
+    createPageHead({
+      path: '/about',
+      title: 'About Us',
+      description:
+        'CediWise is a project by Joshua Ansah to address financial illiteracy in Ghana and help Ghanaians save, plan, and invest for a rainy day.',
+    }),
 })
 
 function AboutPage() {

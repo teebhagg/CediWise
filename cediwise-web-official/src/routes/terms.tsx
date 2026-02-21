@@ -1,19 +1,17 @@
 import { ContentPageLayout } from '@/components/layout/ContentPageLayout'
 import { Footer } from '@/components/layout/Footer'
+import { createPageHead } from '@/lib/seo'
 import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/terms')({
   component: TermsPage,
-  head: () => ({
-    meta: [
-      { title: 'Terms of Service — CediWise' },
-      {
-        name: 'description',
-        content:
-          'CediWise Terms of Service. Read the terms governing use of our financial tools and services.',
-      },
-    ],
-  }),
+  head: () =>
+    createPageHead({
+      path: '/terms',
+      title: 'Terms of Service',
+      description:
+        'CediWise Terms of Service. Read the terms governing use of our financial tools and services.',
+    }),
 })
 
 function TermsPage() {

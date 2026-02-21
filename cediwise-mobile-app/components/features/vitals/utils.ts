@@ -5,7 +5,26 @@ import {
 } from "@/utils/ghanaTax";
 import type { PersonalizationStrategy } from "@/utils/profileVitals";
 
+import type { IncomeFrequency } from "./types";
+
 export const DEFAULT_MIN_LIVING_BUFFER = 600;
+
+/** Convert pay-period amount to monthly equivalent. */
+export function toMonthlySalary(
+  amount: number,
+  frequency: IncomeFrequency
+): number {
+  if (amount <= 0) return 0;
+  switch (frequency) {
+    case "weekly":
+      return amount * (52 / 12); // ~4.33
+    case "bi_weekly":
+      return amount * (26 / 12); // ~2.17
+    case "monthly":
+    default:
+      return amount;
+  }
+}
 
 export function toMoney(value: string): number {
   const n = parseFloat(String(value ?? "").replace(/,/g, ""));
@@ -173,8 +192,12 @@ export function strategyToPercents(strategy: PersonalizationStrategy): {
   return { needsPct: 0.5, wantsPct: 0.3, savingsPct: 0.2 };
 }
 
-export function getNetPreview(stableSalary: string): GhanaTaxBreakdown | null {
-  const gross = toMoney(stableSalary);
-  if (gross <= 0) return null;
-  return computeGhanaTax2026Monthly(gross);
+export function getNetPreview(
+  stableSalary: string,
+  incomeFrequency: IncomeFrequency = "monthly"
+): GhanaTaxBreakdown | null {
+  const amount = toMoney(stableSalary);
+  if (amount <= 0) return null;
+  const monthly = toMonthlySalary(amount, incomeFrequency);
+  return computeGhanaTax2026Monthly(monthly);
 }

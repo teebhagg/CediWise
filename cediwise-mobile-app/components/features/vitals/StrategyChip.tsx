@@ -48,12 +48,12 @@ export const StrategyChip = memo(
       const bg = interpolateColor(
         selectedSV.value,
         [0, 1],
-        ["rgba(148,163,184,0.10)", "rgba(255,255,255,0.92)"]
+        ["rgba(148,163,184,0.10)", "rgba(34,197,94,0.2)"]
       );
       const border = interpolateColor(
         selectedSV.value,
         [0, 1],
-        ["rgba(148,163,184,0.25)", "rgba(255,255,255,0.35)"]
+        ["rgba(148,163,184,0.25)", "rgba(34,197,94,0.5)"]
       );
       const scale = 1 + 0.03 * selectedSV.value - 0.03 * pressedSV.value;
       const opacity = 1 - 0.06 * pressedSV.value;
@@ -66,7 +66,7 @@ export const StrategyChip = memo(
     });
 
     const textStyle = useAnimatedStyle(() => ({
-      color: interpolateColor(selectedSV.value, [0, 1], ["#E2E8F0", "#000000"]),
+      color: interpolateColor(selectedSV.value, [0, 1], ["#E2E8F0", "#E2E8F0"]),
     }));
 
     const checkStyle = useAnimatedStyle(() => ({

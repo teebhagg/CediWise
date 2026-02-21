@@ -1,16 +1,12 @@
-import { useMemo, useState } from "react";
+import { InputProps } from 'heroui-native';
 import {
-  Keyboard,
-  Platform,
   Text,
-  TextInput,
-  TextInputProps,
-  View,
+  View
 } from "react-native";
-import {AppTextField} from "./AppTextField";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated from "react-native-reanimated";
+import { AppTextField } from "./AppTextField";
 
-type Props = Omit<TextInputProps, "style"> & {
+type Props = Omit<InputProps, "style"> & {
   label: string;
   error?: string;
 };
@@ -20,11 +16,6 @@ const AnimatedView = Animated.createAnimatedComponent(View);
 export function LabeledTextInput({
   label,
   error,
-  onFocus,
-  onBlur,
-  onSubmitEditing,
-  returnKeyType,
-  inputAccessoryViewID,
   ...rest
 }: Props) {
 
@@ -43,17 +34,6 @@ export function LabeledTextInput({
       </Text>
 
       <AnimatedView
-        // style={[
-        //   {
-        //     borderRadius: 16,
-        //     borderWidth: 1,
-        //     borderColor: error ? "rgba(239,68,68,0.55)" : "rgba(255,255,255,0.10)",
-        //     backgroundColor: "transparent",
-        //     paddingHorizontal: 16,
-        //     height: 54,
-        //     justifyContent: "center",
-        //   },
-        // ]}
       >
         <AppTextField
           {...rest}

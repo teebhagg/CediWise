@@ -1,12 +1,9 @@
+import { LabeledTextInput } from "@/components/LabeledTextInput";
+import type { GhanaTaxBreakdown } from "@/utils/ghanaTax";
 import * as Haptics from "expo-haptics";
 import { memo } from "react";
 import { Pressable, Text, View } from "react-native";
 import Animated, { FadeInUp } from "react-native-reanimated";
-
-import { Card } from "@/components/Card";
-import { LabeledTextInput } from "@/components/LabeledTextInput";
-import type { GhanaTaxBreakdown } from "@/utils/ghanaTax";
-
 import { InterestChip } from "./InterestChip";
 import { ModeToggle } from "./ModeToggle";
 import { StrategyChip } from "./StrategyChip";
@@ -19,7 +16,9 @@ import type {
   StepErrors,
   UpdateDraft,
 } from "./types";
-import { computeIntelligentStrategy, strategyToPercents, toMoney } from "./utils";
+import { computeIntelligentStrategy, strategyToPercents, toMoney, toMonthlySalary } from "./utils";
+
+const STEP_LABELS = ["Income", "Life", "Expenses", "Interests", "Goal"] as const;
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
@@ -61,6 +60,69 @@ const FINANCIAL_PRIORITIES: { value: FinancialPriority; label: string }[] = [
   { value: "balanced", label: "Balanced" },
 ];
 
+export const StepWelcome = memo(function StepWelcome() {
+  return (
+    <View>
+      <AnimatedView entering={FadeInUp.duration(220).delay(100)}>
+        <Text
+          style={{
+            color: "#FFFFFF",
+            fontFamily: "Figtree-Bold",
+            fontSize: 22,
+            marginTop: 10,
+            letterSpacing: -0.5,
+          }}
+        >
+          Set up your personalized budget
+        </Text>
+      </AnimatedView>
+      <AnimatedView entering={FadeInUp.duration(220).delay(200)}>
+        <Text
+          style={{
+            color: "#94A3AF",
+            fontFamily: "Figtree-Regular",
+            fontSize: 15,
+            marginTop: 12,
+            lineHeight: 24,
+          }}
+        >
+          We&apos;ll ask 5 quick questions to build a budget tailored to you. Takes about 2 minutes.
+        </Text>
+      </AnimatedView>
+      <View style={{ marginTop: 24, gap: 8 }}>
+        {STEP_LABELS.map((label, i) => (
+          <View
+            key={label}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
+            <View
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 12,
+                backgroundColor: "rgba(34,197,94,0.25)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Text style={{ color: "#22C55E", fontFamily: "Figtree-SemiBold", fontSize: 12 }}>
+                {i + 1}
+              </Text>
+            </View>
+            <Text style={{ color: "#E2E8F0", fontFamily: "Figtree-Medium", fontSize: 14 }}>
+              {label}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+});
+
 type StepIncomeProps = {
   draft: Draft;
   errors: StepErrors;
@@ -77,28 +139,13 @@ export const StepIncome = memo(function StepIncome({
   updateDraft,
 }: StepIncomeProps) {
   return (
-    <Card>
+    <View>
       <AnimatedView entering={FadeInUp.duration(220).delay(0)}>
-        <Text
-          style={{
-            color: "#E2E8F0",
-            fontFamily: "Figtree-Medium",
-            fontSize: 14,
-            textTransform: "uppercase",
-            letterSpacing: 0.6,
-          }}
-        >
-          Income & Jobs
-        </Text>
-      </AnimatedView>
-
-      <AnimatedView entering={FadeInUp.duration(220).delay(100)}>
         <Text
           style={{
             color: "#FFFFFF",
             fontFamily: "Figtree-Bold",
-            fontSize: 28,
-            marginTop: 10,
+            fontSize: 22,
             letterSpacing: -0.5,
           }}
         >
@@ -108,10 +155,43 @@ export const StepIncome = memo(function StepIncome({
 
       <View style={{ marginTop: 18, gap: 14 }}>
         <AnimatedView entering={FadeInUp.duration(220).delay(200)}>
+          <Text
+            style={{
+              color: "#94A3B8",
+              fontFamily: "Figtree-Medium",
+              fontSize: 14,
+              marginBottom: 10,
+            }}
+          >
+            How often do you get paid?
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            {INCOME_FREQUENCIES.map((f) => (
+              <InterestChip
+                key={f.value}
+                label={f.label}
+                selected={draft.incomeFrequency === f.value}
+                haptic
+                onToggle={(label) => {
+                  const found = INCOME_FREQUENCIES.find((x) => x.label === label);
+                  if (found) updateDraft({ incomeFrequency: found.value });
+                }}
+              />
+            ))}
+          </View>
+        </AnimatedView>
+
+        <AnimatedView entering={FadeInUp.duration(220).delay(300)}>
           <LabeledTextInput
-            label="Monthly Basic Salary (GHS)"
+            label={
+              draft.incomeFrequency === "weekly"
+                ? "Weekly Salary (GHS)"
+                : draft.incomeFrequency === "bi_weekly"
+                  ? "Bi-weekly Salary (GHS)"
+                  : "Monthly Basic Salary (GHS)"
+            }
             keyboardType="decimal-pad"
-            returnKeyType="done"
+            returnKeyType="next"
             inputAccessoryViewID={keyboardAccessoryId}
             value={draft.stableSalary}
             onChangeText={(v) => updateDraft({ stableSalary: v })}
@@ -119,7 +199,7 @@ export const StepIncome = memo(function StepIncome({
           />
         </AnimatedView>
 
-        <AnimatedView entering={FadeInUp.duration(220).delay(300)}>
+        <AnimatedView entering={FadeInUp.duration(220).delay(400)}>
           <Pressable
             onPress={() => updateDraft({ autoTax: !draft.autoTax })}
             style={({ pressed }) => ({
@@ -186,47 +266,20 @@ export const StepIncome = memo(function StepIncome({
           </Pressable>
         </AnimatedView>
 
-        <AnimatedView entering={FadeInUp.duration(220).delay(400)}>
+        <AnimatedView entering={FadeInUp.duration(220).delay(500)}>
           <LabeledTextInput
             label="Side Hustle / Variable Income (GHS)"
             keyboardType="decimal-pad"
-            returnKeyType="done"
+            returnKeyType="next"
             inputAccessoryViewID={keyboardAccessoryId}
             value={draft.sideIncome}
             onChangeText={(v) => updateDraft({ sideIncome: v })}
           />
         </AnimatedView>
 
-        <AnimatedView entering={FadeInUp.duration(220).delay(500)}>
-          <Text
-            style={{
-              color: "#94A3B8",
-              fontFamily: "Figtree-Medium",
-              fontSize: 14,
-              marginBottom: 10,
-            }}
-          >
-            How often do you get paid?
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-            {INCOME_FREQUENCIES.map((f) => (
-              <InterestChip
-                key={f.value}
-                label={f.label}
-                selected={draft.incomeFrequency === f.value}
-                haptic
-                onToggle={(label) => {
-                  const found = INCOME_FREQUENCIES.find((x) => x.label === label);
-                  if (found) updateDraft({ incomeFrequency: found.value });
-                }}
-              />
-            ))}
-          </View>
-        </AnimatedView>
-
         <AnimatedView entering={FadeInUp.duration(220).delay(600)}>
           <LabeledTextInput
-            label="Payday day (1–31)"
+            label="Payday day of month (1–31)"
             keyboardType="number-pad"
             returnKeyType="done"
             inputAccessoryViewID={keyboardAccessoryId}
@@ -236,7 +289,7 @@ export const StepIncome = memo(function StepIncome({
           />
         </AnimatedView>
       </View>
-    </Card>
+    </View>
   );
 });
 
@@ -247,31 +300,29 @@ type StepLifeStageProps = {
 
 export const StepLifeStage = memo(function StepLifeStage({ draft, updateDraft }: StepLifeStageProps) {
   return (
-    <Card>
+    <View>
       <AnimatedView entering={FadeInUp.duration(220).delay(0)}>
-        <Text
-          style={{
-            color: "#E2E8F0",
-            fontFamily: "Figtree-Medium",
-            fontSize: 14,
-            textTransform: "uppercase",
-            letterSpacing: 0.6,
-          }}
-        >
-          Life Stage & Context
-        </Text>
-      </AnimatedView>
-      <AnimatedView entering={FadeInUp.duration(220).delay(100)}>
         <Text
           style={{
             color: "#FFFFFF",
             fontFamily: "Figtree-Bold",
-            fontSize: 28,
-            marginTop: 10,
+            fontSize: 22,
             letterSpacing: -0.5,
           }}
         >
           Tell us about yourself
+        </Text>
+      </AnimatedView>
+      <AnimatedView entering={FadeInUp.duration(220).delay(150)}>
+        <Text
+          style={{
+            color: "#64748B",
+            fontFamily: "Figtree-Regular",
+            fontSize: 12,
+            marginTop: 4,
+          }}
+        >
+          Optional but helps us tailor your plan.
         </Text>
       </AnimatedView>
 
@@ -368,7 +419,7 @@ export const StepLifeStage = memo(function StepLifeStage({ draft, updateDraft }:
           </View>
         </AnimatedView>
       </View>
-    </Card>
+    </View>
   );
 });
 
@@ -386,7 +437,7 @@ export const StepFixedExpenses = memo(function StepFixedExpenses({
   updateDraft,
 }: StepFixedExpensesProps) {
   return (
-    <Card>
+    <View>
       <AnimatedView entering={FadeInUp.duration(220).delay(0)}>
         <Text
           style={{
@@ -396,7 +447,7 @@ export const StepFixedExpenses = memo(function StepFixedExpenses({
             letterSpacing: -0.5,
           }}
         >
-          Lock in your needs
+          Your fixed monthly expenses
         </Text>
       </AnimatedView>
       <AnimatedView entering={FadeInUp.duration(220).delay(100)}>
@@ -416,6 +467,7 @@ export const StepFixedExpenses = memo(function StepFixedExpenses({
         <AnimatedView entering={FadeInUp.duration(220).delay(200)}>
           <LabeledTextInput
             label="Rent (GHS) (optional)"
+            placeholder="0 or leave blank if none"
             keyboardType="decimal-pad"
             returnKeyType="done"
             inputAccessoryViewID={keyboardAccessoryId}
@@ -426,7 +478,7 @@ export const StepFixedExpenses = memo(function StepFixedExpenses({
         </AnimatedView>
         <AnimatedView entering={FadeInUp.duration(220).delay(300)}>
           <LabeledTextInput
-            label="Tithe / Remittances (GHS)"
+            label="Tithe / Remittances (GHS) (optional)"
             keyboardType="decimal-pad"
             returnKeyType="done"
             inputAccessoryViewID={keyboardAccessoryId}
@@ -437,7 +489,7 @@ export const StepFixedExpenses = memo(function StepFixedExpenses({
 
         <AnimatedView entering={FadeInUp.duration(220).delay(350)}>
           <LabeledTextInput
-            label="Debt repayments (GHS)"
+            label="Debt repayments (GHS) (optional)"
             keyboardType="decimal-pad"
             returnKeyType="done"
             inputAccessoryViewID={keyboardAccessoryId}
@@ -454,10 +506,10 @@ export const StepFixedExpenses = memo(function StepFixedExpenses({
               fontSize: 12,
               letterSpacing: 0.6,
               textTransform: "uppercase",
-              marginBottom: 10,
+              marginBottom: 4,
             }}
           >
-            Utilities input
+            How do you want to enter utilities?
           </Text>
           <ModeToggle
             value={draft.utilitiesMode}
@@ -523,7 +575,7 @@ export const StepFixedExpenses = memo(function StepFixedExpenses({
           </>
         )}
       </View>
-    </Card>
+    </View>
   );
 });
 
@@ -537,7 +589,7 @@ export const StepInterests = memo(function StepInterests({
   onToggleInterest,
 }: StepInterestsProps) {
   return (
-    <Card>
+    <View>
       <AnimatedView entering={FadeInUp.duration(220).delay(0)}>
         <Text
           style={{
@@ -547,7 +599,7 @@ export const StepInterests = memo(function StepInterests({
             letterSpacing: -0.5,
           }}
         >
-          What do you care about?
+          What do you spend on?
         </Text>
       </AnimatedView>
       <AnimatedView entering={FadeInUp.duration(220).delay(100)}>
@@ -559,7 +611,7 @@ export const StepInterests = memo(function StepInterests({
             marginTop: 8,
           }}
         >
-          We’ll shape your Wants categories around these.
+          Select all that apply. We&apos;ll shape your Wants categories around these.
         </Text>
       </AnimatedView>
 
@@ -578,9 +630,15 @@ export const StepInterests = memo(function StepInterests({
           ))}
         </View>
       </AnimatedView>
-    </Card>
+    </View>
   );
 });
+
+const GOAL_OPTIONS = [
+  { key: "emergency_fund" as const, label: "Emergency Fund", description: "A safety net for unexpected expenses. We'll prioritise your savings bucket where possible." },
+  { key: "project" as const, label: "Project", description: "Saving for a specific goal (wedding, car, house). Balanced approach that keeps essentials covered." },
+  { key: "investment" as const, label: "Investment", description: "Long-term wealth building. We'll allocate more to savings when you have headroom." },
+];
 
 type StepGoalProps = {
   draft: Draft;
@@ -588,9 +646,65 @@ type StepGoalProps = {
   updateDraft: UpdateDraft;
 };
 
+function getStrategySuggestionForGoal(
+  goal: "emergency_fund" | "project" | "investment",
+  computedStrategy: "survival" | "balanced" | "aggressive",
+  fixedCostRatio: number
+): "survival" | "balanced" | "aggressive" | null {
+  if (goal === "investment" && computedStrategy === "balanced" && fixedCostRatio < 0.5) {
+    return "aggressive";
+  }
+  if (goal === "emergency_fund" && computedStrategy === "aggressive" && fixedCostRatio > 0.45) {
+    return "balanced";
+  }
+  return null;
+}
+
 export const StepGoal = memo(function StepGoal({ draft, error, updateDraft }: StepGoalProps) {
+  const rawSalary = toMoney(draft.stableSalary);
+  const stableSalary = toMonthlySalary(rawSalary, draft.incomeFrequency);
+  const sideIncome = toMoney(draft.sideIncome);
+  const rent = toMoney(draft.rent);
+  const titheRemittance = toMoney(draft.titheRemittance);
+  const debtObligations = toMoney(draft.debtObligations);
+  const utilitiesTotal =
+    draft.utilitiesMode === "precise"
+      ? toMoney(draft.utilitiesECG) + toMoney(draft.utilitiesWater)
+      : toMoney(draft.utilitiesTotal);
+  const computedIntelligent = computeIntelligentStrategy({
+    stableSalary,
+    autoTax: draft.autoTax,
+    sideIncome,
+    rent,
+    titheRemittance,
+    debtObligations,
+    utilitiesTotal,
+    lifeStage: draft.lifeStage,
+    dependentsCount: Math.max(0, parseInt(draft.dependentsCount, 10) || 0),
+    incomeFrequency: draft.incomeFrequency,
+    spendingStyle: draft.spendingStyle,
+    financialPriority: draft.financialPriority,
+  });
+  const netIncome = computedIntelligent.netIncome;
+  const fixedCostRatio = netIncome > 0 ? computedIntelligent.fixedCosts / netIncome : 1;
+
+  const handleGoalSelect = (goal: "emergency_fund" | "project" | "investment") => {
+    const suggestedStrategy = getStrategySuggestionForGoal(
+      goal,
+      computedIntelligent.strategy,
+      fixedCostRatio
+    );
+    const patch: Partial<Draft> = { primaryGoal: goal };
+    if (suggestedStrategy) patch.strategyChoice = suggestedStrategy;
+    updateDraft(patch);
+  };
+
+  const selectedGoalInfo = draft.primaryGoal
+    ? GOAL_OPTIONS.find((g) => g.key === draft.primaryGoal)
+    : null;
+
   return (
-    <Card>
+    <View>
       <AnimatedView entering={FadeInUp.duration(220).delay(0)}>
         <Text
           style={{
@@ -600,7 +714,7 @@ export const StepGoal = memo(function StepGoal({ draft, error, updateDraft }: St
             letterSpacing: -0.5,
           }}
         >
-          Pick a primary goal
+          What&apos;s your main savings goal?
         </Text>
       </AnimatedView>
       <AnimatedView entering={FadeInUp.duration(220).delay(100)}>
@@ -616,7 +730,78 @@ export const StepGoal = memo(function StepGoal({ draft, error, updateDraft }: St
         </Text>
       </AnimatedView>
 
-      <View style={{ marginTop: 16, gap: 12 }}>
+      <View style={{ marginTop: 16, gap: 14 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+          {GOAL_OPTIONS.map((g) => {
+            const active = draft.primaryGoal === g.key;
+            return (
+              <Pressable
+                key={g.key}
+                onPress={async () => {
+                  try {
+                    await Haptics.selectionAsync();
+                  } catch {
+                    // ignore
+                  }
+                  handleGoalSelect(g.key);
+                }}
+                style={({ pressed }) => ({
+                  flex: 1,
+                  minWidth: 90,
+                  minHeight: 44,
+                  paddingHorizontal: 12,
+                  paddingVertical: 10,
+                  borderRadius: 14,
+                  backgroundColor: active
+                    ? "rgba(34,197,94,0.16)"
+                    : "rgba(148,163,184,0.10)",
+                  borderWidth: 1,
+                  borderColor: active
+                    ? "rgba(34,197,94,0.40)"
+                    : "rgba(148,163,184,0.25)",
+                  opacity: pressed ? 0.92 : 1,
+                  alignItems: "center",
+                  justifyContent: "center",
+                })}
+              >
+                <Text
+                  style={{
+                    color: "#FFFFFF",
+                    fontFamily: "Figtree-Medium",
+                    fontSize: 14,
+                    textAlign: "center",
+                  }}
+                >
+                  {g.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {selectedGoalInfo ? (
+          <View
+            style={{
+              padding: 12,
+              borderRadius: 12,
+              backgroundColor: "rgba(34,197,94,0.08)",
+              borderWidth: 1,
+              borderColor: "rgba(34,197,94,0.2)",
+            }}
+          >
+            <Text
+              style={{
+                color: "#94A3AF",
+                fontFamily: "Figtree-Regular",
+                fontSize: 13,
+                lineHeight: 20,
+              }}
+            >
+              {selectedGoalInfo.description}
+            </Text>
+          </View>
+        ) : null}
+
         <View>
           <Text
             style={{
@@ -625,10 +810,20 @@ export const StepGoal = memo(function StepGoal({ draft, error, updateDraft }: St
               fontSize: 12,
               letterSpacing: 0.6,
               textTransform: "uppercase",
+              marginBottom: 8,
+            }}
+          >
+            Budget style
+          </Text>
+          <Text
+            style={{
+              color: "#64748B",
+              fontFamily: "Figtree-Regular",
+              fontSize: 11,
               marginBottom: 10,
             }}
           >
-            Choose your plan
+            Survival = more to needs • Balanced = 50/30/20 • Aggressive = more to savings
           </Text>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
             <StrategyChip
@@ -652,51 +847,6 @@ export const StepGoal = memo(function StepGoal({ draft, error, updateDraft }: St
           </View>
         </View>
 
-        {([
-          { key: "emergency_fund", label: "Emergency Fund" },
-          { key: "project", label: "Project" },
-          { key: "investment", label: "Investment" },
-        ] as const).map((g) => {
-          const active = draft.primaryGoal === g.key;
-          return (
-            <Pressable
-              key={g.key}
-              onPress={async () => {
-                try {
-                  await Haptics.selectionAsync();
-                } catch {
-                  // ignore
-                }
-                updateDraft({ primaryGoal: g.key });
-              }}
-              style={({ pressed }) => ({
-                minHeight: 56,
-                paddingHorizontal: 14,
-                paddingVertical: 14,
-                borderRadius: 18,
-                backgroundColor: active
-                  ? "rgba(34,197,94,0.16)"
-                  : "rgba(148,163,184,0.10)",
-                borderWidth: 1,
-                borderColor: active
-                  ? "rgba(34,197,94,0.40)"
-                  : "rgba(148,163,184,0.25)",
-                opacity: pressed ? 0.92 : 1,
-              })}
-            >
-              <Text
-                style={{
-                  color: "#FFFFFF",
-                  fontFamily: "Figtree-Medium",
-                  fontSize: 18,
-                }}
-              >
-                {g.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-
         {error ? (
           <Text
             style={{
@@ -711,29 +861,6 @@ export const StepGoal = memo(function StepGoal({ draft, error, updateDraft }: St
 
         <View style={{ marginTop: 8 }}>
           {(() => {
-            const stableSalary = toMoney(draft.stableSalary);
-            const sideIncome = toMoney(draft.sideIncome);
-            const rent = toMoney(draft.rent);
-            const titheRemittance = toMoney(draft.titheRemittance);
-            const debtObligations = toMoney(draft.debtObligations);
-            const utilitiesTotal =
-              draft.utilitiesMode === "precise"
-                ? toMoney(draft.utilitiesECG) + toMoney(draft.utilitiesWater)
-                : toMoney(draft.utilitiesTotal);
-            const computedIntelligent = computeIntelligentStrategy({
-              stableSalary,
-              autoTax: draft.autoTax,
-              sideIncome,
-              rent,
-              titheRemittance,
-              debtObligations,
-              utilitiesTotal,
-              lifeStage: draft.lifeStage,
-              dependentsCount: Math.max(0, parseInt(draft.dependentsCount, 10) || 0),
-              incomeFrequency: draft.incomeFrequency,
-              spendingStyle: draft.spendingStyle,
-              financialPriority: draft.financialPriority,
-            });
             const userOverride =
               draft.strategyChoice === "survival" || draft.strategyChoice === "aggressive";
             const chosen = userOverride
@@ -801,7 +928,7 @@ export const StepGoal = memo(function StepGoal({ draft, error, updateDraft }: St
           })()}
         </View>
       </View>
-    </Card>
+    </View>
   );
 });
 

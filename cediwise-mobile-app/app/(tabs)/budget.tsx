@@ -16,8 +16,9 @@ import { useBudgetScreenState } from '@/components/features/budget/useBudgetScre
 import { RolloverAllocationModal } from '@/components/RolloverAllocationModal';
 import { useAppToast } from '@/hooks/useAppToast';
 import { useRouter } from 'expo-router';
-import { Platform, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Platform, RefreshControl, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollView } from '@/components/KeyboardAwareScrollView';
 
 export default function BudgetScreen() {
   const router = useRouter();
@@ -99,7 +100,7 @@ export default function BudgetScreen() {
         showSettingsButton={!!user}
       />
 
-      <ScrollView
+      <KeyboardAwareScrollView
         className="px-5 py-3"
         contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
@@ -249,7 +250,7 @@ export default function BudgetScreen() {
             </>
           )}
         </View>
-      </ScrollView>
+      </KeyboardAwareScrollView>
 
       <BudgetModals
         showAddCustomCategoryModal={modals.showAddCustomCategoryModal}

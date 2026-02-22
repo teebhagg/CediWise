@@ -25,8 +25,10 @@ const toNumber = (v: unknown): number => {
 };
 
 export async function fetchBudgetStateRemote(
-  userId: string,
+  userId: string
 ): Promise<BudgetState | null> {
+  if (!supabase) return null;
+
   // Fetch profile prefs we mirror into local budget state.
   const profileRes = await supabase
     .from("profiles")
@@ -41,7 +43,7 @@ export async function fetchBudgetStateRemote(
       : undefined;
   const interests = Array.isArray((profileRes.data as any)?.interests)
     ? ((profileRes.data as any).interests as string[]).filter(
-        (x) => typeof x === "string",
+        (x) => typeof x === "string"
       )
     : undefined;
 
@@ -49,7 +51,7 @@ export async function fetchBudgetStateRemote(
   const incomeRes = await supabase
     .from("income_sources")
     .select(
-      "id, user_id, name, type, amount, apply_deductions, created_at, updated_at",
+      "id, user_id, name, type, amount, apply_deductions, created_at, updated_at"
     )
     .eq("user_id", userId);
   if (incomeRes.error) throw incomeRes.error;
@@ -64,14 +66,14 @@ export async function fetchBudgetStateRemote(
       applyDeductions: !!r.apply_deductions,
       createdAt: String(r.created_at ?? new Date().toISOString()),
       updatedAt: String(r.updated_at ?? new Date().toISOString()),
-    }),
+    })
   );
 
   // Cycles
   const cyclesRes = await supabase
     .from("budget_cycles")
     .select(
-      "id, user_id, start_date, end_date, payday_day, needs_pct, wants_pct, savings_pct, created_at, updated_at",
+      "id, user_id, start_date, end_date, payday_day, needs_pct, wants_pct, savings_pct, rollover_from_previous, reallocation_applied, created_at, updated_at"
     )
     .eq("user_id", userId);
   if (cyclesRes.error) throw cyclesRes.error;
@@ -83,12 +85,28 @@ export async function fetchBudgetStateRemote(
     endDate: String(r.end_date),
     paydayDay: Math.max(
       1,
-      Math.min(31, Math.floor(toNumber(r.payday_day)) || 1),
+      Math.min(31, Math.floor(toNumber(r.payday_day)) || 1)
     ),
     needsPct: Math.max(0, Math.min(1, toNumber(r.needs_pct))),
     wantsPct: Math.max(0, Math.min(1, toNumber(r.wants_pct))),
     savingsPct: Math.max(0, Math.min(1, toNumber(r.savings_pct))),
-    rolloverFromPrevious: { needs: 0, wants: 0, savings: 0 },
+    rolloverFromPrevious:
+      r.rollover_from_previous && typeof r.rollover_from_previous === "object"
+        ? {
+            needs: Math.max(
+              0,
+              toNumber((r.rollover_from_previous as any).needs)
+            ),
+            wants: Math.max(
+              0,
+              toNumber((r.rollover_from_previous as any).wants)
+            ),
+            savings: Math.max(
+              0,
+              toNumber((r.rollover_from_previous as any).savings)
+            ),
+          }
+        : { needs: 0, wants: 0, savings: 0 },
     reallocationApplied: !!r.reallocation_applied,
     createdAt: String(r.created_at ?? new Date().toISOString()),
     updatedAt: String(r.updated_at ?? new Date().toISOString()),
@@ -98,7 +116,7 @@ export async function fetchBudgetStateRemote(
   const catsRes = await supabase
     .from("budget_categories")
     .select(
-      "id, user_id, cycle_id, bucket, name, limit_amount, is_custom, parent_id, sort_order, suggested_limit, is_archived, manual_override, created_at, updated_at",
+      "id, user_id, cycle_id, bucket, name, limit_amount, is_custom, parent_id, sort_order, suggested_limit, is_archived, manual_override, created_at, updated_at"
     )
     .eq("user_id", userId);
   if (catsRes.error) throw catsRes.error;
@@ -111,8 +129,8 @@ export async function fetchBudgetStateRemote(
       r.bucket === "needs" || r.bucket === "wants" || r.bucket === "savings"
         ? r.bucket
         : r.bucket === "utilities"
-          ? "needs"
-          : "needs",
+        ? "needs"
+        : "needs",
     name: String(r.name ?? "Category"),
     limitAmount: Math.max(0, toNumber(r.limit_amount)),
     isCustom: !!r.is_custom,
@@ -135,7 +153,7 @@ export async function fetchBudgetStateRemote(
   const txRes = await supabase
     .from("budget_transactions")
     .select(
-      "id, user_id, cycle_id, bucket, category_id, amount, note, occurred_at, source, created_at",
+      "id, user_id, cycle_id, bucket, category_id, amount, note, occurred_at, source, created_at"
     )
     .eq("user_id", userId)
     .order("occurred_at", { ascending: false })
@@ -152,17 +170,17 @@ export async function fetchBudgetStateRemote(
         r.bucket === "needs" || r.bucket === "wants" || r.bucket === "savings"
           ? r.bucket
           : r.bucket === "utilities"
-            ? "needs"
-            : "needs",
+          ? "needs"
+          : "needs",
       categoryId: r.category_id ? String(r.category_id) : null,
       amount: Math.max(0, toNumber(r.amount)),
       note: r.note ? String(r.note) : undefined,
       occurredAt: String(
-        r.occurred_at ?? r.created_at ?? new Date().toISOString(),
+        r.occurred_at ?? r.created_at ?? new Date().toISOString()
       ),
       source: "manual",
       createdAt: String(r.created_at ?? new Date().toISOString()),
-    }),
+    })
   );
 
   // If absolutely nothing exists remotely, treat as no data.
@@ -201,7 +219,7 @@ function mergeById<T extends { id: string }>(remote: T[], local: T[]): T[] {
 
 export function mergeBudgetState(
   remote: BudgetState,
-  local: BudgetState,
+  local: BudgetState
 ): BudgetState {
   return {
     version: 1,
@@ -222,7 +240,7 @@ export async function hydrateBudgetStateFromRemote(
   options?: {
     mode?: HydrateMode;
     getLocalState?: () => Promise<BudgetState>;
-  },
+  }
 ): Promise<HydrateResult> {
   const online = await isOnline();
   if (!online) return { ok: true, hydrated: false, reason: "offline" };

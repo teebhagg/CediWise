@@ -24,6 +24,8 @@ async function attemptMutationRemote(
   payload: Record<string, unknown>
 ): Promise<AttemptResult> {
   try {
+    if (!supabase) return { ok: false, error: "Supabase not configured" };
+
     if (kind === "upsert_profile") {
       const { error } = await supabase
         .from("profiles")
@@ -433,6 +435,16 @@ async function attemptMutationRemote(
   }
 }
 
+/**
+ * Sync a cycle directly to Supabase (bypass queue). Use before enqueueing categories
+ * that reference this cycle to avoid FK violations.
+ */
+export async function syncCycleDirect(
+  payload: Record<string, unknown>
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  return attemptMutationRemote("upsert_cycle", payload);
+}
+
 export async function trySyncMutation(
   userId: string,
   mutation: BudgetMutation
@@ -455,14 +467,28 @@ export async function trySyncMutation(
   return result;
 }
 
+const MUTATION_DEPENDENCY_ORDER: Record<string, number> = {
+  upsert_profile: 0,
+  upsert_cycle: 1,
+  upsert_category: 2,
+  insert_transaction: 3,
+  update_transaction: 4,
+  delete_transaction: 5,
+};
+
 export async function flushBudgetQueue(
   userId: string,
   limit = 25
 ): Promise<{ okCount: number; failCount: number }> {
   const queue = await loadBudgetQueue(userId);
-  const sorted = [...queue.items].sort(
-    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-  );
+  const sorted = [...queue.items].sort((a, b) => {
+    const timeA = new Date(a.createdAt).getTime();
+    const timeB = new Date(b.createdAt).getTime();
+    if (timeA !== timeB) return timeA - timeB;
+    const orderA = MUTATION_DEPENDENCY_ORDER[a.kind] ?? 99;
+    const orderB = MUTATION_DEPENDENCY_ORDER[b.kind] ?? 99;
+    return orderA - orderB;
+  });
   const slice = sorted.slice(0, limit);
 
   let okCount = 0;

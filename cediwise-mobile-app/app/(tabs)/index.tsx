@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import {
     type StyleProp,
     type ViewStyle,
@@ -15,6 +16,7 @@ import { HomeScreenHeader } from '@/components/features/home/HomeScreenHeader';
 import { RecentExpensesSection } from '@/components/features/home/RecentExpensesSection';
 import { SalaryDashboardSection } from '@/components/features/home/SalaryDashboardSection';
 import { useHomeScreenState } from '@/components/features/home/useHomeScreenState';
+import { useUpdateCheckContext } from '@/contexts/UpdateCheckContext';
 import { StoredUserData } from '@/utils/auth';
 
 const styles = StyleSheet.create({
@@ -26,6 +28,7 @@ const styles = StyleSheet.create({
 
 export default function DashboardScreen() {
     const insets = useSafeAreaInsets();
+    const { check: checkForUpdate } = useUpdateCheckContext();
     const {
         user,
         headerTitle,
@@ -54,6 +57,11 @@ export default function DashboardScreen() {
         ledgerAnimStyle,
     } = useHomeScreenState();
 
+    const handleRefreshWithUpdateCheck = useCallback(async () => {
+        await handleRefresh();
+        void checkForUpdate();
+    }, [handleRefresh, checkForUpdate]);
+
     return (
         <SafeAreaView edges={['top']} style={styles.container} className="flex-1 bg-background">
             {/* <StatusBar barStyle="light-content" translucent animated /> */}
@@ -72,7 +80,7 @@ export default function DashboardScreen() {
                 refreshControl={
                     <RefreshControl
                         refreshing={refreshing}
-                        onRefresh={handleRefresh}
+                        onRefresh={handleRefreshWithUpdateCheck}
                         tintColor="#22C55E"
                         colors={['#22C55E']}
                         progressViewOffset={Platform.OS === 'android' ? 60 : undefined}

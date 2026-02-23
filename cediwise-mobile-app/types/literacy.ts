@@ -36,6 +36,8 @@ export type Lesson = {
   verified_by?: LessonVerifiedBy | null;
   version: string;
   last_updated: string;
+  /** Structured content from DB; falls back to bundled if null */
+  content?: LessonContent | null;
 };
 
 export type UserLessonProgress = {

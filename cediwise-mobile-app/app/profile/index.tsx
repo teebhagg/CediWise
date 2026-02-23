@@ -1,11 +1,12 @@
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { ChevronRight, CreditCard, DollarSign, FileText, LogOut, Mail, Phone, User as UserIcon } from 'lucide-react-native';
-import { useState } from 'react';
+import { ChevronRight, CreditCard, Database, DollarSign, FileText, LogOut, Mail, Phone, RotateCcw, User as UserIcon } from 'lucide-react-native';
+import { useCallback, useEffect, useState } from 'react';
 import {
     Pressable,
     ScrollView,
+    Switch,
     Text,
     View,
 } from 'react-native';
@@ -18,14 +19,58 @@ import { useAppToast } from '@/hooks/useAppToast';
 import { useAuth } from '@/hooks/useAuth';
 import { usePersonalizationStatus } from '@/hooks/usePersonalizationStatus';
 import { getDisplayContact } from '@/utils/auth';
+import { clearBudgetLocal } from '@/utils/budgetStorage';
 import { log } from '@/utils/logger';
+import { supabase } from '@/utils/supabase';
 
 export default function ProfileScreen() {
     const router = useRouter();
     const { user, logout } = useAuth();
-    const { showError } = useAppToast();
+    const { showError, showSuccess } = useAppToast();
     const personalization = usePersonalizationStatus(user?.id);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [enableAutoReallocation, setEnableAutoReallocation] = useState(false);
+    const [autoReallocationLoading, setAutoReallocationLoading] = useState(false);
+
+    useEffect(() => {
+        if (!user?.id || !supabase) return;
+        void (async () => {
+            try {
+                const { data } = await supabase
+                    .from('profiles')
+                    .select('enable_auto_reallocation')
+                    .eq('id', user.id)
+                    .maybeSingle();
+                if (data && typeof (data as any).enable_auto_reallocation === 'boolean') {
+                    setEnableAutoReallocation((data as any).enable_auto_reallocation);
+                }
+            } catch {
+                /* ignore */
+            }
+        })();
+    }, [user?.id]);
+
+    const handleAutoReallocationChange = useCallback(
+        async (value: boolean) => {
+            if (!user?.id || !supabase) return;
+            setEnableAutoReallocation(value);
+            setAutoReallocationLoading(true);
+            try {
+                const { error } = await supabase
+                    .from('profiles')
+                    .update({ enable_auto_reallocation: value, updated_at: new Date().toISOString() })
+                    .eq('id', user.id);
+                if (error) throw error;
+            } catch (e) {
+                log.error('Failed to update auto-reallocation:', e);
+                setEnableAutoReallocation(!value);
+                showError('Error', 'Could not update preference');
+            } finally {
+                setAutoReallocationLoading(false);
+            }
+        },
+        [user?.id, showError]
+    );
 
     const handleBackPress = async () => {
         try {
@@ -44,6 +89,18 @@ export default function ProfileScreen() {
         }
         setShowLogoutModal(true);
     };
+
+    const handleClearBudgetLocal = useCallback(async () => {
+        if (!user?.id) return;
+        try {
+            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => { });
+            await clearBudgetLocal(user.id);
+            showSuccess('Cleared', 'Budget local storage cleared. Go to Budget tab to reload from server.');
+        } catch (e) {
+            log.error('Clear budget local failed:', e);
+            showError('Error', 'Could not clear local storage');
+        }
+    }, [user?.id, showSuccess, showError]);
 
     const handleLogoutConfirm = async () => {
         try {
@@ -136,6 +193,34 @@ export default function ProfileScreen() {
                                 </View>
                                 <ChevronRight color="#64748B" size={20} />
                             </Pressable>
+                        </Card>
+                    </View>
+
+                    {/* Budget preferences */}
+                    <View className="mb-5 space-y-3">
+                        <Text className="text-white text-lg font-semibold">Budget preferences</Text>
+
+                        <Card className="">
+                            <View className="flex-row items-center justify-between py-3.5 px-1">
+                                <View className="flex-row items-center gap-3">
+                                    <View className="w-10 h-10 rounded-xl bg-amber-500/10 justify-center items-center">
+                                        <RotateCcw color="#F59E0B" size={20} />
+                                    </View>
+                                    <View>
+                                        <Text className="text-white text-base font-semibold">Auto-reallocation suggestions</Text>
+                                        <Text className="text-xs text-muted-foreground mt-0.5">
+                                            Show reallocation banner based on spending
+                                        </Text>
+                                    </View>
+                                </View>
+                                <Switch
+                                    value={enableAutoReallocation}
+                                    onValueChange={handleAutoReallocationChange}
+                                    disabled={autoReallocationLoading}
+                                    trackColor={{ false: '#334155', true: '#22C55E' }}
+                                    thumbColor="#fff"
+                                />
+                            </View>
                         </Card>
                     </View>
 
@@ -240,6 +325,32 @@ export default function ProfileScreen() {
                             </Pressable>
                         </Card>
                     </View>
+
+                    {__DEV__ ? (
+                        <View className="mb-5 space-y-3">
+                            <Text className="text-white text-lg font-semibold">Developer</Text>
+                            <Card className="bg-amber-600/10 border border-amber-500/30">
+                                <Pressable
+                                    onPress={handleClearBudgetLocal}
+                                    style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
+                                    className="flex-row items-center justify-between py-3.5 px-1"
+                                >
+                                    <View className="flex-row items-center gap-3">
+                                        <View className="w-10 h-10 rounded-xl bg-amber-500/20 justify-center items-center">
+                                            <Database color="#F59E0B" size={20} />
+                                        </View>
+                                        <View>
+                                            <Text className="text-amber-300 text-base font-semibold">Clear budget local storage</Text>
+                                            <Text className="text-xs text-slate-400 mt-0.5">
+                                                Remove cached budget data. Reload from server on next Budget visit.
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <ChevronRight color="#F59E0B" size={20} />
+                                </Pressable>
+                            </Card>
+                        </View>
+                    ) : null}
 
                     {/* Danger Zone */}
                     <View className="mb-6 space-y-3">

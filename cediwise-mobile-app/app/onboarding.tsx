@@ -12,6 +12,8 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PrimaryButton } from "../components/PrimaryButton";
 
+const HERO_IMAGE = require("../assets/images/onboarding-hero.jpg");
+
 const { height } = Dimensions.get("window");
 
 export default function OnboardingScreen() {
@@ -54,7 +56,7 @@ export default function OnboardingScreen() {
       {/* Hero Image Section */}
       <View style={{ height: height * 0.55 }}>
         <Image
-          source={require("../assets/images/onboarding-hero.png")}
+          source={HERO_IMAGE}
           style={{ width: "100%", height: "100%" }}
           contentFit="cover"
         />

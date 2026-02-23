@@ -139,6 +139,10 @@ export default function RootLayout() {
                         options={{ headerShown: false }}
                       />
                       <Stack.Screen
+                        name="salary-calculator"
+                        options={{ headerShown: false }}
+                      />
+                      <Stack.Screen
                         name="terms"
                         options={{ headerShown: false }}
                       />

@@ -1,7 +1,7 @@
 {
   "name": "cediwise-mobile-app",
   "main": "expo-router/entry",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
@@ -12,6 +12,7 @@
     "build:android": "node scripts/build-android.js",
     "seed:lessons": "npx tsx scripts/seed-lessons.ts",
     "seed:budget-personas": "npx tsx scripts/seed-budget-personas.ts",
+    "backfill:lesson-content": "npx tsx scripts/backfill-lesson-content.ts",
     "clear:budget-personas": "npx tsx scripts/clear-budget-personas.ts",
     "test": "jest",
     "test:coverage": "jest --coverage"

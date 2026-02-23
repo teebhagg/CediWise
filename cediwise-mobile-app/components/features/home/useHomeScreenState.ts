@@ -37,6 +37,10 @@ export interface UseHomeScreenStateReturn {
   headerTitle: string;
   headerSubtitle: string;
   authLoading: boolean;
+  /** True while auth or initial profile/budget load; show VitalHeroSkeleton when true. */
+  isHomeLoading: boolean;
+  /** True when user has completed vitals setup (profile + cycle). */
+  setupCompleted: boolean;
   handleProfilePress: () => void;
 
   // Budget
@@ -317,11 +321,16 @@ export function useHomeScreenState(): UseHomeScreenStateReturn {
     budgetTotals
   );
 
+  const isHomeLoading = authLoading || profileVitals.isLoading;
+  const setupCompleted = profileVitals.vitals?.setup_completed ?? true;
+
   return {
     user: user ?? null,
     headerTitle,
     headerSubtitle,
     authLoading,
+    isHomeLoading,
+    setupCompleted,
     handleProfilePress,
     budgetState,
     budgetTotals,

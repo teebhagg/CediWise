@@ -44,6 +44,7 @@ export function useLessons() {
           verified_by: row.verified_by,
           version: row.version,
           last_updated: row.last_updated,
+          content: row.content ?? null,
         }));
 
         if (mapped.length === 0) {

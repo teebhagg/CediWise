@@ -40,7 +40,8 @@ export default function LessonScreen() {
 
   // ── Data ────────────────────────────────────────────────────────────────────
   const lesson = lessons.find((l) => l.id === lessonId);
-  const rawContent = getBundledContent(lessonId ?? "");
+  // Prefer content from DB (Supabase); fallback to bundled for offline / legacy
+  const rawContent = lesson?.content ?? getBundledContent(lessonId ?? "");
 
   const content: LessonContent | null = (() => {
     if (!rawContent) return null;

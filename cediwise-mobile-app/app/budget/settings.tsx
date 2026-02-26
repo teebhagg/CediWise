@@ -1,4 +1,5 @@
 import { BackButton } from '@/components/BackButton';
+import { DEFAULT_STANDARD_HEIGHT, StandardHeader } from '@/components/CediWiseHeader';
 import { BudgetModals } from '@/components/features/budget/BudgetModals';
 import { BudgetPersonalizationCard } from '@/components/features/budget/BudgetPersonalizationCard';
 import { useBudgetScreenState } from '@/components/features/budget/useBudgetScreenState';
@@ -6,29 +7,30 @@ import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'expo-router';
 import { RotateCcw, Settings } from 'lucide-react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BudgetSettingsScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { personalization, derived, budget, modals } = useBudgetScreenState();
+  const headerPadding = DEFAULT_STANDARD_HEIGHT + insets.top;
 
   if (!user?.id) {
     return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
-        <View className="px-5 py-4">
-          <BackButton />
+      <View style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
+        <StandardHeader title="Budget Settings" leading={<BackButton />} centered />
+        <View className="px-5 py-4" style={{ paddingTop: headerPadding }}>
           <Text className="text-slate-400 mt-8 text-center">Sign in to manage budget settings.</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
-      <View className="px-5 pt-2 pb-4">
-        <BackButton />
-        <Text className="text-white text-2xl font-bold mt-2">Budget Settings</Text>
+    <View style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
+      <StandardHeader title="Budget Settings" leading={<BackButton />} centered />
+      <View className="px-5 pt-2 pb-4" style={{ paddingTop: headerPadding }}>
         <Text className="text-slate-400 text-sm mt-1">
           Personalization, cycle, and reset options.
         </Text>
@@ -130,6 +132,6 @@ export default function BudgetSettingsScreen() {
           await budget.reload();
         }}
       />
-    </SafeAreaView>
+    </View>
   );
 }

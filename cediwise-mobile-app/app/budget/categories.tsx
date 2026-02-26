@@ -1,4 +1,5 @@
 import { BackButton } from '@/components/BackButton';
+import { DEFAULT_STANDARD_HEIGHT, StandardHeader } from '@/components/CediWiseHeader';
 import { BudgetCategoriesCard } from '@/components/features/budget/BudgetCategoriesCard';
 import { BudgetModals } from '@/components/features/budget/BudgetModals';
 import { useBudgetScreenState } from '@/components/features/budget/useBudgetScreenState';
@@ -6,10 +7,11 @@ import { useAuth } from '@/hooks/useAuth';
 import type { BudgetBucket } from '@/types/budget';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BudgetCategoriesScreen() {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const { modals, derived, budget } = useBudgetScreenState();
   const [categoriesOpen, setCategoriesOpen] = useState(true);
   const [bucketOpen, setBucketOpen] = useState<Record<BudgetBucket, boolean>>({
@@ -21,35 +23,36 @@ export default function BudgetCategoriesScreen() {
   const showAddModal = modals.showAddCustomCategoryModal;
   const setShowAddModal = modals.setShowAddCustomCategoryModal;
 
+  const headerPadding = DEFAULT_STANDARD_HEIGHT + insets.top;
+
   if (!user?.id) {
     return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
-        <View className="px-5 py-4">
-          <BackButton />
+      <View style={{ flex: 1, backgroundColor: 'black' }}>
+        <StandardHeader title="Categories" leading={<BackButton />} centered />
+        <View className="px-5 py-4" style={{ paddingTop: headerPadding }}>
           <Text className="text-slate-400 mt-8 text-center">Sign in to manage categories.</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!derived.activeCycleId || derived.cycleCategories.length === 0) {
     return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
-        <View className="px-5 py-4">
-          <BackButton />
+      <View style={{ flex: 1, backgroundColor: 'black' }}>
+        <StandardHeader title="Categories" leading={<BackButton />} centered />
+        <View className="px-5 py-4" style={{ paddingTop: headerPadding }}>
           <Text className="text-slate-400 mt-8 text-center">
             Set up your budget and add income sources first.
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
-      <View className="px-5 pt-2 pb-4">
-        <BackButton />
-        <Text className="text-white text-2xl font-bold mt-2">Categories</Text>
+    <View style={{ flex: 1, backgroundColor: 'black' }}>
+      <StandardHeader title="Categories" leading={<BackButton />} centered />
+      <View className="px-5 pt-2 pb-4" style={{ paddingTop: headerPadding }}>
         <Text className="text-slate-400 text-sm mt-1">
           Spent vs remaining, grouped by Needs, Wants, Savings.
         </Text>
@@ -132,6 +135,6 @@ export default function BudgetCategoriesScreen() {
         activeCyclePaydayDay={derived.activeCycle?.paydayDay ?? 1}
         onUpdateCycleDay={async () => { }}
       />
-    </SafeAreaView>
+    </View>
   );
 }

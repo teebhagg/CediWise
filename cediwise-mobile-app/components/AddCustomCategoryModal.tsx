@@ -1,4 +1,4 @@
-import { BlurView } from "expo-blur";
+import { GlassView } from "@/components/GlassView";
 import * as Haptics from "expo-haptics";
 import { Button, Dialog } from "heroui-native";
 import { useEffect, useState } from "react";
@@ -76,7 +76,7 @@ export function AddCustomCategoryModal({
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="bg-black/60" />
-        <BlurView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
+        <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
         <KeyboardAvoidingView
           behavior="padding"
           style={{ flex: 1, justifyContent: "center" }}

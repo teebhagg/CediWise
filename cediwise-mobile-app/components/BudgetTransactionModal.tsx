@@ -3,7 +3,7 @@ import { Button, Dialog } from 'heroui-native';
 import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { BlurView } from 'expo-blur';
+import { GlassView } from '@/components/GlassView';
 import type { BudgetBucket, BudgetCategory, BudgetTransaction } from '../types/budget';
 import { AppTextField } from './AppTextField';
 
@@ -137,7 +137,7 @@ export function BudgetTransactionModal({
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="bg-black/60" />
-        <BlurView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
+        <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
         <KeyboardAvoidingView
           behavior="padding"
           style={{ flex: 1, justifyContent: 'center' }}

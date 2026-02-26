@@ -7,6 +7,8 @@
  * and a next-module CTA.
  */
 
+import { BackButton } from "@/components/BackButton";
+import { DEFAULT_STANDARD_HEIGHT, StandardHeader } from "@/components/CediWiseHeader";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { LEVEL_COLORS, LEVEL_LABELS, MODULES } from "@/constants/literacy";
@@ -23,7 +25,6 @@ import {
 import React, { useEffect, useMemo } from "react";
 import {
   Dimensions,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -40,6 +41,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -185,6 +187,7 @@ function BadgePulse({ color }: { color: string }) {
 
 export default function ModuleCompleteScreen() {
   const { moduleId } = useLocalSearchParams<{ moduleId: string }>();
+  const insets = useSafeAreaInsets();
   const { progress } = useProgress();
 
   const module = useMemo(
@@ -207,11 +210,16 @@ export default function ModuleCompleteScreen() {
     return Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100);
   }, [module, progress]);
 
+  const headerPadding = DEFAULT_STANDARD_HEIGHT + insets.top;
+
   if (!module) {
     return (
-      <SafeAreaView style={styles.root}>
-        <Text style={styles.errorText}>Module not found</Text>
-      </SafeAreaView>
+      <View style={styles.root}>
+        <StandardHeader title="Module Complete" leading={<BackButton onPress={() => router.back()} />} centered />
+        <View style={{ paddingTop: headerPadding, paddingHorizontal: 24 }}>
+          <Text style={styles.errorText}>Module not found</Text>
+        </View>
+      </View>
     );
   }
 
@@ -232,12 +240,15 @@ export default function ModuleCompleteScreen() {
     router.replace(`/literacy/${module.id}`);
   };
 
+  const scrollPaddingTop = 16 + headerPadding;
+
   return (
-    <SafeAreaView style={styles.root}>
+    <View style={styles.root}>
+      <StandardHeader title="Module Complete" leading={<BackButton onPress={() => router.back()} />} centered />
       <Confetti />
 
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { paddingTop: scrollPaddingTop }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Badge */}
@@ -331,7 +342,7 @@ export default function ModuleCompleteScreen() {
           </SecondaryButton>
         </Animated.View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -345,7 +356,6 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: 24,
     paddingBottom: 48,
-    paddingTop: 16,
   },
   errorText: {
     color: "#64748b",

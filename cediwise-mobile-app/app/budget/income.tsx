@@ -1,4 +1,5 @@
 import { BackButton } from '@/components/BackButton';
+import { DEFAULT_STANDARD_HEIGHT, StandardHeader } from '@/components/CediWiseHeader';
 import { BudgetIncomeSourcesCard } from '@/components/features/budget/BudgetIncomeSourcesCard';
 import { BudgetModals } from '@/components/features/budget/BudgetModals';
 import { useBudgetScreenState } from '@/components/features/budget/useBudgetScreenState';
@@ -12,10 +13,11 @@ import {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BudgetIncomeScreen() {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const { form, derived, budget, modals } = useBudgetScreenState();
   const [showIncomeForm, setShowIncomeForm] = useState(false);
 
@@ -47,35 +49,36 @@ export default function BudgetIncomeScreen() {
     transform: [{ rotate: `${interpolate(incomeToggleAnim.value, [0, 1], [0, 45])}deg` }],
   }));
 
+  const headerPadding = DEFAULT_STANDARD_HEIGHT + insets.top;
+
   if (!user?.id) {
     return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
-        <View className="px-5 py-4">
-          <BackButton />
+      <View style={{ flex: 1, backgroundColor: 'black' }}>
+        <StandardHeader title="Income Sources" leading={<BackButton />} centered />
+        <View className="px-5 py-4" style={{ paddingTop: headerPadding }}>
           <Text className="text-slate-400 mt-8 text-center">Sign in to manage income sources.</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!derived.cycleIsSet) {
     return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
-        <View className="px-5 py-4">
-          <BackButton />
+      <View style={{ flex: 1, backgroundColor: 'black' }}>
+        <StandardHeader title="Income Sources" leading={<BackButton />} centered />
+        <View className="px-5 py-4" style={{ paddingTop: headerPadding }}>
           <Text className="text-slate-400 mt-8 text-center">
             Set up your budget cycle first.
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
-      <View className="px-5 pt-2 pb-4">
-        <BackButton />
-        <Text className="text-white text-2xl font-bold mt-2">Income Sources</Text>
+    <View style={{ flex: 1, backgroundColor: 'black' }}>
+      <StandardHeader title="Income Sources" leading={<BackButton />} centered />
+      <View className="px-5 pt-2 pb-4" style={{ paddingTop: headerPadding }}>
         <Text className="text-slate-400 text-sm mt-1">
           Add salary and side hustles so allocations stay realistic.
         </Text>
@@ -187,6 +190,6 @@ export default function BudgetIncomeScreen() {
         activeCyclePaydayDay={derived.activeCycle?.paydayDay ?? 1}
         onUpdateCycleDay={async () => { }}
       />
-    </SafeAreaView>
+    </View>
   );
 }

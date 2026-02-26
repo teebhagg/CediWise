@@ -4,6 +4,7 @@ import { enqueueMutation } from "@/utils/budgetStorage";
 import { trySyncMutation } from "@/utils/budgetSync";
 import { log } from "@/utils/logger";
 import { supabase } from "@/utils/supabase";
+import { uuidv4 } from "@/utils/uuid";
 import { useCallback, useEffect, useState } from "react";
 
 export type AddDebtParams = {
@@ -114,7 +115,7 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
     async (params: AddDebtParams) => {
       if (!user?.id) throw new Error("User not authenticated");
 
-      const id = crypto.randomUUID();
+      const id = uuidv4();
       const now = new Date().toISOString();
       const startDate =
         params.startDate || new Date().toISOString().split("T")[0];
@@ -162,7 +163,7 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
       // Try immediate sync
       await trySyncMutation(user.id, mutation);
     },
-    [user?.id],
+    [user?.id]
   );
 
   // Update debt
@@ -179,8 +180,8 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
                 ...params,
                 updatedAt: new Date().toISOString(),
               }
-            : debt,
-        ),
+            : debt
+        )
       );
 
       // Queue mutation
@@ -204,7 +205,7 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
       // Try immediate sync
       await trySyncMutation(user.id, mutation);
     },
-    [user?.id],
+    [user?.id]
   );
 
   // Delete debt
@@ -227,7 +228,7 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
       // Try immediate sync
       await trySyncMutation(user.id, mutation);
     },
-    [user?.id],
+    [user?.id]
   );
 
   // Record payment
@@ -251,8 +252,8 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
                 isActive,
                 updatedAt: new Date().toISOString(),
               }
-            : d,
-        ),
+            : d
+        )
       );
 
       // Queue mutation
@@ -272,7 +273,7 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
       // Try immediate sync
       await trySyncMutation(user.id, mutation);
     },
-    [user?.id, debts],
+    [user?.id, debts]
   );
 
   // Calculate projected payoff date
@@ -280,7 +281,7 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
     if (debt.monthlyPayment <= 0 || debt.remainingAmount <= 0) return null;
 
     const monthsRemaining = Math.ceil(
-      debt.remainingAmount / debt.monthlyPayment,
+      debt.remainingAmount / debt.monthlyPayment
     );
     const payoffDate = new Date();
     payoffDate.setMonth(payoffDate.getMonth() + monthsRemaining);
@@ -297,11 +298,11 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
     const activeDebts = getActiveDebts();
     const totalDebt = activeDebts.reduce(
       (sum, debt) => sum + debt.remainingAmount,
-      0,
+      0
     );
     const totalMonthlyPayment = activeDebts.reduce(
       (sum, debt) => sum + debt.monthlyPayment,
-      0,
+      0
     );
 
     const debtsWithInterest = activeDebts.filter((d) => d.interestRate != null);
@@ -309,7 +310,7 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
       debtsWithInterest.length > 0
         ? debtsWithInterest.reduce(
             (sum, debt) => sum + (debt.interestRate || 0),
-            0,
+            0
           ) / debtsWithInterest.length
         : 0;
 

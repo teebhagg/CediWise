@@ -1,9 +1,9 @@
+import { GlassView } from "@/components/GlassView";
 import BottomSheet, {
   BottomSheetBackdrop,
   BottomSheetView,
   type BottomSheetBackdropProps,
 } from "@gorhom/bottom-sheet";
-import { BlurView } from "expo-blur";
 import React, {
   forwardRef,
   useCallback,
@@ -83,7 +83,7 @@ export const GlassBottomSheet = forwardRef<
       })}
     >
       <BottomSheetView style={styles.contentContainer}>
-        <BlurView intensity={70} tint="dark" style={styles.blurContainer}>
+        <GlassView intensity={70} tint="dark" style={styles.blurContainer}>
           <View style={styles.glassCard}>
             {/* Indicator */}
             <View style={styles.indicatorContainer}>
@@ -96,7 +96,7 @@ export const GlassBottomSheet = forwardRef<
               {children}
             </Animated.View>
           </View>
-        </BlurView>
+        </GlassView>
       </BottomSheetView>
     </BottomSheet>
   );

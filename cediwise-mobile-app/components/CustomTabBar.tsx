@@ -1,5 +1,5 @@
+import { GlassView } from '@/components/GlassView';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import React, { useEffect, useMemo } from 'react';
 import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -69,7 +69,7 @@ export function CustomTabBar(props: BottomTabBarProps) {
         },
       ]}
     >
-      <BlurView intensity={30} tint="dark" style={styles.blur}>
+      <GlassView intensity={30} tint="dark" style={styles.blur}>
         <View style={styles.border} />
 
         <Animated.View
@@ -131,7 +131,7 @@ export function CustomTabBar(props: BottomTabBarProps) {
             );
           })}
         </View>
-      </BlurView>
+      </GlassView>
     </View>
   );
 }

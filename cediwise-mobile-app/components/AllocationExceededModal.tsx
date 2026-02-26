@@ -3,7 +3,7 @@ import { Button, Dialog } from "heroui-native";
 import { AlertTriangle } from "lucide-react-native";
 import { StyleSheet, Text, View } from "react-native";
 
-import { BlurView } from "expo-blur";
+import { GlassView } from "@/components/GlassView";
 import type { AllocationExceededResult } from "../utils/allocationExceeded";
 
 type Props = {
@@ -52,7 +52,7 @@ export function AllocationExceededModal({
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="bg-black/60" />
-        <BlurView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
+        <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
         <Dialog.Content
           className="max-w-[360px] w-full rounded-xl overflow-hidden bg-slate-900/95 p-0"
         >

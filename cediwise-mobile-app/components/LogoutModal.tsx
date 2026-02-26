@@ -1,4 +1,4 @@
-import { BlurView } from 'expo-blur';
+import { GlassView } from '@/components/GlassView';
 import * as Haptics from 'expo-haptics';
 import { Button, Dialog } from 'heroui-native';
 import { Platform, StyleSheet, View } from 'react-native';
@@ -54,7 +54,7 @@ export function LogoutModal({ visible, onClose, onConfirm, tone = 'warning' }: L
         <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
             <Dialog.Portal>
                 <Dialog.Overlay className="bg-black/60" />
-                <BlurView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
+                <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
                 <Dialog.Content
                     className="max-w-[360px] w-full rounded-xl overflow-hidden bg-slate-900/95 p-0"
                     style={styles.contentShadow}

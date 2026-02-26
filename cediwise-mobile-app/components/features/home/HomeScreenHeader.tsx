@@ -1,21 +1,18 @@
-import { Scaling, User } from 'lucide-react-native';
-import { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
 import {
   Header,
   LargeHeader,
-  LargeHeaderProps,
   ScalingView,
   ScrollHeaderProps,
   ScrollLargeHeaderProps,
-  ScrollViewWithHeaders,
+  ScrollViewWithHeaders
 } from '@codeherence/react-native-header';
+import { User } from 'lucide-react-native';
+import { memo } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SharedValue } from 'react-native-reanimated';
 import { StoredUserData } from '@/utils/auth';
-import { Button } from 'heroui-native';
-import { Avatar } from 'heroui-native';
+import { Avatar, Button } from 'heroui-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const hitSlop = { top: 12, left: 12, bottom: 12, right: 12 };
 
@@ -76,7 +73,7 @@ function HomeScreenHeaderInner({
 
 const HeaderComponent = (props: ScrollHeaderProps) => {
   return (
-    <Header 
+    <Header
       showNavBar={props.showNavBar}
       headerCenter={<Text>CediWise</Text>}
       headerRight={<Button isIconOnly>
@@ -105,7 +102,7 @@ const LargeHeaderComponent = (props: ScrollLargeHeaderProps) => {
   );
 }
 
-export const ExpandHeader = ({children}: {children: React.ReactNode}) => {
+export const ExpandHeader = ({ children }: { children: React.ReactNode }) => {
   const { bottom } = useSafeAreaInsets();
 
   return (

@@ -12,10 +12,10 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 import { BackButton } from "@/components/BackButton";
 import { Card } from "@/components/Card";
+import { StandardHeader } from "@/components/CediWiseHeader";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
 import type { BudgetTemplate, LifeStage } from "@/types/budget";
@@ -125,38 +125,31 @@ export default function BudgetTemplatesScreen() {
     (t) => selectedLifeStage === "all" || t.lifeStage === selectedLifeStage
   );
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }} className="flex-1 bg-[#0A0A0A]" edges={["top"]}>
-      {/* Header */}
-      <View className="flex-row items-center justify-between px-5 py-4">
-        <BackButton />
-        <Text className="text-white text-xl" style={{ fontFamily: "Figtree-Bold", letterSpacing: -0.5 }}>
-          Budget Templates
-        </Text>
-        <View className="w-14" />
-      </View>
+  const lifeStageBottom = (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{flexDirection: "row", gap: 10, alignItems: "center",}}
+    >
+      {LIFE_STAGE_FILTERS.map(({ value, label }) => (
+        <FilterChip
+          key={value}
+          label={label}
+          selected={selectedLifeStage === value}
+          onPress={() => setSelectedLifeStage(value)}
+        />
+      ))}
+    </ScrollView>
+  );
 
-      {/* Filter Chips */}
-      <View className="mb-2">
-        <Text className="text-slate-400 text-xs uppercase tracking-wider px-5 mb-2.5" style={{ fontFamily: "Figtree-Medium" }}>
-          Life stage
-        </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 4, flexDirection: "row", gap: 10 }}
-          className="flex-grow-0"
-        >
-          {LIFE_STAGE_FILTERS.map(({ value, label }) => (
-            <FilterChip
-              key={value}
-              label={label}
-              selected={selectedLifeStage === value}
-              onPress={() => setSelectedLifeStage(value)}
-            />
-          ))}
-        </ScrollView>
-      </View>
+  return (
+    <View style={{ flex: 1, backgroundColor: 'black' }} className="flex-1 bg-[#0A0A0A]">
+      <StandardHeader
+        title="Budget Templates"
+        leading={<BackButton />}
+        centered
+        bottom={lifeStageBottom}
+      />
 
       <FlashList
         data={filteredTemplates}
@@ -169,7 +162,7 @@ export default function BudgetTemplatesScreen() {
             delay={0}
           />
         )}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32, gap: 16 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32, gap: 16, marginTop: 164}}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -185,7 +178,7 @@ export default function BudgetTemplatesScreen() {
           ) : null
         }
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -236,7 +229,7 @@ const TemplateCard = React.memo(function TemplateCard({
   const allocation = formatAllocation(template.needsPct, template.wantsPct, template.savingsPct);
 
   return (
-    <Animated.View entering={FadeInDown.duration(300).delay(delay)}>
+    <Animated.View entering={FadeInDown.duration(300).delay(delay)} className={'py-2'}>
       <Card className="gap-4 p-5">
         {/* Header */}
         <View className="flex-row justify-between items-start">

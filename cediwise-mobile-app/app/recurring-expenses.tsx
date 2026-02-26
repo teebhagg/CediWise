@@ -11,15 +11,21 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AddRecurringExpenseModal } from "@/components/AddRecurringExpenseModal";
 import { BackButton } from "@/components/BackButton";
 import { Card } from "@/components/Card";
+import { StandardHeader } from "@/components/CediWiseHeader";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useRecurringExpenses } from "@/hooks/useRecurringExpenses";
-import type { BudgetBucket, RecurringExpense, RecurringExpenseFrequency } from "@/types/budget";
+import type {
+  BudgetBucket,
+  RecurringExpense,
+  RecurringExpenseFrequency,
+} from "@/types/budget";
+import { Button } from "heroui-native";
 
 // Frequency display mapping
 const FREQUENCY_LABELS: Record<RecurringExpenseFrequency, string> = {
@@ -49,6 +55,7 @@ export default function RecurringExpensesScreen() {
     refresh,
   } = useRecurringExpenses();
 
+  const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -71,14 +78,16 @@ export default function RecurringExpensesScreen() {
             style: "destructive",
             onPress: async () => {
               await deleteRecurringExpense(expense.id);
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              );
               showSuccess("Deleted", "Recurring expense removed successfully");
             },
           },
-        ]
+        ],
       );
     },
-    [deleteRecurringExpense, showSuccess]
+    [deleteRecurringExpense, showSuccess],
   );
 
   const handleEdit = useCallback(
@@ -86,7 +95,7 @@ export default function RecurringExpensesScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       showInfo("Edit", "Edit recurring expense coming in a future update.");
     },
-    [showInfo]
+    [showInfo],
   );
 
   const handleAddSubmit = useCallback(
@@ -107,7 +116,7 @@ export default function RecurringExpensesScreen() {
       setShowAddModal(false);
       showSuccess("Expense added", "Recurring expense added successfully");
     },
-    [addRecurringExpense, showSuccess]
+    [addRecurringExpense, showSuccess],
   );
 
   // Group by bucket
@@ -129,7 +138,12 @@ export default function RecurringExpensesScreen() {
 
   type ListItem =
     | { type: "header"; id: string; bucket: BudgetBucket; bucketTotal: number }
-    | { type: "row"; id: string; expense: RecurringExpense; bucket: BudgetBucket };
+    | {
+      type: "row";
+      id: string;
+      expense: RecurringExpense;
+      bucket: BudgetBucket;
+    };
 
   const listData = useMemo((): ListItem[] => {
     const items: ListItem[] = [];
@@ -172,7 +186,12 @@ export default function RecurringExpensesScreen() {
                 </Text>
               </View>
               <Text style={styles.bucketTotal}>
-                ₵{item.bucketTotal.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/mo
+                ₵
+                {item.bucketTotal.toLocaleString("en-GB", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+                /mo
               </Text>
             </View>
           </View>
@@ -187,7 +206,7 @@ export default function RecurringExpensesScreen() {
         />
       );
     },
-    [handleEdit, handleDelete]
+    [handleEdit, handleDelete],
   );
 
   const keyExtractor = useCallback((item: ListItem) => item.id, []);
@@ -196,12 +215,16 @@ export default function RecurringExpensesScreen() {
 
   const listHeader = useMemo(
     () => (
-      <>
+      <View className="gap-3 mt-3">
         <Animated.View entering={FadeInDown.duration(300).delay(0)}>
           <Card style={styles.summaryCard}>
             <Text style={styles.summaryLabel}>Total Monthly</Text>
             <Text style={styles.summaryAmount}>
-              ₵{totalMonthly.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ₵
+              {totalMonthly.toLocaleString("en-GB", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </Text>
             <Text style={styles.summarySubtext}>
               From {getActiveExpenses().length} recurring expense(s)
@@ -214,24 +237,20 @@ export default function RecurringExpensesScreen() {
             <Card style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>No Recurring Expenses</Text>
               <Text style={styles.emptyText}>
-                Add subscriptions, memberships, or regular payments to track them automatically.
+                Add subscriptions, memberships, or regular payments to track
+                them automatically.
               </Text>
             </Card>
           </Animated.View>
         )}
-      </>
+      </View>
     ),
-    [totalMonthly, recurringExpenses.length, isLoading, getActiveExpenses]
+    [totalMonthly, recurringExpenses.length, isLoading, getActiveExpenses],
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <BackButton />
-        <Text style={styles.title}>Recurring Expenses</Text>
-        <View style={styles.headerPlaceholder} />
-      </View>
+    <View style={styles.container}>
+      <StandardHeader title="Recurring Expenses" leading={<BackButton />} centered />
 
       <FlashList
         data={listData}
@@ -239,7 +258,10 @@ export default function RecurringExpensesScreen() {
         keyExtractor={keyExtractor}
         getItemType={getItemType}
         ListHeaderComponent={listHeader}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: 64 + insets.top },
+        ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -248,15 +270,14 @@ export default function RecurringExpensesScreen() {
 
       {/* Add Button */}
       <View style={styles.footer}>
-        <PrimaryButton
+        <Button
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             setShowAddModal(true);
-          }}
-        >
+          }}>
           <Plus size={20} />
           <Text className="text-base font-semibold">Add Recurring Expense</Text>
-        </PrimaryButton>
+        </Button>
       </View>
 
       <AddRecurringExpenseModal
@@ -264,7 +285,7 @@ export default function RecurringExpensesScreen() {
         onClose={() => setShowAddModal(false)}
         onSubmit={handleAddSubmit}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -283,9 +304,12 @@ const ExpenseItem = React.memo(function ExpenseItem({
   // Calculate monthly amount
   let monthlyAmount = expense.amount;
   if (expense.frequency === "weekly") monthlyAmount = expense.amount * 4.33;
-  else if (expense.frequency === "bi_weekly") monthlyAmount = expense.amount * 2.165;
-  else if (expense.frequency === "quarterly") monthlyAmount = expense.amount / 3;
-  else if (expense.frequency === "annually") monthlyAmount = expense.amount / 12;
+  else if (expense.frequency === "bi_weekly")
+    monthlyAmount = expense.amount * 2.165;
+  else if (expense.frequency === "quarterly")
+    monthlyAmount = expense.amount / 3;
+  else if (expense.frequency === "annually")
+    monthlyAmount = expense.amount / 12;
 
   return (
     <Animated.View entering={FadeInDown.duration(300).delay(delay)}>
@@ -301,7 +325,10 @@ const ExpenseItem = React.memo(function ExpenseItem({
           </View>
           <View style={styles.expenseAmountContainer}>
             <Text style={styles.expenseAmount}>
-              ₵{monthlyAmount.toLocaleString("en-GB", { minimumFractionDigits: 2 })}
+              ₵
+              {monthlyAmount.toLocaleString("en-GB", {
+                minimumFractionDigits: 2,
+              })}
             </Text>
             <Text style={styles.expenseAmountLabel}>/month</Text>
           </View>
@@ -321,8 +348,7 @@ const ExpenseItem = React.memo(function ExpenseItem({
             style={({ pressed }) => [
               styles.actionButton,
               pressed && styles.actionPressed,
-            ]}
-          >
+            ]}>
             <Edit2 size={18} color="#64748B" />
             <Text style={styles.actionText}>Edit</Text>
           </Pressable>
@@ -332,10 +358,11 @@ const ExpenseItem = React.memo(function ExpenseItem({
             style={({ pressed }) => [
               styles.actionButton,
               pressed && styles.actionPressed,
-            ]}
-          >
+            ]}>
             <Trash2 size={18} color="#ef4444" />
-            <Text style={[styles.actionText, { color: "#ef4444" }]}>Delete</Text>
+            <Text style={[styles.actionText, { color: "#ef4444" }]}>
+              Delete
+            </Text>
           </Pressable>
         </View>
       </Card>
@@ -346,7 +373,7 @@ const ExpenseItem = React.memo(function ExpenseItem({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A0A0A",
+    backgroundColor: "black",
   },
   header: {
     flexDirection: "row",
@@ -524,7 +551,7 @@ const styles = StyleSheet.create({
   footer: {
     padding: 20,
     paddingBottom: 32,
-    backgroundColor: "#0A0A0A",
+    backgroundColor: "black",
     borderTopWidth: 1,
     borderTopColor: "rgba(148, 163, 184, 0.1)",
   },

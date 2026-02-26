@@ -1,4 +1,9 @@
 import { BackButton } from "@/components/BackButton";
+import {
+  DEFAULT_EXPANDED_HEIGHT,
+  DEFAULT_STANDARD_HEIGHT,
+  ExpandedHeader,
+} from "@/components/CediWiseHeader";
 import { LessonContentRenderer } from "@/components/features/literacy/LessonContentRenderer";
 import { LessonFeedbackModal } from "@/components/features/literacy/LessonFeedbackModal";
 import { LessonQuiz } from "@/components/features/literacy/quiz/LessonQuiz";
@@ -15,15 +20,13 @@ import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { CheckCircle2, MessageCircle } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, {
+  FadeInDown,
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function LessonScreen() {
   const { lessonId } = useLocalSearchParams<{ lessonId: string }>();
@@ -37,6 +40,12 @@ export default function LessonScreen() {
   const lessonStartTime = useRef<number>(Date.now());
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [lessonMarkedComplete, setLessonMarkedComplete] = useState(false);
+  const insets = useSafeAreaInsets();
+  const scrollY = useSharedValue(0);
+
+  const scrollHandler = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
 
   // ── Data ────────────────────────────────────────────────────────────────────
   const lesson = lessons.find((l) => l.id === lessonId);
@@ -83,7 +92,7 @@ export default function LessonScreen() {
       const mod = MODULES.find((m) => m.id === lesson.module);
       if (!mod) return;
       const allDone = mod.lessonIds.every(
-        (id) => id === completedLessonId || isCompleted(id)
+        (id) => id === completedLessonId || isCompleted(id),
       );
       if (allDone) {
         setTimeout(() => {
@@ -91,7 +100,7 @@ export default function LessonScreen() {
         }, 800);
       }
     },
-    [lesson?.module, isCompleted]
+    [lesson?.module, isCompleted],
   );
 
   /** Called by LessonQuiz when the user finishes the quiz */
@@ -104,23 +113,28 @@ export default function LessonScreen() {
       if (!saved) {
         showError(
           "Couldn't save progress",
-          "Check your connection and try again."
+          "Check your connection and try again.",
         );
         return;
       }
-      trackQuizAttempt(lessonId, lesson.module, correctCount, quizQuestions.length);
+      trackQuizAttempt(
+        lessonId,
+        lesson.module,
+        correctCount,
+        quizQuestions.length,
+      );
 
       if (passed) {
         setLessonMarkedComplete(true);
         showSuccess(
           "Lesson completed!",
-          `Quiz score: ${Math.round(score * 100)}%`
+          `Quiz score: ${Math.round(score * 100)}%`,
         );
         checkModuleComplete(lessonId);
       } else {
         showError(
           "Not quite there yet",
-          "You can review the lesson and try the quiz again."
+          "You can review the lesson and try the quiz again.",
         );
       }
     },
@@ -133,7 +147,7 @@ export default function LessonScreen() {
       showSuccess,
       showError,
       checkModuleComplete,
-    ]
+    ],
   );
 
   /** Called by "Mark as Complete" button (lessons with no quiz) */
@@ -144,14 +158,14 @@ export default function LessonScreen() {
     if (!saved) {
       showError(
         "Couldn't save progress",
-        "Check your connection and try again."
+        "Check your connection and try again.",
       );
       return;
     }
 
     if (lesson?.id && lesson?.module) {
       const timeSpentSeconds = Math.floor(
-        (Date.now() - lessonStartTime.current) / 1000
+        (Date.now() - lessonStartTime.current) / 1000,
       );
       trackLessonComplete(lesson.id, lesson.module, timeSpentSeconds);
     }
@@ -173,12 +187,12 @@ export default function LessonScreen() {
 
   if (!lesson) {
     return (
-      <SafeAreaView style={styles.root}>
+      <View style={styles.root}>
         <View style={styles.notFound}>
           <Text style={styles.notFoundText}>Lesson not found</Text>
           <BackButton onPress={() => router.back()} />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -187,26 +201,40 @@ export default function LessonScreen() {
   // ── UI ──────────────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView edges={["top"]} style={styles.root}>
-      {/* Nav bar */}
-      <View style={styles.nav}>
-        <BackButton onPress={() => router.back()} />
-        <Pressable
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            setShowFeedbackModal(true);
-          }}
-          style={styles.feedbackBtn}
-        >
-          <MessageCircle size={20} color="#10b981" />
-        </Pressable>
-      </View>
+    <View style={styles.root}>
+      <ExpandedHeader
+        scrollY={scrollY}
+        title={lesson.title}
+        subtitle={`${lesson.duration_minutes} min • ${lesson.difficulty}`}
+        centered={true}
+        leading={<BackButton onPress={() => router.back()} />}
+        actions={[
+          <Pressable
+            key="feedback"
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setShowFeedbackModal(true);
+            }}
+            className="w-10 h-10 rounded-full justify-center items-center bg-emerald-500/10 border border-emerald-500/20 active:bg-emerald-500/20">
+            <MessageCircle size={20} color="#10b981" />
+          </Pressable>,
+        ]}
+      />
 
-      <ScrollView
+      <Animated.ScrollView
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        snapToOffsets={[0, DEFAULT_EXPANDED_HEIGHT - DEFAULT_STANDARD_HEIGHT]}
+        snapToEnd={false}
+        decelerationRate="fast"
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: DEFAULT_EXPANDED_HEIGHT + insets.top + 20,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}>
         {/* Lesson header */}
         <View style={styles.lessonHeader}>
           <Text style={styles.lessonTitle}>{lesson.title}</Text>
@@ -242,8 +270,7 @@ export default function LessonScreen() {
               // Already completed — show a compact "retake" option
               <Animated.View
                 entering={FadeInDown.duration(300).springify()}
-                style={styles.completedQuizCard}
-              >
+                style={styles.completedQuizCard}>
                 <CheckCircle2 size={20} color="#2D9B5A" />
                 <Text style={styles.completedQuizText}>
                   Quiz completed. Feel free to retake it below.
@@ -269,14 +296,13 @@ export default function LessonScreen() {
           {!hasQuiz && isDone && (
             <Animated.View
               entering={FadeInDown.duration(300).springify()}
-              style={styles.completedBanner}
-            >
+              style={styles.completedBanner}>
               <CheckCircle2 size={18} color="#2D9B5A" />
               <Text style={styles.completedBannerText}>Lesson completed</Text>
             </Animated.View>
           )}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Feedback modal */}
       <LessonFeedbackModal
@@ -285,7 +311,7 @@ export default function LessonScreen() {
         visible={showFeedbackModal}
         onClose={() => setShowFeedbackModal(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

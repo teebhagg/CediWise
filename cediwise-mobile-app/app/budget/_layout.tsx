@@ -5,7 +5,7 @@ export default function BudgetLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#0A0A0A' },
+        contentStyle: { backgroundColor: 'black' },
       }}
     >
       <Stack.Screen name="index" />

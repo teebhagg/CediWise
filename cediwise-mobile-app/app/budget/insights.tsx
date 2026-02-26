@@ -1,4 +1,5 @@
 import { BackButton } from '@/components/BackButton';
+import { DEFAULT_STANDARD_HEIGHT, StandardHeader } from '@/components/CediWiseHeader';
 import { BudgetModals } from '@/components/features/budget/BudgetModals';
 import {
   BudgetSpendingInsightsCard,
@@ -7,11 +8,13 @@ import {
 import { useBudgetScreenState } from '@/components/features/budget/useBudgetScreenState';
 import { useAuth } from '@/hooks/useAuth';
 import { ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BudgetInsightsScreen() {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const { derived, budget, modals, ui } = useBudgetScreenState();
+  const headerPadding = DEFAULT_STANDARD_HEIGHT + insets.top;
 
   const handleApplyLimitAdjustment = (rec: AdvisorRecommendation) => {
     if (rec.categoryId && rec.context != null && rec.currentLimit != null) {
@@ -27,33 +30,32 @@ export default function BudgetInsightsScreen() {
 
   if (!user?.id) {
     return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
-        <View className="px-5 py-4">
-          <BackButton />
+      <View style={{ flex: 1, backgroundColor: 'black' }}>
+        <StandardHeader title="Spending Insights" leading={<BackButton />} centered />
+        <View className="px-5 py-4" style={{ paddingTop: headerPadding }}>
           <Text className="text-slate-400 mt-8 text-center">Sign in to view insights.</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!derived.activeCycleId || derived.cycleCategories.length === 0) {
     return (
-      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
-        <View className="px-5 py-4">
-          <BackButton />
+      <View style={{ flex: 1, backgroundColor: 'black' }}>
+        <StandardHeader title="Spending Insights" leading={<BackButton />} centered />
+        <View className="px-5 py-4" style={{ paddingTop: headerPadding }}>
           <Text className="text-slate-400 mt-8 text-center">
             Add categories and log expenses to see insights.
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#0A0A0A' }}>
-      <View className="px-5 pt-2 pb-4">
-        <BackButton />
-        <Text className="text-white text-2xl font-bold mt-2">Spending Insights</Text>
+    <View style={{ flex: 1, backgroundColor: 'black' }}>
+      <StandardHeader title="Spending Insights" leading={<BackButton />} centered />
+      <View className="px-5 pt-2 pb-4" style={{ paddingTop: headerPadding }}>
         <Text className="text-slate-400 text-sm mt-1">
           AI-powered recommendations and category analysis.
         </Text>
@@ -122,6 +124,6 @@ export default function BudgetInsightsScreen() {
         activeCyclePaydayDay={derived.activeCycle?.paydayDay ?? 1}
         onUpdateCycleDay={async () => { }}
       />
-    </SafeAreaView>
+    </View>
   );
 }

@@ -8,6 +8,7 @@ import { enqueueMutation } from "@/utils/budgetStorage";
 import { flushBudgetQueue } from "@/utils/budgetSync";
 import { log } from "@/utils/logger";
 import { supabase } from "@/utils/supabase";
+import { uuidv4 } from "@/utils/uuid";
 import { useCallback, useEffect, useState } from "react";
 
 export type AddRecurringExpenseParams = {
@@ -132,7 +133,7 @@ export function useRecurringExpenses(): UseRecurringExpensesReturn {
     async (params: AddRecurringExpenseParams) => {
       if (!user?.id) throw new Error("User not authenticated");
 
-      const id = crypto.randomUUID();
+      const id = uuidv4();
       const now = new Date().toISOString();
       const startDate =
         params.startDate || new Date().toISOString().split("T")[0];
@@ -204,7 +205,7 @@ export function useRecurringExpenses(): UseRecurringExpensesReturn {
       // Queue mutation
       const now = new Date().toISOString();
       await enqueueMutation(user.id, {
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         userId: user.id,
         createdAt: now,
         kind: "update_recurring_expense",
@@ -237,7 +238,7 @@ export function useRecurringExpenses(): UseRecurringExpensesReturn {
       // Queue mutation
       const now = new Date().toISOString();
       await enqueueMutation(user.id, {
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         userId: user.id,
         createdAt: now,
         kind: "delete_recurring_expense",

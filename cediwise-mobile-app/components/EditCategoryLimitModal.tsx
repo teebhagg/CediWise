@@ -3,9 +3,9 @@ import { Button, Dialog } from 'heroui-native';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { BlurView } from 'expo-blur';
-import { AppTextField } from './AppTextField';
+import { GlassView } from '@/components/GlassView';
 import { ArrowUpRightIcon } from 'lucide-react-native';
+import { AppTextField } from './AppTextField';
 
 type Props = {
   visible: boolean;
@@ -67,7 +67,7 @@ export function EditCategoryLimitModal({
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="bg-black/60" />
-        <BlurView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
+        <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
         <KeyboardAvoidingView
           behavior="padding"
           style={{ flex: 1, justifyContent: 'center' }}
@@ -114,7 +114,7 @@ export function EditCategoryLimitModal({
                         Use suggested: ₵{suggestedLimit.toLocaleString()} (from your spending)
                       </Text>
                       {/* <View className="w-10 h-10 flex items-center justify-center bg-emerald-500/15 rounded-full"> */}
-                        <ArrowUpRightIcon size={24} color="#1B6B3A" />
+                      <ArrowUpRightIcon size={24} color="#1B6B3A" />
                       {/* </View> */}
                     </Pressable>
                   )}

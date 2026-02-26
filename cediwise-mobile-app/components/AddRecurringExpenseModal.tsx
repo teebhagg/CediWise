@@ -10,8 +10,8 @@ import {
   View,
 } from "react-native";
 
+import { GlassView } from "@/components/GlassView";
 import type { BudgetBucket, RecurringExpenseFrequency } from "@/types/budget";
-import { BlurView } from "expo-blur";
 import { ScrollView } from "react-native";
 import { AppTextField } from "./AppTextField";
 
@@ -99,7 +99,7 @@ export function AddRecurringExpenseModal({
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="bg-black/60" />
-        <BlurView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
+        <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
         <KeyboardAvoidingView
           behavior="padding"
           style={{ flex: 1, justifyContent: "center" }}

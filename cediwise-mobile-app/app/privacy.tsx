@@ -1,9 +1,10 @@
 import { BackButton } from "@/components/BackButton";
+import { StandardHeader } from "@/components/CediWiseHeader";
 import Markdown from "@ronradtke/react-native-markdown-display";
 import { router } from "expo-router";
 import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const privacyContent = `
 # Privacy Policy for CediWise
@@ -73,16 +74,22 @@ const markdownStyles = {
 };
 
 export default function PrivacyScreen() {
+  const insets = useSafeAreaInsets();
   return (
-    <SafeAreaView edges={["top"]} style={styles.root}>
-      <View style={styles.nav}>
-        <BackButton onPress={() => router.back()} />
-        <Text style={styles.navTitle}>Privacy Policy</Text>
-      </View>
-      <ScrollView contentContainerStyle={styles.content}>
+    <View style={styles.root}>
+      <StandardHeader
+        title="Privacy Policy"
+        leading={<BackButton onPress={() => router.back()} />}
+        centered
+      />
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: 64 + insets.top },
+        ]}>
         <Markdown style={markdownStyles}>{privacyContent}</Markdown>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

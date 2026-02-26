@@ -5,16 +5,17 @@ import { RefreshCcw, Trash2 } from 'lucide-react-native';
 import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BackButton } from '@/components/BackButton';
 import { Card } from '@/components/Card';
+import { DEFAULT_STANDARD_HEIGHT, StandardHeader } from '@/components/CediWiseHeader';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useAppToast } from '@/hooks/useAppToast';
 import { useAuth } from '@/hooks/useAuth';
 import { useBudget } from '@/hooks/useBudget';
 import type { BudgetMutation } from '@/types/budget';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -202,18 +203,16 @@ export default function BudgetQueueScreen() {
 
   const keyExtractor = useCallback((item: BudgetMutation) => item.id, []);
 
+  const insets = useSafeAreaInsets();
+  const headerPadding = DEFAULT_STANDARD_HEIGHT + insets.top;
+
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: 'black' }} className="flex-1 bg-background">
-      <View className="px-5 py-3 flex-row items-center justify-between">
-        <View>
-          <BackButton />
-          <Text className="text-white text-2xl font-bold" style={queueStyles.title}>
-            Sync Queue
-          </Text>
-          <Text className="text-muted-foreground text-sm" style={queueStyles.textMuted}>
-            Pending items retry until they save.
-          </Text>
-        </View>
+    <View style={{ flex: 1, backgroundColor: 'black' }} className="flex-1 bg-background">
+      <StandardHeader title="Sync Queue" leading={<BackButton />} centered />
+      <View className="px-5 py-3" style={{ paddingTop: headerPadding }}>
+        <Text className="text-muted-foreground text-sm" style={queueStyles.textMuted}>
+          Pending items retry until they save.
+        </Text>
       </View>
 
       <View className="px-5 flex-1">
@@ -243,7 +242,7 @@ export default function BudgetQueueScreen() {
           }
         }}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -1,7 +1,7 @@
-import { BlurView } from 'expo-blur';
-import { ReactNode } from 'react';
-import { View, ViewProps } from 'react-native';
+import { GlassView } from '@/components/GlassView';
 import { Surface } from 'heroui-native';
+import { ReactNode } from 'react';
+import { ViewProps } from 'react-native';
 
 type CardProps = ViewProps & {
   children: ReactNode;
@@ -22,9 +22,9 @@ export function Card({ children, style, className, blurred = true, ...rest }: Ca
   }
 
   return (
-    <BlurView intensity={30} tint="dark" className="rounded-lg overflow-hidden">
+    <GlassView intensity={30} tint="dark" className="rounded-lg overflow-hidden">
       {content}
-    </BlurView>
+    </GlassView>
   );
 }
 

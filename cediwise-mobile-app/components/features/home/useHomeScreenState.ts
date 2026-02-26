@@ -35,6 +35,7 @@ export interface UseHomeScreenStateReturn {
   // Auth / user
   user: HomeScreenUser;
   headerTitle: string;
+  headerCollapsedTitle: string;
   headerSubtitle: string;
   authLoading: boolean;
   /** True while auth or initial profile/budget load; show VitalHeroSkeleton when true. */
@@ -311,6 +312,7 @@ export function useHomeScreenState(): UseHomeScreenStateReturn {
   const headerTitle = user?.name
     ? `Welcome back, ${user.name.split(" ")[0]}`
     : "CediWise";
+  const headerCollapsedTitle = "CediWise"
   const headerSubtitle = user?.email
     ? "Here's your financial overview"
     : "Here's your financial overview";
@@ -327,6 +329,7 @@ export function useHomeScreenState(): UseHomeScreenStateReturn {
   return {
     user: user ?? null,
     headerTitle,
+    headerCollapsedTitle,
     headerSubtitle,
     authLoading,
     isHomeLoading,

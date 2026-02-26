@@ -1,4 +1,9 @@
 import { BackButton } from "@/components/BackButton";
+import {
+  DEFAULT_EXPANDED_HEIGHT,
+  DEFAULT_STANDARD_HEIGHT,
+  ExpandedHeader,
+} from "@/components/CediWiseHeader";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { LEVEL_COLORS, LEVEL_LABELS, MODULES } from "@/constants/literacy";
 import { useLessons } from "@/hooks/useLessons";
@@ -16,14 +21,14 @@ import {
   Trophy,
 } from "lucide-react-native";
 import React, { memo, useMemo } from "react";
-import {
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ─── Lesson Row ───────────────────────────────────────────────────────────────
 
@@ -54,8 +59,7 @@ const LessonRow = memo(function LessonRow({
           styles.lessonRow,
           pressed && !isLocked && styles.lessonRowPressed,
           isLocked && styles.lessonRowLocked,
-        ]}
-      >
+        ]}>
         {/* Step number / completion indicator */}
         <View style={styles.stepIndicator}>
           {isCompleted ? (
@@ -72,8 +76,7 @@ const LessonRow = memo(function LessonRow({
         <View style={styles.lessonContent}>
           <Text
             style={[styles.lessonTitle, isCompleted && styles.lessonTitleDone]}
-            numberOfLines={2}
-          >
+            numberOfLines={2}>
             {lesson.title}
           </Text>
           <View style={styles.lessonMeta}>
@@ -98,24 +101,32 @@ const LessonRow = memo(function LessonRow({
 
 // ─── Module Overview Screen ───────────────────────────────────────────────────
 
+const AnimatedFlashList = Animated.createAnimatedComponent(FlashList) as any;
+
 export default function ModuleOverviewScreen() {
   const { moduleId } = useLocalSearchParams<{ moduleId: string }>();
   const { lessons } = useLessons();
   const { isCompleted } = useProgress();
+  const insets = useSafeAreaInsets();
+  const scrollY = useSharedValue(0);
+
+  const scrollHandler = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
 
   const module = useMemo(
     () => MODULES.find((m) => m.id === moduleId),
-    [moduleId]
+    [moduleId],
   );
 
   const moduleLessons = useMemo(
     () => lessons.filter((l) => l.module === moduleId),
-    [lessons, moduleId]
+    [lessons, moduleId],
   );
 
   const completedCount = useMemo(
     () => moduleLessons.filter((l) => isCompleted(l.id)).length,
-    [moduleLessons, isCompleted]
+    [moduleLessons, isCompleted],
   );
 
   const totalCount = moduleLessons.length;
@@ -125,10 +136,10 @@ export default function ModuleOverviewScreen() {
 
   if (!module) {
     return (
-      <SafeAreaView style={styles.errorContainer}>
+      <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Module not found</Text>
         <BackButton onPress={() => router.back()} />
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -162,14 +173,23 @@ export default function ModuleOverviewScreen() {
       <View style={[styles.headerCard, { borderColor: levelColor + "40" }]}>
         {/* Level badge */}
         <View style={styles.headerTop}>
-          <View style={[styles.levelBadge, { backgroundColor: levelColor + "20", borderColor: levelColor + "50" }]}>
+          <View
+            style={[
+              styles.levelBadge,
+              {
+                backgroundColor: levelColor + "20",
+                borderColor: levelColor + "50",
+              },
+            ]}>
             <Text style={[styles.levelBadgeText, { color: levelColor }]}>
               {levelLabel}
             </Text>
           </View>
           <View style={styles.timePill}>
             <Clock size={12} color="#64748b" />
-            <Text style={styles.timePillText}>{module.estimated_minutes} min total</Text>
+            <Text style={styles.timePillText}>
+              {module.estimated_minutes} min total
+            </Text>
           </View>
         </View>
 
@@ -202,8 +222,7 @@ export default function ModuleOverviewScreen() {
           <Animated.View
             key={idx}
             entering={FadeInDown.delay(100 + idx * 50).springify()}
-            style={styles.objectiveRow}
-          >
+            style={styles.objectiveRow}>
             <View style={styles.objectiveDot} />
             <Text style={styles.objectiveText}>{obj}</Text>
           </Animated.View>
@@ -224,8 +243,7 @@ export default function ModuleOverviewScreen() {
       {allDone && (
         <Animated.View
           entering={FadeInDown.delay(200).springify()}
-          style={styles.completeBanner}
-        >
+          style={styles.completeBanner}>
           <Trophy size={20} color="#C9A84C" />
           <Text style={styles.completeBannerText}>
             {"You've completed this module!"}
@@ -238,55 +256,69 @@ export default function ModuleOverviewScreen() {
       </PrimaryButton>
 
       {/* Next module teaser */}
-      {allDone && module.next_module_id && (() => {
-        const next = MODULES.find((m) => m.id === module.next_module_id);
-        if (!next) return null;
-        return (
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              router.push(`/literacy/${next.id}`);
-            }}
-            style={styles.nextModuleCard}
-          >
-            <View style={styles.nextModuleContent}>
-              <Text style={styles.nextModuleLabel}>Up next</Text>
-              <Text style={styles.nextModuleTitle}>{next.title}</Text>
-              <Text style={styles.nextModuleDesc} numberOfLines={1}>
-                {next.description}
-              </Text>
-            </View>
-            <ChevronRight size={20} color="#2D9B5A" />
-          </Pressable>
-        );
-      })()}
+      {allDone &&
+        module.next_module_id &&
+        (() => {
+          const next = MODULES.find((m) => m.id === module.next_module_id);
+          if (!next) return null;
+          return (
+            <Pressable
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                router.push(`/literacy/${next.id}`);
+              }}
+              style={styles.nextModuleCard}>
+              <View style={styles.nextModuleContent}>
+                <Text style={styles.nextModuleLabel}>Up next</Text>
+                <Text style={styles.nextModuleTitle}>{next.title}</Text>
+                <Text style={styles.nextModuleDesc} numberOfLines={1}>
+                  {next.description}
+                </Text>
+              </View>
+              <ChevronRight size={20} color="#2D9B5A" />
+            </Pressable>
+          );
+        })()}
     </View>
   );
 
   return (
-    <SafeAreaView edges={["top"]} style={styles.root}>
-      {/* Top nav */}
-      <View style={styles.nav}>
-        <BackButton onPress={() => router.back()} />
-      </View>
+    <View style={styles.root}>
+      <ExpandedHeader
+        scrollY={scrollY}
+        title={module.title}
+        centered={true}
+        leading={<BackButton onPress={() => router.back()} />}
+      />
 
-      <FlashList
+      <AnimatedFlashList
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        snapToOffsets={[0, DEFAULT_EXPANDED_HEIGHT - DEFAULT_STANDARD_HEIGHT]}
+        snapToEnd={false}
+        decelerationRate="fast"
         data={moduleLessons}
         ListHeaderComponent={ListHeader}
         ListFooterComponent={ListFooter}
-        renderItem={({ item, index }) => (
+        renderItem={({ item, index }: any) => (
           <LessonRow
             lesson={item}
-            index={index}
+            index={index as number}
             isCompleted={isCompleted(item.id)}
             isLocked={false}
           />
         )}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        keyExtractor={(item: any) => item.id}
+        contentContainerStyle={[
+          styles.list,
+          {
+            paddingTop: DEFAULT_EXPANDED_HEIGHT + insets.top + 20,
+          },
+        ]}
         ItemSeparatorComponent={() => <View style={styles.separator} />}
+        estimatedItemSize={80}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -398,7 +430,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(201,168,76,0.06)",
     borderWidth: 1,
     borderColor: "rgba(201,168,76,0.2)",
-    borderRadius: 30,  // rounded-xl
+    borderRadius: 30, // rounded-xl
     padding: 14,
     marginBottom: 20,
   },

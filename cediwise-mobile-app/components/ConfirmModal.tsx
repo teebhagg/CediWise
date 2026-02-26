@@ -1,4 +1,4 @@
-import { BlurView } from 'expo-blur';
+import { GlassView } from '@/components/GlassView';
 import * as Haptics from 'expo-haptics';
 import { Button, Dialog } from 'heroui-native';
 import { Platform, StyleSheet, View } from 'react-native';
@@ -46,16 +46,16 @@ export function ConfirmModal({
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="bg-black/60" />
-        <BlurView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
+        <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
         <Dialog.Content
           className="max-w-[360px] w-full rounded-xl bg-[rgba(18,22,33,0.98)] p-0"
           style={styles.contentShadow}
         >
           <Dialog.Close
-              variant="ghost"
-              className="absolute top-4 right-4 w-10 h-10 rounded-full z-10"
-              onPress={handleClose}
-            />
+            variant="ghost"
+            className="absolute top-4 right-4 w-10 h-10 rounded-full z-10"
+            onPress={handleClose}
+          />
           <View style={styles.content}>
             <Dialog.Title className="text-[26px] font-bold text-slate-200 text-center mb-1.5">
               {title}

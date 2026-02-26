@@ -9,6 +9,11 @@
 
 import { AppTextField } from "@/components/AppTextField";
 import { BackButton } from "@/components/BackButton";
+import {
+  DEFAULT_EXPANDED_HEIGHT,
+  DEFAULT_STANDARD_HEIGHT,
+  ExpandedHeader,
+} from "@/components/CediWiseHeader";
 import { GlassBottomSheet } from "@/components/GlassBottomSheet";
 import {
   GLOSSARY,
@@ -18,7 +23,7 @@ import {
 import { useAppToast } from "@/hooks/useAppToast";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import { BookMarked, ChevronRight, ExternalLink, Search, X } from "lucide-react-native";
+import { ChevronRight, ExternalLink, Search, X } from "lucide-react-native";
 import React, { memo, useCallback, useMemo, useRef, useState } from "react";
 import {
   Linking,
@@ -30,8 +35,13 @@ import {
   TextInput,
   View,
 } from "react-native";
-import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import Animated, {
+  FadeInDown,
+  FadeInUp,
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ─── Glossary Term Card ───────────────────────────────────────────────────────
 
@@ -51,8 +61,10 @@ const TermCard = memo(function TermCard({
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           onPress(term);
         }}
-        style={({ pressed }) => [styles.termCard, pressed && styles.termCardPressed]}
-      >
+        style={({ pressed }) => [
+          styles.termCard,
+          pressed && styles.termCardPressed,
+        ]}>
         <View style={styles.termCardContent}>
           <Text style={styles.termName}>{term.term}</Text>
           {term.full_form && (
@@ -101,13 +113,11 @@ function TermDetailModal({
       // ref={sheetRef}
       // snapPoints={["42%"]}
       initialIndex={0}
-      onClose={onClose}
-    >
+      onClose={onClose}>
       {/* <Pressable style={styles.modalBackdrop} onPress={onClose} /> */}
       <Animated.View
         entering={FadeInUp.duration(300).springify()}
-        style={styles.sheet}
-      >
+        style={styles.sheet}>
         {/* Handle */}
         {/* <View style={styles.sheetHandle} /> */}
 
@@ -127,8 +137,7 @@ function TermDetailModal({
         <ScrollView
           style={styles.sheetScroll}
           contentContainerStyle={styles.sheetScrollContent}
-          showsVerticalScrollIndicator={false}
-        >
+          showsVerticalScrollIndicator={false}>
           {/* Definition */}
           <Text style={styles.sheetDefinition}>{term.definition}</Text>
 
@@ -145,11 +154,10 @@ function TermDetailModal({
 
           {/* Source */}
           {term.source && (
-            <Pressable
-              style={styles.sheetSource}
-              onPress={handleOpenSource}
-            >
-              <Text style={styles.sheetSourceLabel}>Source: {term.source.label}</Text>
+            <Pressable style={styles.sheetSource} onPress={handleOpenSource}>
+              <Text style={styles.sheetSourceLabel}>
+                Source: {term.source.label}
+              </Text>
               {term.source.url && <ExternalLink size={13} color="#64748b" />}
             </Pressable>
           )}
@@ -160,11 +168,18 @@ function TermDetailModal({
 }
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
+const AnimatedSectionList = Animated.createAnimatedComponent(SectionList);
 
 export default function GlossaryScreen() {
   const [query, setQuery] = useState("");
   const [selectedTerm, setSelectedTerm] = useState<GlossaryTerm | null>(null);
   const inputRef = useRef<TextInput>(null);
+  const insets = useSafeAreaInsets();
+  const scrollY = useSharedValue(0);
+
+  const scrollHandler = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
 
   const filtered = useMemo(() => {
     if (!query.trim()) return GLOSSARY;
@@ -172,7 +187,7 @@ export default function GlossaryScreen() {
     return GLOSSARY.filter((t) =>
       `${t.term} ${t.full_form ?? ""} ${t.definition} ${t.tags.join(" ")}`
         .toLowerCase()
-        .includes(q)
+        .includes(q),
     );
   }, [query]);
 
@@ -187,73 +202,75 @@ export default function GlossaryScreen() {
     inputRef.current?.blur();
   };
 
-  return (
-    <SafeAreaView edges={["top"]} style={styles.root}>
-      {/* Nav */}
-      <View style={styles.nav}>
-        <BackButton onPress={() => router.back()} />
-      </View>
-
-      {/* Header */}
-      <Animated.View
-        entering={FadeInDown.duration(300).springify()}
-        style={styles.header}
-      >
-        <View style={styles.headerIconRow}>
-          <BookMarked size={22} color="#C9A84C" />
-          <Text style={styles.headerTitle}>Financial Glossary</Text>
-        </View>
-        <Text style={styles.headerSubtitle}>
-          {GLOSSARY.length} Ghana-specific financial terms, A–Z
-        </Text>
-      </Animated.View>
-
-      {/* Search bar */}
-      <View style={styles.searchWrap}>
-        {/* <View style={styles.searchBar}> */}
-        <AppTextField
-          prefixIcon={<Search size={16} color="#64748b" />}
-          suffixIcon={query.length > 0 && (
+  const searchBar = (
+    <View style={{ width: "100%" }}>
+      <AppTextField
+        containerClassName="w-full"
+        prefixIcon={<Search size={16} color="#64748b" />}
+        suffixIcon={
+          query.length > 0 && (
             <Pressable onPress={clearSearch} hitSlop={8}>
               <X size={15} color="#64748b" />
             </Pressable>
-          )}
-          placeholder="Search terms..."
-          value={query}
-          onChangeText={setQuery}
-          returnKeyType="search"
-          autoCorrect={true}
-          autoCapitalize="none"
-        />
-        {/* </View> */}
-      </View>
+          )
+        }
+        placeholder="Search terms..."
+        value={query}
+        onChangeText={setQuery}
+        returnKeyType="search"
+        autoCorrect={true}
+        autoCapitalize="none"
+      />
+    </View>
+  );
+
+  return (
+    <View style={styles.root}>
+      <ExpandedHeader
+        scrollY={scrollY}
+        title="Financial Glossary"
+        subtitle={`${GLOSSARY.length} terms tailored for Ghana`}
+        centered={true}
+        leading={<BackButton onPress={() => router.back()} />}
+        bottom={searchBar}
+      />
+
+      {/* Search bar pinned below header if not scrolling? No, within ScrollView for glossary usually works best if it's part of header, but here it's better at top of list */}
 
       {/* Result count when searching */}
-      {query.length > 0 && (
-        <Text style={styles.resultCount}>
-          {filtered.length} result{filtered.length !== 1 ? "s" : ""} for &quot;{query}&quot;
+      {/* {query.length > 0 && (
+        <Text style={[styles.resultCount, { marginTop: 10 }]}>
+          {filtered.length} result{filtered.length !== 1 ? "s" : ""} for &quot;
+          {query}&quot;
         </Text>
-      )}
+      )} */}
 
       {/* Alphabetical section list */}
       {sections.length === 0 ? (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No terms match &quot;{query}&quot;</Text>
+          <Text style={styles.emptyText}>
+            No terms match &quot;{query}&quot;
+          </Text>
           <Pressable onPress={clearSearch}>
             <Text style={styles.clearText}>Clear search</Text>
           </Pressable>
         </View>
       ) : (
-        <SectionList
+        <AnimatedSectionList
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          snapToOffsets={[0, DEFAULT_EXPANDED_HEIGHT - DEFAULT_STANDARD_HEIGHT]}
+          snapToEnd={false}
+          decelerationRate="fast"
           sections={sections}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item: any) => item.id}
           stickySectionHeadersEnabled
-          renderSectionHeader={({ section }) => (
+          renderSectionHeader={({ section }: any) => (
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionLetter}>{section.letter}</Text>
             </View>
           )}
-          renderItem={({ item, index }) => (
+          renderItem={({ item, index }: any) => (
             <TermCard
               term={item}
               onPress={handleTermPress}
@@ -261,8 +278,15 @@ export default function GlossaryScreen() {
             />
           )}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
-          SectionSeparatorComponent={() => <View style={styles.sectionSeparator} />}
-          contentContainerStyle={styles.listContent}
+          SectionSeparatorComponent={() => (
+            <View style={styles.sectionSeparator} />
+          )}
+          contentContainerStyle={[
+            styles.listContent,
+            {
+              paddingTop: DEFAULT_EXPANDED_HEIGHT + insets.top + 60,
+            },
+          ]}
           showsVerticalScrollIndicator={false}
         />
       )}
@@ -272,7 +296,7 @@ export default function GlossaryScreen() {
         term={selectedTerm}
         onClose={() => setSelectedTerm(null)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -313,6 +337,7 @@ const styles = StyleSheet.create({
 
   // Search
   searchWrap: {
+    // width: "fill",
     paddingHorizontal: 20,
     paddingBottom: 8,
   },

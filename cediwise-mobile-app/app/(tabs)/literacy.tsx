@@ -7,214 +7,81 @@
  * FR-SRC-005: Glossary shortcut card
  */
 
+import {
+  DEFAULT_EXPANDED_HEIGHT,
+  DEFAULT_STANDARD_HEIGHT,
+  ExpandedHeader,
+} from "@/components/CediWiseHeader";
 import { ModuleCard } from "@/components/features/literacy/ModuleCard";
 import { MODULES } from "@/constants/literacy";
 import { useLessons } from "@/hooks/useLessons";
 import { useProgress } from "@/hooks/useProgress";
-import { useSearch } from "@/hooks/useSearch";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import {
-  BookMarked,
-  BookOpen,
-  ChevronRight,
-  Clock,
-  Layers,
-  Search,
-  X,
-} from "lucide-react-native";
-import React, { useCallback, useRef, useState } from "react";
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
-
-// ─── Search Results View ──────────────────────────────────────────────────────
-
-function SearchResults({ query }: { query: string }) {
-  const { lessons } = useLessons();
-  const results = useSearch(query, lessons);
-
-  if (results.total === 0) {
-    return (
-      <View style={styles.emptySearch}>
-        <Text style={styles.emptySearchText}>
-          {`No results for "${query}"`}
-        </Text>
-        <Text style={styles.emptySearchHint}>
-          {'Try "momo", "susu", "t-bill", "pension", or "budget"'}
-        </Text>
-      </View>
-    );
-  }
-
-  return (
-    <ScrollView
-      style={styles.resultsScroll}
-      contentContainerStyle={styles.resultsContent}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-    >
-      {/* Lesson results */}
-      {results.lessons.length > 0 && (
-        <Animated.View entering={FadeInDown.delay(0).duration(250)}>
-          <Text style={styles.resultGroupLabel}>Lessons</Text>
-          {results.lessons.map((r) => (
-            <Pressable
-              key={r.id}
-              style={({ pressed }) => [styles.resultRow, pressed && styles.resultRowPressed]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push(`/literacy/lesson/${r.id}`);
-              }}
-            >
-              <View style={styles.resultIcon}>
-                <BookOpen size={15} color="#2D9B5A" />
-              </View>
-              <View style={styles.resultContent}>
-                <Text style={styles.resultTitle} numberOfLines={1}>{r.title}</Text>
-                <View style={styles.resultMeta}>
-                  <Text style={styles.resultMetaText}>{r.moduleTitle}</Text>
-                  <View style={styles.resultMetaDot} />
-                  <Clock size={11} color="#64748b" />
-                  <Text style={styles.resultMetaText}>{r.duration_minutes} min</Text>
-                </View>
-              </View>
-              <ChevronRight size={15} color="#475569" />
-            </Pressable>
-          ))}
-        </Animated.View>
-      )}
-
-      {/* Module results */}
-      {results.modules.length > 0 && (
-        <Animated.View entering={FadeInDown.delay(50).duration(250)}>
-          <Text style={styles.resultGroupLabel}>Modules</Text>
-          {results.modules.map((r) => (
-            <Pressable
-              key={r.id}
-              style={({ pressed }) => [styles.resultRow, pressed && styles.resultRowPressed]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push(`/literacy/${r.id}`);
-              }}
-            >
-              <View style={[styles.resultIcon, styles.resultIconModule]}>
-                <Layers size={15} color="#C9A84C" />
-              </View>
-              <View style={styles.resultContent}>
-                <Text style={styles.resultTitle} numberOfLines={1}>{r.title}</Text>
-                <Text style={styles.resultMetaText} numberOfLines={1}>{r.description}</Text>
-              </View>
-              <ChevronRight size={15} color="#475569" />
-            </Pressable>
-          ))}
-        </Animated.View>
-      )}
-
-      {/* Glossary results */}
-      {results.glossary.length > 0 && (
-        <Animated.View entering={FadeInDown.delay(100).duration(250)}>
-          <Text style={styles.resultGroupLabel}>Glossary</Text>
-          {results.glossary.map((r) => (
-            <Pressable
-              key={r.term.id}
-              style={({ pressed }) => [styles.resultRow, pressed && styles.resultRowPressed]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push("/literacy/glossary");
-              }}
-            >
-              <View style={[styles.resultIcon, styles.resultIconGlossary]}>
-                <BookMarked size={15} color="#64748b" />
-              </View>
-              <View style={styles.resultContent}>
-                <Text style={styles.resultTitle}>{r.term.term}</Text>
-                {r.term.full_form && (
-                  <Text style={styles.termFullForm}>{r.term.full_form}</Text>
-                )}
-                <Text style={styles.resultMetaText} numberOfLines={2}>
-                  {r.term.definition}
-                </Text>
-              </View>
-            </Pressable>
-          ))}
-          {results.glossary.length >= 8 && (
-            <Pressable
-              style={styles.seeAllGlossary}
-              onPress={() => router.push("/literacy/glossary")}
-            >
-              <Text style={styles.seeAllText}>See all glossary terms →</Text>
-            </Pressable>
-          )}
-        </Animated.View>
-      )}
-    </ScrollView>
-  );
-}
+import { BookMarked, ChevronRight } from "lucide-react-native";
+import React from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, {
+  FadeInDown,
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ─── Main Tab Screen ──────────────────────────────────────────────────────────
 
 export default function LiteracyScreen() {
-  const { loading, error, refetch } = useLessons();
+  const { loading } = useLessons();
   const { isCompleted } = useProgress();
-  const [query, setQuery] = useState("");
-  const inputRef = useRef<TextInput>(null);
-  const isSearching = query.trim().length > 0;
-
-  const clearSearch = useCallback(() => {
-    setQuery("");
-    inputRef.current?.blur();
-  }, []);
+  const insets = useSafeAreaInsets();
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
 
   return (
-    <SafeAreaView style={styles.root}>
-      {/* Header */}
-      <Animated.View
-        entering={FadeInUp.duration(350).springify()}
-        style={styles.header}
-      >
-        <Text style={styles.headerTitle}>Learn</Text>
-        <Text style={styles.headerSubtitle}>
-          Financial literacy tailored for Ghana
-        </Text>
-        {error && (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorText}>
-              Content is showing offline fallback. Tap to retry.
-            </Text>
-            <Pressable onPress={refetch} hitSlop={8}>
-              <Text style={styles.errorRetry}>Retry</Text>
-            </Pressable>
-          </View>
-        )}
-      </Animated.View>
-        <ScrollView
-          style={styles.homeScroll}
-          contentContainerStyle={styles.homeContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          className="pb-10"
-        >
+    <View style={styles.root}>
+      <ExpandedHeader
+        scrollY={scrollY}
+        title="Learn"
+        subtitle="Financial literacy tailored for Ghana"
+      />
+      <Animated.ScrollView
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        snapToOffsets={[0, DEFAULT_EXPANDED_HEIGHT - DEFAULT_STANDARD_HEIGHT]}
+        snapToEnd={false}
+        decelerationRate="fast"
+        style={styles.homeScroll}
+        contentContainerStyle={[
+          styles.homeContent,
+          {
+            paddingTop: DEFAULT_EXPANDED_HEIGHT + insets.top + 24,
+            paddingBottom: insets.bottom + 100,
+            gap: 24,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}>
+        <View style={{ gap: 24, marginTop: 8 }}>
           {/* Glossary shortcut */}
-          <Animated.View entering={FadeInDown.delay(120).duration(300).springify()}>
+          <Animated.View
+            entering={FadeInDown.delay(120).duration(300).springify()}>
             <Pressable
-              style={({ pressed }) => [styles.glossaryCard, pressed && styles.glossaryCardPressed]}
+              style={({ pressed }) => [
+                styles.glossaryCard,
+                pressed && styles.glossaryCardPressed,
+              ]}
               onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 router.push("/literacy/glossary");
               }}
-            >
+              hitSlop={8}>
               <View style={styles.glossaryCardLeft}>
                 <BookMarked size={20} color="#C9A84C" />
                 <View style={styles.glossaryCardText}>
-                  <Text style={styles.glossaryCardTitle}>Financial Glossary</Text>
+                  <Text style={styles.glossaryCardTitle}>
+                    Financial Glossary
+                  </Text>
                   <Text style={styles.glossaryCardSubtitle}>
                     75 Ghana-specific terms, A–Z
                   </Text>
@@ -227,10 +94,11 @@ export default function LiteracyScreen() {
           {/* Section label */}
           <Animated.View
             entering={FadeInDown.delay(160).duration(300).springify()}
-            style={styles.modulesHeader}
-          >
+            style={styles.modulesHeader}>
             <Text style={styles.modulesLabel}>Modules</Text>
-            <Text style={styles.modulesCount}>{MODULES.length} available</Text>
+            <Text style={styles.modulesCount}>
+              {MODULES.length} available
+            </Text>
           </Animated.View>
 
           {/* Module cards */}
@@ -241,7 +109,7 @@ export default function LiteracyScreen() {
           ) : (
             MODULES.map((module, index) => {
               const completedCount = module.lessonIds.filter((id) =>
-                isCompleted(id)
+                isCompleted(id),
               ).length;
               const totalCount = module.lessonIds.length;
               return (
@@ -255,8 +123,9 @@ export default function LiteracyScreen() {
               );
             })
           )}
-        </ScrollView>
-    </SafeAreaView>
+        </View>
+      </Animated.ScrollView>
+    </View>
   );
 }
 
@@ -314,9 +183,8 @@ const styles = StyleSheet.create({
   homeScroll: { flex: 1 },
   homeContent: {
     paddingHorizontal: 20,
-    paddingBottom: 100,
-    marginBottom: 140,
-    gap: 10,
+    paddingBottom: 120,
+    gap: 16,
   },
 
   // Glossary shortcut card
@@ -407,7 +275,6 @@ const styles = StyleSheet.create({
   // Search results
   resultsScroll: { flex: 1 },
   resultsContent: {
-    paddingHorizontal: 20,
     paddingBottom: 40,
     gap: 4,
   },

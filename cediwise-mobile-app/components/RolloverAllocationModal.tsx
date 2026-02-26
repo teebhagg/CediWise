@@ -1,5 +1,5 @@
+import { GlassView } from "@/components/GlassView";
 import { formatCurrency } from "@/utils/formatCurrency";
-import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Button, Dialog } from "heroui-native";
 import { CheckIcon, ChevronDown } from "lucide-react-native";
@@ -263,7 +263,7 @@ export function RolloverAllocationModal({
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="bg-black/60" />
-        <BlurView
+        <GlassView
           intensity={7}
           tint="dark"
           className="absolute inset-0"

@@ -1,4 +1,4 @@
-import { BlurView } from 'expo-blur';
+import { GlassView } from '@/components/GlassView';
 import * as Haptics from 'expo-haptics';
 import { Button, Dialog } from 'heroui-native';
 import { Download } from 'lucide-react-native';
@@ -48,7 +48,7 @@ export function UpdateDialog({
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="bg-black/60" />
-        <BlurView
+        <GlassView
           intensity={7}
           tint="dark"
           className="absolute inset-0"

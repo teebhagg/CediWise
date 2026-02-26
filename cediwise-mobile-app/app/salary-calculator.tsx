@@ -1,12 +1,12 @@
-import { BackButton } from '@/components/BackButton';
-import { Card } from '@/components/Card';
-import { ProgressRing } from '@/components/ProgressRing';
-import { SalaryInput } from '@/components/SalaryInput';
-import { useAuth } from '@/hooks/useAuth';
-import { useProfileVitals } from '@/hooks/useProfileVitals';
-import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { BackButton } from "@/components/BackButton";
+import { Card } from "@/components/Card";
+import { ProgressRing } from "@/components/ProgressRing";
+import { SalaryInput } from "@/components/SalaryInput";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfileVitals } from "@/hooks/useProfileVitals";
+import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -14,12 +14,13 @@ import {
   ScrollView,
   Text,
   View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { computeGhanaTax2026Monthly } from '@/utils/ghanaTax';
+import { StandardHeader } from "@/components/CediWiseHeader";
+import { computeGhanaTax2026Monthly } from "@/utils/ghanaTax";
 
-const stripFormatting = (text: string) => text.replace(/[,₵\s]/g, '');
+const stripFormatting = (text: string) => text.replace(/[,₵\s]/g, "");
 const toNumber = (s: string) => {
   const n = parseFloat(stripFormatting(s));
   return Number.isFinite(n) ? n : 0;
@@ -29,8 +30,9 @@ export default function SalaryCalculatorScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { vitals } = useProfileVitals(user?.id);
-  const [salary, setSalary] = useState('');
+  const [salary, setSalary] = useState("");
   const [estimateTaxEnabled, setEstimateTaxEnabled] = useState(true);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (vitals?.setup_completed && (vitals.stable_salary ?? 0) > 0) {
@@ -40,9 +42,10 @@ export default function SalaryCalculatorScreen() {
   }, [vitals?.setup_completed, vitals?.stable_salary, vitals?.auto_tax]);
 
   const gross = toNumber(salary);
-  const breakdown = gross > 0
-    ? computeGhanaTax2026Monthly(gross)
-    : { ssnit: 0, paye: 0, netTakeHome: 0 };
+  const breakdown =
+    gross > 0
+      ? computeGhanaTax2026Monthly(gross)
+      : { ssnit: 0, paye: 0, netTakeHome: 0 };
   const net = estimateTaxEnabled ? breakdown.netTakeHome : gross;
 
   const handleToggleTax = async () => {
@@ -60,31 +63,35 @@ export default function SalaryCalculatorScreen() {
     } catch {
       // ignore
     }
-    router.push('/vitals?mode=edit');
+    router.push("/vitals?mode=edit");
   };
 
   return (
-    <SafeAreaView
-      edges={['top']}
-      style={{ flex: 1, backgroundColor: 'black' }}
-      className="flex-1 bg-background"
-    >
+    <View
+      style={{ flex: 1, backgroundColor: "black" }}
+      className="flex-1 bg-background">
+      <StandardHeader
+        title="Tax & salary calculator"
+        centered
+        leading={<BackButton onPress={() => router.back()} />}
+      />
+
       <KeyboardAvoidingView
         className="flex-1 bg-background"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
-        <View className="px-5 pt-3 pb-2 flex-row items-center justify-between">
-          <BackButton onPress={() => router.back()} />
-        </View>
-
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}>
         <ScrollView
           className="flex-1"
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+          contentContainerStyle={{
+            paddingHorizontal: 20,
+            paddingBottom: 40,
+            paddingTop: 64 + insets.top,
+          }}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <Text className="text-white text-xl font-bold">Tax & salary calculator</Text>
+          showsVerticalScrollIndicator={false}>
+          <Text className="text-white text-xl font-bold">
+            Tax & salary calculator
+          </Text>
           <Text className="text-slate-400 text-sm mt-1">
             Estimate SSNIT and PAYE from your monthly gross salary.
           </Text>
@@ -100,13 +107,12 @@ export default function SalaryCalculatorScreen() {
 
           <Pressable
             onPress={handleToggleTax}
-            className={`min-h-[44px] px-3.5 py-3 rounded-[1.75rem] border mt-4 ${estimateTaxEnabled ? 'bg-emerald-500/20 border-emerald-500/35' : 'bg-slate-400/10 border-slate-400/25'}`}
+            className={`min-h-[44px] px-3.5 py-3 rounded-[1.75rem] border mt-4 ${estimateTaxEnabled ? "bg-emerald-500/20 border-emerald-500/35" : "bg-slate-400/10 border-slate-400/25"}`}
             style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1 })}
             accessibilityRole="button"
-            accessibilityLabel="Toggle tax estimation"
-          >
+            accessibilityLabel="Toggle tax estimation">
             <Text className="text-slate-200 font-medium text-[13px]">
-              Apply SSNIT & PAYE: {estimateTaxEnabled ? 'On' : 'Off'}
+              Apply SSNIT & PAYE: {estimateTaxEnabled ? "On" : "Off"}
             </Text>
             <Text className="text-slate-400 text-xs mt-1.5">
               Turn off if your salary is already net.
@@ -129,7 +135,8 @@ export default function SalaryCalculatorScreen() {
 
           <Card className="mt-6">
             <Text className="text-slate-400 text-xs">
-              For educational purposes only. This is not financial, legal, or tax advice. Verify with GRA or a qualified advisor.
+              For educational purposes only. This is not financial, legal, or
+              tax advice. Verify with GRA or a qualified advisor.
             </Text>
           </Card>
 
@@ -138,13 +145,14 @@ export default function SalaryCalculatorScreen() {
               onPress={handleSaveToVitals}
               className="mt-4 flex-row items-center justify-center min-h-[44px]"
               accessibilityRole="button"
-              accessibilityLabel="Save to profile"
-            >
-              <Text className="text-emerald-400 text-sm font-medium">Save to profile →</Text>
+              accessibilityLabel="Save to profile">
+              <Text className="text-emerald-400 text-sm font-medium">
+                Save to profile →
+              </Text>
             </Pressable>
           )}
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

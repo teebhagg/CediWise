@@ -1,6 +1,13 @@
 import { FlashList } from "@shopify/flash-list";
 import * as Haptics from "expo-haptics";
-import { Calendar, DollarSign, Edit2, Plus, Trash2, TrendingDown } from "lucide-react-native";
+import {
+  Calendar,
+  DollarSign,
+  Edit2,
+  Plus,
+  Trash2,
+  TrendingDown,
+} from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
@@ -11,17 +18,19 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AddDebtModal } from "@/components/AddDebtModal";
 import { BackButton } from "@/components/BackButton";
 import { Card } from "@/components/Card";
+import { StandardHeader } from "@/components/CediWiseHeader";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
 import { useBudget } from "@/hooks/useBudget";
 import { useDebts } from "@/hooks/useDebts";
 import type { Debt } from "@/types/budget";
+import { Button } from "heroui-native";
 
 export default function DebtDashboardScreen() {
   const { user } = useAuth();
@@ -41,6 +50,7 @@ export default function DebtDashboardScreen() {
     refresh,
   } = useDebts(monthlyIncome);
 
+  const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -63,14 +73,16 @@ export default function DebtDashboardScreen() {
             style: "destructive",
             onPress: async () => {
               await deleteDebt(debt.id);
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              );
               showSuccess("Deleted", "Debt removed successfully");
             },
           },
-        ]
+        ],
       );
     },
-    [deleteDebt, showSuccess]
+    [deleteDebt, showSuccess],
   );
 
   const handleEdit = useCallback(
@@ -78,7 +90,7 @@ export default function DebtDashboardScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       showInfo("Edit", "Edit debt coming in a future update.");
     },
-    [showInfo]
+    [showInfo],
   );
 
   const handleAddSubmit = useCallback(
@@ -99,7 +111,7 @@ export default function DebtDashboardScreen() {
       setShowAddModal(false);
       showSuccess("Debt added", "Your debt has been added successfully");
     },
-    [addDebt, showSuccess]
+    [addDebt, showSuccess],
   );
 
   const handleRecordPayment = useCallback(
@@ -116,20 +128,25 @@ export default function DebtDashboardScreen() {
               const amount = parseFloat(value || "0");
               if (amount > 0 && amount <= debt.remainingAmount) {
                 await recordPayment(debt.id, amount);
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                Haptics.notificationAsync(
+                  Haptics.NotificationFeedbackType.Success,
+                );
                 showSuccess("Payment recorded", "Debt updated successfully");
               } else {
-                showError("Invalid Amount", "Please enter a valid payment amount.");
+                showError(
+                  "Invalid Amount",
+                  "Please enter a valid payment amount.",
+                );
               }
             },
           },
         ],
         "plain-text",
         "",
-        "numeric"
+        "numeric",
       );
     },
-    [recordPayment, showSuccess, showError]
+    [recordPayment, showSuccess, showError],
   );
 
   const activeDebts = getActiveDebts();
@@ -146,7 +163,7 @@ export default function DebtDashboardScreen() {
         delay={0}
       />
     ),
-    [handleEdit, handleDelete, handleRecordPayment, calculatePayoffDate]
+    [handleEdit, handleDelete, handleRecordPayment, calculatePayoffDate],
   );
 
   const keyExtractor = useCallback((item: Debt) => item.id, []);
@@ -155,7 +172,7 @@ export default function DebtDashboardScreen() {
     () => (
       <>
         {hasDebts && (
-          <>
+          <View className="mt-5 gap-3">
             <Animated.View entering={FadeInDown.duration(300).delay(0)}>
               <Card style={styles.summaryCard}>
                 <View style={styles.summaryHeader}>
@@ -163,7 +180,10 @@ export default function DebtDashboardScreen() {
                   <Text style={styles.summaryLabel}>Total Debt</Text>
                 </View>
                 <Text style={styles.summaryAmount}>
-                  ₵{insights.totalDebt.toLocaleString("en-GB", { minimumFractionDigits: 2 })}
+                  ₵
+                  {insights.totalDebt.toLocaleString("en-GB", {
+                    minimumFractionDigits: 2,
+                  })}
                 </Text>
               </Card>
             </Animated.View>
@@ -171,8 +191,7 @@ export default function DebtDashboardScreen() {
             <View style={styles.insightsRow}>
               <Animated.View
                 entering={FadeInDown.duration(300).delay(50)}
-                style={styles.insightCardContainer}
-              >
+                style={styles.insightCardContainer}>
                 <Card style={styles.insightCard}>
                   <TrendingDown size={20} color="#f59e0b" />
                   <Text style={styles.insightLabel}>Monthly Payment</Text>
@@ -184,8 +203,7 @@ export default function DebtDashboardScreen() {
 
               <Animated.View
                 entering={FadeInDown.duration(300).delay(100)}
-                style={styles.insightCardContainer}
-              >
+                style={styles.insightCardContainer}>
                 <Card style={styles.insightCard}>
                   <Calendar size={20} color="#10b981" />
                   <Text style={styles.insightLabel}>Payoff Time</Text>
@@ -201,10 +219,12 @@ export default function DebtDashboardScreen() {
                 <Card style={styles.ratioCard}>
                   <Text style={styles.ratioLabel}>Debt-to-Income Ratio</Text>
                   <View style={styles.ratioContent}>
-                    <Text style={[
-                      styles.ratioValue,
-                      insights.debtToIncomeRatio > 0.36 && styles.ratioWarning,
-                    ]}>
+                    <Text
+                      style={[
+                        styles.ratioValue,
+                        insights.debtToIncomeRatio > 0.36 &&
+                        styles.ratioWarning,
+                      ]}>
                       {(insights.debtToIncomeRatio * 100).toFixed(1)}%
                     </Text>
                     {insights.debtToIncomeRatio > 0.36 && (
@@ -216,7 +236,7 @@ export default function DebtDashboardScreen() {
                 </Card>
               </Animated.View>
             )}
-          </>
+          </View>
         )}
 
         {!hasDebts && !isLoading && (
@@ -224,31 +244,30 @@ export default function DebtDashboardScreen() {
             <Card style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>No Active Debts</Text>
               <Text style={styles.emptyText}>
-                Track your loans, credit cards, and other debts to stay on top of your payments.
+                Track your loans, credit cards, and other debts to stay on top
+                of your payments.
               </Text>
             </Card>
           </Animated.View>
         )}
       </>
     ),
-    [hasDebts, isLoading, insights]
+    [hasDebts, isLoading, insights],
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <BackButton />
-        <Text style={styles.title}>Debt Dashboard</Text>
-        <View style={styles.headerPlaceholder} />
-      </View>
+    <View style={styles.container}>
+      <StandardHeader title="Debt Dashboard" leading={<BackButton />} centered />
 
       <FlashList
         data={activeDebts}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         ListHeaderComponent={listHeader}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: 64 + insets.top },
+        ]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -257,15 +276,14 @@ export default function DebtDashboardScreen() {
 
       {/* Add Button */}
       <View style={styles.footer}>
-        <PrimaryButton
+        <Button
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             setShowAddModal(true);
-          }}
-        >
+          }}>
           <Plus size={20} />
           <Text className="text-base font-semibold">Add Debt</Text>
-        </PrimaryButton>
+        </Button>
       </View>
 
       <AddDebtModal
@@ -273,7 +291,7 @@ export default function DebtDashboardScreen() {
         onClose={() => setShowAddModal(false)}
         onSubmit={handleAddSubmit}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -293,14 +311,15 @@ const DebtItem = React.memo(function DebtItem({
   calculatePayoffDate: (debt: Debt) => string | null;
   delay: number;
 }) {
-  const progress = debt.totalAmount > 0
-    ? ((debt.totalAmount - debt.remainingAmount) / debt.totalAmount) * 100
-    : 0;
+  const progress =
+    debt.totalAmount > 0
+      ? ((debt.totalAmount - debt.remainingAmount) / debt.totalAmount) * 100
+      : 0;
 
   const payoffDate = calculatePayoffDate(debt);
 
   return (
-    <Animated.View entering={FadeInDown.duration(300).delay(delay)}>
+    <Animated.View entering={FadeInDown.duration(300).delay(delay)} className="mb-4">
       <Card style={styles.debtCard}>
         {/* Header */}
         <View style={styles.debtHeader}>
@@ -346,7 +365,7 @@ const DebtItem = React.memo(function DebtItem({
               <Text style={styles.paymentValue}>
                 {new Date(payoffDate).toLocaleDateString("en-GB", {
                   month: "short",
-                  year: "numeric"
+                  year: "numeric",
                 })}
               </Text>
             </View>
@@ -355,37 +374,36 @@ const DebtItem = React.memo(function DebtItem({
 
         {/* Actions */}
         <View style={styles.actions}>
-          <Pressable
+          <Button
             onPress={() => onRecordPayment(debt)}
             style={({ pressed }) => [
               styles.actionButtonPrimary,
               pressed && styles.actionPressed,
-            ]}
-          >
+            ]}>
             <DollarSign size={18} color="#FFFFFF" />
             <Text style={styles.actionTextPrimary}>Record Payment</Text>
-          </Pressable>
+          </Button>
 
           <View style={styles.secondaryActions}>
-            <Pressable
+            <Button
+              variant="secondary"
               onPress={() => onEdit(debt)}
               style={({ pressed }) => [
                 styles.actionButton,
                 pressed && styles.actionPressed,
-              ]}
-            >
+              ]}>
               <Edit2 size={18} color="#64748B" />
-            </Pressable>
+            </Button>
 
-            <Pressable
+            <Button
+              variant="danger-soft"
               onPress={() => onDelete(debt)}
               style={({ pressed }) => [
                 styles.actionButton,
                 pressed && styles.actionPressed,
-              ]}
-            >
+              ]}>
               <Trash2 size={18} color="#ef4444" />
-            </Pressable>
+            </Button>
           </View>
         </View>
       </Card>
@@ -396,7 +414,7 @@ const DebtItem = React.memo(function DebtItem({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0A0A0A",
+    backgroundColor: "black",
   },
   header: {
     flexDirection: "row",
@@ -608,7 +626,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#10b981",
   },
   actionTextPrimary: {
-    color: "#FFFFFF",
     fontFamily: "Figtree-SemiBold",
     fontSize: 14,
   },
@@ -630,7 +647,7 @@ const styles = StyleSheet.create({
   footer: {
     padding: 20,
     paddingBottom: 32,
-    backgroundColor: "#0A0A0A",
+    backgroundColor: "black",
     borderTopWidth: 1,
     borderTopColor: "rgba(148, 163, 184, 0.1)",
   },

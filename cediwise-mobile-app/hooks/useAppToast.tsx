@@ -16,7 +16,7 @@ export function useAppToast() {
           variant="success"
           placement="top"
           {...props}
-          className="flex flex-row p-1 rounded-md gap-4 items-center"
+          className="flex flex-row rounded-md gap-4 items-center"
         >
           <CheckCircle2 size={20} color="white" className="my-auto" />
           <View className="flex-1">
@@ -39,7 +39,7 @@ export function useAppToast() {
           variant="danger"
           placement="top"
           {...props}
-          className="flex flex-row p-1 rounded-md gap-4 items-center"
+          className="flex flex-row rounded-md gap-4 items-center"
         >
           <XCircle size={20} color="white" className="my-auto" />
           <View className="flex-1">
@@ -63,7 +63,7 @@ export function useAppToast() {
           variant="warning"
           placement="top"
           {...props}
-          className="flex flex-row p-1 rounded-md gap-4 items-center"
+          className="flex flex-row rounded-md gap-4 items-center"
         >
           <Info size={20} color="white" className="my-auto" />
           <View className="flex-1">

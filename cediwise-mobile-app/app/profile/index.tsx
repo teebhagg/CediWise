@@ -1,398 +1,438 @@
-import Constants from 'expo-constants';
-import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
-import { ChevronRight, CreditCard, Database, DollarSign, FileText, LogOut, Mail, Phone, RotateCcw, User as UserIcon } from 'lucide-react-native';
-import { useCallback, useEffect, useState } from 'react';
+import Constants from "expo-constants";
+import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
 import {
-    Pressable,
-    ScrollView,
-    Switch,
-    Text,
-    View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+  CreditCard,
+  Database,
+  DollarSign,
+  FileText,
+  LogOut,
+  Mail,
+  Phone,
+  RotateCcw,
+  User as UserIcon,
+} from "lucide-react-native";
+import { useCallback, useEffect, useState } from "react";
+import { Switch, Text, View } from "react-native";
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { BackButton } from '@/components/BackButton';
-import { Card } from '@/components/Card';
-import { LogoutModal } from '@/components/LogoutModal';
-import { useAppToast } from '@/hooks/useAppToast';
-import { useAuth } from '@/hooks/useAuth';
-import { usePersonalizationStatus } from '@/hooks/usePersonalizationStatus';
-import { getDisplayContact } from '@/utils/auth';
-import { clearBudgetLocal } from '@/utils/budgetStorage';
-import { log } from '@/utils/logger';
-import { supabase } from '@/utils/supabase';
+import { BackButton } from "@/components/BackButton";
+import { Card } from "@/components/Card";
+import {
+  DEFAULT_EXPANDED_HEIGHT,
+  DEFAULT_STANDARD_HEIGHT,
+  ExpandedHeader,
+} from "@/components/CediWiseHeader";
+import { LogoutModal } from "@/components/LogoutModal";
+import { useAppToast } from "@/hooks/useAppToast";
+import { useAuth } from "@/hooks/useAuth";
+import { usePersonalizationStatus } from "@/hooks/usePersonalizationStatus";
+import { getDisplayContact } from "@/utils/auth";
+import { clearBudgetLocal } from "@/utils/budgetStorage";
+import { log } from "@/utils/logger";
+import { supabase } from "@/utils/supabase";
+import {
+  Avatar,
+  ListGroup,
+  PressableFeedback,
+  Separator,
+} from "heroui-native";
+
+const SECTION_LABEL_CLASS = "text-slate-400 text-xs uppercase tracking-wider mb-2.5 ml-1";
+/** Matches Card / app container: rgba(18,22,33,0.9) */
+const LIST_GROUP_CONTAINER_CLASS = "rounded-xl overflow-hidden bg-[rgba(18,22,33,0.9)]";
+
+function IconPrefix({
+  icon: Icon,
+  color,
+}: {
+  icon: React.ComponentType<{ color: string; size: number }>;
+  color: string;
+}) {
+  return (
+    <View className="w-10 h-10 rounded-xl justify-center items-center" style={{ backgroundColor: `${color}20` }}>
+      <Icon color={color} size={20} />
+    </View>
+  );
+}
 
 export default function ProfileScreen() {
-    const router = useRouter();
-    const { user, logout } = useAuth();
-    const { showError, showSuccess } = useAppToast();
-    const personalization = usePersonalizationStatus(user?.id);
-    const [showLogoutModal, setShowLogoutModal] = useState(false);
-    const [enableAutoReallocation, setEnableAutoReallocation] = useState(false);
-    const [autoReallocationLoading, setAutoReallocationLoading] = useState(false);
+  const router = useRouter();
+  const { user, logout } = useAuth();
+  const { showError, showSuccess } = useAppToast();
+  const personalization = usePersonalizationStatus(user?.id);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [enableAutoReallocation, setEnableAutoReallocation] = useState(false);
+  const [autoReallocationLoading, setAutoReallocationLoading] = useState(false);
 
-    useEffect(() => {
-        if (!user?.id || !supabase) return;
-        void (async () => {
-            try {
-                const { data } = await supabase
-                    .from('profiles')
-                    .select('enable_auto_reallocation')
-                    .eq('id', user.id)
-                    .maybeSingle();
-                if (data && typeof (data as any).enable_auto_reallocation === 'boolean') {
-                    setEnableAutoReallocation((data as any).enable_auto_reallocation);
-                }
-            } catch {
-                /* ignore */
-            }
-        })();
-    }, [user?.id]);
+  const insets = useSafeAreaInsets();
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler((event) => {
+    scrollY.value = event.contentOffset.y;
+  });
 
-    const handleAutoReallocationChange = useCallback(
-        async (value: boolean) => {
-            if (!user?.id || !supabase) return;
-            setEnableAutoReallocation(value);
-            setAutoReallocationLoading(true);
-            try {
-                const { error } = await supabase
-                    .from('profiles')
-                    .update({ enable_auto_reallocation: value, updated_at: new Date().toISOString() })
-                    .eq('id', user.id);
-                if (error) throw error;
-            } catch (e) {
-                log.error('Failed to update auto-reallocation:', e);
-                setEnableAutoReallocation(!value);
-                showError('Error', 'Could not update preference');
-            } finally {
-                setAutoReallocationLoading(false);
-            }
-        },
-        [user?.id, showError]
-    );
-
-    const handleBackPress = async () => {
-        try {
-            await Haptics.selectionAsync();
-        } catch {
-            // ignore haptics failure
+  useEffect(() => {
+    if (!user?.id || !supabase) return;
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from("profiles")
+          .select("enable_auto_reallocation")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (
+          data &&
+          typeof (data as any).enable_auto_reallocation === "boolean"
+        ) {
+          setEnableAutoReallocation((data as any).enable_auto_reallocation);
         }
-        router.back();
-    };
+      } catch {
+        /* ignore */
+      }
+    })();
+  }, [user?.id]);
 
-    const handleLogoutPress = async () => {
-        try {
-            await Haptics.selectionAsync();
-        } catch {
-            // ignore haptics failure
-        }
-        setShowLogoutModal(true);
-    };
+  const handleAutoReallocationChange = useCallback(
+    async (value: boolean) => {
+      if (!user?.id || !supabase) return;
+      setEnableAutoReallocation(value);
+      setAutoReallocationLoading(true);
+      try {
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            enable_auto_reallocation: value,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", user.id);
+        if (error) throw error;
+      } catch (e) {
+        log.error("Failed to update auto-reallocation:", e);
+        setEnableAutoReallocation(!value);
+        showError("Error", "Could not update preference");
+      } finally {
+        setAutoReallocationLoading(false);
+      }
+    },
+    [user?.id, showError],
+  );
 
-    const handleClearBudgetLocal = useCallback(async () => {
-        if (!user?.id) return;
-        try {
-            await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => { });
-            await clearBudgetLocal(user.id);
-            showSuccess('Cleared', 'Budget local storage cleared. Go to Budget tab to reload from server.');
-        } catch (e) {
-            log.error('Clear budget local failed:', e);
-            showError('Error', 'Could not clear local storage');
-        }
-    }, [user?.id, showSuccess, showError]);
+  const handleBackPress = async () => {
+    try {
+      await Haptics.selectionAsync();
+    } catch {
+      // ignore
+    }
+    router.back();
+  };
 
-    const handleLogoutConfirm = async () => {
-        try {
-            await logout();
-            setShowLogoutModal(false);
-            router.replace('/auth');
-        } catch (e) {
-            log.error('Logout error:', e);
-            showError('Logout failed', e instanceof Error ? e.message : 'Could not sign out');
-        }
-    };
+  const handleLogoutPress = async () => {
+    try {
+      await Haptics.selectionAsync();
+    } catch {
+      // ignore
+    }
+    setShowLogoutModal(true);
+  };
 
-    const contact = getDisplayContact(user);
+  const handleClearBudgetLocal = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Warning,
+      ).catch(() => { });
+      await clearBudgetLocal(user.id);
+      showSuccess(
+        "Cleared",
+        "Budget local storage cleared. Go to Budget tab to reload from server.",
+      );
+    } catch (e) {
+      log.error("Clear budget local failed:", e);
+      showError("Error", "Could not clear local storage");
+    }
+  }, [user?.id, showSuccess, showError]);
 
-    const getInitials = (name?: string) => {
-        if (!name) return 'U';
-        const parts = name.split(' ');
-        if (parts.length >= 2) {
-            return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-        }
-        return name[0].toUpperCase();
-    };
+  const handleLogoutConfirm = async () => {
+    try {
+      await logout();
+      setShowLogoutModal(false);
+      router.replace("/auth");
+    } catch (e) {
+      log.error("Logout error:", e);
+      showError(
+        "Logout failed",
+        e instanceof Error ? e.message : "Could not sign out",
+      );
+    }
+  };
 
-    return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: 'black' }} edges={['top']} className="flex-1 bg-background">
-            <ScrollView className="px-5 py-3 ">
-                <View className="flex-1 gap-3">
-                    {/* Header with Back Button */}
-                    <View className="mb-7">
-                        <BackButton onPress={handleBackPress} className="mb-4" />
+  const contact = getDisplayContact(user);
 
-                        <Text className="text-white text-3xl font-bold mb-1">Profile & Settings</Text>
-                        <Text className="text-muted-foreground text-sm">
-                            Manage your account and preferences
-                        </Text>
-                    </View>
+  const getInitials = (name?: string) => {
+    if (!name) return "U";
+    const parts = name.split(" ");
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name[0].toUpperCase();
+  };
 
-                    {/* User Info Card */}
-                    <Card className="">
-                        <View className="items-center py-2">
-                            {/* Avatar */}
-                            <View className="w-20 h-20 rounded-full bg-emerald-600/10 border-2 border-emerald-500/40 justify-center items-center mb-4">
-                                <Text className="text-3xl font-bold text-emerald-400">
-                                    {getInitials(user?.name)}
-                                </Text>
-                            </View>
+  const onItemPress = useCallback(
+    (fn: () => void) => async () => {
+      try {
+        await Haptics.selectionAsync();
+      } catch {
+        // ignore
+      }
+      fn();
+    },
+    [],
+  );
 
-                            {/* Name */}
-                            <Text className="text-white text-xl font-bold mb-1">
-                                {user?.name || 'User'}
-                            </Text>
+  return (
+    <View className="flex-1 bg-black">
+      <ExpandedHeader
+        scrollY={scrollY}
+        title="Profile & Settings"
+        subtitle="Manage your account and preferences"
+        centered={true}
+        leading={<BackButton onPress={handleBackPress} />}
+      />
 
-                            {/* Contact (phone for phone auth, email otherwise) */}
-                            <View className="flex-row items-center gap-1">
-                                {contact.isPhone ? (
-                                    <Phone color="#9CA3AF" size={14} />
-                                ) : (
-                                    <Mail color="#9CA3AF" size={14} />
-                                )}
-                                <Text className="text-sm text-muted-foreground">
-                                    {contact.value || (contact.isPhone ? 'No phone' : 'No email')}
-                                </Text>
-                            </View>
-                        </View>
-                    </Card>
+      <Animated.ScrollView
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
+        snapToOffsets={[0, DEFAULT_EXPANDED_HEIGHT - DEFAULT_STANDARD_HEIGHT]}
+        snapToEnd={false}
+        decelerationRate="fast"
+        className="px-5 py-3"
+        contentContainerStyle={{
+          paddingTop: DEFAULT_EXPANDED_HEIGHT + insets.top + 20,
+          paddingBottom: insets.bottom + 40,
+        }}
+        showsVerticalScrollIndicator={false}>
+        <View className="flex-1 gap-6">
+          {/* User Info Card */}
+          <Card className="">
+            <View className="items-center py-4">
+              <View className="mb-4 rounded-full border-2 border-emerald-500/40 overflow-hidden bg-emerald-600/10">
+                <Avatar alt={user?.name ?? "User"} size="lg">
+                  {user?.avatar ? (
+                    <Avatar.Image source={{ uri: user.avatar }} />
+                  ) : null}
+                  <Avatar.Fallback>
+                    <Text className="text-2xl font-bold text-emerald-400">
+                      {getInitials(user?.name)}
+                    </Text>
+                  </Avatar.Fallback>
+                </Avatar>
+              </View>
+              <Text className="text-white text-xl font-bold mb-1">
+                {user?.name || "User"}
+              </Text>
+              <View className="flex-row items-center gap-1.5">
+                {contact.isPhone ? (
+                  <Phone color="#94A3B8" size={14} />
+                ) : (
+                  <Mail color="#94A3B8" size={14} />
+                )}
+                <Text className="text-sm text-slate-400">
+                  {contact.value || (contact.isPhone ? "No phone" : "No email")}
+                </Text>
+              </View>
+            </View>
+          </Card>
 
-                    {/* Account Settings Section */}
-                    <View className="mb-5 space-y-3">
-                        <Text className="text-white text-lg font-semibold">Account Settings</Text>
+          {/* Account Settings */}
+          <View>
+            <Text className={SECTION_LABEL_CLASS}>Account</Text>
+            <ListGroup variant="tertiary" className={LIST_GROUP_CONTAINER_CLASS}>
+              <ListGroup.Item disabled>
+                <ListGroup.ItemPrefix>
+                  <IconPrefix icon={UserIcon} color="#60A5FA" />
+                </ListGroup.ItemPrefix>
+                <ListGroup.ItemContent>
+                  <ListGroup.ItemTitle>Edit Profile</ListGroup.ItemTitle>
+                  <ListGroup.ItemDescription>Coming soon</ListGroup.ItemDescription>
+                </ListGroup.ItemContent>
+                <ListGroup.ItemSuffix />
+              </ListGroup.Item>
+            </ListGroup>
+          </View>
 
-                        <Card className="">
-                            {/* Edit Profile - Coming Soon */}
-                            <Pressable
-                                style={({ pressed }) => [
-                                    {
-                                        opacity: pressed ? 0.7 : 1,
-                                    },
-                                ]}
-                                disabled
-                                className="flex-row items-center justify-between py-2"
-                            >
-                                <View className="flex-row items-center gap-3">
-                                    <View className="w-10 h-10 rounded-xl bg-sky-500/10 justify-center items-center">
-                                        <UserIcon color="#60A5FA" size={20} />
-                                    </View>
-                                    <View>
-                                        <Text className="text-white text-base font-semibold">Edit Profile</Text>
-                                        <Text className="text-xs text-muted-foreground mt-0.5">Coming soon</Text>
-                                    </View>
-                                </View>
-                                <ChevronRight color="#64748B" size={20} />
-                            </Pressable>
-                        </Card>
-                    </View>
+          {/* Budget preferences */}
+          <View>
+            <Text className={SECTION_LABEL_CLASS}>Budget preferences</Text>
+            <ListGroup variant="tertiary" className={LIST_GROUP_CONTAINER_CLASS}>
+              <ListGroup.Item disabled>
+                <ListGroup.ItemPrefix>
+                  <IconPrefix icon={RotateCcw} color="#F59E0B" />
+                </ListGroup.ItemPrefix>
+                <ListGroup.ItemContent>
+                  <ListGroup.ItemTitle>Auto-reallocation suggestions</ListGroup.ItemTitle>
+                  <ListGroup.ItemDescription>
+                    Show reallocation banner based on spending
+                  </ListGroup.ItemDescription>
+                </ListGroup.ItemContent>
+                <ListGroup.ItemSuffix>
+                  <Switch
+                    value={enableAutoReallocation}
+                    onValueChange={handleAutoReallocationChange}
+                    disabled={autoReallocationLoading}
+                    trackColor={{ false: "#334155", true: "#22C55E" }}
+                    thumbColor="#fff"
+                  />
+                </ListGroup.ItemSuffix>
+              </ListGroup.Item>
+            </ListGroup>
+          </View>
 
-                    {/* Budget preferences */}
-                    <View className="mb-5 space-y-3">
-                        <Text className="text-white text-lg font-semibold">Budget preferences</Text>
+          {/* Personalization */}
+          <View>
+            <Text className={SECTION_LABEL_CLASS}>Personalization</Text>
+            <PressableFeedback animation={false} onPress={onItemPress(() => router.push("/vitals?mode=edit"))}>
+              <PressableFeedback.Scale />
+              <PressableFeedback.Ripple />
+              <ListGroup variant="tertiary" className={LIST_GROUP_CONTAINER_CLASS}>
+                <ListGroup.Item disabled>
+                  <ListGroup.ItemPrefix>
+                    <IconPrefix icon={UserIcon} color="#10B981" />
+                  </ListGroup.ItemPrefix>
+                  <ListGroup.ItemContent>
+                    <ListGroup.ItemTitle>Personalization settings</ListGroup.ItemTitle>
+                    <ListGroup.ItemDescription>
+                      {personalization.isLoading
+                        ? "Checking…"
+                        : personalization.setupCompleted
+                          ? "Completed"
+                          : "Not set"}
+                    </ListGroup.ItemDescription>
+                  </ListGroup.ItemContent>
+                  <ListGroup.ItemSuffix />
+                </ListGroup.Item>
+              </ListGroup>
+            </PressableFeedback>
+          </View>
 
-                        <Card className="">
-                            <View className="flex-row items-center justify-between py-3.5 px-1">
-                                <View className="flex-row items-center gap-3">
-                                    <View className="w-10 h-10 rounded-xl bg-amber-500/10 justify-center items-center">
-                                        <RotateCcw color="#F59E0B" size={20} />
-                                    </View>
-                                    <View>
-                                        <Text className="text-white text-base font-semibold">Auto-reallocation suggestions</Text>
-                                        <Text className="text-xs text-muted-foreground mt-0.5">
-                                            Show reallocation banner based on spending
-                                        </Text>
-                                    </View>
-                                </View>
-                                <Switch
-                                    value={enableAutoReallocation}
-                                    onValueChange={handleAutoReallocationChange}
-                                    disabled={autoReallocationLoading}
-                                    trackColor={{ false: '#334155', true: '#22C55E' }}
-                                    thumbColor="#fff"
-                                />
-                            </View>
-                        </Card>
-                    </View>
+          {/* Budget tools */}
+          <View>
+            <Text className={SECTION_LABEL_CLASS}>Budget tools</Text>
+            <ListGroup variant="tertiary" className={LIST_GROUP_CONTAINER_CLASS}>
+              <PressableFeedback animation={false} onPress={onItemPress(() => router.push("/recurring-expenses"))}>
+                <PressableFeedback.Scale />
+                <PressableFeedback.Ripple />
+                <ListGroup.Item disabled>
+                  <ListGroup.ItemPrefix>
+                    <IconPrefix icon={CreditCard} color="#F59E0B" />
+                  </ListGroup.ItemPrefix>
+                  <ListGroup.ItemContent>
+                    <ListGroup.ItemTitle>Recurring Expenses</ListGroup.ItemTitle>
+                    <ListGroup.ItemDescription>Subscriptions & regular payments</ListGroup.ItemDescription>
+                  </ListGroup.ItemContent>
+                  <ListGroup.ItemSuffix />
+                </ListGroup.Item>
+              </PressableFeedback>
+              <Separator className="mx-4" />
+              <PressableFeedback animation={false} onPress={onItemPress(() => router.push("/debt-dashboard"))}>
+                <PressableFeedback.Scale />
+                <PressableFeedback.Ripple />
+                <ListGroup.Item disabled>
+                  <ListGroup.ItemPrefix>
+                    <IconPrefix icon={DollarSign} color="#EF4444" />
+                  </ListGroup.ItemPrefix>
+                  <ListGroup.ItemContent>
+                    <ListGroup.ItemTitle>Debt Dashboard</ListGroup.ItemTitle>
+                    <ListGroup.ItemDescription>Loans & credit</ListGroup.ItemDescription>
+                  </ListGroup.ItemContent>
+                  <ListGroup.ItemSuffix />
+                </ListGroup.Item>
+              </PressableFeedback>
+              <Separator className="mx-4" />
+              <PressableFeedback animation={false} onPress={onItemPress(() => router.push("/budget-templates"))}>
+                <PressableFeedback.Scale />
+                <PressableFeedback.Ripple />
+                <ListGroup.Item disabled>
+                  <ListGroup.ItemPrefix>
+                    <IconPrefix icon={FileText} color="#10B981" />
+                  </ListGroup.ItemPrefix>
+                  <ListGroup.ItemContent>
+                    <ListGroup.ItemTitle>Budget Templates</ListGroup.ItemTitle>
+                    <ListGroup.ItemDescription>Life-stage templates</ListGroup.ItemDescription>
+                  </ListGroup.ItemContent>
+                  <ListGroup.ItemSuffix />
+                </ListGroup.Item>
+              </PressableFeedback>
+            </ListGroup>
+          </View>
 
-                    {/* Personalization */}
-                    <View className="mb-5 space-y-3">
-                        <Text className="text-white text-lg font-semibold">Personalization</Text>
+          {__DEV__ ? (
+            <View>
+              <Text className={SECTION_LABEL_CLASS}>Developer</Text>
+              <ListGroup variant="tertiary" className={`${LIST_GROUP_CONTAINER_CLASS} border border-amber-500/30`}>
+                <PressableFeedback animation={false} onPress={onItemPress(handleClearBudgetLocal)}>
+                  <PressableFeedback.Scale />
+                  <PressableFeedback.Ripple />
+                  <ListGroup.Item disabled>
+                    <ListGroup.ItemPrefix>
+                      <IconPrefix icon={Database} color="#F59E0B" />
+                    </ListGroup.ItemPrefix>
+                    <ListGroup.ItemContent>
+                      <ListGroup.ItemTitle className="text-amber-300">
+                        Clear budget local storage
+                      </ListGroup.ItemTitle>
+                      <ListGroup.ItemDescription className="text-slate-400">
+                        Remove cached budget data. Reload from server on next Budget visit.
+                      </ListGroup.ItemDescription>
+                    </ListGroup.ItemContent>
+                    <ListGroup.ItemSuffix />
+                  </ListGroup.Item>
+                </PressableFeedback>
+              </ListGroup>
+            </View>
+          ) : null}
 
-                        <Pressable
-                            onPress={async () => {
-                                try {
-                                    await Haptics.selectionAsync();
-                                } catch {
-                                    // ignore
-                                }
-                                router.push('/vitals?mode=edit');
-                            }}
-                            style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
-                        >
-                            <Card className="">
-                                <View className="flex-row items-center justify-between py-2">
-                                    <View style={{ flex: 1 }}>
-                                        <Text className="text-white text-base font-semibold">
-                                            Personalization settings
-                                        </Text>
-                                        <Text className="text-xs text-muted-foreground mt-0.5">
-                                            {personalization.isLoading
-                                                ? 'Checking…'
-                                                : personalization.setupCompleted
-                                                    ? 'Completed'
-                                                    : 'Not set'}
-                                        </Text>
-                                    </View>
-                                    <ChevronRight color="#64748B" size={20} />
-                                </View>
-                            </Card>
-                        </Pressable>
-                    </View>
+          {/* Account Actions */}
+          <View>
+            <Text className={SECTION_LABEL_CLASS}>Account actions</Text>
+            <PressableFeedback animation={false} onPress={onItemPress(handleLogoutPress)}>
+              <PressableFeedback.Scale />
+              <PressableFeedback.Ripple />
+              <ListGroup variant="tertiary" className={`${LIST_GROUP_CONTAINER_CLASS} border border-rose-500/30`}>
+                <ListGroup.Item disabled>
+                  <ListGroup.ItemPrefix>
+                    <IconPrefix icon={LogOut} color="#EF4444" />
+                  </ListGroup.ItemPrefix>
+                  <ListGroup.ItemContent>
+                    <ListGroup.ItemTitle className="text-rose-400">Logout</ListGroup.ItemTitle>
+                    <ListGroup.ItemDescription>Sign out of your account</ListGroup.ItemDescription>
+                  </ListGroup.ItemContent>
+                  <ListGroup.ItemSuffix />
+                </ListGroup.Item>
+              </ListGroup>
+            </PressableFeedback>
+          </View>
 
-                    {/* Budget tools */}
-                    <View className="mb-5 space-y-3">
-                        <Text className="text-white text-lg font-semibold">Budget tools</Text>
+          {/* App Info */}
+          <View className="items-center pt-2 pb-4">
+            <Text className="text-xs text-slate-500">
+              CediWise v{Constants.expoConfig?.version ?? "0.0.1"}
+            </Text>
+            <Text className="text-[11px] text-slate-500 mt-1">
+              Your Personal Finance Companion
+            </Text>
+          </View>
+        </View>
+      </Animated.ScrollView>
 
-                        <Card className="">
-                            <Pressable
-                                onPress={async () => {
-                                    try { await Haptics.selectionAsync(); } catch { }
-                                    router.push('/recurring-expenses');
-                                }}
-                                style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
-                                className="flex-row items-center justify-between py-3.5 px-1"
-                            >
-                                <View className="flex-row items-center gap-3">
-                                    <View className="w-10 h-10 rounded-xl bg-amber-500/10 justify-center items-center">
-                                        <CreditCard color="#F59E0B" size={20} />
-                                    </View>
-                                    <View>
-                                        <Text className="text-white text-base font-semibold">Recurring Expenses</Text>
-                                        <Text className="text-xs text-muted-foreground mt-0.5">Subscriptions & regular payments</Text>
-                                    </View>
-                                </View>
-                                <ChevronRight color="#64748B" size={20} />
-                            </Pressable>
-                            <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginHorizontal: 0 }} />
-                            <Pressable
-                                onPress={async () => {
-                                    try { await Haptics.selectionAsync(); } catch { }
-                                    router.push('/debt-dashboard');
-                                }}
-                                style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
-                                className="flex-row items-center justify-between py-3.5 px-1"
-                            >
-                                <View className="flex-row items-center gap-3">
-                                    <View className="w-10 h-10 rounded-xl bg-rose-500/10 justify-center items-center">
-                                        <DollarSign color="#EF4444" size={20} />
-                                    </View>
-                                    <View>
-                                        <Text className="text-white text-base font-semibold">Debt Dashboard</Text>
-                                        <Text className="text-xs text-muted-foreground mt-0.5">Loans & credit</Text>
-                                    </View>
-                                </View>
-                                <ChevronRight color="#64748B" size={20} />
-                            </Pressable>
-                            <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.06)', marginHorizontal: 0 }} />
-                            <Pressable
-                                onPress={async () => {
-                                    try { await Haptics.selectionAsync(); } catch { }
-                                    router.push('/budget-templates');
-                                }}
-                                style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
-                                className="flex-row items-center justify-between py-3.5 px-1"
-                            >
-                                <View className="flex-row items-center gap-3">
-                                    <View className="w-10 h-10 rounded-xl bg-emerald-500/10 justify-center items-center">
-                                        <FileText color="#10B981" size={20} />
-                                    </View>
-                                    <View>
-                                        <Text className="text-white text-base font-semibold">Budget Templates</Text>
-                                        <Text className="text-xs text-muted-foreground mt-0.5">Life-stage templates</Text>
-                                    </View>
-                                </View>
-                                <ChevronRight color="#64748B" size={20} />
-                            </Pressable>
-                        </Card>
-                    </View>
-
-                    {__DEV__ ? (
-                        <View className="mb-5 space-y-3">
-                            <Text className="text-white text-lg font-semibold">Developer</Text>
-                            <Card className="bg-amber-600/10 border border-amber-500/30">
-                                <Pressable
-                                    onPress={handleClearBudgetLocal}
-                                    style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
-                                    className="flex-row items-center justify-between py-3.5 px-1"
-                                >
-                                    <View className="flex-row items-center gap-3">
-                                        <View className="w-10 h-10 rounded-xl bg-amber-500/20 justify-center items-center">
-                                            <Database color="#F59E0B" size={20} />
-                                        </View>
-                                        <View>
-                                            <Text className="text-amber-300 text-base font-semibold">Clear budget local storage</Text>
-                                            <Text className="text-xs text-slate-400 mt-0.5">
-                                                Remove cached budget data. Reload from server on next Budget visit.
-                                            </Text>
-                                        </View>
-                                    </View>
-                                    <ChevronRight color="#F59E0B" size={20} />
-                                </Pressable>
-                            </Card>
-                        </View>
-                    ) : null}
-
-                    {/* Danger Zone */}
-                    <View className="mb-6 space-y-3">
-                        <Text className="text-white text-lg font-semibold">Account Actions</Text>
-
-                        <Pressable
-                            onPress={handleLogoutPress}
-                            style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}
-                        >
-                            <Card className="bg-rose-600/10 border border-rose-500/30">
-                                <View className="flex-row items-center gap-3">
-                                    <View className="w-10 h-10 rounded-xl bg-rose-500/20 justify-center items-center">
-                                        <LogOut color="#EF4444" size={20} />
-                                    </View>
-                                    <View className="flex-1">
-                                        <Text className="text-rose-400 text-base font-semibold">Logout</Text>
-                                        <Text className="text-xs text-muted-foreground mt-0.5">
-                                            Sign out of your account
-                                        </Text>
-                                    </View>
-                                    <ChevronRight color="#EF4444" size={20} />
-                                </View>
-                            </Card>
-                        </Pressable>
-                    </View>
-
-                    {/* App Info */}
-                    <View className="items-center py-5">
-                        <Text className="text-xs text-slate-500">
-                            CediWise v{Constants.expoConfig?.version ?? '0.0.1'}
-                        </Text>
-                        <Text className="text-[11px] text-slate-400 mt-1">Your Personal Finance Companion</Text>
-                    </View>
-                </View>
-            </ScrollView>
-
-            {/* Logout Confirmation Modal */}
-            <LogoutModal
-                visible={showLogoutModal}
-                onClose={() => setShowLogoutModal(false)}
-                onConfirm={handleLogoutConfirm}
-            />
-        </SafeAreaView>
-    );
+      <LogoutModal
+        visible={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleLogoutConfirm}
+      />
+    </View>
+  );
 }

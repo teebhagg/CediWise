@@ -1,22 +1,19 @@
-import { createContext, useContext, type ReactNode } from "react";
-
-import {
-  useUpdateCheck,
-  type UpdateInfo,
-} from "@/hooks/useUpdateCheck";
+import { useUpdateCheck } from "@/hooks/useUpdateCheck";
+import React, { ReactNode, createContext, useContext } from "react";
 
 type UpdateCheckContextValue = {
-  updateInfo: UpdateInfo | null;
-  dismiss: () => void;
-  check: () => Promise<void>;
+  /** Manually trigger an update check */
+  check: () => void;
 };
 
-const UpdateCheckContext = createContext<UpdateCheckContextValue | null>(null);
+const UpdateCheckContext = createContext<UpdateCheckContextValue | undefined>(
+  undefined,
+);
 
 export function UpdateCheckProvider({ children }: { children: ReactNode }) {
-  const value = useUpdateCheck();
+  const { check } = useUpdateCheck();
   return (
-    <UpdateCheckContext.Provider value={value}>
+    <UpdateCheckContext.Provider value={{ check }}>
       {children}
     </UpdateCheckContext.Provider>
   );
@@ -25,11 +22,9 @@ export function UpdateCheckProvider({ children }: { children: ReactNode }) {
 export function useUpdateCheckContext(): UpdateCheckContextValue {
   const ctx = useContext(UpdateCheckContext);
   if (!ctx) {
-    return {
-      updateInfo: null,
-      dismiss: () => { },
-      check: async () => { },
-    };
+    throw new Error(
+      "useUpdateCheckContext must be used within UpdateCheckProvider",
+    );
   }
   return ctx;
 }

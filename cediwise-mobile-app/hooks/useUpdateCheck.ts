@@ -1,103 +1,37 @@
-import Constants from "expo-constants";
-import { useCallback, useEffect, useState } from "react";
-import { AppState, AppStateStatus, Platform } from "react-native";
+import { useCallback, useEffect } from "react";
+import { AppState, InteractionManager, Platform } from "react-native";
+import { checkAndPromptUpdate } from "../services/inAppUpdates";
 
-import { log } from "@/utils/logger";
-
-const GITHUB_REPO = "teebhagg/CediWise";
-const API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
-
-export type UpdateInfo = {
-  version: string;
-  downloadUrl: string;
-};
-
-function parseVersion(v: string): number[] {
-  return v
-    .replace(/^v/, "")
-    .split(".")
-    .map(Number)
-    .filter((n) => !Number.isNaN(n));
-}
-
-function isNewerVersion(latest: string, current: string): boolean {
-  const a = parseVersion(latest);
-  const b = parseVersion(current);
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    const x = a[i] ?? 0;
-    const y = b[i] ?? 0;
-    if (x > y) return true;
-    if (x < y) return false;
-  }
-  return false;
-}
-
-async function fetchLatestRelease(): Promise<UpdateInfo | null> {
-  try {
-    const res = await fetch(API_URL, {
-      headers: {
-        Accept: "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-      },
-    });
-    if (!res.ok) return null;
-    const data = (await res.json()) as {
-      tag_name?: string;
-      assets?: { name: string; browser_download_url: string }[];
-    };
-    const tag = data.tag_name;
-    if (!tag) return null;
-    const apk = data.assets?.find((a) => a.name.endsWith(".apk"));
-    if (!apk?.browser_download_url) return null;
-    return {
-      version: tag.replace(/^v/, ""),
-      downloadUrl: apk.browser_download_url,
-    };
-  } catch (e) {
-    log.error("Update check failed:", e);
-    return null;
-  }
-}
-
+/**
+ * Hook that checks for Android in‑app updates using the native Play Store UI.
+ * It runs on mount and whenever the app returns to the foreground.
+ * The update flow is IMMEDIATE (blocking) as requested.
+ */
 export function useUpdateCheck() {
-  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
-
-  const check = useCallback(async () => {
+  const check = useCallback(() => {
     if (Platform.OS !== "android") return;
-
-    const current = Constants.expoConfig?.version ?? "0.0.1";
-    const latest = await fetchLatestRelease();
-    if (!latest) return;
-
-    if (isNewerVersion(latest.version, current)) {
-      setUpdateInfo(latest);
-    }
+    // Immediate update flow
+    void checkAndPromptUpdate({ immediate: true });
   }, []);
 
-  const dismiss = useCallback(() => {
-    setUpdateInfo(null);
-  }, []);
-
+  // Initial check after interactions to avoid blocking first paint
   useEffect(() => {
-    void check();
+    InteractionManager.runAfterInteractions(() => {
+      check();
+    });
   }, [check]);
 
+  // Re‑check when app becomes active again
   useEffect(() => {
     if (Platform.OS !== "android") return;
-
-    const handleAppStateChange = (nextState: AppStateStatus) => {
+    const handler = (nextState: any) => {
       if (nextState === "active") {
-        void check();
+        check();
       }
     };
-
-    const sub = AppState.addEventListener("change", handleAppStateChange);
+    const sub = AppState.addEventListener("change", handler);
     return () => sub.remove();
   }, [check]);
 
-  return {
-    updateInfo,
-    dismiss,
-    check,
-  };
+  return { check };
 }

@@ -2,7 +2,7 @@
   "expo": {
     "name": "CediWise",
     "slug": "cediwise-mobile-app",
-    "version": "0.1.7",
+    "version": "0.1.8",
     "orientation": "portrait",
     "icon": "./assets/images/logo/cediwise-smooth-light-logo.png",
     "scheme": "cediwisemobileapp",
@@ -27,7 +27,17 @@
       "softwareKeyboardLayoutMode": "pan",
       "predictiveBackGestureEnabled": false,
       "package": "com.cediwise.app",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "enableProguardInReleaseBuilds": true,
+      "enableShrinkResourcesInReleaseBuilds": true,
+      "blockedPermissions": [
+        "com.google.android.gms.permission.AD_ID"
+      ],
+      "permissions": [
+        "android.permission.NOTIFICATION_LISTENER_SERVICE",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.INTERNET"
+      ]
     },
     "web": {
       "output": "static",

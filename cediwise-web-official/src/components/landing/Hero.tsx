@@ -1,8 +1,5 @@
-import { buttonVariants } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
-import { SmartPhone01Icon } from '@hugeicons/core-free-icons'
-import { HugeiconsIcon } from '@hugeicons/react'
 import { motion } from 'framer-motion'
+import { JoinBetaButton } from './JoinBetaButton'
 
 export function Hero() {
   return (
@@ -57,7 +54,15 @@ export function Hero() {
                 <HugeiconsIcon icon={SmartPhone01Icon} className="size-5" />
                 Get it on Android
               </a> */}
-              <a
+              <div className="flex flex-col items-start gap-2">
+                <span className="text-amber-500 font-medium text-sm">
+                  The application is currently in beta.
+                </span>
+                <JoinBetaButton className="cursor-pointer">
+                  Join Beta Test
+                </JoinBetaButton>
+              </div>
+              {/* <a
                 href="/api/download-latest-apk"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -67,8 +72,8 @@ export function Hero() {
                 )}
               >
                 <HugeiconsIcon icon={SmartPhone01Icon} className="size-5" />
-                Download android app
-              </a>
+                Download APK
+              </a> */}
             </div>
           </div>
         </div>

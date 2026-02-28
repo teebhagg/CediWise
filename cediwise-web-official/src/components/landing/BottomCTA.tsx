@@ -1,10 +1,9 @@
 'use client'
 
-import { ArrowRight01Icon, SmartPhone01Icon } from '@hugeicons/core-free-icons'
+import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { motion } from 'framer-motion'
-import { cn } from '@/lib/utils'
-import { buttonVariants } from '@/components/ui/button'
+import { JoinBetaButton } from './JoinBetaButton'
 
 export function BottomCTA() {
   return (
@@ -77,21 +76,29 @@ export function BottomCTA() {
                 <HugeiconsIcon icon={ArrowRight01Icon} className="size-5" />
               </motion.a> */}
 
-              <motion.a
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-amber-500 font-medium text-sm">
+                  The application is currently in beta.
+                </span>
+                <JoinBetaButton className="h-16 gap-3 rounded-2xl bg-primary px-8 text-lg font-bold text-black transition-all hover:bg-primary/90">
+                  🚀 Join Beta Test
+                </JoinBetaButton>
+              </div>
+              {/* <motion.a
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 href="/api/download-latest-apk"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(
-                  buttonVariants({ size: 'lg' }),
-                  'h-16 gap-3 rounded-2xl bg-primary px-8 text-lg font-bold text-black transition-all hover:bg-primary/90',
+                  buttonVariants({ variant: 'outline', size: 'lg' }),
+                  'h-16 gap-3 rounded-2xl border-white/10 bg-white/5 px-8 text-lg font-bold text-white backdrop-blur-sm transition-all hover:bg-white/10',
                 )}
               >
                 <HugeiconsIcon icon={SmartPhone01Icon} className="size-6" />
-                Download android app
+                Download APK
                 <HugeiconsIcon icon={ArrowRight01Icon} className="size-5" />
-              </motion.a>
+              </motion.a> */}
             </div>
           </div>
 

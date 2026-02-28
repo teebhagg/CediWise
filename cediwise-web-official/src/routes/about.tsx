@@ -4,13 +4,9 @@ import { Footer } from '@/components/layout/Footer'
 import { buttonVariants } from '@/components/ui/button'
 import { createPageHead } from '@/lib/seo'
 import { cn } from '@/lib/utils'
-import {
-  ArrowLeft01Icon,
-  ArrowRight01Icon,
-  SmartPhone01Icon,
-} from '@hugeicons/core-free-icons'
+import { ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { Link, createFileRoute } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
 
 export const Route = createFileRoute('/about')({
@@ -74,9 +70,10 @@ function AboutPage() {
             className="space-y-10 text-zinc-300 leading-relaxed"
           >
             <p className="text-lg">
-              CediWise was created by <strong className="text-white">Joshua Ansah</strong> —
-              a software engineer who saw a gap: many Ghanaians lack the tools
-              and knowledge to plan their finances, save consistently, and invest
+              CediWise was created by{' '}
+              <strong className="text-white">Joshua Ansah</strong> — a software
+              engineer who saw a gap: many Ghanaians lack the tools and
+              knowledge to plan their finances, save consistently, and invest
               for the future.
             </p>
 
@@ -95,7 +92,7 @@ function AboutPage() {
               deserves clarity over their money.
             </p>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 mt-12">
+            <div className="rounded-2xl border border-white/10 bg-white/2 p-8 mt-12">
               <h2 className="text-xl font-bold text-white mb-4">
                 Meet the creator
               </h2>
@@ -117,23 +114,6 @@ function AboutPage() {
               >
                 View portfolio
                 <HugeiconsIcon icon={ArrowRight01Icon} className="size-4" />
-              </motion.a>
-            </div>
-
-            <div className="pt-8">
-              <motion.a
-                href="/api/download-latest-apk"
-                target="_blank"
-                rel="noopener noreferrer"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className={cn(
-                  buttonVariants({ size: 'lg' }),
-                  'inline-flex h-14 gap-2 rounded-xl bg-primary px-8 text-base font-bold text-black',
-                )}
-              >
-                <HugeiconsIcon icon={SmartPhone01Icon} className="size-5" />
-                Download CediWise
               </motion.a>
             </div>
           </motion.article>

@@ -107,7 +107,7 @@ function TermsPage() {
           <h2>13. Contact</h2>
           <p>
             For legal notices:{' '}
-            <a href="mailto:legal@cediwise.app">legal@cediwise.app</a>
+            <a href="mailto:joshua.ansah@cediwise.app">joshua.ansah@cediwise.app</a>
           </p>
         </section>
       </ContentPageLayout>

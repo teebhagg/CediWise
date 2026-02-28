@@ -29,8 +29,8 @@ const contactMethods = [
     title: 'Email',
     description: 'For general inquiries, privacy, or legal matters.',
     links: [
-      { label: 'privacy@cediwise.app', href: 'mailto:privacy@cediwise.app' },
-      { label: 'legal@cediwise.app', href: 'mailto:legal@cediwise.app' },
+      { label: 'joshua.ansah@cediwise.app', href: 'mailto:joshua.ansah@cediwise.app' },
+      { label: 'joshua.ansah@cediwise.app', href: 'mailto:joshua.ansah@cediwise.app' },
     ],
   },
   {

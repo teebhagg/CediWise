@@ -1,6 +1,6 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
+import { JoinBetaButton } from '@/components/landing/JoinBetaButton'
 import { MenuVertical } from '@/components/ui/menu-vertical'
 import { cn } from '@/lib/utils'
 import { Link } from '@tanstack/react-router'
@@ -85,18 +85,7 @@ export function Header() {
                 <span className="absolute -bottom-1 left-0 h-px w-0 bg-primary transition-all duration-300 group-hover:w-full" />
               </Link>
             ))}
-            <a
-              href="/api/download-latest-apk"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button
-                size="sm"
-                className="h-10 rounded-xl bg-primary px-6 text-sm font-bold text-black shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all hover:scale-105 hover:bg-primary/90 active:scale-95"
-              >
-                Get Started
-              </Button>
-            </a>
+            <JoinBetaButton className="h-10 rounded-xl px-6 text-sm font-bold shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all hover:scale-105" />
           </div>
 
           {/* Mobile Burger (Framer Component Style) */}
@@ -189,17 +178,10 @@ export function Header() {
                 />
               </div>
 
-              <div className="mt-12 px-10">
-                <a
-                  href="/api/download-latest-apk"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <Button className="h-16 w-full max-w-sm rounded-[2rem] bg-primary text-xl font-bold text-black shadow-lg">
-                    Install App
-                  </Button>
-                </a>
+              <div className="mt-12 px-10 flex justify-center">
+                <div onClick={() => setIsOpen(false)}>
+                  <JoinBetaButton className="h-16 w-full max-w-sm rounded-[2rem] bg-primary text-xl font-bold text-black shadow-lg" />
+                </div>
               </div>
             </motion.div>
           </>

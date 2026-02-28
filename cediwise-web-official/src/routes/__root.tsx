@@ -1,8 +1,8 @@
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 
-import appCss from '../styles.css?url'
 import { Header } from '@/components/layout/Header'
 import { OG_IMAGE, SITE_URL } from '@/lib/seo'
+import appCss from '../styles.css?url'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -60,7 +60,8 @@ export const Route = createRootRoute({
       { name: 'twitter:image', content: OG_IMAGE },
       {
         name: 'author',
-        content: 'Joshua Ansah, khalijonez777@gmail.com, joshua.albert.ansah@gmail.com',
+        content:
+          'Joshua Ansah, khalijonez777@gmail.com, joshua.albert.ansah@gmail.com',
       },
       {
         name: 'publisher',

@@ -35,7 +35,7 @@ function PrivacyPage() {
           <h2>2. Controller & Contact</h2>
           <p>
             Data controller: CediWise. For privacy inquiries, contact us at{' '}
-            <a href="mailto:privacy@cediwise.app">privacy@cediwise.app</a>.
+            <a href="mailto:joshua.ansah@cediwise.app">joshua.ansah@cediwise.app</a>.
           </p>
 
           <h2>3. What we collect</h2>
@@ -107,7 +107,7 @@ function PrivacyPage() {
             You have rights to request: access, correction, deletion
             (right to be forgotten), portability, restriction of processing, and
             to object to processing where applicable. Contact{' '}
-            <a href="mailto:privacy@cediwise.app">privacy@cediwise.app</a> to
+            <a href="mailto:joshua.ansah@cediwise.app">joshua.ansah@cediwise.app</a> to
             exercise these rights.
           </p>
 
@@ -140,7 +140,7 @@ function PrivacyPage() {
 
           <h2>13. Contact</h2>
           <p>
-            <a href="mailto:privacy@cediwise.app">privacy@cediwise.app</a>
+            <a href="mailto:joshua.ansah@cediwise.app">joshua.ansah@cediwise.app</a>
           </p>
         </section>
       </ContentPageLayout>

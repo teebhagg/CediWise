@@ -1,4 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+  GoogleSignin,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
 import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
@@ -537,121 +541,193 @@ export function extractUserData(user: any): StoredUserData {
 
 export async function signInWithGoogle(): Promise<AuthResult> {
   if (!supabase) return { success: false, error: "App not configured" };
-  try {
-    // Get the redirect URL for this app using the proper app scheme
-    // const redirectUrl = Linking.createURL("auth/callback");
-    const redirectUrl = Linking.createURL("auth/callback");
 
-    log.debug("Redirect URL:", redirectUrl);
+  // Web: keep existing Supabase OAuth + browser flow.
+  if (isWeb) {
+    try {
+      const redirectUrl = Linking.createURL("auth/callback");
 
-    const { data, error: urlError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: Linking.createURL("auth/callback"),
-      },
-    });
+      log.debug("Redirect URL:", redirectUrl);
 
-    if (urlError || !data?.url) {
-      return {
-        success: false,
-        error: urlError?.message ?? "Failed to initiate Google sign-in",
-      };
-    }
-
-    log.debug("OAuth URL:", data.url);
-    log.debug("Opening OAuth URL for Google Sign-In");
-
-    // Open the OAuth URL in the system browser
-    const result: any = await WebBrowser.openAuthSessionAsync(
-      data.url,
-      redirectUrl
-    );
-
-    log.debug("OAuth browser result type:", result.type);
-
-    // Check if the user successfully authenticated
-    if (result.type === "success") {
-      const params: any = getQueryParams(result.url);
-      log.debug("Query params:", params);
-      const accessToken = params.access_token;
-      const refreshToken = params.refresh_token;
-      const expiresAtSeconds = toNumber(params.expires_at);
-      const expiresInSeconds = toNumber(params.expires_in);
-      log.debug("Access token:", !!accessToken);
-      log.debug("Refresh token:", !!refreshToken);
-      log.debug("✓ OAuth browser returned successfully");
-
-      const user = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
+      const { data, error: urlError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: redirectUrl,
+        },
       });
 
-      if (user.error) {
-        log.error("Session set error:", user.error);
-        return { success: false, error: user.error.message };
-      }
-
-      // Wait a moment for Supabase to process the redirect URL and establish session
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const { data: sessionData, error } = await supabase.auth.getSession();
-
-      if (error) {
-        log.error("Session retrieval error:", error);
-        return { success: false, error: error.message };
-      }
-
-      log.debug("Session retrieved:", !!sessionData.session);
-
-      if (sessionData.session && sessionData.session.user) {
-        log.debug(
-          "✓ Session established for user:",
-          sessionData.session.user.email
-        );
-
-        // Extract user data and store locally
-        const userData = extractUserData(sessionData.session.user);
-        const expiresIn =
-          sessionData.session.expires_in ||
-          (expiresInSeconds ? Math.floor(expiresInSeconds) : undefined) ||
-          3600;
-        const expiresAt =
-          typeof (sessionData.session as any).expires_at === "number"
-            ? (sessionData.session as any).expires_at * 1000
-            : expiresAtSeconds
-            ? Math.floor(expiresAtSeconds) * 1000
-            : Date.now() + expiresIn * 1000;
-
-        const authData: StoredAuthData = {
-          accessToken: sessionData.session.access_token,
-          refreshToken: sessionData.session.refresh_token || "",
-          expiresIn,
-          expiresAt,
-          user: userData,
+      if (urlError || !data?.url) {
+        return {
+          success: false,
+          error: urlError?.message ?? "Failed to initiate Google sign-in",
         };
+      }
 
-        // Store auth data locally
-        await storeAuthData(authData);
-        log.debug("✓ User data stored locally");
-        return { success: true };
-      } else {
-        log.error("✗ No session found after OAuth success");
+      log.debug("OAuth URL:", data.url);
+      log.debug("Opening OAuth URL for Google Sign-In");
+
+      const result: any = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        redirectUrl
+      );
+
+      log.debug("OAuth browser result type (web):", result.type);
+
+      if (result.type === "success") {
+        const params: any = getQueryParams(result.url);
+        log.debug("Query params:", params);
+        const accessToken = params.access_token;
+        const refreshToken = params.refresh_token;
+        const expiresAtSeconds = toNumber(params.expires_at);
+        const expiresInSeconds = toNumber(params.expires_in);
+        log.debug("Access token:", !!accessToken);
+        log.debug("Refresh token:", !!refreshToken);
+
+        const user = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+
+        if (user.error) {
+          log.error("Session set error:", user.error);
+          return { success: false, error: user.error.message };
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        const { data: sessionData, error } = await supabase.auth.getSession();
+
+        if (error) {
+          log.error("Session retrieval error:", error);
+          return { success: false, error: error.message };
+        }
+
+        if (sessionData.session && sessionData.session.user) {
+          const userData = extractUserData(sessionData.session.user);
+          const expiresIn =
+            sessionData.session.expires_in ||
+            (expiresInSeconds ? Math.floor(expiresInSeconds) : undefined) ||
+            3600;
+          const expiresAt =
+            typeof (sessionData.session as any).expires_at === "number"
+              ? (sessionData.session as any).expires_at * 1000
+              : expiresAtSeconds
+              ? Math.floor(expiresAtSeconds) * 1000
+              : Date.now() + expiresIn * 1000;
+
+          const authData: StoredAuthData = {
+            accessToken: sessionData.session.access_token,
+            refreshToken: sessionData.session.refresh_token || "",
+            expiresIn,
+            expiresAt,
+            user: userData,
+          };
+
+          await storeAuthData(authData);
+          log.debug("✓ User data stored locally (web)");
+          return { success: true };
+        }
+
+        log.error("✗ No session found after OAuth success (web)");
         return {
           success: false,
           error: "Authentication succeeded but session not established",
         };
+      } else if (result.type === "dismiss") {
+        log.debug("User dismissed OAuth browser (web)");
+        return { success: false, error: "Sign-in cancelled" };
+      } else {
+        log.error("OAuth result type (web):", result.type);
+        return { success: false, error: "Sign-in failed" };
       }
-    } else if (result.type === "dismiss") {
-      log.debug("User dismissed OAuth browser");
-      return { success: false, error: "Sign-in cancelled" };
-    } else {
-      log.error("OAuth result type:", result.type);
-      return { success: false, error: "Sign-in failed" };
+    } catch (e) {
+      const message =
+        e instanceof Error ? e.message : "Unable to sign in with Google";
+      log.error("Google sign-in error (web):", message);
+      return { success: false, error: message };
     }
+  }
+
+  // Native (iOS / Android): use Google Sign-In SDK + Supabase signInWithIdToken.
+  try {
+    // Ensure Google Play services / native SDK is available (Android).
+    if (Platform.OS === "android") {
+      await GoogleSignin.hasPlayServices({
+        showPlayServicesUpdateDialog: true,
+      });
+    }
+
+    const userInfo = await GoogleSignin.signIn();
+    const tokens = await GoogleSignin.getTokens();
+    const idToken = tokens.idToken || (userInfo as any)?.idToken;
+
+    if (!idToken) {
+      log.error("Google Sign-In returned no idToken");
+      return {
+        success: false,
+        error: "Unable to get Google ID token. Please try again.",
+      };
+    }
+
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider: "google",
+      token: idToken,
+    });
+
+    if (error || !data?.session || !data.session.user) {
+      log.error("Supabase signInWithIdToken error:", error);
+      return {
+        success: false,
+        error: error?.message ?? "Could not complete Google sign-in",
+      };
+    }
+
+    const session = data.session;
+    const userData = extractUserData(session.user);
+    const expiresIn = session.expires_in || 3600;
+    const expiresAt =
+      typeof (session as any).expires_at === "number"
+        ? (session as any).expires_at * 1000
+        : Date.now() + expiresIn * 1000;
+
+    const authData: StoredAuthData = {
+      accessToken: session.access_token,
+      refreshToken: session.refresh_token || "",
+      expiresIn,
+      expiresAt,
+      user: userData,
+    };
+
+    await storeAuthData(authData);
+    log.debug("✓ User data stored locally (native Google)");
+    return { success: true };
   } catch (e) {
+    if (e && typeof e === "object" && "code" in e) {
+      const code = (e as any).code;
+      if (code === statusCodes.SIGN_IN_CANCELLED) {
+        log.debug("Google Sign-In cancelled by user");
+        return { success: false, error: "Sign-in cancelled" };
+      }
+      if (code === statusCodes.IN_PROGRESS) {
+        log.debug("Google Sign-In already in progress");
+        return {
+          success: false,
+          error: "Sign-in already in progress. Please wait.",
+        };
+      }
+      if (code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        log.error("Google Play services not available");
+        return {
+          success: false,
+          error:
+            "Google Play services are not available on this device. Try again later.",
+        };
+      }
+    }
+
     const message =
       e instanceof Error ? e.message : "Unable to sign in with Google";
-    log.error("Google sign-in error:", message);
+    log.error("Google native sign-in error:", message);
     return { success: false, error: message };
   }
 }

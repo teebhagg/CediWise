@@ -86,7 +86,7 @@ export function JoinBetaButton({ className, children }: JoinBetaButtonProps) {
             </div>
 
             <a
-              href="https://play.google.com/store/apps/details?id=com.cediwise.app&hl=en"
+              href="https://play.google.com/apps/testing/com.cediwise.app"
               target="_blank"
               rel="noopener noreferrer"
               className={cn(

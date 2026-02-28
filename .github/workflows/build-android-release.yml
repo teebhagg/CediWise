@@ -1,10 +1,9 @@
-# Build Android APK via EAS (local) and publish to GitHub Releases.
-# Uses EAS --local to avoid cloud build credits. Prunes old release assets (keeps last 3).
-# Required secrets: EXPO_TOKEN, EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_KEY,
-#   EXPO_PUBLIC_SUPABASE_ANON_KEY, FIREBASE_PROJECT_ID
+# Build Android AAB via EAS (local) and deploy to Google Play Store.
+# Uses EAS --local to avoid cloud build credits. No GitHub Releases.
+# Required secrets: EXPO_TOKEN, GOOGLE_SERVICE_KEY, EXPO_PUBLIC_SUPABASE_URL,
+#   EXPO_PUBLIC_SUPABASE_KEY, EXPO_PUBLIC_SUPABASE_ANON_KEY, FIREBASE_PROJECT_ID
 # Trigger: push to main, push tag v*, or manual workflow_dispatch.
-# Website uses releases/latest to get CediWise-{version}.apk for download.
-name: Build Android APK & Release
+name: Build Android & Deploy to Play Store
 
 permissions:
   contents: write
@@ -87,6 +86,9 @@ jobs:
         working-directory: ${{ env.MOBILE_APP_DIR }}
         run: npm ci
 
+      - name: Write Google Service Account key
+        run: echo '${{ secrets.GOOGLE_SERVICE_KEY }}' > /tmp/google-service-account-key.json
+
       - name: Inject secrets into eas.json
         working-directory: ${{ env.MOBILE_APP_DIR }}
         env:
@@ -104,12 +106,15 @@ jobs:
             EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
             FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID
           };
+          eas.submit = eas.submit || {};
+          eas.submit.production = eas.submit.production || {};
+          eas.submit.production.android = { ...eas.submit.production.android, serviceAccountKeyPath: '/tmp/google-service-account-key.json' };
           fs.writeFileSync('eas.json', JSON.stringify(eas, null, 2));
           "
 
-      - name: Build Android APK
+      - name: Build Android AAB (Play Store)
         working-directory: ${{ env.MOBILE_APP_DIR }}
-        run: npm run build:android
+        run: npm run build:android:aab
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
@@ -117,26 +122,14 @@ jobs:
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ needs.check-version.outputs.version }}
-          name: CediWise v${{ needs.check-version.outputs.version }}
-          files: ${{ env.MOBILE_APP_DIR }}/dist/*.apk
-          generate_release_notes: true
-          draft: false
+      - name: Submit to Google Play Store
+        working-directory: ${{ env.MOBILE_APP_DIR }}
+        run: eas submit --path "dist/CediWise-${{ needs.check-version.outputs.version }}.aab" --platform android --profile production --non-interactive
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Prune old release assets (keep last 3)
-        continue-on-error: true
+      - name: Delete build artifacts
+        if: success()
         run: |
-          RELEASES=$(gh api "repos/${{ github.repository }}/releases" -q '[.[] | {id: .id, assets: [.assets[]? | .id]}]')
-          echo "$RELEASES" | jq -c '.[3:][]' 2>/dev/null | while read -r release; do
-            ASSET_IDS=$(echo "$release" | jq -r '.assets[]? // empty')
-            for asset_id in $ASSET_IDS; do
-              [ -n "$asset_id" ] && gh api -X DELETE "repos/${{ github.repository }}/releases/assets/$asset_id" && echo "Deleted asset $asset_id"
-            done
-          done
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          rm -rf ${{ env.MOBILE_APP_DIR }}/dist
+          rm -f /tmp/google-service-account-key.json

@@ -4,10 +4,11 @@ import * as SplashScreen from "expo-splash-screen";
 // import { StatusBar } from 'expo-status-bar';
 import { TriggerProvider } from "@/contexts/TriggerContext";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import * as WebBrowser from "expo-web-browser";
 import { HeroUINativeProvider } from "heroui-native";
 import { useEffect, useState } from "react";
-import { StatusBar, View } from "react-native";
+import { Platform, StatusBar, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import {
@@ -42,7 +43,20 @@ export default function RootLayout() {
       setAppIsReady(true);
       SplashScreen.hideAsync();
     }
+
     WebBrowser.maybeCompleteAuthSession();
+
+    if (Platform.OS === "ios" || Platform.OS === "android") {
+      try {
+        GoogleSignin.configure({
+          // Web client ID from google-services.json (client_type: 3)
+          webClientId:
+            "758685762731-vh9reoikjerbsu8pbcigndi29tdb7fp9.apps.googleusercontent.com",
+        });
+      } catch (e) {
+        console.warn("GoogleSignin.configure failed", e);
+      }
+    }
   }, [fontsLoaded]);
 
   if (!appIsReady) {

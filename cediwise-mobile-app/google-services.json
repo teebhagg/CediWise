@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "758685762731-nclrarpsiqsuupct0hk455ehlj7vhmri.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.cediwise.app",
+            "certificate_hash": "539ad0c9450bbb95fb2bbee6eb5eb13fc697be74"
+          }
+        },
+        {
           "client_id": "758685762731-vth88pqkptkh9i8gnmv9st6eu6c37bmc.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

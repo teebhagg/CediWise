@@ -1,7 +1,7 @@
 {
   "name": "cediwise-mobile-app",
   "main": "expo-router/entry",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",

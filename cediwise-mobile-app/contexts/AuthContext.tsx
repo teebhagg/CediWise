@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import { AppState, AppStateStatus } from "react-native";
+import { deactivateCurrentDeviceToken } from "../services/notifications";
 import { clearAuthData, getStoredAuthData } from "../utils/auth";
 import { log } from "../utils/logger";
 import { supabase } from "../utils/supabase";
@@ -63,6 +64,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
+      const userId = user?.id;
+      if (userId) {
+        await deactivateCurrentDeviceToken(userId);
+      }
       if (supabase) {
         try {
           await supabase.auth.signOut();
@@ -76,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       log.error("Error during logout:", e);
       throw e;
     }
-  }, []);
+  }, [user?.id]);
 
   const refreshAuth = useCallback(async () => {
     setIsLoading(true);

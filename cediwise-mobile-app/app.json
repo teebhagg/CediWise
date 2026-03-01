@@ -2,7 +2,7 @@
   "expo": {
     "name": "CediWise",
     "slug": "cediwise-mobile-app",
-    "version": "0.1.10",
+    "version": "0.1.11",
     "orientation": "portrait",
     "icon": "./assets/images/logo/cediwise-smooth-light-logo.png",
     "scheme": "cediwisemobileapp",
@@ -35,6 +35,7 @@
       ],
       "permissions": [
         "android.permission.NOTIFICATION_LISTENER_SERVICE",
+        "android.permission.POST_NOTIFICATIONS",
         "android.permission.ACCESS_NETWORK_STATE",
         "android.permission.INTERNET"
       ]
@@ -46,6 +47,14 @@
     "plugins": [
       "expo-router",
       "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/logo/notification_logo.png",
+          "color": "#10b981",
+          "defaultChannel": "cediwise-default"
+        }
+      ],
       [
         "expo-splash-screen",
         {

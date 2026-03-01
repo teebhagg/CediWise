@@ -7,11 +7,29 @@ const QUEUE_KEY_PREFIX = "@cediwise_budget_queue:";
 
 export const BUDGET_CHANGED_EVENT = "cediwise_budget_changed";
 
+/** When set, skip emitting BUDGET_CHANGED_EVENT for this userId. Used during vitals batch to avoid reload storm. */
+let suppressBudgetEmitForUser: string | null = null;
+
+/** Suppress or resume budget change emissions. Call from vitals before/after batch; emit once at end. */
+export function setSuppressBudgetEmit(userId: string | null): void {
+  suppressBudgetEmitForUser = userId;
+}
+
 function emitBudgetChanged(userId: string) {
+  if (suppressBudgetEmitForUser === userId) return;
   try {
     DeviceEventEmitter.emit(BUDGET_CHANGED_EVENT, { userId });
   } catch {
     // ignore event emitter failures
+  }
+}
+
+/** Force emit BUDGET_CHANGED_EVENT. Call after vitals batch when suppress was used. */
+export function emitBudgetChangedNow(userId: string): void {
+  try {
+    DeviceEventEmitter.emit(BUDGET_CHANGED_EVENT, { userId });
+  } catch {
+    // ignore
   }
 }
 

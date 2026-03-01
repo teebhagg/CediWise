@@ -1,96 +1,119 @@
+import { authTokens } from "@/constants/authTokens";
+import { useAuth } from "@/hooks/useAuth";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import {
   extractUserData,
+  persistAuthAndVerify,
   refreshStoredSession,
-  storeAuthData,
 } from "../utils/auth";
+import { onLoginSuccess } from "../utils/authRouting";
 import { log } from "../utils/logger";
-import { getPostAuthRoute } from "../utils/profileVitals";
 import { supabase } from "../utils/supabase";
+
+const MAX_RETRIES = 2;
 
 export default function Index() {
   const [isLoading, setIsLoading] = useState(true);
+  const { refreshAuth } = useAuth();
+
+  const checkSession = useCallback(async () => {
+    try {
+      if (!supabase) {
+        router.replace("/auth");
+        return;
+      }
+      // 1) Fast path: use local auth, refreshing if needed.
+      const storedAuth = await refreshStoredSession();
+      if (storedAuth?.user?.id) {
+        log.debug("Using stored auth data for user:", storedAuth.user.email);
+        await refreshAuth();
+        await onLoginSuccess(storedAuth.user.id);
+        return;
+      }
+
+      // 2) Fallback: check Supabase persisted session and store locally.
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        log.error("Session check error:", error);
+        router.replace("/onboarding");
+        return;
+      }
+
+      if (data.session?.user) {
+        const userData = extractUserData(data.session.user);
+        const expiresIn = data.session.expires_in ?? 3600;
+        const expiresAt =
+          typeof (data.session as { expires_at?: number }).expires_at === "number"
+            ? (data.session as { expires_at: number }).expires_at * 1000
+            : Date.now() + expiresIn * 1000;
+
+        const stored = await persistAuthAndVerify({
+          accessToken: data.session.access_token,
+          refreshToken: data.session.refresh_token ?? "",
+          expiresIn,
+          expiresAt,
+          user: userData,
+        });
+        if (!stored?.user?.id) {
+          log.error("Auth data not persisted; not navigating");
+          router.replace("/onboarding");
+          return;
+        }
+        await refreshAuth();
+        await onLoginSuccess(stored.user.id);
+        return;
+      }
+
+      log.debug("No session found, redirecting to onboarding");
+      router.replace("/onboarding");
+    } catch (e) {
+      log.error("Error checking session:", e);
+      throw e;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [refreshAuth]);
 
   useEffect(() => {
-    const checkSession = async () => {
-      try {
-        // Supabase env may be missing in production APK (e.g. EAS env not set).
-        if (!supabase) {
-          router.replace("/auth");
-          setIsLoading(false);
+    let retries = 0;
+
+    const run = async () => {
+      while (retries <= MAX_RETRIES) {
+        setIsLoading(true);
+        try {
+          await checkSession();
           return;
+        } catch (e) {
+          retries++;
+          if (retries > MAX_RETRIES) {
+            log.error("Session check failed after retries:", e);
+            router.replace("/onboarding");
+            return;
+          }
+          await new Promise((r) => setTimeout(r, 500 * retries));
         }
-        // 1) Fast path: use local auth, refreshing if needed.
-        const storedAuth = await refreshStoredSession();
-        if (storedAuth) {
-          log.debug("Using stored auth data for user:", storedAuth.user.email);
-          const route = await getPostAuthRoute(storedAuth.user.id);
-          router.replace(route);
-          return;
-        }
-
-        // 2) Fallback: check Supabase persisted session and store locally.
-        const { data, error } = await supabase.auth.getSession();
-
-        if (error) {
-          log.error("Session check error:", error);
-          router.replace("/onboarding");
-          return;
-        }
-
-        if (data.session && data.session.user) {
-          const userData = extractUserData(data.session.user);
-          const expiresIn = data.session.expires_in || 3600;
-          const expiresAt =
-            typeof (data.session as any).expires_at === "number"
-              ? (data.session as any).expires_at * 1000
-              : Date.now() + expiresIn * 1000;
-
-          await storeAuthData({
-            accessToken: data.session.access_token,
-            refreshToken: data.session.refresh_token || "",
-            expiresIn,
-            expiresAt,
-            user: userData,
-          });
-
-          const route = await getPostAuthRoute(userData.id);
-          router.replace(route);
-          return;
-        }
-
-        {
-          // No session, redirect to onboarding
-          log.debug("No session found, redirecting to onboarding");
-          router.replace("/onboarding");
-        }
-      } catch (e) {
-        log.error("Error checking session:", e);
-        router.replace("/onboarding");
-      } finally {
-        setIsLoading(false);
       }
     };
 
-    checkSession();
-  }, []);
+    run();
+  }, [checkSession]);
 
   return (
     <View
       style={{
         flex: 1,
-        backgroundColor: "#020617",
+        backgroundColor: authTokens.background,
         justifyContent: "center",
         alignItems: "center",
       }}>
       {isLoading && (
         <>
-          <ActivityIndicator size="large" color="#E5E7EB" />
+          <ActivityIndicator size="large" color={authTokens.spinner} />
           <Text
             style={{
-              color: "#9CA3AF",
+              color: authTokens.textMuted,
               marginTop: 12,
               fontFamily: "Figtree-Regular",
             }}>

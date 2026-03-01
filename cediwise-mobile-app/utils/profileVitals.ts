@@ -127,22 +127,30 @@ export async function writeProfileVitalsCache(
 
 /**
  * Returns the route to send the user to after login, based on personalization status.
- * Use from index, OTP success, and OAuth callback so vitals gate is consistent.
+ * Retries once if profile row is missing (e.g. backend trigger not yet run).
  */
 export async function getPostAuthRoute(
   userId: string
 ): Promise<"/(tabs)" | "/vitals"> {
   const cached = await readPersonalizationStatusCache(userId);
   if (cached?.setupCompleted || cached?.skippedVitals) return "/(tabs)";
-  try {
-    const status = await fetchPersonalizationStatusRemote(userId);
-    await writePersonalizationStatusCache(userId, status.setupCompleted);
-    return status.setupCompleted ? "/(tabs)" : "/vitals";
-  } catch {
-    return cached?.setupCompleted || cached?.skippedVitals
-      ? "/(tabs)"
-      : "/vitals";
+  const retryDelayMs = 800;
+  for (let attempt = 0; attempt <= 1; attempt++) {
+    try {
+      const status = await fetchPersonalizationStatusRemote(userId);
+      await writePersonalizationStatusCache(userId, status.setupCompleted);
+      return status.setupCompleted ? "/(tabs)" : "/vitals";
+    } catch {
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, retryDelayMs));
+        continue;
+      }
+      return cached?.setupCompleted || cached?.skippedVitals
+        ? "/(tabs)"
+        : "/vitals";
+    }
   }
+  return "/vitals";
 }
 
 export async function fetchPersonalizationStatusRemote(

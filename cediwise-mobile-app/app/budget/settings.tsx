@@ -3,14 +3,19 @@ import { DEFAULT_STANDARD_HEIGHT, StandardHeader } from '@/components/CediWiseHe
 import { BudgetModals } from '@/components/features/budget/BudgetModals';
 import { BudgetPersonalizationCard } from '@/components/features/budget/BudgetPersonalizationCard';
 import { useBudgetScreenState } from '@/components/features/budget/useBudgetScreenState';
+import { useTourContext } from '@/contexts/TourContext';
+import { useAppToast } from '@/hooks/useAppToast';
 import { useAuth } from '@/hooks/useAuth';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { RotateCcw, Settings } from 'lucide-react-native';
+import { RotateCcw, Settings, Sparkles } from 'lucide-react-native';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function BudgetSettingsScreen() {
   const { user } = useAuth();
+  const { resetTourSeen } = useTourContext();
+  const { showSuccess, showError } = useAppToast();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { personalization, derived, budget, modals } = useBudgetScreenState();
@@ -75,6 +80,31 @@ export default function BudgetSettingsScreen() {
               Clears all budget data
             </Text>
           </Pressable>
+
+          {__DEV__ ? (
+            <Pressable
+              onPress={async () => {
+                try {
+                  await Haptics.notificationAsync(
+                    Haptics.NotificationFeedbackType.Success,
+                  ).catch(() => { });
+                  await resetTourSeen();
+                  showSuccess("Reset", "Tour seen flags cleared.");
+                } catch {
+                  showError("Error", "Could not reset tour");
+                }
+              }}
+              className="flex-row items-center justify-between py-4 px-4 rounded-xl bg-amber-500/10 border border-amber-500/30 active:bg-amber-500/20"
+            >
+              <View className="flex-row items-center gap-2">
+                <Sparkles size={18} color="#F59E0B" />
+                <Text className="text-amber-400 font-semibold">Reset tour seen</Text>
+              </View>
+              <Text className="text-slate-400 text-sm">
+                Dev only
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       </ScrollView>
 

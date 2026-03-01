@@ -21,6 +21,7 @@ import { router } from "expo-router";
 import { BookMarked, ChevronRight } from "lucide-react-native";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
+import { TourZone, useTour } from "react-native-lumen";
 import Animated, {
   FadeInDown,
   useAnimatedScrollHandler,
@@ -32,6 +33,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function LiteracyScreen() {
   const { loading } = useLessons();
+  const { scrollViewRef } = useTour();
   const { isCompleted } = useProgress();
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
@@ -40,13 +42,14 @@ export default function LiteracyScreen() {
   });
 
   return (
-    <View style={styles.root}>
+    <View style={styles.root} collapsable={false}>
       <ExpandedHeader
         scrollY={scrollY}
         title="Learn"
         subtitle="Financial literacy tailored for Ghana"
       />
       <Animated.ScrollView
+        ref={scrollViewRef}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         snapToOffsets={[0, DEFAULT_EXPANDED_HEIGHT - DEFAULT_STANDARD_HEIGHT]}
@@ -64,35 +67,45 @@ export default function LiteracyScreen() {
         showsVerticalScrollIndicator={false}>
         <View style={{ gap: 24, marginTop: 8 }}>
           {/* Glossary shortcut */}
-          <Animated.View
-            entering={FadeInDown.delay(120).duration(300).springify()}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.glossaryCard,
-                pressed && styles.glossaryCardPressed,
-              ]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                router.push("/literacy/glossary");
-              }}
-              hitSlop={8}>
-              <View style={styles.glossaryCardLeft}>
-                <BookMarked size={20} color="#C9A84C" />
-                <View style={styles.glossaryCardText}>
-                  <Text style={styles.glossaryCardTitle}>
-                    Financial Glossary
-                  </Text>
-                  <Text style={styles.glossaryCardSubtitle}>
-                    75 Ghana-specific terms, A–Z
-                  </Text>
+          <TourZone
+            stepKey="literacy-glossary"
+            name="Glossary Shortcuts"
+            description="75 Ghana-specific terms, A–Z. Tap to browse the financial glossary."
+            shape="rounded-rect"
+            borderRadius={16}
+            style={{ width: "100%" }}>
+            <Animated.View
+              collapsable={false}
+              entering={FadeInDown.delay(120).duration(300).springify()}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.glossaryCard,
+                  pressed && styles.glossaryCardPressed,
+                ]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  router.push("/literacy/glossary");
+                }}
+                hitSlop={8}>
+                <View style={styles.glossaryCardLeft}>
+                  <BookMarked size={20} color="#C9A84C" />
+                  <View style={styles.glossaryCardText}>
+                    <Text style={styles.glossaryCardTitle}>
+                      Financial Glossary
+                    </Text>
+                    <Text style={styles.glossaryCardSubtitle}>
+                      75 Ghana-specific terms, A–Z
+                    </Text>
+                  </View>
                 </View>
-              </View>
-              <ChevronRight size={18} color="#C9A84C" />
-            </Pressable>
-          </Animated.View>
+                <ChevronRight size={18} color="#C9A84C" />
+              </Pressable>
+            </Animated.View>
+          </TourZone>
 
           {/* Section label */}
           <Animated.View
+            collapsable={false}
             entering={FadeInDown.delay(160).duration(300).springify()}
             style={styles.modulesHeader}>
             <Text style={styles.modulesLabel}>Modules</Text>
@@ -112,7 +125,7 @@ export default function LiteracyScreen() {
                 isCompleted(id),
               ).length;
               const totalCount = module.lessonIds.length;
-              return (
+              const card = (
                 <ModuleCard
                   key={module.id}
                   module={module}
@@ -121,6 +134,21 @@ export default function LiteracyScreen() {
                   index={index}
                 />
               );
+              if (index === 0) {
+                return (
+                  <TourZone
+                    key={module.id}
+                    stepKey="literacy-lessons"
+                    name="Lessons"
+                    description="Take lessons on budgeting, saving, and more. Tap a module to start."
+                    shape="rounded-rect"
+                    borderRadius={12}
+                    style={{ width: "100%" }}>
+                    <View collapsable={false}>{card}</View>
+                  </TourZone>
+                );
+              }
+              return card;
             })
           )}
         </View>

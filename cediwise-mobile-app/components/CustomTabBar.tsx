@@ -1,15 +1,23 @@
-import { GlassView } from '@/components/GlassView';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import * as Haptics from 'expo-haptics';
-import React, { useEffect, useMemo } from 'react';
-import { Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { GlassView } from "@/components/GlassView";
+import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import * as Haptics from "expo-haptics";
+import React, { useEffect, useMemo } from "react";
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import { TourZone } from "react-native-lumen";
 import Animated, {
   interpolate,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
-} from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Tunables to match your reference (once you share the screenshot/video frame).
 const H_MARGIN = 16;
@@ -21,10 +29,10 @@ const INDICATOR_RADIUS = 20;
 
 const INDICATOR_MAX_WIDTH = 85;
 const INDICATOR_MIN_WIDTH = 30;
-const BG = '#020617';
-const BORDER = 'rgba(255,255,255,0.10)';
-const ACTIVE = '#22C55E';
-const INACTIVE = '#94A3B8';
+const BG = "#020617";
+const BORDER = "rgba(255,255,255,0.10)";
+const ACTIVE = "#22C55E";
+const INACTIVE = "#94A3B8";
 
 const SPRING = { damping: 18, stiffness: 220, mass: 0.6 } as const;
 
@@ -62,76 +70,111 @@ export function CustomTabBar(props: BottomTabBarProps) {
   return (
     <View
       pointerEvents="box-none"
+      collapsable={false}
       style={[
         styles.wrapper,
         {
           paddingBottom: Math.max(insets.bottom, 10),
         },
-      ]}
-    >
-      <GlassView intensity={30} tint="dark" style={styles.blur}>
-        <View style={styles.border} />
+      ]}>
+      <TourZone
+        stepKey="home-nav"
+        name="Navigation"
+        description="Switch between Home, Budget, Learn, and Invest anytime."
+        shape="rounded-rect"
+        borderRadius={28}>
+        <View collapsable={false}>
+          <GlassView intensity={30} tint="dark" style={styles.blur}>
+            <View style={styles.border} />
 
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.indicator,
-            indicatorStyle,
-            { width: Math.max(INDICATOR_MIN_WIDTH, indicatorWidth), height: INDICATOR_HEIGHT, borderRadius: INDICATOR_RADIUS },
-          ]}
-        />
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.indicator,
+                indicatorStyle,
+                {
+                  width: Math.max(INDICATOR_MIN_WIDTH, indicatorWidth),
+                  height: INDICATOR_HEIGHT,
+                  borderRadius: INDICATOR_RADIUS,
+                },
+              ]}
+            />
 
-        <View style={styles.row}>
-          {state.routes.map((route, index) => {
-            const focused = state.index === index;
-            const { options } = descriptors[route.key];
+            <View style={styles.row}>
+              {state.routes.map((route, index) => {
+                const focused = state.index === index;
+                const { options } = descriptors[route.key];
 
-            const label =
-              options.tabBarLabel ??
-              options.title ??
-              // expo-router route name as fallback
-              route.name;
+                const label =
+                  options.tabBarLabel ??
+                  options.title ??
+                  // expo-router route name as fallback
+                  route.name;
 
-            const onPress = () => {
-              const event = navigation.emit({
-                type: 'tabPress',
-                target: route.key,
-                canPreventDefault: true,
-              });
+                const onPress = () => {
+                  const event = navigation.emit({
+                    type: "tabPress",
+                    target: route.key,
+                    canPreventDefault: true,
+                  });
 
-              if (!focused && !event.defaultPrevented) {
-                navigation.navigate(route.name);
-                void Haptics.selectionAsync();
-              }
-            };
+                  if (!focused && !event.defaultPrevented) {
+                    navigation.navigate(route.name);
+                    void Haptics.selectionAsync();
+                  }
+                };
 
-            const onLongPress = () => {
-              navigation.emit({
-                type: 'tabLongPress',
-                target: route.key,
-              });
-            };
+                const onLongPress = () => {
+                  navigation.emit({
+                    type: "tabLongPress",
+                    target: route.key,
+                  });
+                };
 
-            const icon = options.tabBarIcon?.({
-              focused,
-              color: focused ? BG : INACTIVE,
-              size: 22,
-            });
+                const icon = options.tabBarIcon?.({
+                  focused,
+                  color: focused ? BG : INACTIVE,
+                  size: 22,
+                });
 
-            return (
-              <TabButton
-                key={route.key}
-                label={String(label)}
-                focused={focused}
-                onPress={onPress}
-                onLongPress={onLongPress}
-              >
-                {icon}
-              </TabButton>
-            );
-          })}
+                const iconWithTour =
+                  route.name === "budget" ? (
+                    <TourZone
+                      stepKey="budget-tab"
+                      name="Budget Tab"
+                      description="Return here anytime to check your budget."
+                      shape="circle"
+                      zoneStyle={{ padding: 16 }}>
+                      <View collapsable={false}>{icon}</View>
+                    </TourZone>
+                  ) : route.name === "literacy" ? (
+                    <TourZone
+                      stepKey="home-learn-tab"
+                      name="Learn"
+                      description="Explore lessons and glossary here—no profile needed."
+                      shape="circle"
+                      zoneStyle={{ padding: 16 }}>
+                      <View collapsable={false}>{icon}</View>
+                    </TourZone>
+                  ) : (
+                    icon
+                  );
+
+                return (
+                  <TabButton
+                    key={route.key}
+                    label={String(label)}
+                    focused={focused}
+                    onPress={onPress}
+                    onLongPress={onLongPress}>
+                    {iconWithTour}
+                  </TabButton>
+                );
+              })}
+            </View>
+          </GlassView>
         </View>
-      </GlassView>
+      </TourZone>
     </View>
   );
 }
@@ -171,11 +214,12 @@ function TabButton({
       style={({ pressed }) => [styles.item, pressed && styles.pressed]}
       accessibilityRole="button"
       accessibilityState={focused ? { selected: true } : {}}
-      accessibilityLabel={label}
-    >
+      accessibilityLabel={label}>
       <View style={styles.iconWrap}>{children}</View>
       <Animated.View style={labelStyle}>
-        <Text style={[styles.label, { color: focused ? BG : INACTIVE }]} numberOfLines={1}>
+        <Text
+          style={[styles.label, { color: focused ? BG : INACTIVE }]}
+          numberOfLines={1}>
           {label}
         </Text>
       </Animated.View>
@@ -185,23 +229,24 @@ function TabButton({
 
 const styles = StyleSheet.create({
   wrapper: {
-    position: 'absolute',
+    position: "absolute",
     left: 0,
     right: 0,
     bottom: 0,
     paddingHorizontal: H_MARGIN,
     paddingBottom: 10,
     paddingTop: 0,
+    elevation: 0
   },
   blur: {
     height: BAR_HEIGHT,
     borderRadius: BAR_RADIUS,
     padding: PADDING,
-    backgroundColor: Platform.OS === 'android' ? BG : 'transparent',
-    overflow: 'hidden',
+    backgroundColor: Platform.OS === "android" ? BG : "transparent",
+    overflow: "hidden",
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: "#000",
         shadowOpacity: 0.35,
         shadowRadius: 18,
         shadowOffset: { width: 0, height: 10 },
@@ -220,13 +265,13 @@ const styles = StyleSheet.create({
   },
   row: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     // paddingHorizontal: 26,
   },
   indicator: {
-    position: 'absolute',
+    position: "absolute",
     top: (BAR_HEIGHT - INDICATOR_HEIGHT) / 2,
     left: -16,
     right: 0,
@@ -236,9 +281,9 @@ const styles = StyleSheet.create({
   },
   item: {
     flex: 1,
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 4,
     borderRadius: 18,
   },
@@ -246,14 +291,12 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   iconWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   label: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
     letterSpacing: -0.2,
   },
 });
-
-

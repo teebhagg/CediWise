@@ -17,6 +17,12 @@ import {
 } from "react-native-safe-area-context";
 import { Uniwind } from "uniwind";
 import { RootErrorBoundary } from "../components/RootErrorBoundary";
+import { TourErrorBoundary } from "../components/tour/TourErrorBoundary";
+import { AuthProvider } from "../contexts/AuthContext";
+import {
+  TourProvider,
+  TourProviderFallback,
+} from "../contexts/TourContext";
 import { useAuthRefresh } from "../hooks/useAuthRefresh";
 import "./globals.css";
 
@@ -24,6 +30,55 @@ import "./globals.css";
 Uniwind.setTheme("dark");
 
 SplashScreen.preventAutoHideAsync();
+
+function AppShell() {
+  return (
+    <View style={{ flex: 1, backgroundColor: "black" }}>
+      <StatusBar backgroundColor="black" translucent={true} />
+      <SafeAreaListener
+        onChange={({ insets }) => {
+          Uniwind.updateInsets(insets);
+        }}>
+        <Stack>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="profile" options={{ headerShown: false }} />
+          <Stack.Screen name="queue" options={{ headerShown: false }} />
+          <Stack.Screen name="vitals" options={{ headerShown: false }} />
+          <Stack.Screen name="budget" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="budget-templates"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="debt-dashboard"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="recurring-expenses"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen name="expenses" options={{ headerShown: false }} />
+          <Stack.Screen name="auth/index" options={{ headerShown: false }} />
+          <Stack.Screen name="auth/otp" options={{ headerShown: false }} />
+          <Stack.Screen name="auth/name" options={{ headerShown: false }} />
+          <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="onboarding"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen name="literacy" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="salary-calculator"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen name="terms" options={{ headerShown: false }} />
+          <Stack.Screen name="privacy" options={{ headerShown: false }} />
+        </Stack>
+      </SafeAreaListener>
+    </View>
+  );
+}
 
 export default function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
@@ -79,95 +134,22 @@ export default function RootLayout() {
               },
             }}>
             <SafeAreaProvider>
-              <TriggerProvider>
-                <View style={{ flex: 1, backgroundColor: "black" }}>
-                  <StatusBar backgroundColor="black" translucent={true} />
-                  <SafeAreaListener
-                    onChange={({ insets }) => {
-                      Uniwind.updateInsets(insets);
-                    }}>
-                    {/* <StatusBar backgroundColor="#0f172a" translucent={true} /> */}
-                    <Stack>
-                      <Stack.Screen
-                        name="index"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="(tabs)"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="profile"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="queue"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="vitals"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="budget"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="budget-templates"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="debt-dashboard"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="recurring-expenses"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="expenses"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="auth/index"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="auth/otp"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="auth/name"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="auth/callback"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="onboarding"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="literacy"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="salary-calculator"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="terms"
-                        options={{ headerShown: false }}
-                      />
-                      <Stack.Screen
-                        name="privacy"
-                        options={{ headerShown: false }}
-                      />
-                    </Stack>
-                  </SafeAreaListener>
-                </View>
-              </TriggerProvider>
+              <AuthProvider>
+                <TourErrorBoundary
+                  fallback={
+                    <TourProviderFallback>
+                      <TriggerProvider>
+                        <AppShell />
+                      </TriggerProvider>
+                    </TourProviderFallback>
+                  }>
+                  <TourProvider>
+                    <TriggerProvider>
+                      <AppShell />
+                    </TriggerProvider>
+                  </TourProvider>
+                </TourErrorBoundary>
+              </AuthProvider>
             </SafeAreaProvider>
           </HeroUINativeProvider>
         </BottomSheetModalProvider>

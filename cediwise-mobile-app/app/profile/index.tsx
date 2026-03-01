@@ -10,6 +10,7 @@ import {
   Mail,
   Phone,
   RotateCcw,
+  Sparkles,
   User as UserIcon,
 } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
@@ -28,6 +29,7 @@ import {
   ExpandedHeader,
 } from "@/components/CediWiseHeader";
 import { LogoutModal } from "@/components/LogoutModal";
+import { useTourContext } from "@/contexts/TourContext";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersonalizationStatus } from "@/hooks/usePersonalizationStatus";
@@ -63,6 +65,7 @@ function IconPrefix({
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { resetTourSeen } = useTourContext();
   const { showError, showSuccess } = useAppToast();
   const personalization = usePersonalizationStatus(user?.id);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -138,6 +141,20 @@ export default function ProfileScreen() {
     }
     setShowLogoutModal(true);
   };
+
+  const handleResetTourSeen = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success,
+      ).catch(() => { });
+      await resetTourSeen();
+      showSuccess("Reset", "Tour seen flags cleared. Tours will show again.");
+    } catch (e) {
+      log.error("Reset tour seen failed:", e);
+      showError("Error", "Could not reset tour");
+    }
+  }, [user?.id, resetTourSeen, showSuccess, showError]);
 
   const handleClearBudgetLocal = useCallback(async () => {
     if (!user?.id) return;
@@ -386,6 +403,25 @@ export default function ProfileScreen() {
                       </ListGroup.ItemTitle>
                       <ListGroup.ItemDescription className="text-slate-400">
                         Remove cached budget data. Reload from server on next Budget visit.
+                      </ListGroup.ItemDescription>
+                    </ListGroup.ItemContent>
+                    <ListGroup.ItemSuffix />
+                  </ListGroup.Item>
+                </PressableFeedback>
+                <Separator className="mx-4" />
+                <PressableFeedback animation={false} onPress={onItemPress(handleResetTourSeen)}>
+                  <PressableFeedback.Scale />
+                  <PressableFeedback.Ripple />
+                  <ListGroup.Item disabled>
+                    <ListGroup.ItemPrefix>
+                      <IconPrefix icon={Sparkles} color="#22C55E" />
+                    </ListGroup.ItemPrefix>
+                    <ListGroup.ItemContent>
+                      <ListGroup.ItemTitle className="text-amber-300">
+                        Reset tour seen
+                      </ListGroup.ItemTitle>
+                      <ListGroup.ItemDescription className="text-slate-400">
+                        Clear onboarding tour flags. Tours will show again on next visit.
                       </ListGroup.ItemDescription>
                     </ListGroup.ItemContent>
                     <ListGroup.ItemSuffix />

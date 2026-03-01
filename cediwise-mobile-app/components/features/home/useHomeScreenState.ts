@@ -324,7 +324,7 @@ export function useHomeScreenState(): UseHomeScreenStateReturn {
   );
 
   const isHomeLoading = authLoading || profileVitals.isLoading;
-  const setupCompleted = profileVitals.vitals?.setup_completed ?? true;
+  const setupCompleted = profileVitals.vitals?.setup_completed ?? false;
 
   return {
     user: user ?? null,

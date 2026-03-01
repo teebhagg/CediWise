@@ -44,9 +44,11 @@ function normalizePhoneForFirebase(phone: string): string {
   return s.startsWith("233") ? "+" + s : "+233" + s;
 }
 
-type AuthResult = {
+export type AuthResult = {
   success: boolean;
   error?: string;
+  /** Set on success when caller should use persisted auth (e.g. OTP flow). */
+  stored?: StoredAuthData | null;
 };
 
 export type StoredUserData = {
@@ -250,8 +252,8 @@ export async function handleOAuthCallbackFromUrl(
       user: userData,
     };
 
-    await storeAuthData(authData);
-    return { success: true };
+    const stored = await persistAuthAndVerify(authData);
+    return { success: true, stored };
   } catch (e) {
     const message =
       e instanceof Error ? e.message : "Failed to complete sign-in";
@@ -337,10 +339,12 @@ export async function updateUserProfileName(name: string): Promise<AuthResult> {
     const authData = await getStoredAuthData({ allowExpired: true });
     if (authData) {
       const userData = extractUserData(data.user);
-      await storeAuthData({
+      const updated = {
         ...authData,
         user: { ...authData.user, name: userData.name ?? trimmed },
-      });
+      };
+      const stored = await persistAuthAndVerify(updated);
+      return { success: true, stored };
     }
     return { success: true };
   } catch (e) {
@@ -357,6 +361,21 @@ export async function storeAuthData(authData: StoredAuthData): Promise<void> {
     await setAuthStorage(JSON.stringify(authData));
   } catch (e) {
     throw e;
+  }
+}
+
+/**
+ * Store auth data and verify by reading back. Use after building authData from session/OTP.
+ * Returns stored data on success, null if read-back failed.
+ */
+export async function persistAuthAndVerify(
+  authData: StoredAuthData
+): Promise<StoredAuthData | null> {
+  try {
+    await storeAuthData(authData);
+    return await getStoredAuthData();
+  } catch {
+    return null;
   }
 }
 
@@ -800,8 +819,8 @@ export async function verifyOtpAndStore(
       expiresAt,
       user: userData,
     };
-    await storeAuthData(authData);
-    return { success: true };
+    const stored = await persistAuthAndVerify(authData);
+    return { success: true, stored };
   } catch (e) {
     firebasePhoneConfirmation = null;
     const message = e instanceof Error ? e.message : "Unable to verify code";

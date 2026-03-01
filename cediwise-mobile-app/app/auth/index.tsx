@@ -1,9 +1,12 @@
 import AnimatedPhoneNumberInput from '@/components/AnimatedPhoneNumberInput';
 import { Card } from '@/components/Card';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { requestOtp, signInWithGoogle } from '@/utils/auth';
+import { useAppToast } from '@/hooks/useAppToast';
+import { useAuth } from '@/hooks/useAuth';
+import { getStoredAuthData, requestOtp, signInWithGoogle } from '@/utils/auth';
+import { onLoginSuccess } from '@/utils/authRouting';
 import { log } from '@/utils/logger';
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StatusBar, Text, View } from 'react-native';
 import Animated, {
@@ -13,13 +16,13 @@ import Animated, {
     withTiming,
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAppToast } from '@/hooks/useAppToast';
 export default function AuthLandingScreen() {
     const [phone, setPhone] = useState('');
     const [error, setError] = useState<string | undefined>();
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const { showError } = useAppToast();
+    const { refreshAuth } = useAuth();
 
     const cardOpacity = useSharedValue(0);
     const cardTranslateY = useSharedValue(20);
@@ -79,13 +82,16 @@ export default function AuthLandingScreen() {
         log.debug('Result: ', result);
         setGoogleLoading(false);
         if (!result.success) {
-            // setError(result.error);
             showError('Error', result.error);
-        } else {
-            setTimeout(() => {
-                router.replace('/(tabs)');
-            }, 1000);
+            return;
         }
+        const stored = await getStoredAuthData();
+        if (!stored?.user?.id) {
+            showError('Error', "We couldn't save your sign-in on this device. Tap to try again.");
+            return;
+        }
+        await refreshAuth();
+        await onLoginSuccess(stored.user.id);
     };
 
     return (
@@ -150,12 +156,6 @@ export default function AuthLandingScreen() {
                                     >
                                         Continue with Google
                                     </PrimaryButton>
-
-                                    <Link href="/auth/otp" className="mt-4 self-center">
-                                        <Text className="text-muted-foreground text-xs">
-                                            Already have a code?
-                                        </Text>
-                                    </Link>
                                 </Animated.View>
                             </Card>
                         </Animated.View>

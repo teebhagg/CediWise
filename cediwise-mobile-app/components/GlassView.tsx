@@ -32,14 +32,14 @@ export function GlassView({
           : "#1f2937";
 
     return (
-      <View style={[style, { backgroundColor }]} {...rest}>
+      <View style={[style, { backgroundColor, elevation: 0 }]} {...rest}>
         {children}
       </View>
     );
   }
 
   return (
-    <BlurView intensity={intensity} tint={tint} style={style} {...rest}>
+    <BlurView intensity={intensity} tint={tint} style={[style, { elevation: 0 }]} {...rest}>
       {children}
     </BlurView>
   );

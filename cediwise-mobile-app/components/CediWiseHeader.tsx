@@ -180,7 +180,16 @@ export const StandardHeader: React.FC<HeaderProps> = ({
       <GlassView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
       <View style={[styles.border, { top: totalHeight - 1 }]} />
 
-      <View style={[styles.navBar, { top: insets.top, height: standardHeight }]}>
+      <View
+        style={[
+          styles.navBar,
+          {
+            top: insets.top,
+            height: standardHeight,
+            paddingRight: Math.max(HORIZONTAL_PADDING, insets.right),
+            paddingLeft: Math.max(HORIZONTAL_PADDING, insets.left),
+          },
+        ]}>
         <NavBarContent
           title={title}
           leading={leading}
@@ -315,7 +324,12 @@ export const ExpandedHeader: React.FC<ExpandedHeaderProps> = ({
       <View
         style={[
           styles.navBar,
-          { top: insets.top, height: standardHeight },
+          {
+            top: insets.top,
+            height: standardHeight,
+            paddingRight: Math.max(HORIZONTAL_PADDING, insets.right),
+            paddingLeft: Math.max(HORIZONTAL_PADDING, insets.left),
+          },
         ]}>
         <NavBarContent
           title={collapsedTitle ?? title}

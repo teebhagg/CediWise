@@ -1,8 +1,9 @@
 import { BackButton } from '@/components/BackButton';
 import { Card } from '@/components/Card';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import { getStoredAuthData, requestOtp, verifyOtp } from '@/utils/auth';
-import { getPostAuthRoute } from '@/utils/profileVitals';
+import { useAuth } from '@/hooks/useAuth';
+import { requestOtp, verifyOtp } from '@/utils/auth';
+import { onLoginSuccess } from '@/utils/authRouting';
 import { router, useLocalSearchParams } from 'expo-router';
 import { InputOTP, REGEXP_ONLY_DIGITS } from 'heroui-native';
 import { useEffect, useState } from 'react';
@@ -18,6 +19,7 @@ export default function OtpScreen() {
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN_SEC);
+  const { refreshAuth } = useAuth();
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -42,14 +44,18 @@ export default function OtpScreen() {
       setError(result.error);
       return;
     }
-    const auth = await getStoredAuthData();
-    const hasName = auth?.user?.name?.trim();
+    const stored = result.stored;
+    if (!stored?.user?.id) {
+      setError("We couldn't save your sign-in on this device. Tap to try again.");
+      return;
+    }
+    const hasName = stored.user?.name?.trim();
     if (!hasName) {
       router.replace('/auth/name');
       return;
     }
-    const route = auth?.user?.id ? await getPostAuthRoute(auth.user.id) : '/(tabs)';
-    router.replace(route);
+    await refreshAuth();
+    await onLoginSuccess(stored.user.id);
   };
 
   const onResend = async () => {

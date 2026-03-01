@@ -1,6 +1,20 @@
-import { StepFixedExpenses, StepGoal, StepIncome, StepInterests, StepLifeStage, StepWelcome } from "@/components/features/vitals/Steps";
+import {
+  StepFixedExpenses,
+  StepGoal,
+  StepIncome,
+  StepInterests,
+  StepLifeStage,
+  StepWelcome,
+} from "@/components/features/vitals/Steps";
 import type { Draft, StepErrors } from "@/components/features/vitals/types";
-import { clampDay, computeIntelligentStrategy, getNetPreview, strategyToPercents, toMoney, toMonthlySalary } from "@/components/features/vitals/utils";
+import {
+  clampDay,
+  computeIntelligentStrategy,
+  getNetPreview,
+  strategyToPercents,
+  toMoney,
+  toMonthlySalary,
+} from "@/components/features/vitals/utils";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -10,8 +24,8 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
+  useWindowDimensions,
 } from "react-native";
 import Animated, {
   Easing,
@@ -23,7 +37,10 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
 import { KeyboardAwareScrollView } from "@/components/KeyboardAwareScrollView";
 import { KeyboardDoneAccessory } from "@/components/KeyboardDoneAccessory";
@@ -32,12 +49,23 @@ import { SecondaryButton } from "@/components/SecondaryButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useBudget } from "@/hooks/useBudget";
 import { usePersonalizationStatus } from "@/hooks/usePersonalizationStatus";
-import { enqueueMutation, loadBudgetState, saveBudgetState } from "@/utils/budgetStorage";
-import { trySyncMutation } from "@/utils/budgetSync";
+import {
+  emitBudgetChangedNow,
+  enqueueMutation,
+  loadBudgetState,
+  saveBudgetState,
+  setSuppressBudgetEmit,
+} from "@/utils/budgetStorage";
+import { trySyncProfileWithRetries } from "@/utils/budgetSync";
 import { isOnline } from "@/utils/connectivity";
-import { vitalsDraftKey, writePersonalizationStatusCache, writeProfileVitalsCache } from "@/utils/profileVitals";
+import {
+  vitalsDraftKey,
+  writePersonalizationStatusCache,
+  writeProfileVitalsCache,
+} from "@/utils/profileVitals";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Button, Separator } from "heroui-native";
+import { log } from "@/utils/logger";
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 
@@ -92,7 +120,12 @@ export default function VitalsWizard() {
   const insets = useSafeAreaInsets();
 
   // Reserve space so scroll content can scroll above the bottom bar (button row + optional link + padding)
-  const bottomBarHeight = 16 + 48 + 10 + (draft.step > 0 && draft.step < totalSteps - 1 && !editMode ? 48 : 0) + Math.max(16, insets.bottom);
+  const bottomBarHeight =
+    16 +
+    48 +
+    10 +
+    (draft.step > 0 && draft.step < totalSteps - 1 && !editMode ? 48 : 0) +
+    Math.max(16, insets.bottom);
 
   const progress = useSharedValue(0);
 
@@ -104,12 +137,15 @@ export default function VitalsWizard() {
     async (next: Draft) => {
       if (!user?.id) return;
       try {
-        await AsyncStorage.setItem(vitalsDraftKey(user.id), JSON.stringify(next));
+        await AsyncStorage.setItem(
+          vitalsDraftKey(user.id),
+          JSON.stringify(next),
+        );
       } catch {
         // ignore
       }
     },
-    [user?.id]
+    [user?.id],
   );
 
   useEffect(() => {
@@ -122,34 +158,53 @@ export default function VitalsWizard() {
         setDraft((prev) => ({
           ...prev,
           ...parsed,
-          utilitiesMode: parsed.utilitiesMode === "precise" ? "precise" : "general",
-          interests: Array.isArray(parsed.interests) ? parsed.interests : prev.interests,
+          utilitiesMode:
+            parsed.utilitiesMode === "precise" ? "precise" : "general",
+          interests: Array.isArray(parsed.interests)
+            ? parsed.interests
+            : prev.interests,
           lifeStage:
-            parsed.lifeStage != null && ["student", "young_professional", "family", "retiree"].includes(parsed.lifeStage)
+            parsed.lifeStage != null &&
+              ["student", "young_professional", "family", "retiree"].includes(
+                parsed.lifeStage,
+              )
               ? parsed.lifeStage
               : prev.lifeStage,
-          dependentsCount: typeof parsed.dependentsCount === "string" ? parsed.dependentsCount : prev.dependentsCount,
+          dependentsCount:
+            typeof parsed.dependentsCount === "string"
+              ? parsed.dependentsCount
+              : prev.dependentsCount,
           incomeFrequency:
-            parsed.incomeFrequency != null && ["weekly", "bi_weekly", "monthly"].includes(parsed.incomeFrequency)
+            parsed.incomeFrequency != null &&
+              ["weekly", "bi_weekly", "monthly"].includes(parsed.incomeFrequency)
               ? parsed.incomeFrequency
               : prev.incomeFrequency,
           spendingStyle:
-            parsed.spendingStyle != null && ["conservative", "moderate", "liberal"].includes(parsed.spendingStyle)
+            parsed.spendingStyle != null &&
+              ["conservative", "moderate", "liberal"].includes(
+                parsed.spendingStyle,
+              )
               ? parsed.spendingStyle
               : prev.spendingStyle,
           financialPriority:
             parsed.financialPriority != null &&
-              ["debt_payoff", "savings_growth", "lifestyle", "balanced"].includes(parsed.financialPriority)
+              ["debt_payoff", "savings_growth", "lifestyle", "balanced"].includes(
+                parsed.financialPriority,
+              )
               ? parsed.financialPriority
               : prev.financialPriority,
           primaryGoal:
             parsed.primaryGoal != null &&
-              ["emergency_fund", "project", "investment"].includes(parsed.primaryGoal)
+              ["emergency_fund", "project", "investment"].includes(
+                parsed.primaryGoal,
+              )
               ? parsed.primaryGoal
               : prev.primaryGoal,
           strategyChoice:
             parsed.strategyChoice != null &&
-              ["survival", "balanced", "aggressive"].includes(parsed.strategyChoice)
+              ["survival", "balanced", "aggressive"].includes(
+                parsed.strategyChoice,
+              )
               ? parsed.strategyChoice
               : prev.strategyChoice,
           step:
@@ -179,12 +234,18 @@ export default function VitalsWizard() {
   const title = useMemo(() => {
     if (editMode && draft.step > 0) {
       switch (draft.step) {
-        case 1: return "Income & Jobs";
-        case 2: return "Life Stage & Context";
-        case 3: return "Fixed Expenses";
-        case 4: return "Interests & Wants";
-        case 5: return "Goal Setting";
-        default: return "Update your profile";
+        case 1:
+          return "Income & Jobs";
+        case 2:
+          return "Life Stage & Context";
+        case 3:
+          return "Fixed Expenses";
+        case 4:
+          return "Interests & Wants";
+        case 5:
+          return "Goal Setting";
+        default:
+          return "Update your profile";
       }
     }
     switch (draft.step) {
@@ -208,8 +269,10 @@ export default function VitalsWizard() {
   const stepErrors: StepErrors = useMemo(() => {
     const e: Record<string, string> = {};
     if (draft.step === 1) {
-      if (toMoney(draft.stableSalary) <= 0) e.stableSalary = "Enter your salary";
-      if (clampDay(draft.paydayDay) === null) e.paydayDay = "Enter a day between 1 and 31";
+      if (toMoney(draft.stableSalary) <= 0)
+        e.stableSalary = "Enter your salary";
+      if (clampDay(draft.paydayDay) === null)
+        e.paydayDay = "Enter a day between 1 and 31";
     }
     if (draft.step === 3) {
       const total =
@@ -228,22 +291,25 @@ export default function VitalsWizard() {
   const allStepsErrors: StepErrors = useMemo(() => {
     const e: Record<string, string> = {};
     if (toMoney(draft.stableSalary) <= 0) e.stableSalary = "Enter your salary";
-    if (clampDay(draft.paydayDay) === null) e.paydayDay = "Enter a day between 1 and 31";
+    if (clampDay(draft.paydayDay) === null)
+      e.paydayDay = "Enter a day between 1 and 31";
     const utilitiesTotal =
       draft.utilitiesMode === "precise"
         ? toMoney(draft.utilitiesECG) + toMoney(draft.utilitiesWater)
         : toMoney(draft.utilitiesTotal);
-    if (utilitiesTotal <= 0) e.utilities = "Enter utilities amount (or 0 if none)";
+    if (utilitiesTotal <= 0)
+      e.utilities = "Enter utilities amount (or 0 if none)";
     if (!draft.primaryGoal) e.goal = "Select a primary goal";
     return e;
   }, [draft]);
 
   const canContinue = Object.keys(stepErrors).length === 0;
-  const canFinish = draft.step === 5 && Object.keys(allStepsErrors).length === 0;
+  const canFinish =
+    draft.step === 5 && Object.keys(allStepsErrors).length === 0;
 
   const netPreview = useMemo(
     () => getNetPreview(draft.stableSalary, draft.incomeFrequency),
-    [draft.stableSalary, draft.incomeFrequency]
+    [draft.stableSalary, draft.incomeFrequency],
   );
 
   const animateStepChange = useCallback(
@@ -251,15 +317,19 @@ export default function VitalsWizard() {
       outgoingStepRef.current = draft.step;
       direction.value = dir === "forward" ? 1 : -1;
       transition.value = 0;
-      transition.value = withSpring(1, {
-        damping: 22,
-        stiffness: 180,
-        overshootClamping: false,
-      }, (finished) => {
-        if (finished) runOnJS(clearOutgoing)();
-      });
+      transition.value = withSpring(
+        1,
+        {
+          damping: 22,
+          stiffness: 180,
+          overshootClamping: false,
+        },
+        (finished) => {
+          if (finished) runOnJS(clearOutgoing)();
+        },
+      );
     },
-    [clearOutgoing, direction, draft.step, transition]
+    [clearOutgoing, direction, draft.step, transition],
   );
 
   const outgoingStyle = useAnimatedStyle(() => {
@@ -282,7 +352,7 @@ export default function VitalsWizard() {
       t,
       [0, 1],
       [direction.value * 24, 0],
-      Extrapolate.CLAMP
+      Extrapolate.CLAMP,
     );
     const scale = interpolate(t, [0, 1], [0.98, 1], Extrapolate.CLAMP);
     return { opacity, transform: [{ translateX }, { scale }] };
@@ -292,15 +362,18 @@ export default function VitalsWizard() {
     height: containerHeight.value,
   }));
 
-  const onStepLayout = useCallback((e: LayoutChangeEvent) => {
-    const h = e.nativeEvent.layout.height;
-    if (h > 0) {
-      containerHeight.value = withSpring(Math.max(200, h), {
-        damping: 20,
-        stiffness: 200,
-      });
-    }
-  }, [containerHeight]);
+  const onStepLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      const h = e.nativeEvent.layout.height;
+      if (h > 0) {
+        containerHeight.value = withSpring(Math.max(200, h), {
+          damping: 20,
+          stiffness: 200,
+        });
+      }
+    },
+    [containerHeight],
+  );
 
   const updateDraft = useCallback(
     (patch: Partial<Draft>) => {
@@ -310,7 +383,7 @@ export default function VitalsWizard() {
         return next;
       });
     },
-    [persistDraft]
+    [persistDraft],
   );
 
   const toggleInterest = useCallback(
@@ -332,7 +405,7 @@ export default function VitalsWizard() {
         return next;
       });
     },
-    [persistDraft]
+    [persistDraft],
   );
 
   useEffect(() => {
@@ -349,7 +422,9 @@ export default function VitalsWizard() {
       setShowValidationHint(true);
       scrollViewRef.current?.scrollTo({ y: 120, animated: true });
       try {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Warning,
+        );
       } catch {
         // ignore
       }
@@ -376,8 +451,10 @@ export default function VitalsWizard() {
     } catch {
       // ignore
     }
-    await writePersonalizationStatusCache(user.id, false, { skippedVitals: true });
-    router.replace("/(tabs)/budget");
+    await writePersonalizationStatusCache(user.id, false, {
+      skippedVitals: true,
+    });
+    router.replace("/(tabs)");
   }, [user?.id]);
 
   const handleFinish = useCallback(async () => {
@@ -387,7 +464,9 @@ export default function VitalsWizard() {
       setShowValidationHint(true);
       scrollViewRef.current?.scrollTo({ y: 120, animated: true });
       try {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Warning,
+        );
       } catch {
         // ignore
       }
@@ -426,7 +505,8 @@ export default function VitalsWizard() {
         financialPriority: draft.financialPriority,
       });
       const userOverride =
-        draft.strategyChoice === "survival" || draft.strategyChoice === "aggressive";
+        draft.strategyChoice === "survival" ||
+        draft.strategyChoice === "aggressive";
       const computed = userOverride
         ? {
           ...computedIntelligent,
@@ -443,6 +523,8 @@ export default function VitalsWizard() {
 
       // 1) Persist personalization profile (offline-first via existing queue + immediate attempt)
       const createdAt = new Date().toISOString();
+      setSuppressBudgetEmit(user.id);
+
       const payload = {
         id: user.id,
         setup_completed: true,
@@ -478,7 +560,27 @@ export default function VitalsWizard() {
         kind: "upsert_profile",
         payload,
       });
-      await trySyncMutation(user.id, queued);
+
+      // Online: block until profile sync succeeds (prevents setupCompleted conflicts)
+      const online = await isOnline();
+      if (online) {
+        const syncResult = await trySyncProfileWithRetries(user.id, queued);
+        if (!syncResult.ok) {
+          setError(
+            "Couldn't save. Check your connection and try again."
+          );
+          log.error("[Vitals] Profile sync failed", { syncResult });
+          try {
+            await Haptics.notificationAsync(
+              Haptics.NotificationFeedbackType.Error,
+            );
+          } catch {
+            // ignore
+          }
+          return;
+        }
+      }
+
       await writePersonalizationStatusCache(user.id, true);
       // Cache vitals locally so Budget can display them instantly/offline.
       await writeProfileVitalsCache(user.id, {
@@ -502,7 +604,7 @@ export default function VitalsWizard() {
         savings_pct: computed.savingsPct,
       });
 
-      // 2) Also copy interests into local budget prefs (so UI can use offline)
+      // 2) Copy interests into local budget prefs (so UI can use offline)
       const state = await loadBudgetState(user.id);
       await saveBudgetState({
         ...state,
@@ -515,21 +617,29 @@ export default function VitalsWizard() {
       if (utilitiesTotal > 0) {
         if (draft.utilitiesMode === "precise") {
           if (utilitiesECG > 0) fixedAmountsByCategory["ECG"] = utilitiesECG;
-          if (utilitiesWater > 0) fixedAmountsByCategory["Ghana Water"] = utilitiesWater;
+          if (utilitiesWater > 0)
+            fixedAmountsByCategory["Ghana Water"] = utilitiesWater;
         } else {
           fixedAmountsByCategory["ECG"] = Math.round(utilitiesTotal * 0.6);
-          fixedAmountsByCategory["Ghana Water"] = Math.round(utilitiesTotal * 0.4);
+          fixedAmountsByCategory["Ghana Water"] = Math.round(
+            utilitiesTotal * 0.4,
+          );
         }
       }
-      if (titheRemittance > 0) fixedAmountsByCategory["Tithes/Church"] = titheRemittance;
-      if (debtObligations > 0) fixedAmountsByCategory["Debt Payments"] = debtObligations;
+      if (titheRemittance > 0)
+        fixedAmountsByCategory["Tithes/Church"] = titheRemittance;
+      if (debtObligations > 0)
+        fixedAmountsByCategory["Debt Payments"] = debtObligations;
       await budget.setupBudget({
         paydayDay,
         needsPct: computed.needsPct,
         wantsPct: computed.wantsPct,
         savingsPct: computed.savingsPct,
         interests: draft.interests,
-        fixedAmountsByCategory: Object.keys(fixedAmountsByCategory).length > 0 ? fixedAmountsByCategory : undefined,
+        fixedAmountsByCategory:
+          Object.keys(fixedAmountsByCategory).length > 0
+            ? fixedAmountsByCategory
+            : undefined,
         lifeStage: draft.lifeStage,
       });
 
@@ -550,7 +660,9 @@ export default function VitalsWizard() {
       }
 
       try {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        );
       } catch {
         // ignore
       }
@@ -562,12 +674,17 @@ export default function VitalsWizard() {
         // ignore
       }
 
-      router.replace("/(tabs)/budget");
+      setSuppressBudgetEmit(null);
+      emitBudgetChangedNow(user.id);
+
+      router.replace("/(tabs)/budget?tour=budget&fromVitals=1");
     } catch (e) {
       const offline = !(await isOnline());
       const message = offline
         ? "You're offline. Your progress is saved—try again when you're back online."
-        : (e instanceof Error ? e.message : "Something went wrong");
+        : e instanceof Error
+          ? e.message
+          : "Something went wrong";
       setError(message);
       try {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -592,7 +709,8 @@ export default function VitalsWizard() {
         />
       );
     }
-    if (draft.step === 2) return <StepLifeStage draft={draft} updateDraft={updateDraft} />;
+    if (draft.step === 2)
+      return <StepLifeStage draft={draft} updateDraft={updateDraft} />;
     if (draft.step === 3) {
       return (
         <StepFixedExpenses
@@ -604,7 +722,12 @@ export default function VitalsWizard() {
       );
     }
     if (draft.step === 4) {
-      return <StepInterests interests={draft.interests} onToggleInterest={toggleInterest} />;
+      return (
+        <StepInterests
+          interests={draft.interests}
+          onToggleInterest={toggleInterest}
+        />
+      );
     }
     return <StepGoal draft={draft} error={error} updateDraft={updateDraft} />;
   };
@@ -624,7 +747,8 @@ export default function VitalsWizard() {
         />
       );
     }
-    if (s === 2) return <StepLifeStage draft={draft} updateDraft={updateDraft} />;
+    if (s === 2)
+      return <StepLifeStage draft={draft} updateDraft={updateDraft} />;
     if (s === 3) {
       return (
         <StepFixedExpenses
@@ -636,7 +760,12 @@ export default function VitalsWizard() {
       );
     }
     if (s === 4) {
-      return <StepInterests interests={draft.interests} onToggleInterest={toggleInterest} />;
+      return (
+        <StepInterests
+          interests={draft.interests}
+          onToggleInterest={toggleInterest}
+        />
+      );
     }
     return <StepGoal draft={draft} error={error} updateDraft={updateDraft} />;
   };
@@ -645,8 +774,16 @@ export default function VitalsWizard() {
 
   if (noUser) {
     return (
-      <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: "#000000" }}>
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center", padding: 24 }}>
+      <SafeAreaView
+        edges={["top"]}
+        style={{ flex: 1, backgroundColor: "#000000" }}>
+        <View
+          style={{
+            flex: 1,
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 24,
+          }}>
           <Text
             style={{
               color: "#E2E8F0",
@@ -654,11 +791,12 @@ export default function VitalsWizard() {
               fontSize: 18,
               textAlign: "center",
               marginBottom: 16,
-            }}
-          >
+            }}>
             Please sign in to set up your budget.
           </Text>
-          <PrimaryButton onPress={() => router.replace("/auth")} style={{ minWidth: 200 }}>
+          <PrimaryButton
+            onPress={() => router.replace("/auth")}
+            style={{ minWidth: 200 }}>
             Sign in
           </PrimaryButton>
         </View>
@@ -667,7 +805,9 @@ export default function VitalsWizard() {
   }
 
   return (
-    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: "#000000" }}>
+    <SafeAreaView
+      edges={["top"]}
+      style={{ flex: 1, backgroundColor: "#000000" }}>
       {/* Progress neon line */}
       <View style={{ height: 3, backgroundColor: "rgba(16,185,129,0.18)" }}>
         <AnimatedView
@@ -692,13 +832,26 @@ export default function VitalsWizard() {
             paddingHorizontal: 20,
             paddingTop: 12,
             paddingBottom: 4,
-          }}
-        >
+          }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: "#9CA3AF", fontFamily: "Figtree-Medium", fontSize: 12, letterSpacing: 0.8, textTransform: "uppercase" }}>
+            <Text
+              style={{
+                color: "#9CA3AF",
+                fontFamily: "Figtree-Medium",
+                fontSize: 12,
+                letterSpacing: 0.8,
+                textTransform: "uppercase",
+              }}>
               Step {draft.step + 1} of {totalSteps}
             </Text>
-            <Text style={{ color: "#FFFFFF", fontFamily: "Figtree-Bold", fontSize: 28, marginTop: 8, letterSpacing: -0.5 }}>
+            <Text
+              style={{
+                color: "#FFFFFF",
+                fontFamily: "Figtree-Bold",
+                fontSize: 28,
+                marginTop: 8,
+                letterSpacing: -0.5,
+              }}>
               {title}
             </Text>
           </View>
@@ -714,10 +867,18 @@ export default function VitalsWizard() {
                 }
                 await handleSkip();
               }}
-              style={{ paddingVertical: 8, paddingHorizontal: 12, marginTop: 4 }}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Text style={{ color: "#94A3B8", fontFamily: "Figtree-Medium", fontSize: 15 }}>
+              style={{
+                paddingVertical: 8,
+                paddingHorizontal: 12,
+                marginTop: 4,
+              }}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+              <Text
+                style={{
+                  color: "#94A3B8",
+                  fontFamily: "Figtree-Medium",
+                  fontSize: 15,
+                }}>
                 Skip
               </Text>
             </Button>
@@ -730,36 +891,37 @@ export default function VitalsWizard() {
           ref={scrollViewRef}
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: bottomBarHeight }}
-          className="px-5 py-4"
-        >
-          {showValidationHint && draft.step > 0 && (draft.step === 5 ? !canFinish : !canContinue) && (
-            <Text
-              style={{
-                color: "#FCA5A5",
-                fontFamily: "Figtree-Regular",
-                fontSize: 13,
-                marginBottom: 12,
-              }}
-            >
-              Complete required fields above to continue.
-            </Text>
-          )}
+          className="px-5 py-4">
+          {showValidationHint &&
+            draft.step > 0 &&
+            (draft.step === 5 ? !canFinish : !canContinue) && (
+              <Text
+                style={{
+                  color: "#FCA5A5",
+                  fontFamily: "Figtree-Regular",
+                  fontSize: 13,
+                  marginBottom: 12,
+                }}>
+                Complete required fields above to continue.
+              </Text>
+            )}
 
           {/* Slide/scale transition stack - height adapts to step content */}
           <Animated.View style={[containerStyle]}>
             {outgoingStepRef.current !== null ? (
               <Animated.View
                 style={[StyleSheet.absoluteFill, outgoingStyle]}
-                accessibilityElementsHidden
-              >
+                accessibilityElementsHidden>
                 {outgoingNode()}
               </Animated.View>
             ) : null}
 
             <Animated.View
-              style={[{ position: "absolute", left: 0, right: 0, top: 0 }, incomingStyle]}
-              onLayout={onStepLayout}
-            >
+              style={[
+                { position: "absolute", left: 0, right: 0, top: 0 },
+                incomingStyle,
+              ]}
+              onLayout={onStepLayout}>
               {currentStepNode()}
             </Animated.View>
           </Animated.View>
@@ -779,13 +941,15 @@ export default function VitalsWizard() {
             backgroundColor: "#000000",
             borderTopWidth: 1,
             borderTopColor: "rgba(255,255,255,0.06)",
-          }}
-        >
+          }}>
           <View style={{ flexDirection: "row", gap: 10 }}>
             <SecondaryButton
-              onPress={draft.step === 0 ? () => router.replace("/(tabs)/budget") : goBack}
-              style={{ flex: 1 }}
-            >
+              onPress={
+                draft.step === 0
+                  ? handleSkip
+                  : goBack
+              }
+              style={{ flex: 1 }}>
               {draft.step === 0 ? "I'll do this later" : "Back"}
             </SecondaryButton>
 
@@ -793,8 +957,10 @@ export default function VitalsWizard() {
               <PrimaryButton
                 onPress={goNext}
                 disabled={!canContinue && draft.step > 0}
-                style={{ flex: 1, opacity: canContinue || draft.step === 0 ? 1 : 0.5 }}
-              >
+                style={{
+                  flex: 1,
+                  opacity: canContinue || draft.step === 0 ? 1 : 0.5,
+                }}>
                 Next
               </PrimaryButton>
             ) : (
@@ -802,9 +968,12 @@ export default function VitalsWizard() {
                 onPress={handleFinish}
                 loading={loading}
                 disabled={loading}
-                style={{ flex: 1, opacity: canFinish ? 1 : 0.5 }}
-              >
-                {editMode ? "Save changes" : "Finish"}
+                style={{ flex: 1, opacity: canFinish ? 1 : 0.5 }}>
+                {loading
+                  ? "Saving…"
+                  : editMode
+                    ? "Save changes"
+                    : "Finish"}
               </PrimaryButton>
             )}
           </View>
@@ -813,23 +982,21 @@ export default function VitalsWizard() {
             <Pressable
               onPress={() => {
                 void persistDraft(draft);
-                router.replace("/(tabs)/budget");
+                router.replace("/(tabs)");
               }}
               style={{
                 alignSelf: "center",
                 paddingVertical: 12,
                 paddingHorizontal: 16,
                 marginTop: 8,
-              }}
-            >
+              }}>
               <Text
                 style={{
                   color: "#64748B",
                   fontFamily: "Figtree-Regular",
                   fontSize: 12,
                   textDecorationLine: "underline",
-                }}
-              >
+                }}>
                 Save and continue later
               </Text>
             </Pressable>
@@ -839,4 +1006,3 @@ export default function VitalsWizard() {
     </SafeAreaView>
   );
 }
-

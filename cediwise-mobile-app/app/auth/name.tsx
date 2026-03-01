@@ -2,14 +2,13 @@ import { AppTextField } from '@/components/AppTextField';
 import { BackButton } from '@/components/BackButton';
 import { Card } from '@/components/Card';
 import { PrimaryButton } from '@/components/PrimaryButton';
-import {
-  getStoredAuthData,
-  updateUserProfileName,
-} from '@/utils/auth';
-import { getPostAuthRoute } from '@/utils/profileVitals';
-import { router } from 'expo-router';
+import { authTokens } from '@/constants/authTokens';
+import { useAuth } from '@/hooks/useAuth';
+import { getStoredAuthData, updateUserProfileName } from '@/utils/auth';
+import { onLoginSuccess } from '@/utils/authRouting';
 import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -22,15 +21,19 @@ export default function AuthNameScreen() {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const { refreshAuth } = useAuth();
 
   useEffect(() => {
-    getStoredAuthData().then(async (auth) => {
-      if (auth?.user?.name?.trim() && auth?.user?.id) {
-        const route = await getPostAuthRoute(auth.user.id);
-        router.replace(route);
-      }
-    });
-  }, []);
+    getStoredAuthData()
+      .then(async (auth) => {
+        if (auth?.user?.name?.trim() && auth?.user?.id) {
+          await refreshAuth();
+          await onLoginSuccess(auth.user.id);
+        }
+      })
+      .finally(() => setCheckingAuth(false));
+  }, [refreshAuth]);
 
   const onSubmit = async () => {
     setError(undefined);
@@ -45,11 +48,23 @@ export default function AuthNameScreen() {
       setError(result.error);
       return;
     }
-    const auth = await getStoredAuthData();
-    const route =
-      auth?.user?.id ? await getPostAuthRoute(auth.user.id) : '/(tabs)';
-    router.replace(route);
+    const stored = result.stored;
+    if (!stored?.user?.id) {
+      setError("We couldn't save your sign-in on this device. Tap to try again.");
+      return;
+    }
+    await refreshAuth();
+    await onLoginSuccess(stored.user.id);
   };
+
+  if (checkingAuth) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: authTokens.background }} className="flex-1 bg-background justify-center items-center">
+        <ActivityIndicator size="large" color={authTokens.spinner} />
+        <Text style={{ color: authTokens.textMuted, marginTop: 12, fontFamily: 'Figtree-Regular', fontSize: 15 }}>Loading...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView

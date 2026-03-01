@@ -1,4 +1,7 @@
-import { BudgetLoadingSkeleton } from "@/components/BudgetLoading";
+import {
+  BudgetLoadingSkeleton,
+  InlineSyncPill,
+} from "@/components/BudgetLoading";
 import { Card } from "@/components/Card";
 import { RolloverAllocationModal } from "@/components/RolloverAllocationModal";
 import { ApplyVitalsCard } from "@/components/features/budget/ApplyVitalsCard";
@@ -13,10 +16,13 @@ import { BudgetSetupCycleCard } from "@/components/features/budget/BudgetSetupCy
 import { BudgetToolsCard } from "@/components/features/budget/BudgetToolsCard";
 import { StartNewCycleCard } from "@/components/features/budget/StartNewCycleCard";
 import { useBudgetScreenState } from "@/components/features/budget/useBudgetScreenState";
+import { useTourContext } from "@/contexts/TourContext";
 import { useAppToast } from "@/hooks/useAppToast";
+import { useConnectivity } from "@/hooks/useConnectivity";
 import * as Haptics from "expo-haptics";
-import { useRouter } from "expo-router";
-import { Settings } from "lucide-react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { Bug, Settings, WifiOff } from "lucide-react-native";
+import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -25,18 +31,19 @@ import {
   Text,
   View,
 } from "react-native";
+import { TourZone, useTour } from "react-native-lumen";
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { InlineSyncPill } from "@/components/BudgetLoading";
 import {
   DEFAULT_EXPANDED_HEIGHT,
   DEFAULT_STANDARD_HEIGHT,
   ExpandedHeader,
 } from "@/components/CediWiseHeader";
+import { BUDGET_TOUR_READY_TIMEOUT_MS } from "@/constants/tourTokens";
 
 export default function BudgetScreen() {
   const router = useRouter();
@@ -57,6 +64,66 @@ export default function BudgetScreen() {
     scrollY.value = event.contentOffset.y;
   });
   const { showSuccess, showError } = useAppToast();
+  const params = useLocalSearchParams<{ tour?: string; fromVitals?: string }>();
+  const { startBudgetTour, skipBudgetTour, hasSeenBudgetTour } = useTourContext();
+  const { scrollViewRef } = useTour();
+  const { isConnected } = useConnectivity();
+  const fromVitals = params.fromVitals === "1";
+  const [initialSyncAttempted, setInitialSyncAttempted] = useState(false);
+  const initialSyncRanRef = useRef(false);
+
+  const showPostVitalsSkeleton =
+    fromVitals &&
+    (budget.isLoading ||
+      (budget.pendingCount > 0 && !initialSyncAttempted));
+
+  /** Tour zones (budget-overview, budget-actions) exist only when content is shown. */
+  const tourZonesReady =
+    !!user &&
+    !budget.isLoading &&
+    !showPostVitalsSkeleton;
+
+  useEffect(() => {
+    if (
+      params.tour !== "budget" ||
+      hasSeenBudgetTour !== false ||
+      !user?.id
+    ) {
+      return;
+    }
+
+    if (tourZonesReady) {
+      startBudgetTour();
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      void skipBudgetTour();
+    }, BUDGET_TOUR_READY_TIMEOUT_MS);
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    params.tour,
+    hasSeenBudgetTour,
+    user?.id,
+    tourZonesReady,
+    startBudgetTour,
+    skipBudgetTour,
+  ]);
+
+  useEffect(() => {
+    if (!fromVitals || initialSyncRanRef.current || !user?.id) return;
+    if (budget.isLoading) return;
+    initialSyncRanRef.current = true;
+    if (budget.pendingCount === 0) {
+      setInitialSyncAttempted(true);
+      return;
+    }
+    budget
+      .syncNow()
+      .catch(() => { })
+      .finally(() => setInitialSyncAttempted(true));
+  }, [fromVitals, user?.id, budget.isLoading, budget.pendingCount, budget.syncNow]);
 
   const handleApplyVitals = async () => {
     const v = derived.vitalsSummary?.v;
@@ -127,6 +194,20 @@ export default function BudgetScreen() {
         title="Budget"
         subtitle="Needs / Wants / Savings — payday-based."
         actions={[
+          isConnected === false && (
+            <View
+              key="offline"
+              className="mr-1 px-2 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 flex-row items-center gap-1">
+              <WifiOff size={12} color="#FCA5A5" />
+              <Text className="text-red-300 font-medium text-[10px]">Offline</Text>
+            </View>
+          ),
+          <Pressable
+            key="debug-tour"
+            onPress={startBudgetTour}
+            className="w-9 h-9 mr-1 rounded-full justify-center items-center bg-slate-500/10 border border-slate-400/20 active:bg-slate-500/20">
+            <Bug size={18} color="#94A3B8" />
+          </Pressable>,
           <InlineSyncPill
             key="sync-pill"
             visible={budget.isSyncing || refreshing || budget.retryIn !== null}
@@ -147,7 +228,7 @@ export default function BudgetScreen() {
               key="settings"
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(
-                  () => {},
+                  () => { },
                 );
                 router.push("/budget/settings");
               }}
@@ -163,6 +244,7 @@ export default function BudgetScreen() {
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}>
         <Animated.ScrollView
+          ref={scrollViewRef}
           onScroll={scrollHandler}
           scrollEventThrottle={16}
           snapToOffsets={[0, DEFAULT_EXPANDED_HEIGHT - DEFAULT_STANDARD_HEIGHT]}
@@ -243,7 +325,7 @@ export default function BudgetScreen() {
                   Budget data is tied to your account for syncing.
                 </Text>
               </Card>
-            ) : budget.isLoading ? (
+            ) : budget.isLoading || showPostVitalsSkeleton ? (
               <BudgetLoadingSkeleton />
             ) : (
               <>
@@ -285,34 +367,54 @@ export default function BudgetScreen() {
                   }}
                 />
 
-                <BudgetOverviewCard
-                  visible={
-                    !derived.cycleHasEnded &&
-                    !!budget.totals &&
-                    derived.hasIncomeSources
-                  }
-                  cycle={derived.activeCycle}
-                  totals={budget.totals}
-                  healthScore={ui.budgetHealthScore?.score ?? null}
-                  healthLabel={
-                    (ui.budgetHealthScore?.score ?? 0) >= 75
-                      ? "On track"
-                      : (ui.budgetHealthScore?.score ?? 0) >= 50
-                        ? "Needs attention"
-                        : "At risk"
-                  }
-                  healthSummary={ui.budgetHealthScore?.summary}
-                />
+                <TourZone
+                  stepKey="budget-overview"
+                  name="Budget Overview"
+                  description="Your budget overview. Track needs, wants, and savings here."
+                  shape="rounded-rect"
+                  borderRadius={16}
+                  style={{ width: "100%" }}>
+                  <View collapsable={false}>
+                    <BudgetOverviewCard
+                      visible={
+                        !derived.cycleHasEnded &&
+                        !!budget.totals &&
+                        derived.hasIncomeSources
+                      }
+                      cycle={derived.activeCycle}
+                      totals={budget.totals}
+                      healthScore={ui.budgetHealthScore?.score ?? null}
+                      healthLabel={
+                        (ui.budgetHealthScore?.score ?? 0) >= 75
+                          ? "On track"
+                          : (ui.budgetHealthScore?.score ?? 0) >= 50
+                            ? "Needs attention"
+                            : "At risk"
+                      }
+                      healthSummary={ui.budgetHealthScore?.summary}
+                    />
+                  </View>
+                </TourZone>
 
-                <BudgetQuickActions
-                  visible={
-                    !derived.cycleHasEnded &&
-                    derived.cycleIsSet &&
-                    derived.hasIncomeSources
-                  }
-                  onLogExpense={() => modals.setShowTxModal(true)}
-                  disabledLogExpense={!derived.activeCycleId}
-                />
+                <TourZone
+                  stepKey="budget-actions"
+                  name="Quick Actions"
+                  description="Record expenses and manage your cycle from here."
+                  shape="rounded-rect"
+                  borderRadius={16}
+                  style={{ width: "100%" }}>
+                  <View collapsable={false}>
+                    <BudgetQuickActions
+                      visible={
+                        !derived.cycleHasEnded &&
+                        derived.cycleIsSet &&
+                        derived.hasIncomeSources
+                      }
+                      onLogExpense={() => modals.setShowTxModal(true)}
+                      disabledLogExpense={!derived.activeCycleId}
+                    />
+                  </View>
+                </TourZone>
 
                 <BudgetExpensesCard
                   visible={derived.cycleIsSet && !derived.cycleHasEnded}
@@ -414,8 +516,8 @@ export default function BudgetScreen() {
         totalAmount={
           ui.pendingRollover
             ? ui.pendingRollover.rollover.needs +
-              ui.pendingRollover.rollover.wants +
-              ui.pendingRollover.rollover.savings
+            ui.pendingRollover.rollover.wants +
+            ui.pendingRollover.rollover.savings
             : 0
         }
         destinations={ui.pendingRollover?.savingsCategories ?? []}

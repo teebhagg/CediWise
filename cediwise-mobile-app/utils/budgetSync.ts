@@ -467,6 +467,28 @@ export async function trySyncMutation(
   return result;
 }
 
+/**
+ * Sync a profile mutation with retries. Use when online to ensure profile is
+ * persisted before navigation (prevents setupCompleted conflicts on home/budget).
+ */
+export async function trySyncProfileWithRetries(
+  userId: string,
+  mutation: BudgetMutation,
+  maxAttempts = 3,
+  backoffMs = 1000
+): Promise<AttemptResult> {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const result = await trySyncMutation(userId, mutation);
+    if (result.ok) return result;
+    if (attempt < maxAttempts - 1) {
+      await new Promise((r) => setTimeout(r, backoffMs));
+    } else {
+      return result;
+    }
+  }
+  return { ok: false, error: "Sync failed after retries" };
+}
+
 const MUTATION_DEPENDENCY_ORDER: Record<string, number> = {
   upsert_profile: 0,
   upsert_cycle: 1,

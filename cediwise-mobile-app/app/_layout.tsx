@@ -8,7 +8,7 @@ import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import * as WebBrowser from "expo-web-browser";
 import { HeroUINativeProvider } from "heroui-native";
 import { useEffect, useState } from "react";
-import { Platform, StatusBar, View } from "react-native";
+import { AppState, Platform, StatusBar, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import {
@@ -19,11 +19,13 @@ import { Uniwind } from "uniwind";
 import { RootErrorBoundary } from "../components/RootErrorBoundary";
 import { TourErrorBoundary } from "../components/tour/TourErrorBoundary";
 import { AuthProvider } from "../contexts/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import {
   TourProvider,
   TourProviderFallback,
 } from "../contexts/TourContext";
 import { useAuthRefresh } from "../hooks/useAuthRefresh";
+import { initNotificationSystem } from "../services/notifications";
 import "./globals.css";
 
 // Apply dark theme before first paint (same as NativeWind dark app)
@@ -32,6 +34,21 @@ Uniwind.setTheme("dark");
 SplashScreen.preventAutoHideAsync();
 
 function AppShell() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    void initNotificationSystem(user?.id ?? null);
+  }, [user?.id]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        void initNotificationSystem(user?.id ?? null);
+      }
+    });
+    return () => sub.remove();
+  }, [user?.id]);
+
   return (
     <View style={{ flex: 1, backgroundColor: "black" }}>
       <StatusBar backgroundColor="black" translucent={true} />

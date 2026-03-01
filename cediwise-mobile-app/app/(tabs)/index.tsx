@@ -1,5 +1,4 @@
 import { usePathname, useRouter } from "expo-router";
-import { Bug } from "lucide-react-native";
 import { useCallback, useEffect } from "react";
 import {
   Platform,
@@ -121,12 +120,6 @@ export default function DashboardScreen() {
         collapsedTitle={headerCollapsedTitle}
         subtitle={headerSubtitle}
         actions={[
-          <Pressable
-            key="debug-tour"
-            onPress={startHomeTour}
-            style={{ marginRight: 8, padding: 8 }}>
-            <Bug color="white" size={20} />
-          </Pressable>,
           !authLoading && (
             <TourZone
               stepKey="home-profile"

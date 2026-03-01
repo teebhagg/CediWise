@@ -21,7 +21,7 @@ import { useAppToast } from "@/hooks/useAppToast";
 import { useConnectivity } from "@/hooks/useConnectivity";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Bug, Settings, WifiOff } from "lucide-react-native";
+import { Settings, WifiOff } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -202,12 +202,6 @@ export default function BudgetScreen() {
               <Text className="text-red-300 font-medium text-[10px]">Offline</Text>
             </View>
           ),
-          <Pressable
-            key="debug-tour"
-            onPress={startBudgetTour}
-            className="w-9 h-9 mr-1 rounded-full justify-center items-center bg-slate-500/10 border border-slate-400/20 active:bg-slate-500/20">
-            <Bug size={18} color="#94A3B8" />
-          </Pressable>,
           <InlineSyncPill
             key="sync-pill"
             visible={budget.isSyncing || refreshing || budget.retryIn !== null}

@@ -9,6 +9,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   lessons: "Lessons",
   new: "New",
   feedback: "Feedback",
+  emails: "Emails",
   progress: "Progress",
   "tbill-rates": "T-Bill Rates",
   notifications: "Notifications",

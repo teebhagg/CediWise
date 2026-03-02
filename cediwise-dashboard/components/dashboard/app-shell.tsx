@@ -30,9 +30,11 @@ import {
   BookOpen01Icon,
   DashboardSquare01Icon,
   Logout01Icon,
+  MessageQuestionIcon,
   Notification01Icon,
   SearchIcon,
   Settings01Icon,
+  Mail01Icon,
   UserGroupIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -44,6 +46,8 @@ const navItems = [
   { href: "/", label: "Dashboard", icon: DashboardSquare01Icon },
   { href: "/users", label: "Users", icon: UserGroupIcon },
   { href: "/learning-data", label: "Learning Data", icon: BookOpen01Icon },
+  { href: "/feedback", label: "App Feedback", icon: MessageQuestionIcon },
+  { href: "/emails", label: "Emails", icon: Mail01Icon },
   { href: "/notifications", label: "Notifications", icon: Notification01Icon },
   { href: "/announcements", label: "Announcements", icon: Notification01Icon },
   { href: "/settings", label: "Settings", icon: Settings01Icon },

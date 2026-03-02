@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { EmailComposerDialog } from "@/components/emails/email-composer-dialog";
 import {
   Card,
   CardContent,
@@ -86,6 +87,25 @@ export default async function UserDetailPage({
             {secondary ? `${secondary} · ` : ""}
             {user.id}
           </p>
+        </div>
+        <div className="ml-auto">
+          {user.email ? (
+            <EmailComposerDialog
+              triggerLabel="Send Email"
+              triggerVariant="default"
+              triggerSize="default"
+              recipients={[{ userId: user.id, email: user.email ?? "", name: name ?? undefined }]}
+              lockedRecipients={true}
+              audienceType="single"
+              source="user_profile"
+              title="Email user"
+              description="Send a branded email directly to this user."
+            />
+          ) : (
+            <Button variant="ghost" disabled>
+              No email on file
+            </Button>
+          )}
         </div>
       </div>
 

@@ -80,7 +80,7 @@ function renderSection(section: unknown, i: number): React.ReactNode {
       return (
         <div key={i} className="my-4 overflow-x-auto rounded-md border border-border">
           <table className="w-full text-sm">
-            {section.caption && (
+            {typeof section.caption === "string" && (
               <caption className="text-muted-foreground px-2 py-1 text-left text-xs">
                 {String(section.caption)}
               </caption>
@@ -111,7 +111,7 @@ function renderSection(section: unknown, i: number): React.ReactNode {
     case "example":
       return (
         <div key={i} className="my-3 rounded-md border border-border bg-muted/20 p-3">
-          {section.title && (
+          {typeof section.title === "string" && (
             <p className="text-foreground mb-1 font-medium text-sm">
               {String(section.title)}
             </p>
@@ -155,7 +155,7 @@ function renderSection(section: unknown, i: number): React.ReactNode {
       return (
         <div key={i} className="my-3 rounded-md border border-primary/30 bg-primary/5 p-3">
           <p className="font-medium text-foreground">{String(section.label ?? "")}</p>
-          {section.description && (
+          {typeof section.description === "string" && (
             <p className="text-muted-foreground mt-1 text-sm">
               {String(section.description)}
             </p>

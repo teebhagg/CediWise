@@ -31,6 +31,7 @@ const ROUTES = [
   { href: "/learning-data/progress", label: "Progress", icon: BookOpen01Icon, keywords: ["stats", "tracking"] },
   { href: "/learning-data/tbill-rates", label: "T-Bill Rates", icon: BookOpen01Icon, keywords: ["treasury", "rates"] },
   { href: "/notifications", label: "Notifications", icon: Notification01Icon, keywords: ["alerts"] },
+  { href: "/announcements", label: "Announcements", icon: Notification01Icon, keywords: ["push", "broadcast"] },
   { href: "/settings", label: "Settings", icon: Settings01Icon, keywords: ["preferences"] },
 ] as const;
 

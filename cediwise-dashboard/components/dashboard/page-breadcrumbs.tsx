@@ -12,6 +12,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   progress: "Progress",
   "tbill-rates": "T-Bill Rates",
   notifications: "Notifications",
+  announcements: "Announcements",
   settings: "Settings",
 };
 

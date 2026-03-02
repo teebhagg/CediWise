@@ -74,6 +74,25 @@ npm run dev
 
 ---
 
+## Releases & Distribution
+
+### Android (Play Store)
+
+- Newer **Android builds** are now distributed via the **Google Play Store** (testing track) instead of standalone APK files.
+- To join the testing track:
+  - Click/Press the "Join Beta" on [CediWise](https://cediwise.app) 
+  - Use a Google account to join the CediWise Test Group on Google Group.
+  - After joinnin the Group Opt In for Closed testing to download the app.
+  - Open the link on your device, accept the invitation, and install **CediWise** from the Play Store.
+- For local development builds, you can still run the app with the **Mobile (Expo)** steps above.
+
+### Web
+
+- The official production web app is live at `https://cediwise.app`.
+- Use the **Web** quick start steps above for local development and contributing UI/UX changes.
+
+---
+
 ## Environment
 
 | Variable                   | Description          |

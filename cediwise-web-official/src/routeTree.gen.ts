@@ -14,6 +14,7 @@ import { Route as SmeLedgerRouteImport } from './routes/sme-ledger'
 import { Route as SalaryCalculatorRouteImport } from './routes/salary-calculator'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as FinancialLiteracyRouteImport } from './routes/financial-literacy'
+import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as BudgetingToolRouteImport } from './routes/budgeting-tool'
 import { Route as AboutRouteImport } from './routes/about'
@@ -44,6 +45,11 @@ const FinancialLiteracyRoute = FinancialLiteracyRouteImport.update({
   path: '/financial-literacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FeedbackRoute = FeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/budgeting-tool': typeof BudgetingToolRoute
   '/contact': typeof ContactRoute
+  '/feedback': typeof FeedbackRoute
   '/financial-literacy': typeof FinancialLiteracyRoute
   '/privacy': typeof PrivacyRoute
   '/salary-calculator': typeof SalaryCalculatorRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/budgeting-tool': typeof BudgetingToolRoute
   '/contact': typeof ContactRoute
+  '/feedback': typeof FeedbackRoute
   '/financial-literacy': typeof FinancialLiteracyRoute
   '/privacy': typeof PrivacyRoute
   '/salary-calculator': typeof SalaryCalculatorRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/budgeting-tool': typeof BudgetingToolRoute
   '/contact': typeof ContactRoute
+  '/feedback': typeof FeedbackRoute
   '/financial-literacy': typeof FinancialLiteracyRoute
   '/privacy': typeof PrivacyRoute
   '/salary-calculator': typeof SalaryCalculatorRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/budgeting-tool'
     | '/contact'
+    | '/feedback'
     | '/financial-literacy'
     | '/privacy'
     | '/salary-calculator'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/budgeting-tool'
     | '/contact'
+    | '/feedback'
     | '/financial-literacy'
     | '/privacy'
     | '/salary-calculator'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/budgeting-tool'
     | '/contact'
+    | '/feedback'
     | '/financial-literacy'
     | '/privacy'
     | '/salary-calculator'
@@ -140,6 +152,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   BudgetingToolRoute: typeof BudgetingToolRoute
   ContactRoute: typeof ContactRoute
+  FeedbackRoute: typeof FeedbackRoute
   FinancialLiteracyRoute: typeof FinancialLiteracyRoute
   PrivacyRoute: typeof PrivacyRoute
   SalaryCalculatorRoute: typeof SalaryCalculatorRoute
@@ -184,6 +197,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FinancialLiteracyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/feedback': {
+      id: '/feedback'
+      path: '/feedback'
+      fullPath: '/feedback'
+      preLoaderRoute: typeof FeedbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/contact': {
       id: '/contact'
       path: '/contact'
@@ -220,6 +240,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   BudgetingToolRoute: BudgetingToolRoute,
   ContactRoute: ContactRoute,
+  FeedbackRoute: FeedbackRoute,
   FinancialLiteracyRoute: FinancialLiteracyRoute,
   PrivacyRoute: PrivacyRoute,
   SalaryCalculatorRoute: SalaryCalculatorRoute,

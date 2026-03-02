@@ -18,6 +18,7 @@ const footerLinks = [
       { name: 'Budgeting Tool', href: '/budgeting-tool' },
       { name: 'SME Ledger', href: '/sme-ledger' },
       { name: 'Financial Literacy', href: '/financial-literacy' },
+      { name: 'Feedback', href: '/feedback' },
     ],
   },
   {

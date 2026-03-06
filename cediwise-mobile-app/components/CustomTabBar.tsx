@@ -29,8 +29,8 @@ const INDICATOR_RADIUS = 20;
 
 const INDICATOR_MAX_WIDTH = 85;
 const INDICATOR_MIN_WIDTH = 30;
-const BG = "#020617";
-const BORDER = "rgba(255,255,255,0.10)";
+const BG = "#0f172a";
+const BORDER = "rgba(255,255,255,0.14)";
 const ACTIVE = "#22C55E";
 const INACTIVE = "#94A3B8";
 
@@ -141,8 +141,8 @@ export function CustomTabBar(props: BottomTabBarProps) {
                   route.name === "budget" ? (
                     <TourZone
                       stepKey="budget-tab"
-                      name="Budget Tab"
-                      description="Return here anytime to check your budget."
+                      name="Create your first budget"
+                      description="Let's build your budget now. Use the tools above to set up your first cycle."
                       shape="circle"
                       zoneStyle={{ padding: 16 }}>
                       <View collapsable={false}>{icon}</View>

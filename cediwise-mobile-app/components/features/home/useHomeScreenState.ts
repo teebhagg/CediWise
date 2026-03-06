@@ -103,7 +103,7 @@ export function useHomeScreenState(): UseHomeScreenStateReturn {
   const [refreshing, setRefreshing] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [estimateTaxEnabled, setEstimateTaxEnabled] = useState(true);
-  const didHydrateRef = useRef(false);
+  const didVitalsRefreshRef = useRef(false);
 
   const overviewAnim = useSharedValue(0);
   const salaryAnim = useSharedValue(0);
@@ -111,11 +111,10 @@ export function useHomeScreenState(): UseHomeScreenStateReturn {
 
   useEffect(() => {
     if (!user?.id) return;
-    if (didHydrateRef.current) return;
-    didHydrateRef.current = true;
-    void hydrateFromRemote();
+    if (didVitalsRefreshRef.current) return;
+    didVitalsRefreshRef.current = true;
     void profileVitals.refresh();
-  }, [hydrateFromRemote, profileVitals, user?.id]);
+  }, [profileVitals, user?.id]);
 
   const activeCycleId = useMemo(() => {
     const sorted = [...(budgetState?.cycles ?? [])].sort(

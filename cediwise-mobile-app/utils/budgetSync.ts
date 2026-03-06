@@ -178,6 +178,7 @@ async function attemptMutationRemote(
 
     if (kind === "reset_budget") {
       const userId = payload.user_id;
+      const removeProfile = payload.remove_profile === true;
       if (!isUuid(userId)) {
         return { ok: false, error: "Invalid user id for reset." };
       }
@@ -248,13 +249,22 @@ async function attemptMutationRemote(
       if (delAdjustments.error)
         return { ok: false, error: delAdjustments.error.message };
 
-      // Clear budget prefs (if profile row exists)
-      const updProfile = await supabase
-        .from("profiles")
-        .update({ payday_day: null })
-        .eq("id", userId);
-      if (updProfile.error)
-        return { ok: false, error: updProfile.error.message };
+      if (removeProfile) {
+        const delProfile = await supabase
+          .from("profiles")
+          .delete()
+          .eq("id", userId);
+        if (delProfile.error)
+          return { ok: false, error: delProfile.error.message };
+      } else {
+        // Clear budget prefs (if profile row exists)
+        const updProfile = await supabase
+          .from("profiles")
+          .update({ payday_day: null })
+          .eq("id", userId);
+        if (updProfile.error)
+          return { ok: false, error: updProfile.error.message };
+      }
 
       return { ok: true };
     }
@@ -498,6 +508,7 @@ const MUTATION_DEPENDENCY_ORDER: Record<string, number> = {
   delete_transaction: 5,
 };
 
+/** Processes one sync run (start→end). Caller must refresh queue only after this returns so UI updates only on run boundaries. */
 export async function flushBudgetQueue(
   userId: string,
   limit = 25
@@ -523,4 +534,97 @@ export async function flushBudgetQueue(
   }
 
   return { okCount, failCount };
+}
+
+/**
+ * Delete all budget-related data from the server (and optionally profile prefs).
+ * Does not use the queue; performs deletes directly. Caller should clear local
+ * state and queue after this succeeds.
+ */
+export async function deleteAllBudgetDataFromServer(
+  userId: string,
+  options: { removeProfile: boolean }
+): Promise<AttemptResult> {
+  if (!isUuid(userId)) {
+    return { ok: false, error: "Invalid user id." };
+  }
+  if (!supabase) return { ok: false, error: "Supabase not configured" };
+
+  try {
+    const delTx = await supabase
+      .from("budget_transactions")
+      .delete()
+      .eq("user_id", userId);
+    if (delTx.error) return { ok: false, error: delTx.error.message };
+
+    const delCats = await supabase
+      .from("budget_categories")
+      .delete()
+      .eq("user_id", userId);
+    if (delCats.error) return { ok: false, error: delCats.error.message };
+
+    const delCycles = await supabase
+      .from("budget_cycles")
+      .delete()
+      .eq("user_id", userId);
+    if (delCycles.error) return { ok: false, error: delCycles.error.message };
+
+    const delIncome = await supabase
+      .from("income_sources")
+      .delete()
+      .eq("user_id", userId);
+    if (delIncome.error) return { ok: false, error: delIncome.error.message };
+
+    const delGoals = await supabase
+      .from("savings_goals")
+      .delete()
+      .eq("user_id", userId);
+    if (delGoals.error) return { ok: false, error: delGoals.error.message };
+
+    const delUtils = await supabase
+      .from("utility_logs")
+      .delete()
+      .eq("user_id", userId);
+    if (delUtils.error) return { ok: false, error: delUtils.error.message };
+
+    const delRecurring = await supabase
+      .from("recurring_expenses")
+      .delete()
+      .eq("user_id", userId);
+    if (delRecurring.error)
+      return { ok: false, error: delRecurring.error.message };
+
+    const delDebts = await supabase
+      .from("debts")
+      .delete()
+      .eq("user_id", userId);
+    if (delDebts.error) return { ok: false, error: delDebts.error.message };
+
+    const delPatterns = await supabase
+      .from("spending_patterns")
+      .delete()
+      .eq("user_id", userId);
+    if (delPatterns.error)
+      return { ok: false, error: delPatterns.error.message };
+
+    const delAdjustments = await supabase
+      .from("budget_adjustments_log")
+      .delete()
+      .eq("user_id", userId);
+    if (delAdjustments.error)
+      return { ok: false, error: delAdjustments.error.message };
+
+    if (options.removeProfile) {
+      const delProfile = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", userId);
+      if (delProfile.error)
+        return { ok: false, error: delProfile.error.message };
+    }
+
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: errorMessage(e) };
+  }
 }

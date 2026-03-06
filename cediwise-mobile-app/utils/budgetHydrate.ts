@@ -15,6 +15,13 @@ type HydrateResult =
 
 type HydrateMode = "replace" | "merge";
 
+/**
+ * Max transactions fetched from remote during hydrate. Only the latest N by occurred_at
+ * are pulled. Replace mode can therefore drop older transactions if the user has more
+ * than this on the server; merge mode keeps local-only and local-winning-by-id data.
+ */
+const REMOTE_TRANSACTIONS_LIMIT = 500;
+
 const toNumber = (v: unknown): number => {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   if (typeof v === "string" && v.trim().length > 0) {
@@ -149,7 +156,7 @@ export async function fetchBudgetStateRemote(
     updatedAt: String(r.updated_at ?? new Date().toISOString()),
   }));
 
-  // Transactions (cap to prevent huge pulls in seed phase)
+  // Transactions: cap to avoid huge pulls (see REMOTE_TRANSACTIONS_LIMIT).
   const txRes = await supabase
     .from("budget_transactions")
     .select(
@@ -157,7 +164,7 @@ export async function fetchBudgetStateRemote(
     )
     .eq("user_id", userId)
     .order("occurred_at", { ascending: false })
-    .limit(500);
+    .limit(REMOTE_TRANSACTIONS_LIMIT);
   if (txRes.error) throw txRes.error;
 
   const transactions: BudgetTransaction[] = (txRes.data ?? []).map(
@@ -183,7 +190,10 @@ export async function fetchBudgetStateRemote(
     })
   );
 
-  // If absolutely nothing exists remotely, treat as no data.
+  // If absolutely nothing exists remotely, treat as no data (caller won't replace local).
+  // When hasAny is true but cycles/categories/transactions are empty (e.g. profile row
+  // only), we still build and return a state; replace mode can then overwrite local with
+  // that empty state (server as source of truth). Rare if server was cleared.
   const hasAny =
     !!profileRes.data ||
     incomeSources.length > 0 ||

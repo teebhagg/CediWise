@@ -55,6 +55,7 @@ export function useBudgetScreenState() {
     updateCycleAllocation,
     insertDebt,
     resetBudget,
+    deleteAllBudgetData,
     computeNewCyclePreview,
     createNewCycleFromPreview,
     createNewCycleImmediate,
@@ -65,7 +66,7 @@ export function useBudgetScreenState() {
   } = useBudget(user?.id);
 
   const [refreshing, setRefreshing] = useState(false);
-  const didHydrateRef = useRef(false);
+  const didVitalsRefreshRef = useRef(false);
 
   const [paydayDay, setPaydayDay] = useState("25");
   const [cycleDayError, setCycleDayError] = useState<string | null>(null);
@@ -176,11 +177,10 @@ export function useBudgetScreenState() {
 
   useEffect(() => {
     if (!user?.id) return;
-    if (didHydrateRef.current) return;
-    didHydrateRef.current = true;
-    void hydrateFromRemote();
+    if (didVitalsRefreshRef.current) return;
+    didVitalsRefreshRef.current = true;
     void profileVitals.refresh();
-  }, [hydrateFromRemote, profileVitals, user?.id]);
+  }, [profileVitals, user?.id]);
 
   useEffect(() => {
     if (
@@ -211,7 +211,7 @@ export function useBudgetScreenState() {
   const activeCycleId = useMemo(() => {
     const sorted = [...(state?.cycles ?? [])].sort(
       (a, b) =>
-        new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+        new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
     );
     return sorted[0]?.id ?? null;
   }, [state?.cycles]);
@@ -219,7 +219,7 @@ export function useBudgetScreenState() {
   const activeCycle = useMemo(() => {
     const sorted = [...(state?.cycles ?? [])].sort(
       (a, b) =>
-        new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+        new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
     );
     return sorted[0] ?? null;
   }, [state?.cycles]);
@@ -227,7 +227,7 @@ export function useBudgetScreenState() {
   const previousCycle = useMemo(() => {
     const sorted = [...(state?.cycles ?? [])].sort(
       (a, b) =>
-        new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+        new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
     );
     return sorted[1] ?? null;
   }, [state?.cycles]);
@@ -236,7 +236,7 @@ export function useBudgetScreenState() {
     if (!previousCycle) {
       if (__DEV__ && (state?.cycles?.length ?? 0) >= 1) {
         console.log(
-          "[Reallocation] No previous cycle – need at least 2 cycles"
+          "[Reallocation] No previous cycle – need at least 2 cycles",
         );
       }
       return null;
@@ -245,7 +245,7 @@ export function useBudgetScreenState() {
       if (__DEV__) {
         console.log(
           "[Reallocation] No income – monthlyNetIncome:",
-          totals?.monthlyNetIncome ?? 0
+          totals?.monthlyNetIncome ?? 0,
         );
       }
       return null;
@@ -261,7 +261,7 @@ export function useBudgetScreenState() {
       return null;
     }
     const prevTxCount = state.transactions.filter(
-      (t) => t.cycleId === previousCycle.id
+      (t) => t.cycleId === previousCycle.id,
     ).length;
     if (prevTxCount === 0 && __DEV__) {
       console.log("[Reallocation] Previous cycle has no transactions");
@@ -269,11 +269,11 @@ export function useBudgetScreenState() {
     const suggestion = analyzeAndSuggestReallocation(
       previousCycle,
       state.transactions,
-      totals.monthlyNetIncome
+      totals.monthlyNetIncome,
     );
     if (__DEV__ && !suggestion.shouldReallocate) {
       console.log(
-        "[Reallocation] Engine returned shouldReallocate=false (need both >8% overspend and >12% underspend by bucket)"
+        "[Reallocation] Engine returned shouldReallocate=false (need both >8% overspend and >12% underspend by bucket)",
       );
     }
     return suggestion.shouldReallocate ? suggestion : null;
@@ -303,7 +303,7 @@ export function useBudgetScreenState() {
         v.tithe_remittance +
         v.debt_obligations +
         v.utilities_total +
-        DEFAULT_MIN_LIVING_BUFFER
+        DEFAULT_MIN_LIVING_BUFFER,
     );
     const ratio = netIncome > 0 ? fixedCosts / netIncome : null;
     return { v, netIncome, fixedCosts, ratio };
@@ -361,7 +361,7 @@ export function useBudgetScreenState() {
         name: c.name,
         limitAmount: c.limitAmount,
       })),
-      state.transactions
+      state.transactions,
     )
       .then((insights) => {
         if (!cancelled) {
@@ -389,12 +389,12 @@ export function useBudgetScreenState() {
                   savingsLimit: totals.savingsLimit,
                 }
               : undefined,
-            { cycleEndDate: activeCycle?.endDate }
+            { cycleEndDate: activeCycle?.endDate },
           );
           setAdvisorRecommendations(recs);
           if (totals) {
             const overCount = insights.filter(
-              (i) => i.spent > i.limit && i.limit > 0
+              (i) => i.spent > i.limit && i.limit > 0,
             ).length;
             const overDetails = insights
               .filter((i) => i.spent > i.limit && i.limit > 0)
@@ -408,20 +408,20 @@ export function useBudgetScreenState() {
             const overspendTrend = overTrends.includes("increasing")
               ? "increasing"
               : overTrends.includes("decreasing")
-              ? "decreasing"
-              : undefined;
+                ? "decreasing"
+                : undefined;
             const savingsInsights = insights.filter((i) =>
               catById.get(i.categoryId)
                 ? catById.get(i.categoryId)!.bucket === "savings"
-                : false
+                : false,
             );
             const savingsTrend = savingsInsights.some(
-              (i) => i.trend === "increasing"
+              (i) => i.trend === "increasing",
             )
               ? "increasing"
               : savingsInsights.some((i) => i.trend === "decreasing")
-              ? "decreasing"
-              : undefined;
+                ? "decreasing"
+                : undefined;
             const savingsConsistent =
               totals.savingsLimit > 0 &&
               totals.spentByBucket.savings >= totals.savingsLimit * 0.8;
@@ -441,7 +441,26 @@ export function useBudgetScreenState() {
               savingsTrend,
               savingsConsistent,
             });
-            setBudgetHealthScore(health);
+            const allocationHints: string[] = [];
+            if (activeCycle && totals.monthlyNetIncome > 0) {
+              if (activeCycle.savingsPct < 0.05) {
+                allocationHints.push(
+                  "Savings is below 5%. Consider increasing to build an emergency fund.",
+                );
+              }
+              const totalAllocated =
+                totals.needsLimit + totals.wantsLimit + totals.savingsLimit;
+              if (totalAllocated > totals.monthlyNetIncome * 1.1) {
+                allocationHints.push(
+                  "You're allocating more than your income. Adjust allocations to stay within budget.",
+                );
+              }
+            }
+            const summary =
+              allocationHints.length > 0
+                ? `${health.summary} ${allocationHints.join(" ")}`
+                : health.summary;
+            setBudgetHealthScore({ score: health.score, summary });
           } else {
             setBudgetHealthScore(null);
           }
@@ -477,7 +496,7 @@ export function useBudgetScreenState() {
           (t) =>
             t.cycleId === activeCycleId &&
             t.bucket === "needs" &&
-            t.categoryId === categoryId
+            t.categoryId === categoryId,
         )
         .reduce((s, t) => s + t.amount, 0);
       return spent + nextAmount > category.limitAmount;
@@ -488,8 +507,8 @@ export function useBudgetScreenState() {
     retryIn !== null
       ? `Trying again in ${retryIn}…`
       : isSyncing || refreshing
-      ? "Syncing…"
-      : "Syncing…";
+        ? "Syncing…"
+        : "Syncing…";
 
   const incomeAccentColors = useMemo(
     () => [
@@ -501,19 +520,19 @@ export function useBudgetScreenState() {
       "#84CC16",
       "#14B8A6",
     ],
-    []
+    [],
   );
 
   const onRefresh = async () => {
     setRefreshing(true);
     const start = Date.now();
     try {
-      await syncNow();
-      await hydrateFromRemote({ force: true });
-      await profileVitals.refresh();
-      await fetchEnableAutoReallocation();
-      await reload();
-      await recalculateBudget();
+      await syncNow(); // Sync the budget state with the remote
+      await hydrateFromRemote({ force: true }); // Hydrate the budget state from the remote
+      await profileVitals.refresh(); // Refresh the profile vitals
+      await fetchEnableAutoReallocation(); // Fetch the enable auto reallocation setting
+      await reload(); // Reload the budget state
+      await recalculateBudget(); // Recalculate the budget
     } catch {
       // ignore
     } finally {
@@ -586,7 +605,7 @@ export function useBudgetScreenState() {
       setPendingCategoryAction({ type: "add", params });
       setShowAllocationExceededModal(true);
     },
-    [activeCycle, state?.categories, state?.incomeSources, addCategory]
+    [activeCycle, state?.categories, state?.incomeSources, addCategory],
   );
 
   const handleUpdateCategoryLimit = useCallback(
@@ -618,7 +637,7 @@ export function useBudgetScreenState() {
       setPendingCategoryAction({ type: "update", id, nextLimit });
       setShowAllocationExceededModal(true);
     },
-    [activeCycle, state?.categories, state?.incomeSources, updateCategoryLimit]
+    [activeCycle, state?.categories, state?.incomeSources, updateCategoryLimit],
   );
 
   const onConfirmAllocationExceeded = useCallback(async () => {
@@ -626,7 +645,7 @@ export function useBudgetScreenState() {
     if (allocationExceededResult.suggestedAllocation && activeCycle) {
       await updateCycleAllocation(
         activeCycle.id,
-        allocationExceededResult.suggestedAllocation
+        allocationExceededResult.suggestedAllocation,
       );
     }
     if (allocationExceededResult.debtAmount > 0) {
@@ -642,7 +661,7 @@ export function useBudgetScreenState() {
     } else {
       await updateCategoryLimit(
         pendingCategoryAction.id,
-        pendingCategoryAction.nextLimit
+        pendingCategoryAction.nextLimit,
       );
     }
     setPendingCategoryAction(null);
@@ -685,14 +704,14 @@ export function useBudgetScreenState() {
         durationDays?: number;
         durationMonths?: number;
         paydayDay?: number;
-      }
+      },
     ) => {
       if (!pendingRollover) return;
       await createNewCycleFromPreview(pendingRollover, allocations, overrides);
       setPendingRollover(null);
       await reload();
     },
-    [pendingRollover, createNewCycleFromPreview, reload]
+    [pendingRollover, createNewCycleFromPreview, reload],
   );
 
   return {
@@ -718,6 +737,7 @@ export function useBudgetScreenState() {
       updateCycleAllocation,
       updateCycleDay,
       resetBudget,
+      deleteAllBudgetData,
       recalculateBudget,
       syncNow,
       reload,

@@ -25,7 +25,12 @@ import {
   TourProviderFallback,
 } from "../contexts/TourContext";
 import { useAuthRefresh } from "../hooks/useAuthRefresh";
+import { useBudget } from "../hooks/useBudget";
 import { initNotificationSystem } from "../services/notifications";
+import {
+  hasHydratedThisSession,
+  setHydratedThisSession,
+} from "../utils/budgetHydrateSession";
 import "./globals.css";
 
 // Apply dark theme before first paint (same as NativeWind dark app)
@@ -35,6 +40,7 @@ SplashScreen.preventAutoHideAsync();
 
 function AppShell() {
   const { user } = useAuth();
+  const { hydrateFromRemote } = useBudget(user?.id);
 
   useEffect(() => {
     void initNotificationSystem(user?.id ?? null);
@@ -48,6 +54,13 @@ function AppShell() {
     });
     return () => sub.remove();
   }, [user?.id]);
+
+  // Single app-level hydrate once per session (avoids duplicate when Home + Budget mount).
+  useEffect(() => {
+    if (!user?.id || hasHydratedThisSession()) return;
+    setHydratedThisSession();
+    void hydrateFromRemote();
+  }, [user?.id, hydrateFromRemote]);
 
   return (
     <View style={{ flex: 1, backgroundColor: "black" }}>

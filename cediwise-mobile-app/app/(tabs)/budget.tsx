@@ -44,6 +44,7 @@ import {
   ExpandedHeader,
 } from "@/components/CediWiseHeader";
 import { BUDGET_TOUR_READY_TIMEOUT_MS } from "@/constants/tourTokens";
+import { analytics } from "@/utils/analytics";
 
 export default function BudgetScreen() {
   const router = useRouter();
@@ -65,12 +66,30 @@ export default function BudgetScreen() {
   });
   const { showSuccess, showError } = useAppToast();
   const params = useLocalSearchParams<{ tour?: string; fromVitals?: string }>();
-  const { startBudgetTour, skipBudgetTour, hasSeenBudgetTour } = useTourContext();
+  const {
+    startBudgetTour,
+    skipBudgetTour,
+    hasSeenBudgetTour,
+    valueFirstOnboardingEnabled,
+  } = useTourContext();
   const { scrollViewRef } = useTour();
   const { isConnected } = useConnectivity();
   const fromVitals = params.fromVitals === "1";
   const [initialSyncAttempted, setInitialSyncAttempted] = useState(false);
+  const [showPendingSyncCard, setShowPendingSyncCard] = useState(false);
   const initialSyncRanRef = useRef(false);
+  const firstViewLoggedCycleIdRef = useRef<string | null>(null);
+  const budgetTourTriggeredRef = useRef(false);
+
+  useEffect(() => {
+    const shouldShow = budget.pendingCount > 0 || budget.isSyncing;
+    if (!shouldShow) {
+      setShowPendingSyncCard(false);
+      return;
+    }
+    const id = setTimeout(() => setShowPendingSyncCard(true), 2500);
+    return () => clearTimeout(id);
+  }, [budget.isSyncing, budget.pendingCount]);
 
   const showPostVitalsSkeleton =
     fromVitals &&
@@ -84,32 +103,48 @@ export default function BudgetScreen() {
     !showPostVitalsSkeleton;
 
   useEffect(() => {
-    if (
-      params.tour !== "budget" ||
-      hasSeenBudgetTour !== false ||
-      !user?.id
-    ) {
+    const shouldStartForGuidedFlow =
+      params.tour === "budget" && hasSeenBudgetTour === false && !!user?.id;
+    const shouldStartForContextualFallback =
+      valueFirstOnboardingEnabled &&
+      params.tour !== "budget" &&
+      hasSeenBudgetTour === false &&
+      !!user?.id;
+
+    if (!shouldStartForGuidedFlow && !shouldStartForContextualFallback) {
       return;
     }
+    if (budgetTourTriggeredRef.current) return;
 
     if (tourZonesReady) {
+      budgetTourTriggeredRef.current = true;
       startBudgetTour();
       return;
     }
 
-    const timeoutId = setTimeout(() => {
-      void skipBudgetTour();
-    }, BUDGET_TOUR_READY_TIMEOUT_MS);
+    if (shouldStartForGuidedFlow) {
+      budgetTourTriggeredRef.current = true;
+      const timeoutId = setTimeout(() => {
+        void skipBudgetTour();
+      }, BUDGET_TOUR_READY_TIMEOUT_MS);
 
-    return () => clearTimeout(timeoutId);
+      return () => clearTimeout(timeoutId);
+    }
   }, [
-    params.tour,
     hasSeenBudgetTour,
-    user?.id,
-    tourZonesReady,
-    startBudgetTour,
+    params.tour,
     skipBudgetTour,
+    startBudgetTour,
+    tourZonesReady,
+    user?.id,
+    valueFirstOnboardingEnabled,
   ]);
+
+  useEffect(() => {
+    if (hasSeenBudgetTour === true) {
+      budgetTourTriggeredRef.current = false;
+    }
+  }, [hasSeenBudgetTour]);
 
   useEffect(() => {
     if (!fromVitals || initialSyncRanRef.current || !user?.id) return;
@@ -123,7 +158,7 @@ export default function BudgetScreen() {
       .syncNow()
       .catch(() => { })
       .finally(() => setInitialSyncAttempted(true));
-  }, [fromVitals, user?.id, budget.isLoading, budget.pendingCount, budget.syncNow]);
+  }, [fromVitals, user?.id, budget.isLoading, budget.pendingCount, budget.syncNow, budget]);
 
   const handleApplyVitals = async () => {
     const v = derived.vitalsSummary?.v;
@@ -183,7 +218,40 @@ export default function BudgetScreen() {
     }
 
     await budget.reload();
+
+    if (user?.id) {
+      analytics.budgetCreated({
+        userId: user.id,
+        source: "apply_vitals",
+      });
+    }
   };
+
+  // Fire BudgetFirstViewShown once per cycle when overview is actually visible
+  useEffect(() => {
+    if (
+      !user?.id ||
+      !derived.activeCycle ||
+      !budget.totals ||
+      budget.isLoading ||
+      showPostVitalsSkeleton
+    ) {
+      return;
+    }
+    const cycleId = derived.activeCycle.id;
+    if (firstViewLoggedCycleIdRef.current === cycleId) return;
+    firstViewLoggedCycleIdRef.current = cycleId;
+    analytics.budgetFirstViewShown({
+      userId: user.id,
+      cycleId,
+    });
+  }, [
+    user?.id,
+    derived.activeCycle,
+    budget.totals,
+    budget.isLoading,
+    showPostVitalsSkeleton,
+  ]);
 
   return (
     <View
@@ -207,13 +275,13 @@ export default function BudgetScreen() {
             visible={budget.isSyncing || refreshing || budget.retryIn !== null}
             label={derived.syncPillLabel}
           />,
-          budget.pendingCount > 0 && (
+          (budget.pendingCount > 0 || budget.isSyncing) && (
             <Pressable
               key="queue"
               onPress={() => router.push("/queue")}
               className="px-3 py-1.5 rounded-full bg-rose-500/15 border border-rose-500/30">
               <Text className="text-red-300 font-medium text-[10px]">
-                Sync: {budget.pendingCount}
+                {budget.isSyncing ? "Syncing…" : `Sync: ${budget.pendingCount}`}
               </Text>
             </Pressable>
           ),
@@ -274,6 +342,7 @@ export default function BudgetScreen() {
           <View className="gap-4 mb-6">
             {/* Onboarding: Personalize first (new users who haven't done vitals) */}
             <BudgetPersonalizationCard
+              userId={user?.id}
               showCta={
                 !!user &&
                 !personalization.isLoading &&
@@ -306,7 +375,8 @@ export default function BudgetScreen() {
             />
 
             <BudgetPendingSyncCard
-              visible={budget.pendingCount > 0}
+              visible={showPendingSyncCard}
+              isSyncing={budget.isSyncing}
               onRetry={async () => budget.syncNow()}
             />
 
@@ -363,8 +433,8 @@ export default function BudgetScreen() {
 
                 <TourZone
                   stepKey="budget-overview"
-                  name="Budget Overview"
-                  description="Your budget overview. Track needs, wants, and savings here."
+                  name="Welcome to CediWise"
+                  description="If your profile is not set, use the personalization banner above for a tailored plan."
                   shape="rounded-rect"
                   borderRadius={16}
                   style={{ width: "100%" }}>
@@ -392,8 +462,8 @@ export default function BudgetScreen() {
 
                 <TourZone
                   stepKey="budget-actions"
-                  name="Quick Actions"
-                  description="Record expenses and manage your cycle from here."
+                  name="Salary → Budget"
+                  description="Your income and expenses become a clear Needs / Wants / Savings plan."
                   shape="rounded-rect"
                   borderRadius={16}
                   style={{ width: "100%" }}>
@@ -484,6 +554,7 @@ export default function BudgetScreen() {
               next.applyDeductions ?? modals.incomeToEdit.applyDeductions,
           });
           await budget.reload();
+          showSuccess("Income updated", "Your income source has been updated.");
         }}
         editingLimit={modals.editingLimit}
         setEditingLimit={modals.setEditingLimit}

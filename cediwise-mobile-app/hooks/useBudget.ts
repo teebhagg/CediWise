@@ -197,7 +197,11 @@ export type UseBudgetReturn = {
   state: BudgetState | null;
   queue: BudgetQueue | null;
   isLoading: boolean;
+  /** True from sync run start until the last item in the current pass is attempted (UI updates only on this boundary). */
   isSyncing: boolean;
+  /** Set when a sync run has just ended; consumer can show a toast then call clearSyncRunResult(). */
+  lastSyncRunEndedAt: number | null;
+  clearSyncRunResult: () => void;
   retryIn: number | null;
   pendingCount: number;
   cycle: { startDate: string; endDate: string } | null;
@@ -298,6 +302,10 @@ export type UseBudgetReturn = {
     allocation: { needsPct: number; wantsPct: number; savingsPct: number },
     options?: { reallocationReason?: string }
   ) => Promise<void>;
+  applyTemplate: (
+    cycleId: string,
+    allocation: { needsPct: number; wantsPct: number; savingsPct: number }
+  ) => Promise<void>;
   insertDebt: (params: {
     name: string;
     totalAmount: number;
@@ -305,9 +313,11 @@ export type UseBudgetReturn = {
     monthlyPayment: number;
   }) => Promise<void>;
   resetBudget: () => Promise<void>;
+  /** Delete all budget data on server then clear local; optionally clear profile (payday, interests). */
+  deleteAllBudgetData: (removeProfile: boolean) => Promise<void>;
   syncNow: () => Promise<void>;
   hydrateFromRemote: (options?: { force?: boolean }) => Promise<void>;
-  recalculateBudget: () => Promise<void>;
+  recalculateBudget: (overrideState?: BudgetState) => Promise<void>;
   retryMutation: (id: string) => Promise<void>;
   clearLocal: () => Promise<void>;
   reload: () => Promise<void>;
@@ -318,8 +328,13 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
   const [queue, setQueue] = useState<BudgetQueue | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncRunEndedAt, setLastSyncRunEndedAt] = useState<number | null>(null);
   const [retryIn, setRetryIn] = useState<number | null>(null);
   const retryIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const clearSyncRunResult = useCallback(() => {
+    setLastSyncRunEndedAt(null);
+  }, []);
 
   const cancelScheduledRetry = useCallback(() => {
     if (retryIntervalRef.current) {
@@ -1679,17 +1694,42 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     });
   }, [enqueueAndTry, refreshQueue, userId]);
 
+  const deleteAllBudgetData = useCallback(
+    async (removeProfile: boolean) => {
+      if (!userId) return;
+      // Local-first: clear local state now, queue remote reset for eventual sync.
+      await clearBudgetLocal(userId);
+      const empty = createEmptyBudgetState(userId);
+      setState(empty);
+      await saveBudgetState(empty);
+      await refreshQueue();
+
+      await enqueueAndTry({
+        id: makeQueueId(),
+        userId,
+        createdAt: new Date().toISOString(),
+        kind: "reset_budget",
+        payload: {
+          user_id: userId,
+          remove_profile: removeProfile,
+        },
+      });
+    },
+    [enqueueAndTry, refreshQueue, userId]
+  );
+
   const syncNow = useCallback(async () => {
     if (!userId) return;
     cancelScheduledRetry();
 
-    setIsSyncing(true);
+    setIsSyncing(true); // start tag: UI shows "Syncing…" for the whole run
     let firstFailCount = 0;
     try {
       const first = await flushBudgetQueue(userId);
       firstFailCount = first.failCount;
     } finally {
-      await refreshQueue();
+      await refreshQueue(); // queue state updates only at end (no per-item UI churn)
+      setLastSyncRunEndedAt(Date.now()); // end tag: UI can show toast / final state
       setIsSyncing(false);
     }
 
@@ -1712,11 +1752,12 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           // Retry once (delayed), then stop (queue remains if still failing).
           void (async () => {
             if (!userId) return;
-            setIsSyncing(true);
+            setIsSyncing(true); // start tag (retry run)
             try {
               await flushBudgetQueue(userId);
             } finally {
               await refreshQueue();
+              setLastSyncRunEndedAt(Date.now()); // end tag
               setIsSyncing(false);
             }
           })();
@@ -1725,28 +1766,74 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     }
   }, [cancelScheduledRetry, refreshQueue, userId]);
 
-  const recalculateBudget = useCallback(async () => {
-    if (!userId) return;
-    const current = state ?? (await loadBudgetState(userId));
-    const next = recalculateBudgetFromAllocations(current);
-    const activeCycleId = activeCycle?.id ?? current.cycles[0]?.id;
-    await persistState(next);
-    const now = new Date().toISOString();
-    const cycleCats = next.categories.filter(
-      (c) => c.cycleId === activeCycleId
-    );
-    for (const cat of cycleCats) {
-      const prev = current.categories.find((x) => x.id === cat.id);
-      if (prev && prev.limitAmount === cat.limitAmount) continue;
+  const recalculateBudget = useCallback(
+    async (overrideState?: BudgetState) => {
+      if (!userId) return;
+      const current =
+        overrideState ?? state ?? (await loadBudgetState(userId));
+      const next = recalculateBudgetFromAllocations(current);
+      const activeCycleId = activeCycle?.id ?? current.cycles[0]?.id;
+      await persistState(next);
+      const now = new Date().toISOString();
+      const cycleCats = next.categories.filter(
+        (c) => c.cycleId === activeCycleId
+      );
+      for (const cat of cycleCats) {
+        const prev = current.categories.find((x) => x.id === cat.id);
+        if (prev && prev.limitAmount === cat.limitAmount) continue;
+        await enqueueAndTry({
+          id: makeQueueId(),
+          userId,
+          createdAt: now,
+          kind: "upsert_category",
+          payload: categoryToPayload(cat),
+        });
+      }
+    },
+    [activeCycle?.id, enqueueAndTry, persistState, state, userId]
+  );
+
+  const applyTemplate = useCallback(
+    async (
+      cycleId: string,
+      allocation: { needsPct: number; wantsPct: number; savingsPct: number }
+    ) => {
+      if (!userId) return;
+      const current = state ?? createEmptyBudgetState(userId);
+      const cycle = current.cycles.find((c) => c.id === cycleId);
+      if (!cycle) return;
+      const now = new Date().toISOString();
+      const updatedCycle: BudgetCycle = {
+        ...cycle,
+        needsPct: allocation.needsPct,
+        wantsPct: allocation.wantsPct,
+        savingsPct: allocation.savingsPct,
+        updatedAt: now,
+      };
+      const next: BudgetState = {
+        ...current,
+        cycles: [
+          updatedCycle,
+          ...current.cycles.filter((c) => c.id !== cycleId),
+        ],
+      };
+      await persistState(next);
+      await recalculateBudget(next);
       await enqueueAndTry({
         id: makeQueueId(),
         userId,
         createdAt: now,
-        kind: "upsert_category",
-        payload: categoryToPayload(cat),
+        kind: "apply_template",
+        payload: {
+          cycle_id: cycleId,
+          needs_pct: updatedCycle.needsPct,
+          wants_pct: updatedCycle.wantsPct,
+          savings_pct: updatedCycle.savingsPct,
+        },
       });
-    }
-  }, [activeCycle?.id, enqueueAndTry, persistState, state, userId]);
+    },
+    [enqueueAndTry, persistState, recalculateBudget, state, userId]
+  );
 
   const hydrateFromRemote = useCallback(
     async (options?: { force?: boolean }) => {
@@ -1790,6 +1877,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     queue,
     isLoading,
     isSyncing,
+    lastSyncRunEndedAt,
+    clearSyncRunResult,
     retryIn,
     pendingCount,
     cycle,
@@ -1807,8 +1896,10 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     updateCategoryLimit,
     updateCycleDay,
     updateCycleAllocation,
+    applyTemplate,
     insertDebt,
     resetBudget,
+    deleteAllBudgetData,
     computeNewCyclePreview,
     createNewCycleFromPreview,
     createNewCycleImmediate,

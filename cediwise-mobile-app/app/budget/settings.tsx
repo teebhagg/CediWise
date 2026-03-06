@@ -2,13 +2,15 @@ import { BackButton } from '@/components/BackButton';
 import { DEFAULT_STANDARD_HEIGHT, StandardHeader } from '@/components/CediWiseHeader';
 import { BudgetModals } from '@/components/features/budget/BudgetModals';
 import { BudgetPersonalizationCard } from '@/components/features/budget/BudgetPersonalizationCard';
+import { DeleteAllBudgetDataModal } from '@/components/features/budget/DeleteAllBudgetDataModal';
 import { useBudgetScreenState } from '@/components/features/budget/useBudgetScreenState';
 import { useTourContext } from '@/contexts/TourContext';
 import { useAppToast } from '@/hooks/useAppToast';
 import { useAuth } from '@/hooks/useAuth';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { RotateCcw, Settings, Sparkles } from 'lucide-react-native';
+import { Settings, Sparkles, Trash2 } from 'lucide-react-native';
+import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -19,6 +21,7 @@ export default function BudgetSettingsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { personalization, derived, budget, modals } = useBudgetScreenState();
+  const [showDeleteAllBudgetModal, setShowDeleteAllBudgetModal] = useState(false);
   const headerPadding = DEFAULT_STANDARD_HEIGHT + insets.top;
 
   if (!user?.id) {
@@ -48,6 +51,7 @@ export default function BudgetSettingsScreen() {
       >
         <View className="gap-4">
           <BudgetPersonalizationCard
+            userId={user.id}
             showCta={!personalization.isLoading && !personalization.setupCompleted}
             showSummary={!!derived.vitalsSummary}
             vitalsSummary={derived.vitalsSummary}
@@ -56,7 +60,7 @@ export default function BudgetSettingsScreen() {
           {derived.cycleIsSet && derived.activeCycle && (
             <Pressable
               onPress={() => modals.setShowEditCycleModal(true)}
-              className="flex-row items-center justify-between py-4 px-4 rounded-xl bg-slate-500/10 border border-slate-400/20 active:bg-slate-500/20"
+              className="flex-row items-center justify-between py-4 px-4 rounded-sm bg-slate-500/10 border border-slate-400/20 active:bg-slate-500/20"
             >
               <View>
                 <Text className="text-white font-semibold">Edit payday day</Text>
@@ -69,16 +73,15 @@ export default function BudgetSettingsScreen() {
           )}
 
           <Pressable
-            onPress={() => modals.setShowResetConfirm(true)}
-            className="flex-row items-center justify-between py-4 px-4 rounded-xl bg-orange-500/10 border border-orange-500/20 active:bg-orange-500/20"
+            onPress={() => setShowDeleteAllBudgetModal(true)}
+            className="flex-row items-center justify-between py-4 px-4 rounded-md bg-orange-500/10 border border-orange-500/20 active:bg-orange-500/20"
           >
             <View className="flex-row items-center gap-2">
-              <RotateCcw size={18} color="#F97316" />
-              <Text className="text-orange-400 font-semibold">Reset Budget</Text>
+              <Trash2 size={18} color="#F97316" />
+              <Text className="text-orange-400 font-semibold">
+                Delete all budget data
+              </Text>
             </View>
-            <Text className="text-slate-400 text-sm">
-              Clears all budget data
-            </Text>
           </Pressable>
 
           {__DEV__ ? (
@@ -121,13 +124,9 @@ export default function BudgetSettingsScreen() {
         setPendingConfirm={() => { }}
         showNeedsOverModal={false}
         setShowNeedsOverModal={() => { }}
-        showResetConfirm={modals.showResetConfirm}
-        setShowResetConfirm={modals.setShowResetConfirm}
-        onResetBudget={async () => {
-          modals.setShowResetConfirm(false);
-          await budget.resetBudget();
-          await budget.reload();
-        }}
+        showResetConfirm={false}
+        setShowResetConfirm={() => {}}
+        onResetBudget={async () => {}}
         categoryToDelete={null}
         setCategoryToDelete={() => { }}
         showDeleteCategoryConfirm={false}
@@ -160,6 +159,27 @@ export default function BudgetSettingsScreen() {
         onUpdateCycleDay={async (nextDay) => {
           await budget.updateCycleDay(nextDay);
           await budget.reload();
+        }}
+      />
+
+      <DeleteAllBudgetDataModal
+        visible={showDeleteAllBudgetModal}
+        onClose={() => setShowDeleteAllBudgetModal(false)}
+        onConfirm={async (removeProfile) => {
+          try {
+            await budget.deleteAllBudgetData(removeProfile);
+          } catch (e) {
+            setShowDeleteAllBudgetModal(false);
+            showError(
+              'Error',
+              e instanceof Error ? e.message : 'Failed to delete budget data'
+            );
+            throw e;
+          }
+        }}
+        onComplete={() => {
+          setShowDeleteAllBudgetModal(false);
+          setTimeout(() => router.replace('/(tabs)/budget'), 100);
         }}
       />
     </View>

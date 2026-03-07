@@ -1,12 +1,14 @@
 import { LabeledTextInput } from "@/components/LabeledTextInput";
 import type { GhanaTaxBreakdown } from "@/utils/ghanaTax";
-import * as Haptics from "expo-haptics";
-import { memo } from "react";
+import { Check, Circle, Sparkles } from "lucide-react-native";
+import { memo, useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
-import Animated, { FadeInUp } from "react-native-reanimated";
-import { InterestChip } from "./InterestChip";
-import { ModeToggle } from "./ModeToggle";
-import { StrategyChip } from "./StrategyChip";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import type {
   Draft,
   FinancialPriority,
@@ -16,11 +18,299 @@ import type {
   StepErrors,
   UpdateDraft,
 } from "./types";
-import { computeIntelligentStrategy, strategyToPercents, toMoney, toMonthlySalary } from "./utils";
 
-const STEP_LABELS = ["Income", "Life", "Expenses", "Interests", "Goal"] as const;
+function StepHeading({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <View>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+        <View
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 17,
+            backgroundColor: "rgba(34,197,94,0.14)",
+            borderWidth: 1,
+            borderColor: "rgba(34,197,94,0.32)",
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
+          <Sparkles size={17} color="#22C55E" />
+        </View>
+        <Text
+          style={{
+            color: "#FFFFFF",
+            fontFamily: "Figtree-Bold",
+            fontSize: 24,
+            letterSpacing: -0.5,
+            flexShrink: 1,
+          }}>
+          {title}
+        </Text>
+      </View>
+      {subtitle ? (
+        <Text
+          style={{
+            color: "#94A3AF",
+            fontFamily: "Figtree-Regular",
+            fontSize: 13,
+            marginTop: 10,
+            lineHeight: 20,
+          }}>
+          {subtitle}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
 
-const AnimatedView = Animated.createAnimatedComponent(View);
+function SectionLabel({ text }: { text: string }) {
+  return (
+    <Text
+      style={{
+        color: "#94A3B8",
+        fontFamily: "Figtree-SemiBold",
+        fontSize: 13,
+        marginBottom: 10,
+      }}>
+      {text}
+    </Text>
+  );
+}
+
+function CheckboxOption({
+  label,
+  description,
+  selected,
+  onPress,
+}: {
+  label: string;
+  description?: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: selected }}
+      style={({ pressed }) => ({
+        minHeight: 52,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: selected ? "rgba(34,197,94,0.55)" : "rgba(148,163,184,0.25)",
+        backgroundColor: selected
+          ? "rgba(34,197,94,0.16)"
+          : "rgba(15,23,42,0.35)",
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 10,
+        opacity: pressed ? 0.9 : 1,
+      })}>
+      <View
+        style={{
+          width: 20,
+          height: 20,
+          borderRadius: 6,
+          borderWidth: 1.5,
+          borderColor: selected ? "#22C55E" : "rgba(148,163,184,0.5)",
+          backgroundColor: selected ? "#22C55E" : "transparent",
+          alignItems: "center",
+          justifyContent: "center",
+          marginTop: 1,
+        }}>
+        {selected ? <Check size={12} color="#04140A" /> : null}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text
+          style={{
+            color: "#E2E8F0",
+            fontFamily: "Figtree-Medium",
+            fontSize: 14,
+          }}>
+          {label}
+        </Text>
+        {description ? (
+          <Text
+            style={{
+              color: "#94A3AF",
+              fontFamily: "Figtree-Regular",
+              fontSize: 12,
+              marginTop: 2,
+              lineHeight: 18,
+            }}>
+            {description}
+          </Text>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+
+function PillOption({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: selected }}
+      style={({ pressed }) => ({
+        minHeight: 44,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: selected ? "rgba(34,197,94,0.6)" : "rgba(148,163,184,0.3)",
+        backgroundColor: selected
+          ? "rgba(34,197,94,0.16)"
+          : "rgba(15,23,42,0.35)",
+        paddingHorizontal: 14,
+        paddingVertical: 10,
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+        opacity: pressed ? 0.9 : 1,
+      })}>
+      <View
+        style={{
+          width: 18,
+          height: 18,
+          borderRadius: 9,
+          borderWidth: 1.5,
+          borderColor: selected ? "#22C55E" : "rgba(148,163,184,0.55)",
+          backgroundColor: selected ? "#22C55E" : "transparent",
+          alignItems: "center",
+          justifyContent: "center",
+        }}>
+        {selected ? <Check size={11} color="#04140A" /> : null}
+      </View>
+      <Text
+        style={{
+          color: selected ? "#DCFCE7" : "#E2E8F0",
+          fontFamily: "Figtree-Medium",
+          fontSize: 13,
+        }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function RadioOption({
+  label,
+  description,
+  selected,
+  onPress,
+}: {
+  label: string;
+  description: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      style={({ pressed }) => ({
+        minHeight: 64,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: selected ? "rgba(34,197,94,0.6)" : "rgba(148,163,184,0.25)",
+        backgroundColor: selected
+          ? "rgba(34,197,94,0.14)"
+          : "rgba(15,23,42,0.35)",
+        paddingHorizontal: 12,
+        paddingVertical: 12,
+        flexDirection: "row",
+        alignItems: "flex-start",
+        gap: 10,
+        opacity: pressed ? 0.9 : 1,
+      })}>
+      <View style={{ marginTop: 2 }}>
+        <Circle size={20} color={selected ? "#22C55E" : "#94A3B8"} fill={selected ? "#22C55E" : "transparent"} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text
+          style={{
+            color: "#E2E8F0",
+            fontFamily: "Figtree-SemiBold",
+            fontSize: 14,
+          }}>
+          {label}
+        </Text>
+        <Text
+          style={{
+            color: "#94A3AF",
+            fontFamily: "Figtree-Regular",
+            fontSize: 12,
+            marginTop: 3,
+            lineHeight: 18,
+          }}>
+          {description}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+const INCOME_FREQUENCIES: {
+  value: IncomeFrequency;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "weekly",
+    label: "Weekly",
+    description: "Paid every week (about 4.33 times each month).",
+  },
+  {
+    value: "bi_weekly",
+    label: "Bi-weekly",
+    description: "Paid every two weeks (about 2.17 times each month).",
+  },
+  {
+    value: "monthly",
+    label: "Monthly",
+    description: "Paid once monthly (default cycle behavior).",
+  },
+];
+
+const LIFE_STAGES: { value: LifeStage; label: string; description: string }[] = [
+  { value: "student", label: "Student", description: "Lower steady income, education-heavy priorities." },
+  { value: "young_professional", label: "Young Professional", description: "Early career growth and lifestyle balance." },
+  { value: "family", label: "Family", description: "Household needs and long-term stability focus." },
+  { value: "retiree", label: "Retiree", description: "Preserve spending stability and savings drawdown." },
+];
+
+const SPENDING_STYLES: { value: SpendingStyle; label: string; description: string }[] = [
+  { value: "conservative", label: "Conservative", description: "Prefers lower discretionary spend and tighter limits." },
+  { value: "moderate", label: "Moderate", description: "Balanced day-to-day spending pattern." },
+  { value: "liberal", label: "Liberal", description: "Higher flexibility for wants and lifestyle spending." },
+];
+
+const FINANCIAL_PRIORITIES: {
+  value: FinancialPriority;
+  label: string;
+  description: string;
+}[] = [
+  { value: "debt_payoff", label: "Pay Off Debt", description: "Prioritize reducing debt obligations faster." },
+  { value: "savings_growth", label: "Grow Savings", description: "Prioritize emergency fund and long-term reserves." },
+  { value: "lifestyle", label: "Lifestyle", description: "Leave more room for wants and quality-of-life spending." },
+  { value: "balanced", label: "Balanced", description: "Keep debt, savings, and lifestyle relatively even." },
+];
 
 const INTERESTS = [
   "Tech",
@@ -34,94 +324,7 @@ const INTERESTS = [
   "Beauty",
 ] as const;
 
-const LIFE_STAGES: { value: LifeStage; label: string }[] = [
-  { value: "student", label: "Student" },
-  { value: "young_professional", label: "Young Professional" },
-  { value: "family", label: "Family" },
-  { value: "retiree", label: "Retiree" },
-];
-
-const INCOME_FREQUENCIES: { value: IncomeFrequency; label: string }[] = [
-  { value: "weekly", label: "Weekly" },
-  { value: "bi_weekly", label: "Bi-weekly" },
-  { value: "monthly", label: "Monthly" },
-];
-
-const SPENDING_STYLES: { value: SpendingStyle; label: string }[] = [
-  { value: "conservative", label: "Conservative" },
-  { value: "moderate", label: "Moderate" },
-  { value: "liberal", label: "Liberal" },
-];
-
-const FINANCIAL_PRIORITIES: { value: FinancialPriority; label: string }[] = [
-  { value: "debt_payoff", label: "Paying Off Debt" },
-  { value: "savings_growth", label: "Growing Savings" },
-  { value: "lifestyle", label: "Lifestyle Quality" },
-  { value: "balanced", label: "Balanced" },
-];
-
-export const StepWelcome = memo(function StepWelcome() {
-  return (
-    <View>
-      <AnimatedView entering={FadeInUp.duration(220).delay(100)}>
-        <Text
-          style={{
-            color: "#FFFFFF",
-            fontFamily: "Figtree-Bold",
-            fontSize: 22,
-            marginTop: 10,
-            letterSpacing: -0.5,
-          }}
-        >
-          Set up your personalized budget
-        </Text>
-      </AnimatedView>
-      <AnimatedView entering={FadeInUp.duration(220).delay(200)}>
-        <Text
-          style={{
-            color: "#94A3AF",
-            fontFamily: "Figtree-Regular",
-            fontSize: 15,
-            marginTop: 12,
-            lineHeight: 24,
-          }}
-        >
-          We&apos;ll ask 5 quick questions to build a budget tailored to you. Takes about 2 minutes.
-        </Text>
-      </AnimatedView>
-      <View style={{ marginTop: 24, gap: 8 }}>
-        {STEP_LABELS.map((label, i) => (
-          <View
-            key={label}
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 10,
-            }}
-          >
-            <View
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: 12,
-                backgroundColor: "rgba(34,197,94,0.25)",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Text style={{ color: "#22C55E", fontFamily: "Figtree-SemiBold", fontSize: 12 }}>
-                {i + 1}
-              </Text>
-            </View>
-            <Text style={{ color: "#E2E8F0", fontFamily: "Figtree-Medium", fontSize: 14 }}>
-              {label}
-            </Text>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-});
+const DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => i + 1);
 
 type StepIncomeProps = {
   draft: Draft;
@@ -138,797 +341,333 @@ export const StepIncome = memo(function StepIncome({
   netPreview,
   updateDraft,
 }: StepIncomeProps) {
-  return (
-    <View>
-      <AnimatedView entering={FadeInUp.duration(220).delay(0)}>
-        <Text
-          style={{
-            color: "#FFFFFF",
-            fontFamily: "Figtree-Bold",
-            fontSize: 22,
-            letterSpacing: -0.5,
-          }}
-        >
-          Tell us what comes in
-        </Text>
-      </AnimatedView>
-
-      <View style={{ marginTop: 18, gap: 14 }}>
-        <AnimatedView entering={FadeInUp.duration(220).delay(200)}>
-          <Text
-            style={{
-              color: "#94A3B8",
-              fontFamily: "Figtree-Medium",
-              fontSize: 14,
-              marginBottom: 10,
-            }}
-          >
-            How often do you get paid?
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-            {INCOME_FREQUENCIES.map((f) => (
-              <InterestChip
-                key={f.value}
-                label={f.label}
-                selected={draft.incomeFrequency === f.value}
-                haptic
-                onToggle={(label) => {
-                  const found = INCOME_FREQUENCIES.find((x) => x.label === label);
-                  if (found) updateDraft({ incomeFrequency: found.value });
-                }}
-              />
-            ))}
-          </View>
-        </AnimatedView>
-
-        <AnimatedView entering={FadeInUp.duration(220).delay(300)}>
-          <LabeledTextInput
-            label={
-              draft.incomeFrequency === "weekly"
-                ? "Weekly Salary (GHS)"
-                : draft.incomeFrequency === "bi_weekly"
-                  ? "Bi-weekly Salary (GHS)"
-                  : "Monthly Basic Salary (GHS)"
-            }
-            keyboardType="decimal-pad"
-            returnKeyType="next"
-            inputAccessoryViewID={keyboardAccessoryId}
-            value={draft.stableSalary}
-            onChangeText={(v) => updateDraft({ stableSalary: v })}
-            error={errors.stableSalary}
-          />
-        </AnimatedView>
-
-        <AnimatedView entering={FadeInUp.duration(220).delay(400)}>
-          <Pressable
-            onPress={() => updateDraft({ autoTax: !draft.autoTax })}
-            style={({ pressed }) => ({
-              minHeight: 44,
-              paddingHorizontal: 14,
-              paddingVertical: 12,
-              borderRadius: 16,
-              backgroundColor: draft.autoTax
-                ? "rgba(34,197,94,0.12)"
-                : "rgba(148,163,184,0.10)",
-              borderWidth: 1,
-              borderColor: draft.autoTax
-                ? "rgba(34,197,94,0.35)"
-                : "rgba(148,163,184,0.25)",
-              opacity: pressed ? 0.9 : 1,
-            })}
-          >
-            <Text
-              style={{
-                color: "#E2E8F0",
-                fontFamily: "Figtree-Medium",
-                fontSize: 13,
-              }}
-            >
-              Apply SSNIT + PAYE deductions: {draft.autoTax ? "On" : "Off"}
-            </Text>
-            {draft.autoTax ? (
-              netPreview ? (
-                <Text
-                  style={{
-                    color: "#94A3AF",
-                    fontFamily: "Figtree-Regular",
-                    fontSize: 12,
-                    marginTop: 6,
-                  }}
-                >
-                  Net take-home estimate: ₵
-                  {Math.round(netPreview.netTakeHome).toLocaleString("en-GB")}
-                </Text>
-              ) : (
-                <Text
-                  style={{
-                    color: "#94A3AF",
-                    fontFamily: "Figtree-Regular",
-                    fontSize: 12,
-                    marginTop: 6,
-                  }}
-                >
-                  Estimating take-home…
-                </Text>
-              )
-            ) : (
-              <Text
-                style={{
-                  color: "#94A3AF",
-                  fontFamily: "Figtree-Regular",
-                  fontSize: 12,
-                  marginTop: 6,
-                }}
-              >
-                Turn off if your salary is already net / not taxed at source.
-              </Text>
-            )}
-          </Pressable>
-        </AnimatedView>
-
-        <AnimatedView entering={FadeInUp.duration(220).delay(500)}>
-          <LabeledTextInput
-            label="Side Hustle / Variable Income (GHS)"
-            keyboardType="decimal-pad"
-            returnKeyType="next"
-            inputAccessoryViewID={keyboardAccessoryId}
-            value={draft.sideIncome}
-            onChangeText={(v) => updateDraft({ sideIncome: v })}
-          />
-        </AnimatedView>
-
-        <AnimatedView entering={FadeInUp.duration(220).delay(600)}>
-          <LabeledTextInput
-            label="Payday day of month (1–31)"
-            keyboardType="number-pad"
-            returnKeyType="done"
-            inputAccessoryViewID={keyboardAccessoryId}
-            value={draft.paydayDay}
-            onChangeText={(v) => updateDraft({ paydayDay: v })}
-            error={errors.paydayDay}
-          />
-        </AnimatedView>
-      </View>
-    </View>
-  );
-});
-
-type StepLifeStageProps = {
-  draft: Draft;
-  updateDraft: UpdateDraft;
-};
-
-export const StepLifeStage = memo(function StepLifeStage({ draft, updateDraft }: StepLifeStageProps) {
-  return (
-    <View>
-      <AnimatedView entering={FadeInUp.duration(220).delay(0)}>
-        <Text
-          style={{
-            color: "#FFFFFF",
-            fontFamily: "Figtree-Bold",
-            fontSize: 22,
-            letterSpacing: -0.5,
-          }}
-        >
-          Tell us about yourself
-        </Text>
-      </AnimatedView>
-      <AnimatedView entering={FadeInUp.duration(220).delay(150)}>
-        <Text
-          style={{
-            color: "#64748B",
-            fontFamily: "Figtree-Regular",
-            fontSize: 12,
-            marginTop: 4,
-          }}
-        >
-          Optional but helps us tailor your plan.
-        </Text>
-      </AnimatedView>
-
-      <View style={{ marginTop: 18, gap: 16 }}>
-        <AnimatedView entering={FadeInUp.duration(220).delay(200)}>
-          <Text
-            style={{
-              color: "#94A3B8",
-              fontFamily: "Figtree-Medium",
-              fontSize: 14,
-              marginBottom: 10,
-            }}
-          >
-            Life Stage
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-            {LIFE_STAGES.map((s) => (
-              <InterestChip
-                key={s.value}
-                label={s.label}
-                selected={draft.lifeStage === s.value}
-                haptic
-                onToggle={(label) => {
-                  const found = LIFE_STAGES.find((x) => x.label === label);
-                  if (found) updateDraft({ lifeStage: found.value });
-                }}
-              />
-            ))}
-          </View>
-        </AnimatedView>
-
-        <AnimatedView entering={FadeInUp.duration(220).delay(300)}>
-          <LabeledTextInput
-            label="Number of Dependents"
-            keyboardType="number-pad"
-            returnKeyType="done"
-            value={draft.dependentsCount}
-            onChangeText={(v) => updateDraft({ dependentsCount: v })}
-            placeholder="0"
-          />
-        </AnimatedView>
-
-        <AnimatedView entering={FadeInUp.duration(220).delay(400)}>
-          <Text
-            style={{
-              color: "#94A3B8",
-              fontFamily: "Figtree-Medium",
-              fontSize: 14,
-              marginBottom: 10,
-            }}
-          >
-            Spending Style (Optional)
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-            {SPENDING_STYLES.map((s) => (
-              <InterestChip
-                key={s.value}
-                label={s.label}
-                selected={draft.spendingStyle === s.value}
-                haptic
-                onToggle={(label) => {
-                  const found = SPENDING_STYLES.find((x) => x.label === label);
-                  if (found) updateDraft({ spendingStyle: found.value });
-                }}
-              />
-            ))}
-          </View>
-        </AnimatedView>
-
-        <AnimatedView entering={FadeInUp.duration(220).delay(500)}>
-          <Text
-            style={{
-              color: "#94A3B8",
-              fontFamily: "Figtree-Medium",
-              fontSize: 14,
-              marginBottom: 10,
-            }}
-          >
-            Main financial priority?
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-            {FINANCIAL_PRIORITIES.map((p) => (
-              <InterestChip
-                key={p.value}
-                label={p.label}
-                selected={draft.financialPriority === p.value}
-                haptic
-                onToggle={(label) => {
-                  const found = FINANCIAL_PRIORITIES.find((x) => x.label === label);
-                  if (found) updateDraft({ financialPriority: found.value });
-                }}
-              />
-            ))}
-          </View>
-        </AnimatedView>
-      </View>
-    </View>
-  );
-});
-
-type StepFixedExpensesProps = {
-  draft: Draft;
-  errors: StepErrors;
-  keyboardAccessoryId: string;
-  updateDraft: UpdateDraft;
-};
-
-export const StepFixedExpenses = memo(function StepFixedExpenses({
-  draft,
-  errors,
-  keyboardAccessoryId,
-  updateDraft,
-}: StepFixedExpensesProps) {
-  return (
-    <View>
-      <AnimatedView entering={FadeInUp.duration(220).delay(0)}>
-        <Text
-          style={{
-            color: "#FFFFFF",
-            fontFamily: "Figtree-Bold",
-            fontSize: 28,
-            letterSpacing: -0.5,
-          }}
-        >
-          Your fixed monthly expenses
-        </Text>
-      </AnimatedView>
-      <AnimatedView entering={FadeInUp.duration(220).delay(100)}>
-        <Text
-          style={{
-            color: "#94A3AF",
-            fontFamily: "Figtree-Regular",
-            fontSize: 13,
-            marginTop: 8,
-          }}
-        >
-          These help us pick a strategy that matches real life.
-        </Text>
-      </AnimatedView>
-
-      <View style={{ marginTop: 18, gap: 14 }}>
-        <AnimatedView entering={FadeInUp.duration(220).delay(200)}>
-          <LabeledTextInput
-            label="Rent (GHS) (optional)"
-            placeholder="0 or leave blank if none"
-            keyboardType="decimal-pad"
-            returnKeyType="done"
-            inputAccessoryViewID={keyboardAccessoryId}
-            value={draft.rent}
-            onChangeText={(v) => updateDraft({ rent: v })}
-            error={errors.rent}
-          />
-        </AnimatedView>
-        <AnimatedView entering={FadeInUp.duration(220).delay(300)}>
-          <LabeledTextInput
-            label="Tithe / Remittances (GHS) (optional)"
-            keyboardType="decimal-pad"
-            returnKeyType="done"
-            inputAccessoryViewID={keyboardAccessoryId}
-            value={draft.titheRemittance}
-            onChangeText={(v) => updateDraft({ titheRemittance: v })}
-          />
-        </AnimatedView>
-
-        <AnimatedView entering={FadeInUp.duration(220).delay(350)}>
-          <LabeledTextInput
-            label="Debt repayments (GHS) (optional)"
-            keyboardType="decimal-pad"
-            returnKeyType="done"
-            inputAccessoryViewID={keyboardAccessoryId}
-            value={draft.debtObligations}
-            onChangeText={(v) => updateDraft({ debtObligations: v })}
-          />
-        </AnimatedView>
-
-        <AnimatedView entering={FadeInUp.duration(220).delay(400)}>
-          <Text
-            style={{
-              color: "#9CA3AF",
-              fontFamily: "Figtree-Medium",
-              fontSize: 12,
-              letterSpacing: 0.6,
-              textTransform: "uppercase",
-              marginBottom: 4,
-            }}
-          >
-            How do you want to enter utilities?
-          </Text>
-          <ModeToggle
-            value={draft.utilitiesMode}
-            onChange={async (m) => {
-              try {
-                await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              } catch {
-                // ignore
-              }
-              updateDraft({ utilitiesMode: m });
-            }}
-          />
-        </AnimatedView>
-
-        {draft.utilitiesMode === "general" ? (
-          <AnimatedView entering={FadeInUp.duration(220).delay(500)}>
-            <LabeledTextInput
-              label="Utilities total (ECG + Water) (GHS)"
-              keyboardType="decimal-pad"
-              returnKeyType="done"
-              inputAccessoryViewID={keyboardAccessoryId}
-              value={draft.utilitiesTotal}
-              onChangeText={(v) => updateDraft({ utilitiesTotal: v })}
-              error={errors.utilities}
-            />
-          </AnimatedView>
-        ) : (
-          <>
-            <AnimatedView entering={FadeInUp.duration(220).delay(500)}>
-              <LabeledTextInput
-                label="ECG (GHS)"
-                keyboardType="decimal-pad"
-                returnKeyType="done"
-                inputAccessoryViewID={keyboardAccessoryId}
-                value={draft.utilitiesECG}
-                onChangeText={(v) => updateDraft({ utilitiesECG: v })}
-              />
-            </AnimatedView>
-            <AnimatedView entering={FadeInUp.duration(220).delay(600)}>
-              <LabeledTextInput
-                label="Water (GHS)"
-                keyboardType="decimal-pad"
-                returnKeyType="done"
-                inputAccessoryViewID={keyboardAccessoryId}
-                value={draft.utilitiesWater}
-                onChangeText={(v) => updateDraft({ utilitiesWater: v })}
-                error={errors.utilities}
-              />
-            </AnimatedView>
-            <AnimatedView entering={FadeInUp.duration(220).delay(700)}>
-              <Text
-                style={{
-                  color: "#94A3AF",
-                  fontFamily: "Figtree-Regular",
-                  fontSize: 12,
-                  marginTop: -8,
-                }}
-              >
-                Total: ₵
-                {(toMoney(draft.utilitiesECG) + toMoney(draft.utilitiesWater)).toLocaleString("en-GB")}
-              </Text>
-            </AnimatedView>
-          </>
-        )}
-      </View>
-    </View>
-  );
-});
-
-type StepInterestsProps = {
-  interests: string[];
-  onToggleInterest: (interest: string) => void;
-};
-
-export const StepInterests = memo(function StepInterests({
-  interests,
-  onToggleInterest,
-}: StepInterestsProps) {
-  return (
-    <View>
-      <AnimatedView entering={FadeInUp.duration(220).delay(0)}>
-        <Text
-          style={{
-            color: "#FFFFFF",
-            fontFamily: "Figtree-Bold",
-            fontSize: 28,
-            letterSpacing: -0.5,
-          }}
-        >
-          What do you spend on?
-        </Text>
-      </AnimatedView>
-      <AnimatedView entering={FadeInUp.duration(220).delay(100)}>
-        <Text
-          style={{
-            color: "#94A3AF",
-            fontFamily: "Figtree-Regular",
-            fontSize: 13,
-            marginTop: 8,
-          }}
-        >
-          Select all that apply. We&apos;ll shape your Wants categories around these.
-        </Text>
-      </AnimatedView>
-
-      <AnimatedView
-        entering={FadeInUp.duration(220).delay(200)}
-        style={{ marginTop: 16 }}
-      >
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-          {INTERESTS.map((it) => (
-            <InterestChip
-              key={it}
-              label={it}
-              selected={interests.includes(it)}
-              onToggle={onToggleInterest}
-            />
-          ))}
-        </View>
-      </AnimatedView>
-    </View>
-  );
-});
-
-const GOAL_OPTIONS = [
-  { key: "emergency_fund" as const, label: "Emergency Fund", description: "A safety net for unexpected expenses. We'll prioritise your savings bucket where possible." },
-  { key: "project" as const, label: "Project", description: "Saving for a specific goal (wedding, car, house). Balanced approach that keeps essentials covered." },
-  { key: "investment" as const, label: "Investment", description: "Long-term wealth building. We'll allocate more to savings when you have headroom." },
-];
-
-type StepGoalProps = {
-  draft: Draft;
-  error: string | null;
-  updateDraft: UpdateDraft;
-};
-
-function getStrategySuggestionForGoal(
-  goal: "emergency_fund" | "project" | "investment",
-  computedStrategy: "survival" | "balanced" | "aggressive",
-  fixedCostRatio: number
-): "survival" | "balanced" | "aggressive" | null {
-  if (goal === "investment" && computedStrategy === "balanced" && fixedCostRatio < 0.5) {
-    return "aggressive";
-  }
-  if (goal === "emergency_fund" && computedStrategy === "aggressive" && fixedCostRatio > 0.45) {
-    return "balanced";
-  }
-  return null;
-}
-
-export const StepGoal = memo(function StepGoal({ draft, error, updateDraft }: StepGoalProps) {
-  const rawSalary = toMoney(draft.stableSalary);
-  const stableSalary = toMonthlySalary(rawSalary, draft.incomeFrequency);
-  const sideIncome = toMoney(draft.sideIncome);
-  const rent = toMoney(draft.rent);
-  const titheRemittance = toMoney(draft.titheRemittance);
-  const debtObligations = toMoney(draft.debtObligations);
-  const utilitiesTotal =
-    draft.utilitiesMode === "precise"
-      ? toMoney(draft.utilitiesECG) + toMoney(draft.utilitiesWater)
-      : toMoney(draft.utilitiesTotal);
-  const computedIntelligent = computeIntelligentStrategy({
-    stableSalary,
-    autoTax: draft.autoTax,
-    sideIncome,
-    rent,
-    titheRemittance,
-    debtObligations,
-    utilitiesTotal,
-    lifeStage: draft.lifeStage,
-    dependentsCount: Math.max(0, parseInt(draft.dependentsCount, 10) || 0),
-    incomeFrequency: draft.incomeFrequency,
-    spendingStyle: draft.spendingStyle,
-    financialPriority: draft.financialPriority,
-  });
-  const netIncome = computedIntelligent.netIncome;
-  const fixedCostRatio = netIncome > 0 ? computedIntelligent.fixedCosts / netIncome : 1;
-
-  const handleGoalSelect = (goal: "emergency_fund" | "project" | "investment") => {
-    const suggestedStrategy = getStrategySuggestionForGoal(
-      goal,
-      computedIntelligent.strategy,
-      fixedCostRatio
-    );
-    const patch: Partial<Draft> = { primaryGoal: goal };
-    if (suggestedStrategy) patch.strategyChoice = suggestedStrategy;
-    updateDraft(patch);
-  };
-
-  const selectedGoalInfo = draft.primaryGoal
-    ? GOAL_OPTIONS.find((g) => g.key === draft.primaryGoal)
+  const frequencyFactor =
+    draft.incomeFrequency === "weekly"
+      ? 52 / 12
+      : draft.incomeFrequency === "bi_weekly"
+        ? 26 / 12
+        : 1;
+  const periodNetPreview = netPreview
+    ? Math.max(0, netPreview.netTakeHome / frequencyFactor)
     : null;
 
   return (
     <View>
-      <AnimatedView entering={FadeInUp.duration(220).delay(0)}>
-        <Text
-          style={{
-            color: "#FFFFFF",
-            fontFamily: "Figtree-Bold",
-            fontSize: 28,
-            letterSpacing: -0.5,
-          }}
-        >
-          What&apos;s your main savings goal?
-        </Text>
-      </AnimatedView>
-      <AnimatedView entering={FadeInUp.duration(220).delay(100)}>
-        <Text
-          style={{
-            color: "#94A3AF",
-            fontFamily: "Figtree-Regular",
-            fontSize: 13,
-            marginTop: 8,
-          }}
-        >
-          This helps us weight your Savings bucket.
-        </Text>
-      </AnimatedView>
+      <StepHeading
+        title="Income"
+        subtitle="Enter your salary and choose your pay rhythm."
+      />
 
-      <View style={{ marginTop: 16, gap: 14 }}>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-          {GOAL_OPTIONS.map((g) => {
-            const active = draft.primaryGoal === g.key;
-            return (
-              <Pressable
-                key={g.key}
-                onPress={async () => {
-                  try {
-                    await Haptics.selectionAsync();
-                  } catch {
-                    // ignore
-                  }
-                  handleGoalSelect(g.key);
-                }}
-                style={({ pressed }) => ({
-                  flex: 1,
-                  minWidth: 90,
-                  minHeight: 44,
-                  paddingHorizontal: 12,
-                  paddingVertical: 10,
-                  borderRadius: 14,
-                  backgroundColor: active
-                    ? "rgba(34,197,94,0.16)"
-                    : "rgba(148,163,184,0.10)",
-                  borderWidth: 1,
-                  borderColor: active
-                    ? "rgba(34,197,94,0.40)"
-                    : "rgba(148,163,184,0.25)",
-                  opacity: pressed ? 0.92 : 1,
-                  alignItems: "center",
-                  justifyContent: "center",
-                })}
-              >
-                <Text
-                  style={{
-                    color: "#FFFFFF",
-                    fontFamily: "Figtree-Medium",
-                    fontSize: 14,
-                    textAlign: "center",
-                  }}
-                >
-                  {g.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+      <View style={{ marginTop: 18, gap: 14 }}>
+        <View>
+          <SectionLabel text="Income Frequency" />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            {INCOME_FREQUENCIES.map((item) => (
+              <PillOption
+                key={item.value}
+                label={item.label}
+                selected={draft.incomeFrequency === item.value}
+                onPress={() => updateDraft({ incomeFrequency: item.value })}
+              />
+            ))}
+          </View>
+          <Text
+            style={{
+              color: "#94A3AF",
+              fontFamily: "Figtree-Regular",
+              fontSize: 12,
+              marginTop: 8,
+              lineHeight: 18,
+            }}>
+            {INCOME_FREQUENCIES.find((x) => x.value === draft.incomeFrequency)?.description}
+          </Text>
         </View>
 
-        {selectedGoalInfo ? (
-          <View
+        <LabeledTextInput
+          label={
+            draft.incomeFrequency === "weekly"
+              ? "Weekly Salary (GHS)"
+              : draft.incomeFrequency === "bi_weekly"
+                ? "Bi-weekly Salary (GHS)"
+                : "Monthly Salary (GHS)"
+          }
+          keyboardType="decimal-pad"
+          returnKeyType="done"
+          inputAccessoryViewID={keyboardAccessoryId}
+          value={draft.stableSalary}
+          onChangeText={(v) => updateDraft({ stableSalary: v })}
+          error={errors.stableSalary}
+        />
+
+        <CheckboxOption
+          label={`Apply SSNIT + PAYE deductions: ${draft.autoTax ? "On" : "Off"}`}
+          description={
+            draft.autoTax
+              ? periodNetPreview
+                ? `Estimated ${draft.incomeFrequency.replace("_", "-")} take-home: ₵${Math.round(periodNetPreview).toLocaleString("en-GB")}`
+                : "Estimating take-home..."
+              : "Turn off if your salary is already net."
+          }
+          selected={draft.autoTax}
+          onPress={() => updateDraft({ autoTax: !draft.autoTax })}
+        />
+      </View>
+    </View>
+  );
+});
+
+type StepSetupBudgetProps = {
+  draft: Draft;
+  errors: StepErrors;
+  updateDraft: UpdateDraft;
+};
+
+export const StepSetupBudget = memo(function StepSetupBudget({
+  draft,
+  errors,
+  updateDraft,
+}: StepSetupBudgetProps) {
+  const [paydayOpen, setPaydayOpen] = useState(false);
+  const expand = useSharedValue(0);
+
+  useEffect(() => {
+    expand.value = withTiming(paydayOpen ? 1 : 0, {
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [expand, paydayOpen]);
+
+  const dropdownAnimStyle = useAnimatedStyle(() => ({
+    maxHeight: 220 * expand.value,
+    opacity: expand.value,
+    marginTop: 8 * expand.value,
+    transform: [{ translateY: (1 - expand.value) * -8 }],
+    overflow: "hidden",
+  }));
+
+  return (
+    <View>
+      <StepHeading
+        title="Setup Budget"
+        subtitle="Cycle is fixed to payday-to-payday. Choose your payday and allocation style."
+      />
+
+      <View style={{ marginTop: 18, gap: 14 }}>
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: "rgba(148,163,184,0.25)",
+            borderRadius: 14,
+            padding: 12,
+            backgroundColor: "rgba(15,23,42,0.35)",
+          }}>
+          <SectionLabel text="Cycle Type" />
+          <Text style={{ color: "#E2E8F0", fontFamily: "Figtree-SemiBold", fontSize: 14 }}>
+            Payday-to-payday
+          </Text>
+          <Text
             style={{
-              padding: 12,
-              borderRadius: 12,
-              backgroundColor: "rgba(34,197,94,0.08)",
-              borderWidth: 1,
-              borderColor: "rgba(34,197,94,0.2)",
-            }}
-          >
-            <Text
-              style={{
-                color: "#94A3AF",
-                fontFamily: "Figtree-Regular",
-                fontSize: 13,
-                lineHeight: 20,
-              }}
-            >
-              {selectedGoalInfo.description}
-            </Text>
-          </View>
-        ) : null}
+              color: "#94A3AF",
+              fontFamily: "Figtree-Regular",
+              fontSize: 12,
+              marginTop: 4,
+              lineHeight: 18,
+            }}>
+            Your cycle starts on your payday and ends the day before your next payday.
+          </Text>
+        </View>
 
         <View>
-          <Text
+          <SectionLabel text="Payday Day" />
+          <Pressable
+            onPress={() => setPaydayOpen((prev) => !prev)}
             style={{
-              color: "#9CA3AF",
-              fontFamily: "Figtree-Medium",
-              fontSize: 12,
-              letterSpacing: 0.6,
-              textTransform: "uppercase",
-              marginBottom: 8,
-            }}
-          >
-            Budget style
-          </Text>
-          <Text
-            style={{
-              color: "#64748B",
-              fontFamily: "Figtree-Regular",
-              fontSize: 11,
-              marginBottom: 10,
-            }}
-          >
-            Survival = more to needs • Balanced = 50/30/20 • Aggressive = more to savings
-          </Text>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-            <StrategyChip
-              label="Survival"
-              value="survival"
-              selected={draft.strategyChoice === "survival"}
-              onSelect={(value) => updateDraft({ strategyChoice: value })}
-            />
-            <StrategyChip
-              label="Balanced"
-              value="balanced"
-              selected={draft.strategyChoice === "balanced"}
-              onSelect={(value) => updateDraft({ strategyChoice: value })}
-            />
-            <StrategyChip
-              label="Aggressive"
-              value="aggressive"
-              selected={draft.strategyChoice === "aggressive"}
-              onSelect={(value) => updateDraft({ strategyChoice: value })}
-            />
-          </View>
+              minHeight: 46,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: "rgba(148,163,184,0.3)",
+              backgroundColor: "rgba(15,23,42,0.35)",
+              paddingHorizontal: 14,
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}>
+            <Text style={{ color: "#E2E8F0", fontFamily: "Figtree-Medium", fontSize: 13 }}>
+              Day {draft.paydayDay} of each month
+            </Text>
+            <Text style={{ color: "#94A3B8", fontFamily: "Figtree-Regular", fontSize: 12 }}>
+              {paydayOpen ? "Hide" : "Select"}
+            </Text>
+          </Pressable>
+          <Animated.View style={dropdownAnimStyle}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingTop: 4 }}>
+              {DAY_OPTIONS.map((day) => {
+                const selected = draft.paydayDay === day;
+                return (
+                  <Pressable
+                    key={day}
+                    onPress={() => {
+                      updateDraft({ paydayDay: day });
+                      setPaydayOpen(false);
+                    }}
+                    style={{
+                      minWidth: 36,
+                      paddingHorizontal: 10,
+                      paddingVertical: 8,
+                      borderRadius: 999,
+                      borderWidth: 1,
+                      borderColor: selected
+                        ? "rgba(34,197,94,0.55)"
+                        : "rgba(148,163,184,0.25)",
+                      backgroundColor: selected
+                        ? "rgba(34,197,94,0.2)"
+                        : "rgba(148,163,184,0.12)",
+                    }}>
+                    <Text
+                      style={{
+                        color: selected ? "#22C55E" : "#E2E8F0",
+                        fontFamily: "Figtree-Medium",
+                        fontSize: 12,
+                        textAlign: "center",
+                      }}>
+                      {day}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Animated.View>
+          {errors.paydayDay ? (
+            <Text
+              style={{
+                color: "#FCA5A5",
+                fontFamily: "Figtree-Regular",
+                fontSize: 12,
+                marginTop: 6,
+              }}>
+              {errors.paydayDay}
+            </Text>
+          ) : null}
         </View>
 
-        {error ? (
-          <Text
-            style={{
-              color: "#FCA5A5",
-              fontFamily: "Figtree-Regular",
-              marginTop: 8,
-            }}
-          >
-            {error}
-          </Text>
-        ) : null}
-
-        <View style={{ marginTop: 8 }}>
-          {(() => {
-            const userOverride =
-              draft.strategyChoice === "survival" || draft.strategyChoice === "aggressive";
-            const chosen = userOverride
-              ? {
-                ...computedIntelligent,
-                strategy: draft.strategyChoice,
-                ...strategyToPercents(draft.strategyChoice),
-              }
-              : {
-                ...computedIntelligent,
-                strategy: computedIntelligent.strategy,
-                needsPct: computedIntelligent.needsPct,
-                wantsPct: computedIntelligent.wantsPct,
-                savingsPct: computedIntelligent.savingsPct,
-              };
-            return (
-              <View
-                style={{
-                  borderRadius: 18,
-                  padding: 14,
-                  borderWidth: 1,
-                  borderColor: "rgba(255,255,255,0.08)",
-                  backgroundColor: "rgba(2,6,23,0.25)",
-                }}
-              >
-                <Text
-                  style={{
-                    color: "#9CA3AF",
-                    fontFamily: "Figtree-Medium",
-                    fontSize: 12,
-                    letterSpacing: 0.6,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Strategy preview
-                </Text>
-                <Text
-                  style={{
-                    color: "#FFFFFF",
-                    fontFamily: "Figtree-Bold",
-                    fontSize: 18,
-                    marginTop: 8,
-                  }}
-                >
-                  {chosen.strategy === "survival"
-                    ? "Survival"
-                    : chosen.strategy === "aggressive"
-                      ? "Aggressive"
-                      : "Balanced"}
-                </Text>
-                <Text
-                  style={{
-                    color: "#94A3AF",
-                    fontFamily: "Figtree-Regular",
-                    fontSize: 12,
-                    marginTop: 6,
-                  }}
-                >
-                  Needs {(chosen.needsPct * 100).toFixed(0)}% • Wants{" "}
-                  {(chosen.wantsPct * 100).toFixed(0)}% • Savings{" "}
-                  {(chosen.savingsPct * 100).toFixed(0)}%
-                </Text>
-              </View>
-            );
-          })()}
+        <View>
+          <SectionLabel text="Allocation Style (Radio Group)" />
+          <View accessibilityRole="radiogroup" style={{ gap: 8 }}>
+            <RadioOption
+              label="Survival (90 / 10 / 0)"
+              description="Prioritizes needs heavily. Useful when obligations are tight and you need immediate stability."
+              selected={draft.strategyChoice === "survival"}
+              onPress={() => updateDraft({ strategyChoice: "survival" })}
+            />
+            <RadioOption
+              label="Balanced (50 / 30 / 20)"
+              description="Standard split across needs, wants, and savings. Best for stable day-to-day budgeting."
+              selected={draft.strategyChoice === "balanced"}
+              onPress={() => updateDraft({ strategyChoice: "balanced" })}
+            />
+            <RadioOption
+              label="Aggressive (40 / 20 / 40)"
+              description="Pushes more into savings. Suitable when your essentials are under control and you want faster growth."
+              selected={draft.strategyChoice === "aggressive"}
+              onPress={() => updateDraft({ strategyChoice: "aggressive" })}
+            />
+          </View>
         </View>
       </View>
     </View>
   );
 });
 
+type StepPreferencesProps = {
+  draft: Draft;
+  toggleInterest: (interest: string) => void;
+  updateDraft: UpdateDraft;
+};
+
+export const StepPreferences = memo(function StepPreferences({
+  draft,
+  toggleInterest,
+  updateDraft,
+}: StepPreferencesProps) {
+  return (
+    <View>
+      <StepHeading
+        title="Preferences"
+        subtitle="Use checkbox interactions for personal context and interests."
+      />
+
+      <View style={{ marginTop: 18, gap: 16 }}>
+        <View>
+          <SectionLabel text="Life Stage" />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            {LIFE_STAGES.map((item) => (
+              <PillOption
+                key={item.value}
+                label={item.label}
+                selected={draft.lifeStage === item.value}
+                onPress={() => updateDraft({ lifeStage: item.value })}
+              />
+            ))}
+          </View>
+          {draft.lifeStage ? (
+            <Text style={{ color: "#94A3AF", fontFamily: "Figtree-Regular", fontSize: 12, marginTop: 8, lineHeight: 18 }}>
+              {LIFE_STAGES.find((x) => x.value === draft.lifeStage)?.description}
+            </Text>
+          ) : null}
+        </View>
+
+        <View>
+          <SectionLabel text="Spending Style" />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            {SPENDING_STYLES.map((item) => (
+              <PillOption
+                key={item.value}
+                label={item.label}
+                selected={draft.spendingStyle === item.value}
+                onPress={() => updateDraft({ spendingStyle: item.value })}
+              />
+            ))}
+          </View>
+          {draft.spendingStyle ? (
+            <Text style={{ color: "#94A3AF", fontFamily: "Figtree-Regular", fontSize: 12, marginTop: 8, lineHeight: 18 }}>
+              {SPENDING_STYLES.find((x) => x.value === draft.spendingStyle)?.description}
+            </Text>
+          ) : null}
+        </View>
+
+        <View>
+          <SectionLabel text="Financial Priority" />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            {FINANCIAL_PRIORITIES.map((item) => (
+              <PillOption
+                key={item.value}
+                label={item.label}
+                selected={draft.financialPriority === item.value}
+                onPress={() => updateDraft({ financialPriority: item.value })}
+              />
+            ))}
+          </View>
+          {draft.financialPriority ? (
+            <Text style={{ color: "#94A3AF", fontFamily: "Figtree-Regular", fontSize: 12, marginTop: 8, lineHeight: 18 }}>
+              {FINANCIAL_PRIORITIES.find((x) => x.value === draft.financialPriority)?.description}
+            </Text>
+          ) : null}
+        </View>
+
+        <View>
+          <SectionLabel text="Interests" />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            {INTERESTS.map((interest) => (
+              <PillOption
+                key={interest}
+                label={interest}
+                selected={draft.interests.includes(interest)}
+                onPress={() => toggleInterest(interest)}
+              />
+            ))}
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+});

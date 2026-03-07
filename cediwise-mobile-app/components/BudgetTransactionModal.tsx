@@ -136,8 +136,8 @@ export function BudgetTransactionModal({
   return (
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="bg-black/60" />
-        <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
+        <Dialog.Overlay className="bg-black/65" />
+        {Platform.OS === 'ios' && <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />}
         <KeyboardAvoidingView
           behavior="padding"
           style={{ flex: 1, justifyContent: 'center' }}
@@ -157,7 +157,7 @@ export function BudgetTransactionModal({
                 {isEditMode ? 'Edit Expense' : 'Log Expense'}
               </Dialog.Title>
               <Dialog.Description className="text-[15px] text-slate-400 mb-3 text-center leading-[22px]">
-                {isEditMode ? 'Update bucket, category, amount or note.' : 'Pick a bucket + category and save.'}
+                {isEditMode ? 'Update bucket, category, amount or note.' : 'Pick a bucket and save. Category is optional if none exist yet.'}
               </Dialog.Description>
 
               <View className="gap-1.5">
@@ -190,7 +190,7 @@ export function BudgetTransactionModal({
                 </Text>
                 <View className="flex-row flex-wrap gap-2.5">
                   {bucketCategories.length === 0 ? (
-                    <Text className="text-[13px] text-slate-400">No categories yet.</Text>
+                    <Text className="text-[13px] text-slate-400">No categories yet. You can still save this expense.</Text>
                   ) : (
                     bucketCategories.map((c) => (
                       <Pressable

@@ -3,6 +3,7 @@ import { DEFAULT_STANDARD_HEIGHT, StandardHeader } from '@/components/CediWiseHe
 import { BudgetIncomeSourcesCard } from '@/components/features/budget/BudgetIncomeSourcesCard';
 import { BudgetModals } from '@/components/features/budget/BudgetModals';
 import { useBudgetScreenState } from '@/components/features/budget/useBudgetScreenState';
+import { useAppToast } from '@/hooks/useAppToast';
 import { useAuth } from '@/hooks/useAuth';
 import { useLayoutEffect, useState } from 'react';
 import { LayoutAnimation, Platform, ScrollView, Text, UIManager, View } from 'react-native';
@@ -20,6 +21,7 @@ export default function BudgetIncomeScreen() {
   const insets = useSafeAreaInsets();
   const { form, derived, budget, modals } = useBudgetScreenState();
   const [showIncomeForm, setShowIncomeForm] = useState(false);
+  const { showSuccess, showError } = useAppToast();
 
   useLayoutEffect(() => {
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -105,14 +107,22 @@ export default function BudgetIncomeScreen() {
           incomeSources={budget.state?.incomeSources ?? []}
           incomeAccentColors={derived.incomeAccentColors}
           onAddIncome={async () => {
-            const amt = parseFloat(form.incomeAmount) || 0;
-            await budget.addIncomeSource({
-              name: form.incomeName,
-              type: form.incomeType,
-              amount: amt,
-              applyDeductions: form.applyDeductions,
-            });
-            form.setIncomeAmount('');
+            try {
+              const amt = parseFloat(form.incomeAmount) || 0;
+              await budget.addIncomeSource({
+                name: form.incomeName,
+                type: form.incomeType,
+                amount: amt,
+                applyDeductions: form.applyDeductions,
+              });
+              form.setIncomeAmount('');
+              showSuccess('Income saved', 'Using local values; syncing in background.');
+            } catch (e) {
+              showError(
+                'Could not save income',
+                e instanceof Error ? e.message : 'Please try again.'
+              );
+            }
           }}
           onEditIncome={(src) => {
             modals.setIncomeToEdit({
@@ -173,6 +183,7 @@ export default function BudgetIncomeScreen() {
             applyDeductions: next.applyDeductions ?? modals.incomeToEdit.applyDeductions,
           });
           await budget.reload();
+          showSuccess('Income updated', 'Your income source has been updated.');
         }}
         editingLimit={null}
         setEditingLimit={() => { }}

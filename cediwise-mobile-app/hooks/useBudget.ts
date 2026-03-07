@@ -34,6 +34,10 @@ import {
   saveBudgetState,
 } from "../utils/budgetStorage";
 import {
+  clearProfileVitalsCache,
+  writePersonalizationStatusCache,
+} from "../utils/profileVitals";
+import {
   flushBudgetQueue,
   syncCycleDirect,
   trySyncMutation,
@@ -219,6 +223,7 @@ export type UseBudgetReturn = {
     wantsPct?: number;
     savingsPct?: number;
     interests?: string[];
+    seedCategories?: boolean;
     /** Fixed amounts from vitals (e.g. Rent, ECG) for obligation-first allocation */
     fixedAmountsByCategory?: Record<string, number>;
     lifeStage?: "student" | "young_professional" | "family" | "retiree" | null;
@@ -478,6 +483,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       wantsPct = 0.3,
       savingsPct = 0.2,
       interests,
+      seedCategories: shouldSeedCategories = true,
       fixedAmountsByCategory,
       lifeStage,
     }: {
@@ -486,6 +492,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       wantsPct?: number;
       savingsPct?: number;
       interests?: string[];
+      seedCategories?: boolean;
       fixedAmountsByCategory?: Record<string, number>;
       lifeStage?:
         | "student"
@@ -495,7 +502,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         | null;
     }) => {
       if (!userId) return;
-      const current = state ?? createEmptyBudgetState(userId);
+      const latestState = await loadBudgetState(userId);
+      const current = latestState ?? state ?? createEmptyBudgetState(userId);
       const now = new Date();
       const { start, end } = computePaydayCycle(now, paydayDay);
 
@@ -516,19 +524,26 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         updatedAt: createdAt,
       };
 
-      const seeded = seedCategories(interests ?? current.prefs?.interests);
-      const needsList = [...seeded.needs];
-      if (
-        fixedAmountsByCategory?.["Debt Payments"] &&
-        !needsList.includes("Debt Payments")
-      ) {
-        needsList.push("Debt Payments");
+      let allNames: { bucket: BudgetBucket; name: string }[] = [];
+      let needsList: string[] = [];
+      let seeded:
+        | ReturnType<typeof seedCategories>
+        | null = null;
+      if (shouldSeedCategories) {
+        seeded = seedCategories(interests ?? current.prefs?.interests);
+        needsList = [...seeded.needs];
+        if (
+          fixedAmountsByCategory?.["Debt Payments"] &&
+          !needsList.includes("Debt Payments")
+        ) {
+          needsList.push("Debt Payments");
+        }
+        allNames = [
+          ...needsList.map((name) => ({ bucket: "needs" as const, name })),
+          ...seeded.wants.map((name) => ({ bucket: "wants" as const, name })),
+          ...seeded.savings.map((name) => ({ bucket: "savings" as const, name })),
+        ];
       }
-      const allNames: { bucket: BudgetBucket; name: string }[] = [
-        ...needsList.map((name) => ({ bucket: "needs" as const, name })),
-        ...seeded.wants.map((name) => ({ bucket: "wants" as const, name })),
-        ...seeded.savings.map((name) => ({ bucket: "savings" as const, name })),
-      ];
 
       const monthlyNetIncome = current.incomeSources.reduce((sum, src) => {
         if (src.type === "primary" && src.applyDeductions) {
@@ -546,6 +561,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       const historical = getHistoricalAvgByCategory(current);
 
       for (const bucket of ["needs", "wants", "savings"] as const) {
+        if (!seeded) break;
         const names =
           bucket === "needs"
             ? needsList
@@ -643,15 +659,17 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         },
       });
       // categories
-      for (const cat of categories) {
-        // Fire-and-forget; if offline, they stay queued
-        await enqueueAndTry({
-          id: makeQueueId(),
-          userId,
-          createdAt,
-          kind: "upsert_category",
-          payload: categoryToPayload(cat),
-        });
+      if (shouldSeedCategories) {
+        for (const cat of categories) {
+          // Fire-and-forget; if offline, they stay queued
+          await enqueueAndTry({
+            id: makeQueueId(),
+            userId,
+            createdAt,
+            kind: "upsert_category",
+            payload: categoryToPayload(cat),
+          });
+        }
       }
     },
     [enqueueAndTry, persistState, state, userId]
@@ -1714,6 +1732,11 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           remove_profile: removeProfile,
         },
       });
+
+      if (removeProfile) {
+        await clearProfileVitalsCache(userId);
+        await writePersonalizationStatusCache(userId, false);
+      }
     },
     [enqueueAndTry, refreshQueue, userId]
   );

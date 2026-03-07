@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { isValueFirstOnboardingEnabled } from "./featureFlags";
 import { supabase } from "./supabase";
 
 export type PersonalizationStrategy = "survival" | "balanced" | "aggressive";
@@ -125,6 +126,14 @@ export async function writeProfileVitalsCache(
   }
 }
 
+export async function clearProfileVitalsCache(userId: string): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(vitalsKey(userId));
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * Returns the route to send the user to after login, based on personalization status.
  * Retries once if profile row is missing (e.g. backend trigger not yet run).
@@ -132,6 +141,9 @@ export async function writeProfileVitalsCache(
 export async function getPostAuthRoute(
   userId: string
 ): Promise<"/(tabs)" | "/vitals"> {
+  const valueFirstOnboarding = await isValueFirstOnboardingEnabled(userId);
+  if (valueFirstOnboarding) return "/(tabs)";
+
   const cached = await readPersonalizationStatusCache(userId);
   if (cached?.setupCompleted || cached?.skippedVitals) return "/(tabs)";
   const retryDelayMs = 800;

@@ -1,5 +1,4 @@
 import { Card } from '@/components/Card';
-import { PrimaryButton } from '@/components/PrimaryButton';
 import type { BudgetBucket, BudgetTransaction } from '@/types/budget';
 import { bucketLabel } from '@/utils/budgetHelpers';
 import { formatCurrency } from '@/utils/formatCurrency';
@@ -41,14 +40,14 @@ export function BudgetExpensesCard({
     <Card className="">
       <View className="flex-row items-center justify-between">
         <Text className="text-white text-lg font-semibold">Expenses</Text>
-        <PrimaryButton
+        <Button
           onPress={onLogExpense}
-          disabled={!activeCycleId}
+          isDisabled={!activeCycleId}
           className="flex-row gap-2"
         >
           <Plus size={16} color="#020617" />
-          Log
-        </PrimaryButton>
+          <Text className="text-slate-900 font-semibold text-base">Add expense</Text>
+        </Button>
       </View>
 
       <View className="mt-3 flex-row flex-wrap gap-2.5">

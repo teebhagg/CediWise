@@ -34,6 +34,10 @@ const STATUS_KEY_PREFIX = "@cediwise_personalization_status:";
 const DRAFT_KEY_PREFIX = "@cediwise_vitals_draft:";
 const VITALS_KEY_PREFIX = "@cediwise_profile_vitals:";
 
+async function isValueFirstOnboardingEnabled(_userId: string): Promise<boolean> {
+  return process.env.EXPO_PUBLIC_VALUE_FIRST_ONBOARDING_V1 === "true";
+}
+
 function statusKey(userId: string) {
   return `${STATUS_KEY_PREFIX}${userId}`;
 }
@@ -125,6 +129,14 @@ export async function writeProfileVitalsCache(
   }
 }
 
+export async function clearProfileVitalsCache(userId: string): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(vitalsKey(userId));
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * Returns the route to send the user to after login, based on personalization status.
  * Retries once if profile row is missing (e.g. backend trigger not yet run).
@@ -132,6 +144,9 @@ export async function writeProfileVitalsCache(
 export async function getPostAuthRoute(
   userId: string
 ): Promise<"/(tabs)" | "/vitals"> {
+  const valueFirstOnboarding = await isValueFirstOnboardingEnabled(userId);
+  if (valueFirstOnboarding) return "/(tabs)";
+
   const cached = await readPersonalizationStatusCache(userId);
   if (cached?.setupCompleted || cached?.skippedVitals) return "/(tabs)";
   const retryDelayMs = 800;

@@ -25,12 +25,12 @@ export function BudgetQuickActions({
 
   return (
     <View className="gap-3">
-      <View className="flex-row gap-2.5">
+      {/* <View className="flex-row gap-2.5">
         <Pressable
           onPress={() => handlePress(onLogExpense)}
           disabled={disabledLogExpense}
           accessibilityRole="button"
-          accessibilityLabel="Log expense"
+          accessibilityLabel="Add expense"
           className={`flex-1 flex-row items-center justify-center gap-2 py-3.5 rounded-xl ${disabledLogExpense
               ? 'bg-slate-500/20 border border-slate-500/30 opacity-60'
               : 'bg-emerald-500 border border-emerald-400/50 active:bg-emerald-600'
@@ -41,10 +41,10 @@ export function BudgetQuickActions({
             className={`font-semibold text-sm ${disabledLogExpense ? 'text-slate-400' : 'text-slate-900'
               }`}
           >
-            Log Expense
+            Add expense
           </Text>
         </Pressable>
-      </View>
+      </View> */}
       <View className="flex-row gap-2">
         <Pressable
           onPress={() => handlePress(() => router.push('/budget/categories'))}

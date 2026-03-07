@@ -1,7 +1,5 @@
 import type {
   PersonalizationStrategy,
-  PrimaryGoal,
-  UtilitiesMode,
 } from "@/utils/profileVitals";
 
 export type LifeStage = "student" | "young_professional" | "family" | "retiree";
@@ -17,24 +15,13 @@ export type Draft = {
   step: number;
   stableSalary: string;
   autoTax: boolean;
-  sideIncome: string;
-  paydayDay: string;
-  // Life stage (step 1)
+  paydayDay: number;
   lifeStage: LifeStage | null;
-  dependentsCount: string;
   incomeFrequency: IncomeFrequency;
   spendingStyle: SpendingStyle | null;
   financialPriority: FinancialPriority | null;
-  // Fixed expenses
-  rent: string;
-  titheRemittance: string;
-  debtObligations: string;
-  utilitiesMode: UtilitiesMode;
-  utilitiesTotal: string;
-  utilitiesECG: string;
-  utilitiesWater: string;
   interests: string[];
-  primaryGoal: PrimaryGoal | null;
+  // Setup budget preference
   strategyChoice: PersonalizationStrategy;
 };
 

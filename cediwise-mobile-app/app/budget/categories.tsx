@@ -1,29 +1,45 @@
 import { BackButton } from '@/components/BackButton';
 import { DEFAULT_STANDARD_HEIGHT, StandardHeader } from '@/components/CediWiseHeader';
-import { BudgetCategoriesCard } from '@/components/features/budget/BudgetCategoriesCard';
+import { Card } from '@/components/Card';
+import { PrimaryButton } from '@/components/PrimaryButton';
+import { SecondaryButton } from '@/components/SecondaryButton';
 import { BudgetModals } from '@/components/features/budget/BudgetModals';
 import { useBudgetScreenState } from '@/components/features/budget/useBudgetScreenState';
 import { useAuth } from '@/hooks/useAuth';
 import type { BudgetBucket } from '@/types/budget';
-import { useState } from 'react';
+import { formatCurrency } from '@/utils/formatCurrency';
+import { useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const FILTERS: { key: 'all' | BudgetBucket; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'needs', label: 'Needs' },
+  { key: 'wants', label: 'Wants' },
+  { key: 'savings', label: 'Savings' },
+];
 
 export default function BudgetCategoriesScreen() {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const { modals, derived, budget } = useBudgetScreenState();
-  const [categoriesOpen, setCategoriesOpen] = useState(true);
-  const [bucketOpen, setBucketOpen] = useState<Record<BudgetBucket, boolean>>({
-    needs: true,
-    wants: false,
-    savings: false,
-  });
-
-  const showAddModal = modals.showAddCustomCategoryModal;
-  const setShowAddModal = modals.setShowAddCustomCategoryModal;
+  const [filter, setFilter] = useState<'all' | BudgetBucket>('all');
 
   const headerPadding = DEFAULT_STANDARD_HEIGHT + insets.top;
+
+  const flatCategories = useMemo(
+    () => [
+      ...derived.categoriesByBucket.needs,
+      ...derived.categoriesByBucket.wants,
+      ...derived.categoriesByBucket.savings,
+    ],
+    [derived.categoriesByBucket],
+  );
+
+  const visibleCategories = useMemo(() => {
+    if (filter === 'all') return flatCategories;
+    return flatCategories.filter((c) => c.bucket === filter);
+  }, [filter, flatCategories]);
 
   if (!user?.id) {
     return (
@@ -36,13 +52,13 @@ export default function BudgetCategoriesScreen() {
     );
   }
 
-  if (!derived.activeCycleId || derived.cycleCategories.length === 0) {
+  if (!derived.activeCycleId) {
     return (
       <View style={{ flex: 1, backgroundColor: 'black' }}>
         <StandardHeader title="Categories" leading={<BackButton />} centered />
         <View className="px-5 py-4" style={{ paddingTop: headerPadding }}>
           <Text className="text-slate-400 mt-8 text-center">
-            Set up your budget and add income sources first.
+            Set up your budget cycle first.
           </Text>
         </View>
       </View>
@@ -52,42 +68,90 @@ export default function BudgetCategoriesScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: 'black' }}>
       <StandardHeader title="Categories" leading={<BackButton />} centered />
-      <View className="px-5 pt-2 pb-4" style={{ paddingTop: headerPadding }}>
-        <Text className="text-slate-400 text-sm mt-1">
-          Spent vs remaining, grouped by Needs, Wants, Savings.
-        </Text>
-      </View>
-
       <ScrollView
         className="px-5"
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingTop: headerPadding + 10, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
-        <BudgetCategoriesCard
-          visible
-          categoriesOpen={categoriesOpen}
-          onToggleCategories={() => setCategoriesOpen((v) => !v)}
-          bucketOpen={bucketOpen}
-          setBucketOpen={setBucketOpen}
-          categoriesByBucket={derived.categoriesByBucket}
-          activeCycleId={derived.activeCycleId}
-          transactions={budget.state?.transactions ?? []}
-          totals={budget.totals}
-          onEditLimit={(cat) => {
-            modals.setEditingLimit(cat);
-            modals.setShowEditLimitModal(true);
-          }}
-          onDeleteCategory={(cat) => {
-            modals.setCategoryToDelete(cat);
-            modals.setShowDeleteCategoryConfirm(true);
-          }}
-          onAddCustomCategory={() => modals.setShowAddCustomCategoryModal(true)}
-        />
+        <View className="gap-5">
+          <View>
+            <Text className="text-white text-2xl font-bold">Budget Categories</Text>
+            <Text className="text-slate-400 text-sm mt-2">
+              Keep this simple: pick a bucket filter, then add or edit limits.
+            </Text>
+          </View>
+
+          <View className="flex-row flex-wrap gap-2">
+            {FILTERS.map((item) => {
+              const selected = filter === item.key;
+              return (
+                <SecondaryButton
+                  key={item.key}
+                  onPress={() => setFilter(item.key)}
+                  className={selected ? 'bg-emerald-500/20 border border-emerald-400/50' : ''}
+                >
+                  {item.label}
+                </SecondaryButton>
+              );
+            })}
+          </View>
+
+          <Card>
+            <PrimaryButton
+              onPress={() => modals.setShowAddCustomCategoryModal(true)}
+              className="justify-center"
+            >
+              Add category
+            </PrimaryButton>
+          </Card>
+
+          {visibleCategories.length === 0 ? (
+            <Card>
+              <Text className="text-white text-base font-semibold">No categories yet</Text>
+              <Text className="text-slate-400 text-sm mt-2">
+                Add your first category to start tracking this cycle.
+              </Text>
+            </Card>
+          ) : (
+            <View className="gap-3">
+              {visibleCategories.map((cat) => (
+                <Card key={cat.id}>
+                  <View className="flex-row items-center justify-between gap-3">
+                    <View className="flex-1">
+                      <Text className="text-white text-base font-semibold" numberOfLines={1}>
+                        {cat.name}
+                      </Text>
+                      <Text className="text-slate-400 text-xs mt-1 capitalize">{cat.bucket}</Text>
+                    </View>
+                    <View className="items-end">
+                      <Text className="text-emerald-300 text-base font-bold">
+                        ₵{formatCurrency(cat.limitAmount)}
+                      </Text>
+                      <SecondaryButton
+                        onPress={() => {
+                          modals.setEditingLimit({
+                            id: cat.id,
+                            name: cat.name,
+                            current: cat.limitAmount,
+                          });
+                          modals.setShowEditLimitModal(true);
+                        }}
+                        className="mt-2"
+                      >
+                        Edit
+                      </SecondaryButton>
+                    </View>
+                  </View>
+                </Card>
+              ))}
+            </View>
+          )}
+        </View>
       </ScrollView>
 
       <BudgetModals
-        showAddCustomCategoryModal={showAddModal}
-        setShowAddCustomCategoryModal={setShowAddModal}
+        showAddCustomCategoryModal={modals.showAddCustomCategoryModal}
+        setShowAddCustomCategoryModal={modals.setShowAddCustomCategoryModal}
         onAddCategory={modals.handleAddCategory}
         showTxModal={false}
         setShowTxModal={() => { }}

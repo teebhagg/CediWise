@@ -1,4 +1,4 @@
-import { Check } from "lucide-react-native";
+import { Check, type LucideIcon } from "lucide-react-native";
 import { memo, useEffect } from "react";
 import { Pressable, Text } from "react-native";
 import Animated, {
@@ -29,11 +29,18 @@ type StrategyChipProps = {
   label: string;
   value: PersonalizationStrategy;
   selected: boolean;
+  icon?: LucideIcon;
   onSelect: (value: PersonalizationStrategy) => void;
 };
 
 export const StrategyChip = memo(
-  function StrategyChipInner({ label, value, selected, onSelect }: StrategyChipProps) {
+  function StrategyChipInner({
+    label,
+    value,
+    selected,
+    icon: Icon,
+    onSelect,
+  }: StrategyChipProps) {
     const selectedSV = useSharedValue(selected ? 1 : 0);
     const pressedSV = useSharedValue(0);
 
@@ -71,7 +78,7 @@ export const StrategyChip = memo(
 
     const checkStyle = useAnimatedStyle(() => ({
       opacity: selectedSV.value,
-      transform: [{ scale: 0.9 + 0.1 * selectedSV.value }],
+      transform: [{ scale: 0.75 + 0.25 * selectedSV.value }],
     }));
 
     return (
@@ -91,6 +98,17 @@ export const StrategyChip = memo(
           { flexDirection: "row", alignItems: "center", gap: 8 },
         ]}
       >
+        {Icon ? (
+          <Animated.View
+            style={{
+              width: 16,
+              height: 16,
+              alignItems: "center",
+              justifyContent: "center",
+            }}>
+            <Icon size={14} color={selected ? "#22C55E" : "#94A3B8"} />
+          </Animated.View>
+        ) : null}
         <AnimatedText
           style={[
             { fontFamily: "Figtree-Medium", fontSize: 13 },
@@ -105,7 +123,7 @@ export const StrategyChip = memo(
             checkStyle,
           ]}
         >
-          <Check size={16} color={selected ? "#000000" : "transparent"} />
+          <Check size={16} color="#22C55E" />
         </Animated.View>
       </AnimatedPressable>
     );
@@ -114,6 +132,6 @@ export const StrategyChip = memo(
     prev.selected === next.selected &&
     prev.label === next.label &&
     prev.value === next.value &&
+    prev.icon === next.icon &&
     prev.onSelect === next.onSelect
 );
-

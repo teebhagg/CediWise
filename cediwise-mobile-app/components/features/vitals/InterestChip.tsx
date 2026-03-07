@@ -1,3 +1,4 @@
+import { Check, type LucideIcon } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { memo, useEffect } from "react";
 import { Pressable, Text } from "react-native";
@@ -27,12 +28,19 @@ type InterestChipProps = {
   label: string;
   selected: boolean;
   onToggle: (label: string) => void;
+  icon?: LucideIcon;
   /** When true, triggers a light haptic on toggle (default: false). */
   haptic?: boolean;
 };
 
 export const InterestChip = memo(
-  function InterestChipInner({ label, selected, onToggle, haptic = false }: InterestChipProps) {
+  function InterestChipInner({
+    label,
+    selected,
+    onToggle,
+    icon: Icon,
+    haptic = false,
+  }: InterestChipProps) {
     const selectedSV = useSharedValue(selected ? 1 : 0);
     const pressedSV = useSharedValue(0);
 
@@ -74,6 +82,16 @@ export const InterestChip = memo(
       color: interpolateColor(selectedSV.value, [0, 1], ["#E2E8F0", "#E2E8F0"]),
     }));
 
+    const iconStyle = useAnimatedStyle(() => ({
+      opacity: 0.7 + 0.3 * selectedSV.value,
+      transform: [{ scale: 0.94 + 0.06 * selectedSV.value }],
+    }));
+
+    const checkStyle = useAnimatedStyle(() => ({
+      opacity: selectedSV.value,
+      transform: [{ scale: 0.75 + 0.25 * selectedSV.value }],
+    }));
+
     return (
       <AnimatedPressable
         onPress={async () => {
@@ -87,25 +105,55 @@ export const InterestChip = memo(
           onToggle(label);
         }}
         accessibilityRole="button"
-        accessibilityLabel={`Interest ${label}`}
+        accessibilityLabel={`Select ${label}`}
         onPressIn={() => {
           pressedSV.value = withSpring(1, { stiffness: 300, damping: 22 });
         }}
         onPressOut={() => {
           pressedSV.value = withSpring(0, { stiffness: 300, damping: 22 });
         }}
-        style={[interestChipBaseStyle, containerStyle]}
+        style={[
+          interestChipBaseStyle,
+          containerStyle,
+          { flexDirection: "row", alignItems: "center", gap: 8 },
+        ]}
       >
+        {Icon ? (
+          <Animated.View
+            style={[
+              {
+                width: 16,
+                height: 16,
+                alignItems: "center",
+                justifyContent: "center",
+              },
+              iconStyle,
+            ]}>
+            <Icon size={14} color={selected ? "#22C55E" : "#94A3B8"} />
+          </Animated.View>
+        ) : null}
         <AnimatedText style={[{ fontFamily: "Figtree-Medium", fontSize: 13 }, textStyle]}>
           {label}
         </AnimatedText>
+        <Animated.View
+          style={[
+            {
+              width: 16,
+              height: 16,
+              alignItems: "center",
+              justifyContent: "center",
+            },
+            checkStyle,
+          ]}>
+          <Check size={14} color="#22C55E" />
+        </Animated.View>
       </AnimatedPressable>
     );
   },
   (prev, next) =>
     prev.selected === next.selected &&
     prev.label === next.label &&
+    prev.icon === next.icon &&
     prev.onToggle === next.onToggle &&
     prev.haptic === next.haptic
 );
-

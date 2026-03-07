@@ -4,7 +4,6 @@ import {
 } from "@/components/BudgetLoading";
 import { Card } from "@/components/Card";
 import { RolloverAllocationModal } from "@/components/RolloverAllocationModal";
-import { ApplyVitalsCard } from "@/components/features/budget/ApplyVitalsCard";
 import { BudgetExpensesCard } from "@/components/features/budget/BudgetExpensesCard";
 import { BudgetModals } from "@/components/features/budget/BudgetModals";
 import { BudgetOverviewCard } from "@/components/features/budget/BudgetOverviewCard";
@@ -21,7 +20,7 @@ import { useAppToast } from "@/hooks/useAppToast";
 import { useConnectivity } from "@/hooks/useConnectivity";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Settings, WifiOff } from "lucide-react-native";
+import { Plus, Settings, WifiOff } from "lucide-react-native";
 import { useEffect, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -95,6 +94,7 @@ export default function BudgetScreen() {
     fromVitals &&
     (budget.isLoading ||
       (budget.pendingCount > 0 && !initialSyncAttempted));
+  const hasCategories = derived.cycleCategories.length > 0;
 
   /** Tour zones (budget-overview, budget-actions) exist only when content is shown. */
   const tourZonesReady =
@@ -159,73 +159,6 @@ export default function BudgetScreen() {
       .catch(() => { })
       .finally(() => setInitialSyncAttempted(true));
   }, [fromVitals, user?.id, budget.isLoading, budget.pendingCount, budget.syncNow, budget]);
-
-  const handleApplyVitals = async () => {
-    const v = derived.vitalsSummary?.v;
-    if (!v) return;
-    const payday = v.payday_day ?? 25;
-    const needsPct = typeof v.needs_pct === "number" ? v.needs_pct : 0.5;
-    const wantsPct = typeof v.wants_pct === "number" ? v.wants_pct : 0.3;
-    const savingsPct = typeof v.savings_pct === "number" ? v.savings_pct : 0.2;
-
-    const fixedAmountsByCategory: Record<string, number> = {};
-    if (v.rent > 0) fixedAmountsByCategory["Rent"] = v.rent;
-    if (v.tithe_remittance > 0)
-      fixedAmountsByCategory["Tithes/Church"] = v.tithe_remittance;
-    if (v.debt_obligations > 0)
-      fixedAmountsByCategory["Debt Payments"] = v.debt_obligations;
-    if (v.utilities_total > 0) {
-      if (v.utilities_mode === "precise") {
-        if (v.utilities_ecg > 0)
-          fixedAmountsByCategory["ECG"] = v.utilities_ecg;
-        if (v.utilities_water > 0)
-          fixedAmountsByCategory["Ghana Water"] = v.utilities_water;
-      } else {
-        fixedAmountsByCategory["ECG"] = Math.round(v.utilities_total * 0.6);
-        fixedAmountsByCategory["Ghana Water"] = Math.round(
-          v.utilities_total * 0.4,
-        );
-      }
-    }
-
-    await budget.setupBudget({
-      paydayDay: payday,
-      needsPct,
-      wantsPct,
-      savingsPct,
-      interests: v.interests ?? [],
-      fixedAmountsByCategory:
-        Object.keys(fixedAmountsByCategory).length > 0
-          ? fixedAmountsByCategory
-          : undefined,
-    });
-
-    if (v.stable_salary > 0) {
-      await budget.addIncomeSource({
-        name: "Monthly Basic Salary",
-        type: "primary",
-        amount: v.stable_salary,
-        applyDeductions: v.auto_tax,
-      });
-    }
-    if (v.side_income > 0) {
-      await budget.addIncomeSource({
-        name: "Side Hustle",
-        type: "side",
-        amount: v.side_income,
-        applyDeductions: false,
-      });
-    }
-
-    await budget.reload();
-
-    if (user?.id) {
-      analytics.budgetCreated({
-        userId: user.id,
-        source: "apply_vitals",
-      });
-    }
-  };
 
   // Fire BudgetFirstViewShown once per cycle when overview is actually visible
   useEffect(() => {
@@ -365,15 +298,6 @@ export default function BudgetScreen() {
               onStartNewCycle={modals.handleStartNewCycle}
             />
 
-            <ApplyVitalsCard
-              visible={
-                !!user &&
-                !!derived.vitalsSummary &&
-                (!derived.cycleIsSet || !derived.hasIncomeSources)
-              }
-              onApply={handleApplyVitals}
-            />
-
             <BudgetPendingSyncCard
               visible={showPendingSyncCard}
               isSyncing={budget.isSyncing}
@@ -403,9 +327,29 @@ export default function BudgetScreen() {
                         1,
                         Math.min(31, parseInt(form.paydayDay || "25", 10)),
                       );
-                      await budget.setupBudget({ paydayDay: day });
+                      await budget.setupBudget({
+                        paydayDay: day,
+                        seedCategories: false,
+                      });
                     }}
                   />
+                ) : null}
+
+                {derived.cycleIsSet && !hasCategories ? (
+                  <Card>
+                    <Text className="text-white text-lg font-semibold">
+                      Add categories
+                    </Text>
+                    <Text className="text-muted-foreground text-sm mt-1">
+                      Your cycle is ready. Add categories explicitly to start tracking spending.
+                    </Text>
+                    <Pressable
+                      onPress={() => router.push("/budget/categories")}
+                      className="mt-3 flex-row items-center justify-center gap-2 py-3 rounded-xl bg-emerald-500 border border-emerald-400/50 active:bg-emerald-600">
+                      <Plus size={16} color="#020617" />
+                      <Text className="text-slate-900 font-semibold">Add categories</Text>
+                    </Pressable>
+                  </Card>
                 ) : null}
 
                 <BudgetReallocationBanner
@@ -441,9 +385,8 @@ export default function BudgetScreen() {
                   <View collapsable={false}>
                     <BudgetOverviewCard
                       visible={
-                        !derived.cycleHasEnded &&
-                        !!budget.totals &&
-                        derived.hasIncomeSources
+                        derived.cycleIsSet &&
+                        !!budget.totals
                       }
                       cycle={derived.activeCycle}
                       totals={budget.totals}
@@ -471,8 +414,7 @@ export default function BudgetScreen() {
                     <BudgetQuickActions
                       visible={
                         !derived.cycleHasEnded &&
-                        derived.cycleIsSet &&
-                        derived.hasIncomeSources
+                        derived.cycleIsSet
                       }
                       onLogExpense={() => modals.setShowTxModal(true)}
                       disabledLogExpense={!derived.activeCycleId}

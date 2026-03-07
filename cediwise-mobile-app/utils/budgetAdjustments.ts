@@ -12,6 +12,7 @@ export async function logBudgetAdjustment(params: {
   changes: Record<string, unknown>;
   reason?: string | null;
 }): Promise<void> {
+  if (!supabase) return;
   try {
     const { error } = await supabase.from("budget_adjustments_log").insert({
       user_id: params.userId,
@@ -36,6 +37,7 @@ export async function getRecentAdjustments(
   userId: string,
   limit: number = 10
 ): Promise<BudgetAdjustment[]> {
+  if (!supabase) return [];
   try {
     const { data, error } = await supabase
       .from("budget_adjustments_log")
@@ -68,6 +70,7 @@ export async function getCycleAdjustments(
   userId: string,
   cycleId: string
 ): Promise<BudgetAdjustment[]> {
+  if (!supabase) return [];
   try {
     const { data, error } = await supabase
       .from("budget_adjustments_log")
@@ -154,6 +157,21 @@ export type AdjustmentStats = {
 export async function getAdjustmentStats(
   userId: string
 ): Promise<AdjustmentStats> {
+  if (!supabase) {
+    return {
+      totalAdjustments: 0,
+      byType: {
+        vitals_change: 0,
+        manual: 0,
+        auto_reallocation: 0,
+        template_applied: 0,
+        rollover: 0,
+        income_change: 0,
+        category_change: 0,
+      },
+      recentActivity: false,
+    };
+  }
   try {
     const { data, error } = await supabase
       .from("budget_adjustments_log")

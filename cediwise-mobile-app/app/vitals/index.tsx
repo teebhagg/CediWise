@@ -1,21 +1,34 @@
 import {
-  StepFixedExpenses,
-  StepGoal,
   StepIncome,
-  StepInterests,
-  StepLifeStage,
-  StepWelcome,
+  StepPreferences,
+  StepSetupBudget,
 } from "@/components/features/vitals/Steps";
 import type { Draft, StepErrors } from "@/components/features/vitals/types";
 import {
-  clampDay,
   computeIntelligentStrategy,
   getNetPreview,
   strategyToPercents,
   toMoney,
   toMonthlySalary,
 } from "@/components/features/vitals/utils";
+import { KeyboardAwareScrollView } from "@/components/KeyboardAwareScrollView";
+import { BackButton } from "@/components/BackButton";
+import { PrimaryButton } from "@/components/PrimaryButton";
+import { SecondaryButton } from "@/components/SecondaryButton";
+import { useAuth } from "@/hooks/useAuth";
+import { useBudget } from "@/hooks/useBudget";
+import { analytics } from "@/utils/analytics";
+import { isOnline } from "@/utils/connectivity";
+import { log } from "@/utils/logger";
+import {
+  writePersonalizationStatusCache,
+  writeProfileVitalsCache,
+} from "@/utils/profileVitals";
+import { trySyncProfileWithRetries } from "@/utils/budgetSync";
+import { enqueueMutation } from "@/utils/budgetStorage";
+import { readTourSeen } from "@/utils/tourStorage";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -41,55 +54,22 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-
-import { KeyboardAwareScrollView } from "@/components/KeyboardAwareScrollView";
-import { KeyboardDoneAccessory } from "@/components/KeyboardDoneAccessory";
-import { PrimaryButton } from "@/components/PrimaryButton";
-import { SecondaryButton } from "@/components/SecondaryButton";
-import { useAuth } from "@/hooks/useAuth";
-import { useBudget } from "@/hooks/useBudget";
-import { usePersonalizationStatus } from "@/hooks/usePersonalizationStatus";
-import {
-  emitBudgetChangedNow,
-  enqueueMutation,
-  loadBudgetState,
-  saveBudgetState,
-  setSuppressBudgetEmit,
-} from "@/utils/budgetStorage";
-import { trySyncProfileWithRetries } from "@/utils/budgetSync";
-import { isOnline } from "@/utils/connectivity";
-import {
-  vitalsDraftKey,
-  writePersonalizationStatusCache,
-  writeProfileVitalsCache,
-} from "@/utils/profileVitals";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Button, Separator } from "heroui-native";
-import { log } from "@/utils/logger";
+import { Separator } from "heroui-native";
 
 const AnimatedView = Animated.createAnimatedComponent(View);
+const SETUP_LOGO = require("../../assets/images/logo/cediwise-transparent-emerald-logo.png");
 
 function makeDefaultDraft(): Draft {
   return {
     step: 0,
     stableSalary: "",
     autoTax: true,
-    lifeStage: null,
-    dependentsCount: "0",
+    paydayDay: 25,
     incomeFrequency: "monthly",
+    lifeStage: null,
     spendingStyle: null,
     financialPriority: null,
-    sideIncome: "",
-    paydayDay: "25",
-    rent: "",
-    titheRemittance: "",
-    debtObligations: "",
-    utilitiesMode: "general",
-    utilitiesTotal: "",
-    utilitiesECG: "",
-    utilitiesWater: "",
     interests: [],
-    primaryGoal: "emergency_fund",
     strategyChoice: "balanced",
   };
 }
@@ -101,124 +81,39 @@ export default function VitalsWizard() {
 
   const { width } = useWindowDimensions();
   const { user, isLoading: authLoading } = useAuth();
-  const { setupCompleted } = usePersonalizationStatus(user?.id);
-
-  const noUser = !authLoading && !user?.id;
   const budget = useBudget(user?.id);
 
-  const totalSteps = 6;
+  const noUser = !authLoading && !user?.id;
+
+  const totalSteps = 3;
   const [draft, setDraft] = useState<Draft>(makeDefaultDraft());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const transition = useSharedValue(1);
   const direction = useSharedValue<1 | -1>(1);
-  const containerHeight = useSharedValue(480);
+  const containerHeight = useSharedValue(360);
   const outgoingStepRef = useRef<number | null>(null);
   const scrollViewRef = useRef<any>(null);
   const [showValidationHint, setShowValidationHint] = useState(false);
   const insets = useSafeAreaInsets();
 
-  // Reserve space so scroll content can scroll above the bottom bar (button row + optional link + padding)
-  const bottomBarHeight =
-    16 +
-    48 +
-    10 +
-    (draft.step > 0 && draft.step < totalSteps - 1 && !editMode ? 48 : 0) +
-    Math.max(16, insets.bottom);
+  const bottomBarHeight = 16 + 48 + 10 + Math.max(16, insets.bottom);
 
   const progress = useSharedValue(0);
+  const setupProgress = useSharedValue(0.1);
 
   const clearOutgoing = useCallback(() => {
     outgoingStepRef.current = null;
   }, []);
 
-  const persistDraft = useCallback(
-    async (next: Draft) => {
-      if (!user?.id) return;
-      try {
-        await AsyncStorage.setItem(
-          vitalsDraftKey(user.id),
-          JSON.stringify(next),
-        );
-      } catch {
-        // ignore
-      }
-    },
-    [user?.id],
-  );
-
-  useEffect(() => {
-    (async () => {
-      if (!user?.id) return;
-      try {
-        const raw = await AsyncStorage.getItem(vitalsDraftKey(user.id));
-        if (!raw) return;
-        const parsed = JSON.parse(raw) as Partial<Draft>;
-        setDraft((prev) => ({
-          ...prev,
-          ...parsed,
-          utilitiesMode:
-            parsed.utilitiesMode === "precise" ? "precise" : "general",
-          interests: Array.isArray(parsed.interests)
-            ? parsed.interests
-            : prev.interests,
-          lifeStage:
-            parsed.lifeStage != null &&
-              ["student", "young_professional", "family", "retiree"].includes(
-                parsed.lifeStage,
-              )
-              ? parsed.lifeStage
-              : prev.lifeStage,
-          dependentsCount:
-            typeof parsed.dependentsCount === "string"
-              ? parsed.dependentsCount
-              : prev.dependentsCount,
-          incomeFrequency:
-            parsed.incomeFrequency != null &&
-              ["weekly", "bi_weekly", "monthly"].includes(parsed.incomeFrequency)
-              ? parsed.incomeFrequency
-              : prev.incomeFrequency,
-          spendingStyle:
-            parsed.spendingStyle != null &&
-              ["conservative", "moderate", "liberal"].includes(
-                parsed.spendingStyle,
-              )
-              ? parsed.spendingStyle
-              : prev.spendingStyle,
-          financialPriority:
-            parsed.financialPriority != null &&
-              ["debt_payoff", "savings_growth", "lifestyle", "balanced"].includes(
-                parsed.financialPriority,
-              )
-              ? parsed.financialPriority
-              : prev.financialPriority,
-          primaryGoal:
-            parsed.primaryGoal != null &&
-              ["emergency_fund", "project", "investment"].includes(
-                parsed.primaryGoal,
-              )
-              ? parsed.primaryGoal
-              : prev.primaryGoal,
-          strategyChoice:
-            parsed.strategyChoice != null &&
-              ["survival", "balanced", "aggressive"].includes(
-                parsed.strategyChoice,
-              )
-              ? parsed.strategyChoice
-              : prev.strategyChoice,
-          step:
-            typeof parsed.step === "number"
-              ? parsed.step <= 4
-                ? Math.min(5, parsed.step + 1)
-                : Math.min(5, parsed.step)
-              : prev.step,
-        }));
-      } catch {
-        // ignore
-      }
-    })();
-  }, [totalSteps, user?.id]);
+  const completeSetupProgress = useCallback(async () => {
+    setupProgress.value = withTiming(1, {
+      duration: 1000,
+      easing: Easing.out(Easing.cubic),
+    });
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }, [setupProgress]);
 
   useEffect(() => {
     progress.value = withTiming((draft.step + 1) / totalSteps, {
@@ -227,40 +122,36 @@ export default function VitalsWizard() {
     });
   }, [draft.step, progress]);
 
+  useEffect(() => {
+    if (!loading) {
+      setupProgress.value = 0.1;
+      return;
+    }
+    const id = setInterval(() => {
+      const next = Math.min(0.9, setupProgress.value + 0.01);
+      setupProgress.value = withTiming(next, {
+        duration: 100,
+        easing: Easing.linear,
+      });
+    }, 100);
+    return () => clearInterval(id);
+  }, [loading, setupProgress]);
+
   const progressStyle = useAnimatedStyle(() => ({
     width: Math.max(0, Math.min(1, progress.value)) * width,
   }));
+  const setupProgressStyle = useAnimatedStyle(() => ({
+    width: 260 * Math.max(0.08, Math.min(1, setupProgress.value)),
+  }));
 
   const title = useMemo(() => {
-    if (editMode && draft.step > 0) {
-      switch (draft.step) {
-        case 1:
-          return "Income & Jobs";
-        case 2:
-          return "Life Stage & Context";
-        case 3:
-          return "Fixed Expenses";
-        case 4:
-          return "Interests & Wants";
-        case 5:
-          return "Goal Setting";
-        default:
-          return "Update your profile";
-      }
-    }
     switch (draft.step) {
       case 0:
-        return "Welcome";
+        return "Income";
       case 1:
-        return "Income & Jobs";
+        return "Setup Budget";
       case 2:
-        return "Life Stage & Context";
-      case 3:
-        return "Fixed Expenses";
-      case 4:
-        return "Interests & Wants";
-      case 5:
-        return "Goal Setting";
+        return "Preferences";
       default:
         return editMode ? "Update your profile" : "Vitals";
     }
@@ -268,44 +159,32 @@ export default function VitalsWizard() {
 
   const stepErrors: StepErrors = useMemo(() => {
     const e: Record<string, string> = {};
-    if (draft.step === 1) {
-      if (toMoney(draft.stableSalary) <= 0)
+    if (draft.step === 0) {
+      if (toMoney(draft.stableSalary) <= 0) {
         e.stableSalary = "Enter your salary";
-      if (clampDay(draft.paydayDay) === null)
-        e.paydayDay = "Enter a day between 1 and 31";
+      }
     }
-    if (draft.step === 3) {
-      const total =
-        draft.utilitiesMode === "precise"
-          ? toMoney(draft.utilitiesECG) + toMoney(draft.utilitiesWater)
-          : toMoney(draft.utilitiesTotal);
-      if (total <= 0) e.utilities = "Enter utilities amount (or 0 if none)";
-    }
-    if (draft.step === 5) {
-      if (!draft.primaryGoal) e.goal = "Select a primary goal";
+    if (draft.step === 1) {
+      if (!Number.isFinite(draft.paydayDay) || draft.paydayDay < 1 || draft.paydayDay > 31) {
+        e.paydayDay = "Select a payday between 1 and 31";
+      }
     }
     return e;
   }, [draft]);
 
-  /** Full validation for all required steps. Used for Finish button and submit. */
   const allStepsErrors: StepErrors = useMemo(() => {
     const e: Record<string, string> = {};
-    if (toMoney(draft.stableSalary) <= 0) e.stableSalary = "Enter your salary";
-    if (clampDay(draft.paydayDay) === null)
-      e.paydayDay = "Enter a day between 1 and 31";
-    const utilitiesTotal =
-      draft.utilitiesMode === "precise"
-        ? toMoney(draft.utilitiesECG) + toMoney(draft.utilitiesWater)
-        : toMoney(draft.utilitiesTotal);
-    if (utilitiesTotal <= 0)
-      e.utilities = "Enter utilities amount (or 0 if none)";
-    if (!draft.primaryGoal) e.goal = "Select a primary goal";
+    if (toMoney(draft.stableSalary) <= 0) {
+      e.stableSalary = "Enter your salary";
+    }
+    if (!Number.isFinite(draft.paydayDay) || draft.paydayDay < 1 || draft.paydayDay > 31) {
+      e.paydayDay = "Select a payday between 1 and 31";
+    }
     return e;
   }, [draft]);
 
   const canContinue = Object.keys(stepErrors).length === 0;
-  const canFinish =
-    draft.step === 5 && Object.keys(allStepsErrors).length === 0;
+  const canFinish = draft.step === totalSteps - 1 && Object.keys(allStepsErrors).length === 0;
 
   const netPreview = useMemo(
     () => getNetPreview(draft.stableSalary, draft.incomeFrequency),
@@ -334,7 +213,6 @@ export default function VitalsWizard() {
 
   const outgoingStyle = useAnimatedStyle(() => {
     const t = transition.value;
-    // Fade out with subtle scale/slide
     const opacity = interpolate(t, [0, 0.6], [1, 0], Extrapolate.CLAMP);
     const scale = interpolate(t, [0, 1], [1, 0.96], Extrapolate.CLAMP);
     const translateX =
@@ -346,7 +224,6 @@ export default function VitalsWizard() {
 
   const incomingStyle = useAnimatedStyle(() => {
     const t = transition.value;
-    // Fade in with subtle slide
     const opacity = interpolate(t, [0.2, 0.8], [0, 1], Extrapolate.CLAMP);
     const translateX = interpolate(
       t,
@@ -375,44 +252,26 @@ export default function VitalsWizard() {
     [containerHeight],
   );
 
-  const updateDraft = useCallback(
-    (patch: Partial<Draft>) => {
-      setDraft((prev) => {
-        const next = { ...prev, ...patch };
-        void persistDraft(next);
-        return next;
-      });
-    },
-    [persistDraft],
-  );
+  const updateDraft = useCallback((patch: Partial<Draft>) => {
+    setDraft((prev) => ({ ...prev, ...patch }));
+  }, []);
 
-  const toggleInterest = useCallback(
-    (interest: string) => {
-      try {
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      } catch {
-        // ignore
-      }
-      setDraft((prev) => {
-        const selected = prev.interests.includes(interest);
-        const next: Draft = {
-          ...prev,
-          interests: selected
-            ? prev.interests.filter((x) => x !== interest)
-            : [...prev.interests, interest],
-        };
-        void persistDraft(next);
-        return next;
-      });
-    },
-    [persistDraft],
-  );
+  const toggleInterest = useCallback((interest: string) => {
+    setDraft((prev) => {
+      const selected = prev.interests.includes(interest);
+      return {
+        ...prev,
+        interests: selected
+          ? prev.interests.filter((x) => x !== interest)
+          : [...prev.interests, interest],
+      };
+    });
+  }, []);
 
-  useEffect(() => {
-    if (editMode && draft.step === 0) {
-      updateDraft({ step: 1 });
-    }
-  }, [editMode, draft.step, updateDraft]);
+  const exitWizard = useCallback(() => {
+    setDraft(makeDefaultDraft());
+    router.replace("/(tabs)");
+  }, []);
 
   const goNext = useCallback(async () => {
     Keyboard.dismiss();
@@ -422,9 +281,7 @@ export default function VitalsWizard() {
       setShowValidationHint(true);
       scrollViewRef.current?.scrollTo({ y: 120, animated: true });
       try {
-        await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Warning,
-        );
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       } catch {
         // ignore
       }
@@ -439,23 +296,14 @@ export default function VitalsWizard() {
     Keyboard.dismiss();
     setError(null);
     setShowValidationHint(false);
+    if (draft.step === 0) {
+      exitWizard();
+      return;
+    }
     const nextStep = Math.max(0, draft.step - 1);
     updateDraft({ step: nextStep });
     animateStepChange(nextStep, "back");
-  }, [animateStepChange, draft.step, updateDraft]);
-
-  const handleSkip = useCallback(async () => {
-    if (!user?.id) return;
-    try {
-      await Haptics.selectionAsync();
-    } catch {
-      // ignore
-    }
-    await writePersonalizationStatusCache(user.id, false, {
-      skippedVitals: true,
-    });
-    router.replace("/(tabs)");
-  }, [user?.id]);
+  }, [animateStepChange, draft.step, exitWizard, updateDraft]);
 
   const handleFinish = useCallback(async () => {
     Keyboard.dismiss();
@@ -464,90 +312,74 @@ export default function VitalsWizard() {
       setShowValidationHint(true);
       scrollViewRef.current?.scrollTo({ y: 120, animated: true });
       try {
-        await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Warning,
-        );
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
       } catch {
         // ignore
       }
       return;
     }
+
     setError(null);
     setLoading(true);
 
     try {
       const rawSalary = toMoney(draft.stableSalary);
       const stableSalary = toMonthlySalary(rawSalary, draft.incomeFrequency);
-      const sideIncome = toMoney(draft.sideIncome);
-      const rent = toMoney(draft.rent);
-      const titheRemittance = toMoney(draft.titheRemittance);
-      const debtObligations = toMoney(draft.debtObligations);
-      const utilitiesTotal =
-        draft.utilitiesMode === "precise"
-          ? toMoney(draft.utilitiesECG) + toMoney(draft.utilitiesWater)
-          : toMoney(draft.utilitiesTotal);
-      const utilitiesECG = toMoney(draft.utilitiesECG);
-      const utilitiesWater = toMoney(draft.utilitiesWater);
-      const paydayDay = clampDay(draft.paydayDay) ?? 25;
-
       const computedIntelligent = computeIntelligentStrategy({
         stableSalary,
         autoTax: draft.autoTax,
-        sideIncome,
-        rent,
-        titheRemittance,
-        debtObligations,
-        utilitiesTotal,
+        sideIncome: 0,
+        rent: 0,
+        titheRemittance: 0,
+        debtObligations: 0,
+        utilitiesTotal: 0,
         lifeStage: draft.lifeStage,
-        dependentsCount: Math.max(0, parseInt(draft.dependentsCount, 10) || 0),
+        dependentsCount: 0,
         incomeFrequency: draft.incomeFrequency,
         spendingStyle: draft.spendingStyle,
         financialPriority: draft.financialPriority,
       });
+
       const userOverride =
-        draft.strategyChoice === "survival" ||
-        draft.strategyChoice === "aggressive";
+        draft.strategyChoice === "survival" || draft.strategyChoice === "aggressive";
       const computed = userOverride
         ? {
-          ...computedIntelligent,
-          strategy: draft.strategyChoice,
-          ...strategyToPercents(draft.strategyChoice),
-        }
+            ...computedIntelligent,
+            strategy: draft.strategyChoice,
+            ...strategyToPercents(draft.strategyChoice),
+          }
         : {
-          ...computedIntelligent,
-          strategy: computedIntelligent.strategy,
-          needsPct: computedIntelligent.needsPct,
-          wantsPct: computedIntelligent.wantsPct,
-          savingsPct: computedIntelligent.savingsPct,
-        };
+            ...computedIntelligent,
+            strategy: computedIntelligent.strategy,
+            needsPct: computedIntelligent.needsPct,
+            wantsPct: computedIntelligent.wantsPct,
+            savingsPct: computedIntelligent.savingsPct,
+          };
 
-      // 1) Persist personalization profile (offline-first via existing queue + immediate attempt)
       const createdAt = new Date().toISOString();
-      setSuppressBudgetEmit(user.id);
 
       const payload = {
         id: user.id,
         setup_completed: true,
-        payday_day: paydayDay,
+        payday_day: draft.paydayDay,
         interests: draft.interests,
         stable_salary: stableSalary,
         auto_tax: draft.autoTax,
-        side_income: sideIncome,
-        rent,
-        tithe_remittance: titheRemittance,
-        debt_obligations: debtObligations,
-        utilities_mode: draft.utilitiesMode,
-        utilities_total: utilitiesTotal,
-        utilities_ecg: utilitiesECG,
-        utilities_water: utilitiesWater,
-        primary_goal: draft.primaryGoal,
+        side_income: 0,
+        rent: 0,
+        tithe_remittance: 0,
+        debt_obligations: 0,
+        utilities_mode: "general",
+        utilities_total: 0,
+        utilities_ecg: 0,
+        utilities_water: 0,
+        primary_goal: null,
         strategy: computed.strategy,
         needs_pct: computed.needsPct,
         wants_pct: computed.wantsPct,
         savings_pct: computed.savingsPct,
-        // Life stage & context (step 1)
         life_stage: draft.lifeStage ?? null,
-        dependents_count: Math.max(0, parseInt(draft.dependentsCount, 10) || 0),
+        dependents_count: 0,
         income_frequency: draft.incomeFrequency,
         spending_style: draft.spendingStyle ?? null,
         financial_priority: draft.financialPriority ?? null,
@@ -561,127 +393,92 @@ export default function VitalsWizard() {
         payload,
       });
 
-      // Online: block until profile sync succeeds (prevents setupCompleted conflicts)
       const online = await isOnline();
       if (online) {
-        const syncResult = await trySyncProfileWithRetries(user.id, queued);
-        if (!syncResult.ok) {
-          setError(
-            "Couldn't save. Check your connection and try again."
-          );
-          log.error("[Vitals] Profile sync failed", { syncResult });
-          try {
-            await Haptics.notificationAsync(
-              Haptics.NotificationFeedbackType.Error,
-            );
-          } catch {
-            // ignore
+        void trySyncProfileWithRetries(user.id, queued).then((syncResult) => {
+          if (!syncResult.ok) {
+            log.error("[Vitals] Background profile sync failed", { syncResult });
           }
-          return;
-        }
+        });
       }
 
       await writePersonalizationStatusCache(user.id, true);
-      // Cache vitals locally so Budget can display them instantly/offline.
       await writeProfileVitalsCache(user.id, {
         setup_completed: true,
-        payday_day: paydayDay,
+        payday_day: draft.paydayDay,
         interests: draft.interests,
         stable_salary: stableSalary,
         auto_tax: draft.autoTax,
-        side_income: sideIncome,
-        rent,
-        tithe_remittance: titheRemittance,
-        debt_obligations: debtObligations,
-        utilities_mode: draft.utilitiesMode,
-        utilities_total: utilitiesTotal,
-        utilities_ecg: utilitiesECG,
-        utilities_water: utilitiesWater,
-        primary_goal: draft.primaryGoal,
+        side_income: 0,
+        rent: 0,
+        tithe_remittance: 0,
+        debt_obligations: 0,
+        utilities_mode: "general",
+        utilities_total: 0,
+        utilities_ecg: 0,
+        utilities_water: 0,
+        primary_goal: null,
         strategy: computed.strategy,
         needs_pct: computed.needsPct,
         wants_pct: computed.wantsPct,
         savings_pct: computed.savingsPct,
       });
 
-      // 2) Copy interests into local budget prefs (so UI can use offline)
-      const state = await loadBudgetState(user.id);
-      await saveBudgetState({
-        ...state,
-        prefs: { ...state.prefs, interests: draft.interests },
-      });
-
-      // 3) Apply strategy to budgeting (offline-first) with obligation-first allocation
-      const fixedAmountsByCategory: Record<string, number> = {};
-      if (rent > 0) fixedAmountsByCategory["Rent"] = rent;
-      if (utilitiesTotal > 0) {
-        if (draft.utilitiesMode === "precise") {
-          if (utilitiesECG > 0) fixedAmountsByCategory["ECG"] = utilitiesECG;
-          if (utilitiesWater > 0)
-            fixedAmountsByCategory["Ghana Water"] = utilitiesWater;
-        } else {
-          fixedAmountsByCategory["ECG"] = Math.round(utilitiesTotal * 0.6);
-          fixedAmountsByCategory["Ghana Water"] = Math.round(
-            utilitiesTotal * 0.4,
-          );
-        }
+      const existingPrimaryIncome = budget.state?.incomeSources?.find(
+        (source) => source.type === "primary",
+      );
+      if (existingPrimaryIncome) {
+        await budget.updateIncomeSource(existingPrimaryIncome.id, {
+          name: existingPrimaryIncome.name || "Primary income",
+          type: "primary",
+          amount: stableSalary,
+          applyDeductions: draft.autoTax,
+        });
+      } else {
+        await budget.addIncomeSource({
+          name: "Primary income",
+          type: "primary",
+          amount: stableSalary,
+          applyDeductions: draft.autoTax,
+        });
       }
-      if (titheRemittance > 0)
-        fixedAmountsByCategory["Tithes/Church"] = titheRemittance;
-      if (debtObligations > 0)
-        fixedAmountsByCategory["Debt Payments"] = debtObligations;
+
+      // Create the first cycle from vitals inputs, but keep categories explicit/manual.
       await budget.setupBudget({
-        paydayDay,
+        paydayDay: draft.paydayDay,
         needsPct: computed.needsPct,
         wantsPct: computed.wantsPct,
         savingsPct: computed.savingsPct,
         interests: draft.interests,
-        fixedAmountsByCategory:
-          Object.keys(fixedAmountsByCategory).length > 0
-            ? fixedAmountsByCategory
-            : undefined,
-        lifeStage: draft.lifeStage,
+        seedCategories: false,
+        lifeStage: draft.lifeStage ?? null,
       });
-
-      // Income sources
-      await budget.addIncomeSource({
-        name: "Monthly Basic Salary",
-        type: "primary",
-        amount: stableSalary,
-        applyDeductions: draft.autoTax,
-      });
-      if (sideIncome > 0) {
-        await budget.addIncomeSource({
-          name: "Side Hustle",
-          type: "side",
-          amount: sideIncome,
-          applyDeductions: false,
-        });
-      }
 
       try {
-        await Haptics.notificationAsync(
-          Haptics.NotificationFeedbackType.Success,
-        );
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } catch {
         // ignore
       }
 
-      // Clear draft once complete
-      try {
-        await AsyncStorage.removeItem(vitalsDraftKey(user.id));
-      } catch {
-        // ignore
-      }
+      analytics.onboardingEssentialCompleted({ userId: user.id });
+      const [seenHomeTour, seenBudgetTour, seenLearnTour] = await Promise.all([
+        readTourSeen(user.id, "home"),
+        readTourSeen(user.id, "budget"),
+        readTourSeen(user.id, "learn"),
+      ]);
+      analytics.vitalsCompleteAfterTour({
+        userId: user.id,
+        seenHomeTour,
+        seenBudgetTour,
+        seenLearnTour,
+      });
 
-      setSuppressBudgetEmit(null);
-      emitBudgetChangedNow(user.id);
-
-      router.replace("/(tabs)/budget?tour=budget&fromVitals=1");
+      await completeSetupProgress();
+      router.replace("/(tabs)/budget");
     } catch (e) {
       const offline = !(await isOnline());
       const message = offline
-        ? "You're offline. Your progress is saved—try again when you're back online."
+        ? "You are offline. Your profile changes are queued and will sync later."
         : e instanceof Error
           ? e.message
           : "Something went wrong";
@@ -694,11 +491,10 @@ export default function VitalsWizard() {
     } finally {
       setLoading(false);
     }
-  }, [allStepsErrors, budget, draft, user?.id]);
+  }, [allStepsErrors, budget, completeSetupProgress, draft, user?.id]);
 
   const currentStepNode = () => {
-    if (draft.step === 0) return <StepWelcome />;
-    if (draft.step === 1) {
+    if (draft.step === 0) {
       return (
         <StepIncome
           draft={draft}
@@ -709,34 +505,28 @@ export default function VitalsWizard() {
         />
       );
     }
-    if (draft.step === 2)
-      return <StepLifeStage draft={draft} updateDraft={updateDraft} />;
-    if (draft.step === 3) {
+    if (draft.step === 1) {
       return (
-        <StepFixedExpenses
+        <StepSetupBudget
           draft={draft}
           errors={stepErrors}
-          keyboardAccessoryId={keyboardAccessoryId}
           updateDraft={updateDraft}
         />
       );
     }
-    if (draft.step === 4) {
-      return (
-        <StepInterests
-          interests={draft.interests}
-          onToggleInterest={toggleInterest}
-        />
-      );
-    }
-    return <StepGoal draft={draft} error={error} updateDraft={updateDraft} />;
+    return (
+      <StepPreferences
+        draft={draft}
+        toggleInterest={toggleInterest}
+        updateDraft={updateDraft}
+      />
+    );
   };
 
   const outgoingNode = () => {
     const s = outgoingStepRef.current;
     if (s === null) return null;
-    if (s === 0) return <StepWelcome />;
-    if (s === 1) {
+    if (s === 0) {
       return (
         <StepIncome
           draft={draft}
@@ -747,36 +537,27 @@ export default function VitalsWizard() {
         />
       );
     }
-    if (s === 2)
-      return <StepLifeStage draft={draft} updateDraft={updateDraft} />;
-    if (s === 3) {
+    if (s === 1) {
       return (
-        <StepFixedExpenses
+        <StepSetupBudget
           draft={draft}
           errors={stepErrors}
-          keyboardAccessoryId={keyboardAccessoryId}
           updateDraft={updateDraft}
         />
       );
     }
-    if (s === 4) {
-      return (
-        <StepInterests
-          interests={draft.interests}
-          onToggleInterest={toggleInterest}
-        />
-      );
-    }
-    return <StepGoal draft={draft} error={error} updateDraft={updateDraft} />;
+    return (
+      <StepPreferences
+        draft={draft}
+        toggleInterest={toggleInterest}
+        updateDraft={updateDraft}
+      />
+    );
   };
-
-  const showSkip = !!user?.id && !editMode && !setupCompleted;
 
   if (noUser) {
     return (
-      <SafeAreaView
-        edges={["top"]}
-        style={{ flex: 1, backgroundColor: "#000000" }}>
+      <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: "#000000" }}>
         <View
           style={{
             flex: 1,
@@ -794,9 +575,7 @@ export default function VitalsWizard() {
             }}>
             Please sign in to set up your budget.
           </Text>
-          <PrimaryButton
-            onPress={() => router.replace("/auth")}
-            style={{ minWidth: 200 }}>
+          <PrimaryButton onPress={() => router.replace("/auth")} style={{ minWidth: 200 }}>
             Sign in
           </PrimaryButton>
         </View>
@@ -804,11 +583,65 @@ export default function VitalsWizard() {
     );
   }
 
+  if (loading) {
+    return (
+      <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: "#000000" }}>
+        <View
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            paddingHorizontal: 24,
+            marginTop: -60,
+          }}>
+          <Image source={SETUP_LOGO} contentFit="contain" style={{ width: 120, height: 120 }} />
+          <View
+            style={{
+              width: 260,
+              height: 6,
+              borderRadius: 999,
+              backgroundColor: "rgba(148,163,184,0.30)",
+              marginTop: 22,
+              overflow: "hidden",
+            }}>
+            <AnimatedView
+              style={[
+                {
+                  height: 6,
+                  borderRadius: 999,
+                  backgroundColor: "#22C55E",
+                },
+                setupProgressStyle,
+              ]}
+            />
+          </View>
+          <Text
+            style={{
+              marginTop: 28,
+              color: "#94A3B8",
+              fontFamily: "Figtree-SemiBold",
+              fontSize: 14,
+              lineHeight: 20,
+              textAlign: "center",
+            }}>
+            Saving your profile...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView
-      edges={["top"]}
-      style={{ flex: 1, backgroundColor: "#000000" }}>
-      {/* Progress neon line */}
+    <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: "#000000" }}>
+      <View
+        style={{
+          height: 44,
+          paddingHorizontal: 12,
+          justifyContent: "center",
+          alignItems: "flex-start",
+        }}>
+        <BackButton onPress={goBack} />
+      </View>
       <View style={{ height: 3, backgroundColor: "rgba(16,185,129,0.18)" }}>
         <AnimatedView
           style={[
@@ -823,7 +656,6 @@ export default function VitalsWizard() {
       </View>
 
       <View style={{ flex: 1 }}>
-        {/* Header with Skip in top-right */}
         <View
           style={{
             flexDirection: "row",
@@ -855,34 +687,12 @@ export default function VitalsWizard() {
               {title}
             </Text>
           </View>
-          {showSkip ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onPress={async () => {
-                try {
-                  await Haptics.selectionAsync();
-                } catch {
-                  // ignore
-                }
-                await handleSkip();
-              }}
-              style={{
-                paddingVertical: 8,
-                paddingHorizontal: 12,
-                marginTop: 4,
-              }}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
-              <Text
-                style={{
-                  color: "#94A3B8",
-                  fontFamily: "Figtree-Medium",
-                  fontSize: 15,
-                }}>
-                Skip
-              </Text>
-            </Button>
-          ) : null}
+          {/* Skip intentionally disabled for now. */}
+          {/*
+          <Button variant="outline" size="sm">
+            <Text>Skip</Text>
+          </Button>
+          */}
         </View>
 
         <Separator className="mt-4 mx-4" />
@@ -892,21 +702,34 @@ export default function VitalsWizard() {
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: bottomBarHeight }}
           className="px-5 py-4">
-          {showValidationHint &&
-            draft.step > 0 &&
-            (draft.step === 5 ? !canFinish : !canContinue) && (
-              <Text
-                style={{
-                  color: "#FCA5A5",
-                  fontFamily: "Figtree-Regular",
-                  fontSize: 13,
-                  marginBottom: 12,
-                }}>
-                Complete required fields above to continue.
-              </Text>
-            )}
+          {showValidationHint && (draft.step === totalSteps - 1 ? !canFinish : !canContinue) ? (
+            <Text
+              style={{
+                color: "#FCA5A5",
+                fontFamily: "Figtree-Regular",
+                fontSize: 13,
+                marginBottom: 12,
+              }}>
+              Complete required fields above to continue.
+            </Text>
+          ) : null}
 
-          {/* Slide/scale transition stack - height adapts to step content */}
+          {error ? (
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: "rgba(248,113,113,0.5)",
+                backgroundColor: "rgba(127,29,29,0.25)",
+                borderRadius: 12,
+                padding: 12,
+                marginBottom: 12,
+              }}>
+              <Text style={{ color: "#FCA5A5", fontFamily: "Figtree-Regular", fontSize: 12 }}>
+                {error}
+              </Text>
+            </View>
+          ) : null}
+
           <Animated.View style={[containerStyle]}>
             {outgoingStepRef.current !== null ? (
               <Animated.View
@@ -927,10 +750,6 @@ export default function VitalsWizard() {
           </Animated.View>
         </KeyboardAwareScrollView>
 
-        {/* iOS: ensure every keyboard has a Done/Close control */}
-        <KeyboardDoneAccessory accessoryId={keyboardAccessoryId} />
-
-        {/* Bottom bar - in normal flow, never shrink */}
         <View
           style={{
             flexShrink: 0,
@@ -943,23 +762,17 @@ export default function VitalsWizard() {
             borderTopColor: "rgba(255,255,255,0.06)",
           }}>
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <SecondaryButton
-              onPress={
-                draft.step === 0
-                  ? handleSkip
-                  : goBack
-              }
-              style={{ flex: 1 }}>
-              {draft.step === 0 ? "I'll do this later" : "Back"}
+            <SecondaryButton onPress={goBack} style={{ flex: 1 }}>
+              Back
             </SecondaryButton>
 
             {draft.step < totalSteps - 1 ? (
               <PrimaryButton
                 onPress={goNext}
-                disabled={!canContinue && draft.step > 0}
+                disabled={!canContinue}
                 style={{
                   flex: 1,
-                  opacity: canContinue || draft.step === 0 ? 1 : 0.5,
+                  opacity: canContinue ? 1 : 0.5,
                 }}>
                 Next
               </PrimaryButton>
@@ -967,40 +780,30 @@ export default function VitalsWizard() {
               <PrimaryButton
                 onPress={handleFinish}
                 loading={loading}
-                disabled={loading}
+                disabled={loading || !canFinish}
                 style={{ flex: 1, opacity: canFinish ? 1 : 0.5 }}>
-                {loading
-                  ? "Saving…"
-                  : editMode
-                    ? "Save changes"
-                    : "Finish"}
+                {loading ? "Saving…" : editMode ? "Save changes" : "Finish"}
               </PrimaryButton>
             )}
           </View>
 
-          {draft.step > 0 && draft.step < totalSteps - 1 && !editMode ? (
-            <Pressable
-              onPress={() => {
-                void persistDraft(draft);
-                router.replace("/(tabs)");
-              }}
+          <Pressable
+            onPress={exitWizard}
+            style={{
+              alignSelf: "center",
+              paddingVertical: 10,
+              paddingHorizontal: 16,
+            }}>
+            <Text
               style={{
-                alignSelf: "center",
-                paddingVertical: 12,
-                paddingHorizontal: 16,
-                marginTop: 8,
+                color: "#64748B",
+                fontFamily: "Figtree-Regular",
+                fontSize: 12,
+                textDecorationLine: "underline",
               }}>
-              <Text
-                style={{
-                  color: "#64748B",
-                  fontFamily: "Figtree-Regular",
-                  fontSize: 12,
-                  textDecorationLine: "underline",
-                }}>
-                Save and continue later
-              </Text>
-            </Pressable>
-          ) : null}
+              Exit setup
+            </Text>
+          </Pressable>
         </View>
       </View>
     </SafeAreaView>

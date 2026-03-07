@@ -1,5 +1,7 @@
+import { analytics } from '@/utils/analytics';
 import { useRouter } from 'expo-router';
 import { Pencil } from 'lucide-react-native';
+import { useEffect, useRef } from 'react';
 import { Text, View } from 'react-native';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { Card } from '../../Card';
@@ -14,17 +16,26 @@ interface VitalsSummary {
 }
 
 interface BudgetPersonalizationCardProps {
+  userId?: string;
   showCta: boolean;
   showSummary: boolean;
   vitalsSummary: VitalsSummary | null;
 }
 
 export function BudgetPersonalizationCard({
+  userId,
   showCta,
   showSummary,
   vitalsSummary,
 }: BudgetPersonalizationCardProps) {
   const router = useRouter();
+  const didTrackViewRef = useRef(false);
+
+  useEffect(() => {
+    if (!showCta || didTrackViewRef.current) return;
+    didTrackViewRef.current = true;
+    analytics.personalizationBannerView({ userId, placement: 'budget' });
+  }, [showCta, userId]);
 
   if (showCta) {
     return (
@@ -36,7 +47,13 @@ export function BudgetPersonalizationCard({
               Get a personalized budget in 2 minutes (or skip anytime).
             </Text>
           </View>
-          <PrimaryButton onPress={() => router.push('/vitals')} className="h-11 px-4">
+          <PrimaryButton
+            onPress={() => {
+              analytics.personalizationBannerClick({ userId, placement: 'budget' });
+              analytics.vitalsStartFromBanner({ userId, placement: 'budget' });
+              router.push('/vitals');
+            }}
+            className="h-11 px-4">
             <Text className="text-slate-900 font-medium">Start</Text>
           </PrimaryButton>
         </View>

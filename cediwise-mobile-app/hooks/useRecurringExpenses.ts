@@ -9,6 +9,7 @@ import { flushBudgetQueue } from "@/utils/budgetSync";
 import { log } from "@/utils/logger";
 import { supabase } from "@/utils/supabase";
 import { uuidv4 } from "@/utils/uuid";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useState } from "react";
 
 export type AddRecurringExpenseParams = {
@@ -48,6 +49,48 @@ export type UseRecurringExpensesReturn = {
   refresh: () => Promise<void>;
 };
 
+const RECURRING_CACHE_PREFIX = "@cediwise_cache_recurring_expenses:";
+
+function recurringCacheKey(userId: string): string {
+  return `${RECURRING_CACHE_PREFIX}${userId}`;
+}
+
+function toRecurringRow(expense: RecurringExpense): Record<string, unknown> {
+  return {
+    id: expense.id,
+    user_id: expense.userId,
+    name: expense.name,
+    amount: expense.amount,
+    frequency: expense.frequency,
+    bucket: expense.bucket,
+    category_id: expense.categoryId,
+    start_date: expense.startDate,
+    end_date: expense.endDate,
+    is_active: expense.isActive,
+    auto_allocate: expense.autoAllocate,
+    created_at: expense.createdAt,
+    updated_at: expense.updatedAt,
+  };
+}
+
+function recurringFromRow(row: any): RecurringExpense {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    amount: Number(row.amount),
+    frequency: row.frequency as RecurringExpenseFrequency,
+    bucket: row.bucket as BudgetBucket,
+    categoryId: row.category_id,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    isActive: row.is_active,
+    autoAllocate: row.auto_allocate,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 export function useRecurringExpenses(): UseRecurringExpensesReturn {
   const { user } = useAuth();
   const [recurringExpenses, setRecurringExpenses] = useState<
@@ -55,6 +98,21 @@ export function useRecurringExpenses(): UseRecurringExpensesReturn {
   >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const persistRecurringCache = useCallback(
+    async (items: RecurringExpense[]) => {
+      if (!user?.id) return;
+      try {
+        await AsyncStorage.setItem(
+          recurringCacheKey(user.id),
+          JSON.stringify(items.map(toRecurringRow)),
+        );
+      } catch {
+        // ignore cache write errors
+      }
+    },
+    [user?.id]
+  );
 
   // Convert frequency to monthly multiplier
   const toMonthlyAmount = useCallback(
@@ -84,10 +142,26 @@ export function useRecurringExpenses(): UseRecurringExpensesReturn {
       setIsLoading(false);
       return;
     }
+    if (!supabase) {
+      setError("Supabase not configured");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       setIsLoading(true);
       setError(null);
+
+      const cached = await AsyncStorage.getItem(recurringCacheKey(user.id));
+      if (cached) {
+        try {
+          const rows = JSON.parse(cached) as any[];
+          setRecurringExpenses(rows.map(recurringFromRow));
+          setIsLoading(false);
+        } catch {
+          // ignore malformed cache payload
+        }
+      }
 
       const { data, error: fetchError } = await supabase
         .from("recurring_expenses")
@@ -97,23 +171,12 @@ export function useRecurringExpenses(): UseRecurringExpensesReturn {
 
       if (fetchError) throw fetchError;
 
-      const expenses: RecurringExpense[] = (data || []).map((row) => ({
-        id: row.id,
-        userId: row.user_id,
-        name: row.name,
-        amount: Number(row.amount),
-        frequency: row.frequency as RecurringExpenseFrequency,
-        bucket: row.bucket as BudgetBucket,
-        categoryId: row.category_id,
-        startDate: row.start_date,
-        endDate: row.end_date,
-        isActive: row.is_active,
-        autoAllocate: row.auto_allocate,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      }));
+      const expenses: RecurringExpense[] = (data || []).map((row) =>
+        recurringFromRow(row)
+      );
 
       setRecurringExpenses(expenses);
+      await persistRecurringCache(expenses);
     } catch (err) {
       log.error("Failed to load recurring expenses:", err);
       setError(
@@ -122,7 +185,7 @@ export function useRecurringExpenses(): UseRecurringExpensesReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id]);
+  }, [persistRecurringCache, user?.id]);
 
   useEffect(() => {
     loadRecurringExpenses();
@@ -155,7 +218,11 @@ export function useRecurringExpenses(): UseRecurringExpensesReturn {
       };
 
       // Optimistic update
-      setRecurringExpenses((prev) => [newExpense, ...prev]);
+      setRecurringExpenses((prev) => {
+        const next = [newExpense, ...prev];
+        void persistRecurringCache(next);
+        return next;
+      });
 
       // Queue mutation
       await enqueueMutation(user.id, {
@@ -181,7 +248,7 @@ export function useRecurringExpenses(): UseRecurringExpensesReturn {
       // Try immediate sync
       await flushBudgetQueue(user.id);
     },
-    [user?.id]
+    [persistRecurringCache, user?.id]
   );
 
   // Update recurring expense
@@ -190,8 +257,8 @@ export function useRecurringExpenses(): UseRecurringExpensesReturn {
       if (!user?.id) throw new Error("User not authenticated");
 
       // Optimistic update
-      setRecurringExpenses((prev) =>
-        prev.map((expense) =>
+      setRecurringExpenses((prev) => {
+        const next = prev.map((expense) =>
           expense.id === id
             ? {
                 ...expense,
@@ -199,8 +266,10 @@ export function useRecurringExpenses(): UseRecurringExpensesReturn {
                 updatedAt: new Date().toISOString(),
               }
             : expense
-        )
-      );
+        );
+        void persistRecurringCache(next);
+        return next;
+      });
 
       // Queue mutation
       const now = new Date().toISOString();
@@ -222,7 +291,7 @@ export function useRecurringExpenses(): UseRecurringExpensesReturn {
       // Try immediate sync
       await flushBudgetQueue(user.id);
     },
-    [user?.id]
+    [persistRecurringCache, user?.id]
   );
 
   // Delete recurring expense
@@ -231,9 +300,11 @@ export function useRecurringExpenses(): UseRecurringExpensesReturn {
       if (!user?.id) throw new Error("User not authenticated");
 
       // Optimistic update
-      setRecurringExpenses((prev) =>
-        prev.filter((expense) => expense.id !== id)
-      );
+      setRecurringExpenses((prev) => {
+        const next = prev.filter((expense) => expense.id !== id);
+        void persistRecurringCache(next);
+        return next;
+      });
 
       // Queue mutation
       const now = new Date().toISOString();
@@ -248,7 +319,7 @@ export function useRecurringExpenses(): UseRecurringExpensesReturn {
       // Try immediate sync
       await flushBudgetQueue(user.id);
     },
-    [user?.id]
+    [persistRecurringCache, user?.id]
   );
 
   // Get monthly total (optionally filtered by bucket)

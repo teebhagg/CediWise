@@ -1,5 +1,4 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { isValueFirstOnboardingEnabled } from "./featureFlags";
 import { supabase } from "./supabase";
 
 export type PersonalizationStrategy = "survival" | "balanced" | "aggressive";
@@ -34,6 +33,10 @@ export type ProfileVitals = {
 const STATUS_KEY_PREFIX = "@cediwise_personalization_status:";
 const DRAFT_KEY_PREFIX = "@cediwise_vitals_draft:";
 const VITALS_KEY_PREFIX = "@cediwise_profile_vitals:";
+
+async function isValueFirstOnboardingEnabled(_userId: string): Promise<boolean> {
+  return process.env.EXPO_PUBLIC_VALUE_FIRST_ONBOARDING_V1 === "true";
+}
 
 function statusKey(userId: string) {
   return `${STATUS_KEY_PREFIX}${userId}`;

@@ -26,7 +26,7 @@ export default function AuthCallback() {
   const { refreshAuth } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
-  const linkingSubRef = useRef<{ remove: () => void } | undefined>();
+  const linkingSubRef = useRef<{ remove: () => void } | undefined>(undefined);
 
   const finishWithStored = useCallback(
     async (stored: { user: { id: string } } | null) => {

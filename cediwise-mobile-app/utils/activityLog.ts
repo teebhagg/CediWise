@@ -18,6 +18,7 @@ export async function logActivity(params: {
   intendedAmount: number;
   metadata?: Record<string, unknown>;
 }): Promise<void> {
+  if (!supabase) return;
   try {
     const { error } = await supabase.from("user_activity_log").insert({
       user_id: params.userId,
@@ -44,6 +45,7 @@ export async function getActivityForUser(
   userId: string,
   limit: number = 50
 ): Promise<UserActivityLogEntry[]> {
+  if (!supabase) return [];
   try {
     const { data, error } = await supabase
       .from("user_activity_log")
@@ -78,6 +80,7 @@ export async function getActivityForCycle(
   userId: string,
   cycleId: string
 ): Promise<UserActivityLogEntry[]> {
+  if (!supabase) return [];
   try {
     const { data, error } = await supabase
       .from("user_activity_log")

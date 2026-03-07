@@ -5,6 +5,7 @@ import { trySyncMutation } from "@/utils/budgetSync";
 import { log } from "@/utils/logger";
 import { supabase } from "@/utils/supabase";
 import { uuidv4 } from "@/utils/uuid";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useState } from "react";
 
 export type AddDebtParams = {
@@ -54,11 +55,68 @@ function makeQueueId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+const DEBTS_CACHE_PREFIX = "@cediwise_cache_debts:";
+
+function debtsCacheKey(userId: string): string {
+  return `${DEBTS_CACHE_PREFIX}${userId}`;
+}
+
+function toDebtRow(debt: Debt): Record<string, unknown> {
+  return {
+    id: debt.id,
+    user_id: debt.userId,
+    name: debt.name,
+    total_amount: debt.totalAmount,
+    remaining_amount: debt.remainingAmount,
+    monthly_payment: debt.monthlyPayment,
+    interest_rate: debt.interestRate,
+    start_date: debt.startDate,
+    target_payoff_date: debt.targetPayoffDate,
+    is_active: debt.isActive,
+    category_id: debt.categoryId,
+    created_at: debt.createdAt,
+    updated_at: debt.updatedAt,
+  };
+}
+
+function debtFromRow(row: any): Debt {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    totalAmount: Number(row.total_amount),
+    remainingAmount: Number(row.remaining_amount),
+    monthlyPayment: Number(row.monthly_payment),
+    interestRate: row.interest_rate != null ? Number(row.interest_rate) : null,
+    startDate: row.start_date,
+    targetPayoffDate: row.target_payoff_date,
+    isActive: row.is_active,
+    categoryId: row.category_id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 export function useDebts(monthlyIncome?: number): UseDebtsReturn {
   const { user } = useAuth();
   const [debts, setDebts] = useState<Debt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const persistDebtsCache = useCallback(
+    async (items: Debt[]) => {
+      if (!user?.id) return;
+      try {
+        await AsyncStorage.setItem(
+          debtsCacheKey(user.id),
+          JSON.stringify(items.map(toDebtRow))
+        );
+      } catch {
+        // ignore cache write errors
+      }
+    },
+    [user?.id]
+  );
 
   // Load debts from Supabase
   const loadDebts = useCallback(async () => {
@@ -67,10 +125,26 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
       setIsLoading(false);
       return;
     }
+    if (!supabase) {
+      setError("Supabase not configured");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       setIsLoading(true);
       setError(null);
+
+      const cached = await AsyncStorage.getItem(debtsCacheKey(user.id));
+      if (cached) {
+        try {
+          const rows = JSON.parse(cached) as any[];
+          setDebts(rows.map(debtFromRow));
+          setIsLoading(false);
+        } catch {
+          // ignore malformed cache payload
+        }
+      }
 
       const { data, error: fetchError } = await supabase
         .from("debts")
@@ -80,31 +154,17 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
 
       if (fetchError) throw fetchError;
 
-      const loadedDebts: Debt[] = (data || []).map((row) => ({
-        id: row.id,
-        userId: row.user_id,
-        name: row.name,
-        totalAmount: Number(row.total_amount),
-        remainingAmount: Number(row.remaining_amount),
-        monthlyPayment: Number(row.monthly_payment),
-        interestRate:
-          row.interest_rate != null ? Number(row.interest_rate) : null,
-        startDate: row.start_date,
-        targetPayoffDate: row.target_payoff_date,
-        isActive: row.is_active,
-        categoryId: row.category_id,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      }));
+      const loadedDebts: Debt[] = (data || []).map((row) => debtFromRow(row));
 
       setDebts(loadedDebts);
+      await persistDebtsCache(loadedDebts);
     } catch (err) {
       log.error("Failed to load debts:", err);
       setError(err instanceof Error ? err.message : "Failed to load debts");
     } finally {
       setIsLoading(false);
     }
-  }, [user?.id]);
+  }, [persistDebtsCache, user?.id]);
 
   useEffect(() => {
     loadDebts();
@@ -137,7 +197,11 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
       };
 
       // Optimistic update
-      setDebts((prev) => [newDebt, ...prev]);
+      setDebts((prev) => {
+        const next = [newDebt, ...prev];
+        void persistDebtsCache(next);
+        return next;
+      });
 
       // Queue mutation
       const mutation = await enqueueMutation(user.id, {
@@ -163,7 +227,7 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
       // Try immediate sync
       await trySyncMutation(user.id, mutation);
     },
-    [user?.id]
+    [persistDebtsCache, user?.id]
   );
 
   // Update debt
@@ -172,8 +236,8 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
       if (!user?.id) throw new Error("User not authenticated");
 
       // Optimistic update
-      setDebts((prev) =>
-        prev.map((debt) =>
+      setDebts((prev) => {
+        const next = prev.map((debt) =>
           debt.id === id
             ? {
                 ...debt,
@@ -181,8 +245,10 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
                 updatedAt: new Date().toISOString(),
               }
             : debt
-        )
-      );
+        );
+        void persistDebtsCache(next);
+        return next;
+      });
 
       // Queue mutation
       const mutation = await enqueueMutation(user.id, {
@@ -205,7 +271,7 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
       // Try immediate sync
       await trySyncMutation(user.id, mutation);
     },
-    [user?.id]
+    [persistDebtsCache, user?.id]
   );
 
   // Delete debt
@@ -214,7 +280,11 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
       if (!user?.id) throw new Error("User not authenticated");
 
       // Optimistic update
-      setDebts((prev) => prev.filter((debt) => debt.id !== id));
+      setDebts((prev) => {
+        const next = prev.filter((debt) => debt.id !== id);
+        void persistDebtsCache(next);
+        return next;
+      });
 
       // Queue mutation
       const mutation = await enqueueMutation(user.id, {
@@ -228,7 +298,7 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
       // Try immediate sync
       await trySyncMutation(user.id, mutation);
     },
-    [user?.id]
+    [persistDebtsCache, user?.id]
   );
 
   // Record payment
@@ -243,8 +313,8 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
       const isActive = newRemaining > 0;
 
       // Optimistic update
-      setDebts((prev) =>
-        prev.map((d) =>
+      setDebts((prev) => {
+        const next = prev.map((d) =>
           d.id === id
             ? {
                 ...d,
@@ -253,8 +323,10 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
                 updatedAt: new Date().toISOString(),
               }
             : d
-        )
-      );
+        );
+        void persistDebtsCache(next);
+        return next;
+      });
 
       // Queue mutation
       const mutation = await enqueueMutation(user.id, {
@@ -273,7 +345,7 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
       // Try immediate sync
       await trySyncMutation(user.id, mutation);
     },
-    [user?.id, debts]
+    [debts, persistDebtsCache, user?.id]
   );
 
   // Calculate projected payoff date

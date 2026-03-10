@@ -66,8 +66,8 @@ export function EditCategoryLimitModal({
   return (
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="bg-black/60" />
-        <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
+        <Dialog.Overlay className="bg-black/65" />
+        {Platform.OS === 'ios' && <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />}
         <KeyboardAvoidingView
           behavior="padding"
           style={{ flex: 1, justifyContent: 'center' }}

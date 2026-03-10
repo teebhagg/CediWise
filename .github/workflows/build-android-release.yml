@@ -1,5 +1,5 @@
 # Build Android AAB via EAS (local) and deploy to Google Play Store.
-# Uses EAS --local to avoid cloud build credits. No GitHub Releases.
+# Uses EAS --local to avoid cloud build credits. Creates GitHub Release with notes from distributions/{version}.txt (max 500 chars).
 # Required secrets: EXPO_TOKEN, GOOGLE_SERVICE_KEY, EXPO_PUBLIC_SUPABASE_URL,
 #   EXPO_PUBLIC_SUPABASE_KEY, EXPO_PUBLIC_SUPABASE_ANON_KEY, FIREBASE_PROJECT_ID
 # Trigger: push to main, push tag v*, or manual workflow_dispatch.
@@ -43,6 +43,21 @@ jobs:
             VERSION=$(jq -r '.expo.version' ${{ env.MOBILE_APP_DIR }}/app.json)
             echo "version=$VERSION" >> $GITHUB_OUTPUT
           fi
+
+      - name: Validate release notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          NOTES_FILE="${{ env.MOBILE_APP_DIR }}/distributions/${VERSION}.txt"
+          if [ ! -f "$NOTES_FILE" ]; then
+            echo "::error::Release notes file missing: $NOTES_FILE"
+            exit 1
+          fi
+          CHAR_COUNT=$(wc -c < "$NOTES_FILE" | tr -d ' ')
+          if [ "$CHAR_COUNT" -gt 500 ]; then
+            echo "::error::Release notes exceed 500 characters ($CHAR_COUNT). Max 500 allowed."
+            exit 1
+          fi
+          echo "Release notes validated ($CHAR_COUNT chars)"
 
       - name: Determine should_build
         id: check
@@ -127,6 +142,17 @@ jobs:
         run: eas submit --path "dist/CediWise-${{ needs.check-version.outputs.version }}.aab" --platform android --profile production --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Create GitHub Release
+        run: |
+          VERSION="${{ needs.check-version.outputs.version }}"
+          cp ${{ env.MOBILE_APP_DIR }}/distributions/${VERSION}.txt /tmp/release_notes.txt
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
+            --notes-file /tmp/release_notes.txt \
+            --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Delete build artifacts
         if: success()

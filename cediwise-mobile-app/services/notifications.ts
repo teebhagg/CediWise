@@ -11,6 +11,8 @@ const REMINDER_ID_KEY = "@cediwise_notification_daily_reminder_id";
 const REMINDER_VERSION_KEY = "@cediwise_notification_daily_reminder_version";
 const LAST_SYNC_KEY = "@cediwise_notification_last_sync";
 const TOKEN_KEY = "@cediwise_notification_expo_token";
+const GATE_COMPLETED_KEY = "@cediwise_notification_gate_completed";
+const NEXT_ROUTE_KEY = "@cediwise_notification_gate_next_route";
 const REMINDER_VERSION = "v1";
 const DEFAULT_CHANNEL_ID = "cediwise-default";
 
@@ -62,6 +64,26 @@ async function ensurePermissions(): Promise<boolean> {
   if (current.granted) return true;
   const requested = await Notifications.requestPermissionsAsync();
   return requested.granted;
+}
+
+export async function hasNotificationGateCompleted(): Promise<boolean> {
+  return (await AsyncStorage.getItem(GATE_COMPLETED_KEY)) === "true";
+}
+
+export async function completeNotificationGate(): Promise<void> {
+  await AsyncStorage.setItem(GATE_COMPLETED_KEY, "true");
+}
+
+export async function setPendingNotificationRoute(route: string): Promise<void> {
+  await AsyncStorage.setItem(NEXT_ROUTE_KEY, route);
+}
+
+export async function consumePendingNotificationRoute(): Promise<string | null> {
+  const route = await AsyncStorage.getItem(NEXT_ROUTE_KEY);
+  if (route) {
+    await AsyncStorage.removeItem(NEXT_ROUTE_KEY);
+  }
+  return route;
 }
 
 async function upsertPushDevice(userId: string, expoPushToken: string) {
@@ -132,14 +154,6 @@ export async function scheduleDailyExpenseReminder(): Promise<void> {
 export async function syncExpoPushToken(userId: string): Promise<void> {
   if (!isPushEnabled() || !userId || !supabase) return;
 
-  await ensureAndroidChannel();
-
-  const granted = await ensurePermissions();
-  if (!granted) {
-    log.info("Push permission denied; skipping token sync");
-    return;
-  }
-
   const projectId = resolveProjectId();
   if (!projectId) {
     log.warn("EAS project ID missing, unable to fetch Expo push token");
@@ -204,13 +218,33 @@ export async function initNotificationSystem(userId: string | null): Promise<voi
       const data = lastResponse.notification.request.content.data as Record<string, unknown> | undefined;
       handleNotificationNavigation(data);
     }
-
-    const granted = await ensurePermissions();
-    if (!granted) return;
-
-    await scheduleDailyExpenseReminder();
-    await syncExpoPushToken(userId);
   } catch (error) {
     log.warn("Notification init failed", error);
+  }
+}
+
+export async function enablePushNotifications(userId: string): Promise<boolean> {
+  if (!isPushEnabled() || !userId) {
+    await completeNotificationGate();
+    return false;
+  }
+
+  await ensureAndroidChannel();
+
+  const granted = await ensurePermissions();
+  await completeNotificationGate();
+
+  if (!granted) {
+    log.info("Push permission denied; skipping token sync");
+    return false;
+  }
+
+  try {
+    await scheduleDailyExpenseReminder();
+    await syncExpoPushToken(userId);
+    return true;
+  } catch (error) {
+    log.warn("Push enable flow failed", error);
+    return false;
   }
 }

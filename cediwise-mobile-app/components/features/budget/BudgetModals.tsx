@@ -2,7 +2,7 @@ import type { BudgetBucket, BudgetCategory } from '../../../types/budget';
 import type { AllocationExceededResult } from '../../../utils/allocationExceeded';
 import type { SpendingInsight } from '../../../utils/spendingPatterns';
 import { computeSuggestedLimit } from '../../../utils/spendingPatternsLogic';
-import { AddCustomCategoryModal } from '../../AddCustomCategoryModal';
+import { AddCustomCategoryBottomSheet } from './AddCustomCategoryBottomSheet';
 import { AllocationExceededModal } from '../../AllocationExceededModal';
 import { BudgetTransactionModal } from '../../BudgetTransactionModal';
 import { ConfirmModal } from '../../ConfirmModal';
@@ -36,7 +36,12 @@ interface EditingLimit {
 interface BudgetModalsProps {
   showAddCustomCategoryModal: boolean;
   setShowAddCustomCategoryModal: (v: boolean) => void;
-  onAddCategory: (params: { name: string; bucket: BudgetBucket; limitAmount: number }) => Promise<void>;
+  onAddCategory: (params: {
+    name: string;
+    bucket: BudgetBucket;
+    limitAmount: number;
+    icon?: import('@/constants/categoryIcons').CategoryIconName;
+  }) => Promise<void>;
 
   showTxModal: boolean;
   setShowTxModal: (v: boolean) => void;
@@ -143,7 +148,7 @@ export function BudgetModals({
 }: BudgetModalsProps) {
   return (
     <>
-      <AddCustomCategoryModal
+      <AddCustomCategoryBottomSheet
         visible={showAddCustomCategoryModal}
         onClose={() => setShowAddCustomCategoryModal(false)}
         onAdd={async (params) => {

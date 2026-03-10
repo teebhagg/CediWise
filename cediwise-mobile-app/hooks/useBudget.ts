@@ -134,6 +134,7 @@ function categoryToPayload(cat: BudgetCategory): Record<string, unknown> {
     cycle_id: cat.cycleId,
     bucket: cat.bucket,
     name: cat.name,
+    icon: cat.icon ?? null,
     limit_amount: cat.limitAmount,
     is_custom: cat.isCustom ?? false,
     parent_id: cat.parentId ?? null,
@@ -295,11 +296,15 @@ export type UseBudgetReturn = {
     name: string;
     bucket: BudgetBucket;
     limitAmount?: number;
+    icon?: import("@/constants/categoryIcons").CategoryIconName;
   }) => Promise<void>;
   deleteCategory: (categoryId: string) => Promise<void>;
+  /** Remove multiple categories in a single state update (avoids race when deleting many). */
+  deleteCategories: (categoryIds: string[]) => Promise<void>;
   updateCategoryLimit: (
     categoryId: string,
-    nextLimitAmount: number
+    nextLimitAmount: number,
+    icon?: import("../constants/categoryIcons").CategoryIconName
   ) => Promise<void>;
   updateCycleDay: (nextPaydayDay: number) => Promise<void>;
   updateCycleAllocation: (
@@ -1408,10 +1413,12 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       name,
       bucket,
       limitAmount = 0,
+      icon,
     }: {
       name: string;
       bucket: BudgetBucket;
       limitAmount?: number;
+      icon?: import("../constants/categoryIcons").CategoryIconName;
     }) => {
       if (!userId) return;
       const current = state ?? createEmptyBudgetState(userId);
@@ -1435,6 +1442,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         cycleId: activeCycleId,
         bucket,
         name: name.trim() || "Custom",
+        icon: icon ?? null,
         limitAmount: limit,
         isCustom: true,
         parentId: null,
@@ -1499,8 +1507,43 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     [enqueueAndTry, persistState, state, userId]
   );
 
+  const deleteCategories = useCallback(
+    async (categoryIds: string[]) => {
+      if (!userId || categoryIds.length === 0) return;
+      const idsSet = new Set(categoryIds);
+      const current = state ?? createEmptyBudgetState(userId);
+
+      const next: BudgetState = {
+        ...current,
+        categories: current.categories.filter((c) => !idsSet.has(c.id)),
+        transactions: current.transactions.map((t) =>
+          t.categoryId && idsSet.has(t.categoryId)
+            ? { ...t, categoryId: null }
+            : t
+        ),
+      };
+      await persistState(next);
+
+      const now = new Date().toISOString();
+      for (const id of categoryIds) {
+        await enqueueAndTry({
+          id: makeQueueId(),
+          userId,
+          createdAt: now,
+          kind: "delete_category",
+          payload: { id, user_id: userId },
+        });
+      }
+    },
+    [enqueueAndTry, persistState, state, userId]
+  );
+
   const updateCategoryLimit = useCallback(
-    async (categoryId: string, nextLimitAmount: number) => {
+    async (
+      categoryId: string,
+      nextLimitAmount: number,
+      icon?: import("../constants/categoryIcons").CategoryIconName
+    ) => {
       if (!userId) return;
       const current = state ?? createEmptyBudgetState(userId);
       const now = new Date().toISOString();
@@ -1511,6 +1554,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
               ...c,
               limitAmount: limit,
               manualOverride: true,
+              ...(icon !== undefined && { icon }),
               updatedAt: now,
             }
           : c
@@ -1916,6 +1960,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     updateTransaction,
     deleteTransaction,
     deleteCategory,
+    deleteCategories,
     updateCategoryLimit,
     updateCycleDay,
     updateCycleAllocation,

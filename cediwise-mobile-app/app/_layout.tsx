@@ -97,6 +97,10 @@ function AppShell() {
             name="onboarding"
             options={{ headerShown: false }}
           />
+          <Stack.Screen
+            name="notifications"
+            options={{ headerShown: false }}
+          />
           <Stack.Screen name="literacy" options={{ headerShown: false }} />
           <Stack.Screen
             name="salary-calculator"

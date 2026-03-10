@@ -13,7 +13,11 @@ export type EmailTemplateKey =
   | "feedback_followup"
   | "join_beta";
 export type EmailAudienceType = "single" | "selected_users" | "feedback_reply";
-export type EmailSource = "users_tab" | "user_profile" | "app_feedback" | "emails_section";
+export type EmailSource =
+  | "users_tab"
+  | "user_profile"
+  | "app_feedback"
+  | "emails_section";
 
 export type EmailRecipientInput = {
   userId?: string;
@@ -73,7 +77,20 @@ export type EmailRecipientRow = {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const SANITIZE_CONFIG: sanitizeHtml.IOptions = {
-  allowedTags: ["p", "br", "strong", "em", "u", "h2", "h3", "ul", "ol", "li", "blockquote", "a"],
+  allowedTags: [
+    "p",
+    "br",
+    "strong",
+    "em",
+    "u",
+    "h2",
+    "h3",
+    "ul",
+    "ol",
+    "li",
+    "blockquote",
+    "a",
+  ],
   allowedAttributes: {
     a: ["href"],
   },
@@ -121,28 +138,15 @@ async function requireAdminUser() {
   return user;
 }
 
-async function enforceRateLimit(adminUserId: string) {
-  const admin = createAdminClient();
-  const since = new Date(Date.now() - 60_000).toISOString();
-  const { count, error } = await admin
-    .from("email_campaigns")
-    .select("id", { count: "exact", head: true })
-    .eq("created_by", adminUserId)
-    .gte("created_at", since);
-
-  if (error) throw new Error(error.message);
-  if ((count ?? 0) >= 10) {
-    throw new Error("Too many email sends in a short period. Please wait a minute and try again.");
-  }
-}
-
 function validateInput(input: QueueEmailCampaignInput) {
   const subject = sanitizeText(input.subject);
   if (!subject) throw new Error("Subject is required");
   if (subject.length > 160) throw new Error("Subject is too long");
 
   const fallbackBody = sanitizeText(input.messageBody ?? "");
-  const htmlInput = input.messageBodyHtml?.trim() || (fallbackBody ? `<p>${fallbackBody}</p>` : "");
+  const htmlInput =
+    input.messageBodyHtml?.trim() ||
+    (fallbackBody ? `<p>${fallbackBody}</p>` : "");
   const { sanitizedHtml, plainText } = sanitizeBodyHtml(htmlInput);
 
   if (plainText.length > 5000) throw new Error("Message body is too long");
@@ -184,10 +188,15 @@ function validateInput(input: QueueEmailCampaignInput) {
 export async function buildRecipientsFromUserIds(userIds: Array<string>) {
   const ids = Array.from(new Set(userIds.filter(Boolean)));
   if (ids.length === 0)
-    return { recipients: [], skipped: [] as Array<{ userId: string; reason: string }> };
+    return {
+      recipients: [],
+      skipped: [] as Array<{ userId: string; reason: string }>,
+    };
 
   const admin = createAdminClient();
-  const { data: authData, error } = await admin.auth.admin.listUsers({ perPage: 1000 });
+  const { data: authData, error } = await admin.auth.admin.listUsers({
+    perPage: 1000,
+  });
   if (error) throw new Error(error.message);
 
   const byId = new Map(authData.users.map((u) => [u.id, u]));
@@ -207,8 +216,10 @@ export async function buildRecipientsFromUserIds(userIds: Array<string>) {
       continue;
     }
 
-    const meta = (user as { user_metadata?: Record<string, unknown> }).user_metadata;
-    const name = (meta?.full_name as string) ?? (meta?.name as string) ?? undefined;
+    const meta = (user as { user_metadata?: Record<string, unknown> })
+      .user_metadata;
+    const name =
+      (meta?.full_name as string) ?? (meta?.name as string) ?? undefined;
 
     recipients.push({ userId, email, name });
   }
@@ -235,8 +246,6 @@ export async function buildRecipientFromFeedback(feedbackId: string) {
 
 export async function queueEmailCampaign(input: QueueEmailCampaignInput) {
   const user = await requireAdminUser();
-  await enforceRateLimit(user.id);
-
   const validated = validateInput(input);
   const admin = createAdminClient();
 
@@ -263,7 +272,9 @@ export async function queueEmailCampaign(input: QueueEmailCampaignInput) {
     .single<{ id: string }>();
 
   if (campaignError || !campaign) {
-    throw new Error(campaignError?.message ?? "Failed to create email campaign");
+    throw new Error(
+      campaignError?.message ?? "Failed to create email campaign",
+    );
   }
 
   const recipientRows = validated.recipients.map((recipient) => ({
@@ -274,7 +285,9 @@ export async function queueEmailCampaign(input: QueueEmailCampaignInput) {
     delivery_status: "queued",
   }));
 
-  const { error: recipientsError } = await admin.from("email_recipients").insert(recipientRows);
+  const { error: recipientsError } = await admin
+    .from("email_recipients")
+    .insert(recipientRows);
   if (recipientsError) {
     throw new Error(recipientsError.message);
   }
@@ -285,16 +298,19 @@ export async function queueEmailCampaign(input: QueueEmailCampaignInput) {
     throw new Error("Missing Supabase service credentials");
   }
 
-  const response = await fetch(`${supabaseUrl}/functions/v1/send-email-campaign`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${serviceRoleKey}`,
-      apikey: serviceRoleKey,
+  const response = await fetch(
+    `${supabaseUrl}/functions/v1/send-email-campaign`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceRoleKey}`,
+        apikey: serviceRoleKey,
+      },
+      body: JSON.stringify({ campaign_id: campaign.id }),
+      cache: "no-store",
     },
-    body: JSON.stringify({ campaign_id: campaign.id }),
-    cache: "no-store",
-  });
+  );
 
   if (!response.ok) {
     const message = await response.text();
@@ -336,7 +352,11 @@ export async function listEmailCampaigns(page = 1, perPage = 20) {
   };
 }
 
-export async function listEmailRecipients(campaignId: string, page = 1, perPage = 20) {
+export async function listEmailRecipients(
+  campaignId: string,
+  page = 1,
+  perPage = 20,
+) {
   await requireAdminUser();
   const admin = createAdminClient();
 

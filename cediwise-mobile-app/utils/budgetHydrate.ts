@@ -123,7 +123,7 @@ export async function fetchBudgetStateRemote(
   const catsRes = await supabase
     .from("budget_categories")
     .select(
-      "id, user_id, cycle_id, bucket, name, limit_amount, is_custom, parent_id, sort_order, suggested_limit, is_archived, manual_override, created_at, updated_at"
+      "id, user_id, cycle_id, bucket, name, icon, limit_amount, is_custom, parent_id, sort_order, suggested_limit, is_archived, manual_override, created_at, updated_at"
     )
     .eq("user_id", userId);
   if (catsRes.error) throw catsRes.error;
@@ -139,6 +139,7 @@ export async function fetchBudgetStateRemote(
         ? "needs"
         : "needs",
     name: String(r.name ?? "Category"),
+    icon: r.icon != null ? String(r.icon) : null,
     limitAmount: Math.max(0, toNumber(r.limit_amount)),
     isCustom: !!r.is_custom,
     parentId: r.parent_id != null ? String(r.parent_id) : null,

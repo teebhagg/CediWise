@@ -1,0 +1,2 @@
+• Updated Categories UI: new bottom sheets for adding and editing categories, icon picker, predefined categories ordered with unused first
+• Notification permission screen: enable push notifications to receive reminders and expense alerts, with option to skip

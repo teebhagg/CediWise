@@ -50,6 +50,7 @@ export function useBudgetScreenState() {
     addTransaction,
     addCategory,
     deleteCategory,
+    deleteCategories,
     updateCategoryLimit,
     updateCycleDay,
     updateCycleAllocation,
@@ -108,6 +109,7 @@ export function useBudgetScreenState() {
     id: string;
     name: string;
     current: number;
+    icon?: string | null;
     /** Phase 3.2: Pre-filled from advisor limit_adjustment */
     suggestedLimit?: number;
   } | null>(null);
@@ -123,9 +125,19 @@ export function useBudgetScreenState() {
   const [pendingCategoryAction, setPendingCategoryAction] = useState<
     | {
         type: "add";
-        params: { name: string; bucket: BudgetBucket; limitAmount: number };
+        params: {
+          name: string;
+          bucket: BudgetBucket;
+          limitAmount: number;
+          icon?: import("../../../constants/categoryIcons").CategoryIconName;
+        };
       }
-    | { type: "update"; id: string; nextLimit: number }
+    | {
+        type: "update";
+        id: string;
+        nextLimit: number;
+        icon?: import("../../../constants/categoryIcons").CategoryIconName;
+      }
     | null
   >(null);
   const [showIncomeForm, setShowIncomeForm] = useState(false);
@@ -583,6 +595,7 @@ export function useBudgetScreenState() {
       name: string;
       bucket: BudgetBucket;
       limitAmount: number;
+      icon?: import("../../../constants/categoryIcons").CategoryIconName;
     }) => {
       if (!activeCycle || !state?.categories?.length) {
         await addCategory(params);
@@ -609,14 +622,18 @@ export function useBudgetScreenState() {
   );
 
   const handleUpdateCategoryLimit = useCallback(
-    async (id: string, nextLimit: number) => {
+    async (
+      id: string,
+      nextLimit: number,
+      icon?: import("../../../constants/categoryIcons").CategoryIconName
+    ) => {
       if (!activeCycle || !state?.categories?.length) {
-        await updateCategoryLimit(id, nextLimit);
+        await updateCategoryLimit(id, nextLimit, icon);
         return;
       }
       const category = state.categories.find((c) => c.id === id);
       if (!category) {
-        await updateCategoryLimit(id, nextLimit);
+        await updateCategoryLimit(id, nextLimit, icon);
         return;
       }
       const result = checkCategoryLimitImpact({
@@ -628,13 +645,13 @@ export function useBudgetScreenState() {
         categoryId: id,
       });
       if (!result.exceedsBucket && !result.exceedsIncome) {
-        await updateCategoryLimit(id, nextLimit);
+        await updateCategoryLimit(id, nextLimit, icon);
         return;
       }
       setShowEditLimitModal(false);
       setEditingLimit(null);
       setAllocationExceededResult(result);
-      setPendingCategoryAction({ type: "update", id, nextLimit });
+      setPendingCategoryAction({ type: "update", id, nextLimit, icon });
       setShowAllocationExceededModal(true);
     },
     [activeCycle, state?.categories, state?.incomeSources, updateCategoryLimit],
@@ -662,6 +679,7 @@ export function useBudgetScreenState() {
       await updateCategoryLimit(
         pendingCategoryAction.id,
         pendingCategoryAction.nextLimit,
+        pendingCategoryAction.icon,
       );
     }
     setPendingCategoryAction(null);
@@ -733,6 +751,7 @@ export function useBudgetScreenState() {
       addTransaction,
       addCategory,
       deleteCategory,
+      deleteCategories,
       updateCategoryLimit,
       updateCycleAllocation,
       updateCycleDay,

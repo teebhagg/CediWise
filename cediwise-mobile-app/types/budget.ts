@@ -34,12 +34,16 @@ export type BudgetCycle = {
   updatedAt: string;
 };
 
+export type CategoryIconName = string; // Lucide icon name, e.g. "Wallet", "ShoppingCart"
+
 export type BudgetCategory = {
   id: string;
   userId: string;
   cycleId: string;
   bucket: BudgetBucket;
   name: string;
+  /** Custom icon name (Lucide). Falls back to name-based mapping if null. */
+  icon?: CategoryIconName | null;
   limitAmount: number;
   isCustom: boolean;
   parentId?: string | null;

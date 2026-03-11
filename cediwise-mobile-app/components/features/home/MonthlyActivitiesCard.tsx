@@ -69,27 +69,29 @@ function MonthlyActivitiesCardInner({
           >
             <Plus size={20} color="#020617" />
             <Text className="text-slate-900 font-semibold text-base">
-              Record expense
+              Add expense
             </Text>
           </Button>
 
           {topRecent.length === 0 ? (
-            <View className="py-4 rounded-xl bg-white/5 border border-white/5">
+            <View className="flex-col items-center justify-center gap-2 p-4 rounded-sm bg-white/5 border border-white/5">
               <Text className="text-slate-500 text-sm text-center">
-                No expenses this month yet. Tap above to record one.
+                No expenses this month yet. 
               </Text>
+              <Text className="text-slate-400 font-medium">Tap above to add one.</Text>
             </View>
           ) : (
             <View className="gap-3">
               {topRecent.map((t) => {
                 const cat = budgetState?.categories.find((c) => c.id === t.categoryId);
+                const title = t.debtId ? 'Debt Payment' : (cat?.name ?? 'Uncategorized');
                 return (
                   <View
                     key={t.id}
                     className="flex-row justify-between items-center py-2 border-b border-white/5 last:border-b-0"
                   >
                     <Text className="text-slate-200 text-sm" numberOfLines={1}>
-                      {cat?.name ?? 'Uncategorized'}
+                      {title}
                     </Text>
                     <Text className="text-red-300 text-sm font-medium">
                       -₵{formatCurrency(t.amount)}

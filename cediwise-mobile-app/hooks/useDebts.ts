@@ -17,6 +17,8 @@ export type AddDebtParams = {
   startDate?: string;
   targetPayoffDate?: string | null;
   categoryId?: string | null;
+  /** Cycle where overspend occurred (deficit → debt flow) */
+  sourceCycleId?: string | null;
 };
 
 export type UpdateDebtParams = {
@@ -74,6 +76,7 @@ function toDebtRow(debt: Debt): Record<string, unknown> {
     target_payoff_date: debt.targetPayoffDate,
     is_active: debt.isActive,
     category_id: debt.categoryId,
+    source_cycle_id: debt.sourceCycleId ?? null,
     created_at: debt.createdAt,
     updated_at: debt.updatedAt,
   };
@@ -92,6 +95,7 @@ function debtFromRow(row: any): Debt {
     targetPayoffDate: row.target_payoff_date,
     isActive: row.is_active,
     categoryId: row.category_id,
+    sourceCycleId: row.source_cycle_id ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -192,6 +196,7 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
         targetPayoffDate: params.targetPayoffDate || null,
         isActive: true,
         categoryId: params.categoryId || null,
+        sourceCycleId: params.sourceCycleId ?? null,
         createdAt: now,
         updatedAt: now,
       };
@@ -221,6 +226,7 @@ export function useDebts(monthlyIncome?: number): UseDebtsReturn {
           target_payoff_date: params.targetPayoffDate,
           is_active: true,
           category_id: params.categoryId,
+          source_cycle_id: params.sourceCycleId ?? null,
         },
       });
 

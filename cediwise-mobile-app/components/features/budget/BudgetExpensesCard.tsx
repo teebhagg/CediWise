@@ -64,13 +64,14 @@ export function BudgetExpensesCard({
           <>
             {preview.map((t) => {
               const cat = categories.find((c) => c.id === t.categoryId);
+              const title = t.debtId ? 'Debt Payment' : (cat?.name ?? 'Uncategorized');
               return (
                 <View key={t.id} className="py-2.5">
                   <View className="flex-row justify-between items-start">
                     <View className="flex-1 min-w-0 mr-3">
                       <View className="flex-row items-center gap-2 flex-wrap">
                         <Text className="text-slate-200 font-medium" numberOfLines={1} ellipsizeMode="tail">
-                          {cat?.name ?? 'Uncategorized'}
+                          {title}
                         </Text>
                         <View className="bg-slate-500/25 px-2 py-0.5 rounded">
                           <Text className="text-slate-300 text-xs font-medium">

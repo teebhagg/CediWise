@@ -2,7 +2,9 @@ import {
   BudgetLoadingSkeleton,
   InlineSyncPill,
 } from "@/components/BudgetLoading";
+import { AddDebtModal } from "@/components/AddDebtModal";
 import { Card } from "@/components/Card";
+import { DeficitResolutionModal } from "@/components/DeficitResolutionModal";
 import { RolloverAllocationModal } from "@/components/RolloverAllocationModal";
 import { BudgetExpensesCard } from "@/components/features/budget/BudgetExpensesCard";
 import { BudgetModals } from "@/components/features/budget/BudgetModals";
@@ -413,7 +415,6 @@ export default function BudgetScreen() {
                   <View collapsable={false}>
                     <BudgetQuickActions
                       visible={
-                        !derived.cycleHasEnded &&
                         derived.cycleIsSet
                       }
                       onLogExpense={() => modals.setShowTxModal(true)}
@@ -423,7 +424,7 @@ export default function BudgetScreen() {
                 </TourZone>
 
                 <BudgetExpensesCard
-                  visible={derived.cycleIsSet && !derived.cycleHasEnded}
+                  visible={derived.cycleIsSet}
                   activeCycleId={derived.activeCycleId}
                   filter={ui.filter}
                   setFilter={ui.setFilter}
@@ -432,7 +433,16 @@ export default function BudgetScreen() {
                     id: c.id,
                     name: c.name,
                   }))}
-                  onLogExpense={() => modals.setShowTxModal(true)}
+                  onLogExpense={() => {
+                    if (!derived.activeCycleId || derived.cycleHasEnded) {
+                      showError(
+                        "Start a new cycle",
+                        "Set up or start a new cycle to add expenses.",
+                      );
+                      return;
+                    }
+                    modals.setShowTxModal(true);
+                  }}
                   onShowMore={() => router.push("/expenses")}
                   previewCount={3}
                 />
@@ -516,6 +526,31 @@ export default function BudgetScreen() {
           await budget.updateCycleDay(nextDay);
           await budget.reload();
         }}
+      />
+
+      <DeficitResolutionModal
+        visible={modals.showDeficitModal}
+        deficitAmount={modals.pendingDeficit?.deficitAmount ?? 0}
+        cycleLabel={modals.pendingDeficit?.cycleLabel ?? ""}
+        onClose={modals.handleCloseDeficitModal}
+        onResolve={modals.handleDeficitResolve}
+      />
+
+      <AddDebtModal
+        visible={modals.showAddDebtFromDeficitModal}
+        onClose={modals.handleCloseAddDebtFromDeficit}
+        onSubmit={modals.handleAddDebtFromDeficitSubmit}
+        initialValues={
+          modals.pendingAddDebtFromDeficit
+            ? {
+                name: `Cycle overrun – ${modals.pendingAddDebtFromDeficit.cycleLabel}`,
+                totalAmount: modals.pendingAddDebtFromDeficit.deficitAmount,
+                remainingAmount: modals.pendingAddDebtFromDeficit.deficitAmount,
+                monthlyPayment: modals.pendingAddDebtFromDeficit.deficitAmount,
+              }
+            : null
+        }
+        sourceCycleId={modals.pendingAddDebtFromDeficit?.cycleId ?? null}
       />
 
       <RolloverAllocationModal

@@ -12,19 +12,39 @@ import {
 import { GlassView } from "@/components/GlassView";
 import { AppTextField } from "./AppTextField";
 
+export type AddDebtSubmitPayload = {
+  name: string;
+  totalAmount: number;
+  remainingAmount: number;
+  monthlyPayment: number;
+  interestRate?: number | null;
+  sourceCycleId?: string | null;
+};
+
+export type AddDebtInitialValues = {
+  name: string;
+  totalAmount: number;
+  remainingAmount: number;
+  monthlyPayment: number;
+};
+
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (payload: {
-    name: string;
-    totalAmount: number;
-    remainingAmount: number;
-    monthlyPayment: number;
-    interestRate?: number | null;
-  }) => void;
+  onSubmit: (payload: AddDebtSubmitPayload) => void;
+  /** Pre-fill form (e.g. from deficit "Financed" flow) */
+  initialValues?: AddDebtInitialValues | null;
+  /** Cycle where overspend occurred (deficit flow) */
+  sourceCycleId?: string | null;
 };
 
-export function AddDebtModal({ visible, onClose, onSubmit }: Props) {
+export function AddDebtModal({
+  visible,
+  onClose,
+  onSubmit,
+  initialValues,
+  sourceCycleId,
+}: Props) {
   const [name, setName] = useState("");
   const [totalAmount, setTotalAmount] = useState("");
   const [remainingAmount, setRemainingAmount] = useState("");
@@ -35,13 +55,20 @@ export function AddDebtModal({ visible, onClose, onSubmit }: Props) {
   useEffect(() => {
     if (visible) {
       setError(undefined);
-      setName("");
-      setTotalAmount("");
-      setRemainingAmount("");
-      setMonthlyPayment("");
+      if (initialValues) {
+        setName(initialValues.name);
+        setTotalAmount(String(initialValues.totalAmount));
+        setRemainingAmount(String(initialValues.remainingAmount));
+        setMonthlyPayment(String(initialValues.monthlyPayment));
+      } else {
+        setName("");
+        setTotalAmount("");
+        setRemainingAmount("");
+        setMonthlyPayment("");
+      }
       setInterestRate("");
     }
-  }, [visible]);
+  }, [visible, initialValues]);
 
   const handleOpenChange = (open: boolean) => {
     if (!open) onClose();
@@ -89,6 +116,7 @@ export function AddDebtModal({ visible, onClose, onSubmit }: Props) {
       remainingAmount: remaining,
       monthlyPayment: payment,
       interestRate: rate ?? undefined,
+      sourceCycleId: sourceCycleId ?? undefined,
     });
     onClose();
   };
@@ -96,8 +124,8 @@ export function AddDebtModal({ visible, onClose, onSubmit }: Props) {
   return (
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="bg-black/60" />
-        <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
+        <Dialog.Overlay className="bg-black/65" />
+        {Platform.OS === 'ios' && <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />}
         <KeyboardAvoidingView
           behavior="padding"
           style={{ flex: 1, justifyContent: "center" }}

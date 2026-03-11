@@ -82,7 +82,7 @@ function RecentExpensesSectionInner({
             disabled={!activeCycleId || cycleCategories.length === 0}
           >
             <Plus size={18} color="#020617" />
-            <Text className="text-slate-900 font-semibold text-base">Log expense</Text>
+            <Text className="text-slate-900 font-semibold text-base">Add expense</Text>
           </PrimaryButton>
           <Pressable
             onPress={() => router.push('/budget')}
@@ -112,11 +112,12 @@ function RecentExpensesSectionInner({
               {recentExpenses.map((t) => {
                 const cat = budgetState?.categories.find((c) => c.id === t.categoryId);
                 const when = formatExpenseDate(t.occurredAt);
+                const title = t.debtId ? 'Debt Payment' : (cat?.name ?? 'Uncategorized');
                 return (
                   <View key={t.id} className="flex-row justify-between gap-3">
                     <View className="flex-1">
                       <Text className="text-slate-200 font-medium">
-                        {cat?.name ?? 'Uncategorized'}
+                        {title}
                       </Text>
                       <Text className="text-slate-500 text-xs">
                         {t.bucket} • {when}

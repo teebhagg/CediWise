@@ -65,6 +65,8 @@ export type BudgetTransaction = {
   note?: string;
   occurredAt: string; // ISO
   source: "manual";
+  /** When set, this transaction represents a payment toward a specific debt */
+  debtId?: string | null;
   createdAt: string;
 };
 
@@ -122,6 +124,8 @@ export type Debt = {
   targetPayoffDate?: string | null; // YYYY-MM-DD
   isActive: boolean;
   categoryId?: string | null;
+  /** Cycle where overspend occurred (when created from deficit flow) */
+  sourceCycleId?: string | null;
   createdAt: string;
   updatedAt: string;
 };

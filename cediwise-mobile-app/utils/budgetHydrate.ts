@@ -161,7 +161,7 @@ export async function fetchBudgetStateRemote(
   const txRes = await supabase
     .from("budget_transactions")
     .select(
-      "id, user_id, cycle_id, bucket, category_id, amount, note, occurred_at, source, created_at"
+      "id, user_id, cycle_id, bucket, category_id, amount, note, occurred_at, source, debt_id, created_at"
     )
     .eq("user_id", userId)
     .order("occurred_at", { ascending: false })
@@ -187,6 +187,7 @@ export async function fetchBudgetStateRemote(
         r.occurred_at ?? r.created_at ?? new Date().toISOString()
       ),
       source: "manual",
+      debtId: r.debt_id ? String(r.debt_id) : null,
       createdAt: String(r.created_at ?? new Date().toISOString()),
     })
   );

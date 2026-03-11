@@ -85,7 +85,7 @@ export function checkCategoryLimitImpact(params: {
 
   if (exceedsIncome) {
     warnings.push(
-      "This will exceed your total income. Debt will occur; the excess will be added to debts (to be paid next month/cycle)."
+      "This will exceed your total income. If you spend this much, you will overspend. Track any actual overspend in Debt when it happens."
     );
   }
 

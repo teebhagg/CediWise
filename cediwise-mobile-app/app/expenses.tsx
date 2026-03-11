@@ -125,7 +125,9 @@ export default function ExpensesScreen() {
     setSelectedMonthAndYear(null);
   }, []);
 
-  const categoryName = (categoryId: string | null | undefined) => {
+  const categoryName = (tx: BudgetTransaction) => {
+    if (tx.debtId) return "Debt Payment";
+    const categoryId = tx.categoryId;
     if (!categoryId) return "Uncategorized";
     const c = cycleCategories.find((x) => x.id === categoryId);
     return c?.name ?? "Uncategorized";
@@ -273,7 +275,7 @@ export default function ExpensesScreen() {
                         className="text-slate-200 font-medium"
                         numberOfLines={1}
                         ellipsizeMode="tail">
-                        {categoryName(t.categoryId)}
+                        {categoryName(t)}
                       </Text>
                       <View className="bg-slate-500/25 px-2 py-0.5 rounded">
                         <Text className="text-slate-300 text-xs font-medium">

@@ -279,6 +279,8 @@ export type UseBudgetReturn = {
     amount: number;
     note?: string;
     occurredAt?: Date;
+    /** When set, marks this transaction as a payment toward a specific debt */
+    debtId?: string | null;
   }) => Promise<{ wouldExceedNeeds?: boolean }>;
   updateTransaction: (
     id: string,
@@ -706,6 +708,16 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       return sum + src.amount;
     }, 0);
     if (monthlyNetIncome <= 0) return null;
+
+    // If total expenses for the cycle are greater than or equal to income,
+    // there is no true leftover to roll over. In that case we skip the
+    // rollover modal entirely and create the next cycle immediately.
+    const totalSpent = current.transactions
+      .filter((t) => t.cycleId === prevCycle.id)
+      .reduce((sum, t) => sum + t.amount, 0);
+    if (totalSpent >= monthlyNetIncome) {
+      return null;
+    }
 
     const rollover = calculateRollover(
       prevCycle,
@@ -1238,12 +1250,14 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       amount,
       note,
       occurredAt,
+      debtId,
     }: {
       bucket: BudgetBucket;
       categoryId?: string | null;
       amount: number;
       note?: string;
       occurredAt?: Date;
+      debtId?: string | null;
     }) => {
       if (!userId) return {};
       const current = state ?? createEmptyBudgetState(userId);
@@ -1262,6 +1276,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         note: note?.trim() ? note.trim() : undefined,
         occurredAt: (occurredAt ?? new Date()).toISOString(),
         source: "manual",
+        debtId: debtId ?? null,
         createdAt: now,
       };
 
@@ -1312,6 +1327,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           note: tx.note ?? null,
           occurred_at: tx.occurredAt,
           source: tx.source,
+          debt_id: tx.debtId ?? null,
         },
       });
 

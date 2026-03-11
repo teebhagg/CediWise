@@ -1,4 +1,0 @@
-- New Debt Dashboard to track loans and credit cards with total balance, monthly payments, and payoff time.
-- Smarter overspend handling: choose whether a deficit was financed (debt) or covered from savings.
-- Debt payments now show up as 'Debt Payment' needs expenses so your budget and debt stay in sync.
-- Improved cycle rollover logic and small UI fixes.

@@ -47,7 +47,7 @@ jobs:
       - name: Validate release notes
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          NOTES_FILE="${{ env.MOBILE_APP_DIR }}/distributions/${VERSION}.txt"
+          NOTES_FILE="${{ env.MOBILE_APP_DIR }}/distribution/${VERSION}.txt"
           if [ ! -f "$NOTES_FILE" ]; then
             echo "::error::Release notes file missing: $NOTES_FILE"
             exit 1

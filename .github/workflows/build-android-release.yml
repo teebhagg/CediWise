@@ -146,7 +146,7 @@ jobs:
       - name: Create GitHub Release
         run: |
           VERSION="${{ needs.check-version.outputs.version }}"
-          cp ${{ env.MOBILE_APP_DIR }}/distributions/${VERSION}.txt /tmp/release_notes.txt
+          cp ${{ env.MOBILE_APP_DIR }}/distribution/${VERSION}.txt /tmp/release_notes.txt
           gh release create "v${VERSION}" \
             --title "v${VERSION}" \
             --notes-file /tmp/release_notes.txt \

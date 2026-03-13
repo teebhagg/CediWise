@@ -1,0 +1,4 @@
+• New Spending Insights screen: view total spent and trends over 1 week, 1 month, 6 months, or 1 year.
+• Charts to see spending over time or split by category, with a fade under the line chart.
+• Category breakdown with amounts and share of spending, plus an empty state when there are no recorded expenses yet.
+• Clear labels for time ranges and averages (e.g. avg. per day, per week, per cycle), plus short hints so charts are easy to read.

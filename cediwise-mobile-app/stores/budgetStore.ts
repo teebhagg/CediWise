@@ -53,16 +53,19 @@ export const useBudgetStore = create<BudgetStore>((set, get) => ({
       set({ state: null, queue: null, isLoading: false });
       return;
     }
+    const startUserId = userId;
     try {
       const [state, queue] = await Promise.all([
-        loadBudgetState(userId),
-        loadBudgetQueue(userId),
+        loadBudgetState(startUserId),
+        loadBudgetQueue(startUserId),
       ]);
+      if (get().userId !== startUserId) return;
       set({ state, queue, isLoading: false });
     } catch {
+      if (get().userId !== startUserId) return;
       set({
-        state: createEmptyBudgetState(userId),
-        queue: createEmptyQueue(userId),
+        state: createEmptyBudgetState(startUserId),
+        queue: createEmptyQueue(startUserId),
         isLoading: false,
       });
     }

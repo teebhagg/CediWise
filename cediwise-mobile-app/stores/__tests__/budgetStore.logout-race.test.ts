@@ -87,4 +87,37 @@ describe("budgetStore logout race", () => {
     expect(state.state).toBeNull();
     expect(state.queue).toBeNull();
   });
+
+  it("does not overwrite cleared state when logout happens during initForUser", async () => {
+    const emptyState = {
+      version: 1,
+      userId: "user-A",
+      prefs: {},
+      incomeSources: [],
+      cycles: [],
+      categories: [],
+      transactions: [],
+      updatedAt: new Date().toISOString(),
+    };
+    const emptyQueue = {
+      version: 1,
+      userId: "user-A",
+      items: [],
+      updatedAt: new Date().toISOString(),
+    };
+
+    const initPromise = useBudgetStore.getState().initForUser("user-A");
+
+    useBudgetStore.getState().initForUser(null);
+
+    deferredState.resolve(emptyState);
+    deferredQueue.resolve(emptyQueue);
+
+    await initPromise;
+
+    const state = useBudgetStore.getState();
+    expect(state.userId).toBeNull();
+    expect(state.state).toBeNull();
+    expect(state.queue).toBeNull();
+  });
 });

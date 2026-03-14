@@ -1,53 +1,20 @@
-import { useCallback, useEffect, useState } from "react";
-import {
-  fetchProfileVitalsRemote,
-  readProfileVitalsCache,
-  writeProfileVitalsCache,
-  type ProfileVitals,
-} from "../utils/profileVitals";
+import { useProfileVitalsStore } from "@/stores/profileVitalsStore";
+import { useEffect } from "react";
 
 export type UseProfileVitalsReturn = {
   isLoading: boolean;
-  vitals: ProfileVitals | null;
+  vitals: import("../utils/profileVitals").ProfileVitals | null;
   refresh: () => Promise<void>;
 };
 
 export function useProfileVitals(
   userId?: string | null
 ): UseProfileVitalsReturn {
-  const [isLoading, setIsLoading] = useState(true);
-  const [vitals, setVitals] = useState<ProfileVitals | null>(null);
-
-  const refresh = useCallback(async () => {
-    if (!userId) {
-      setVitals(null);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-
-    const cached = await readProfileVitalsCache(userId);
-    if (cached?.vitals) {
-      setVitals(cached.vitals);
-    }
-
-    try {
-      const remote = await fetchProfileVitalsRemote(userId);
-      if (remote) {
-        setVitals(remote);
-        await writeProfileVitalsCache(userId, remote);
-      }
-    } catch {
-      // offline/failed: keep cached vitals if any
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId]);
+  const { isLoading, vitals, refresh } = useProfileVitalsStore();
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void useProfileVitalsStore.getState().initForUser(userId ?? null);
+  }, [userId]);
 
   return { isLoading, vitals, refresh };
 }

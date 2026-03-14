@@ -1,0 +1,4 @@
+• Budget, debts, and progress sync better across screens.
+• Income and savings changes show up right away—no need to leave and come back.
+• Smoother, faster budget loading.
+• Logging out and switching accounts works more reliably.

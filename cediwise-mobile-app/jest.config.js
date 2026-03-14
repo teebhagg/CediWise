@@ -3,10 +3,14 @@ module.exports = {
   preset: "ts-jest",
   testEnvironment: "node",
   roots: ["<rootDir>"],
+  setupFiles: ["<rootDir>/jest.setup.js"],
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/$1",
   },
-  testMatch: ["**/calculators/__tests__/**/*.test.ts"],
+  testMatch: [
+    "**/calculators/__tests__/**/*.test.ts",
+    "**/stores/__tests__/**/*.test.ts",
+  ],
   collectCoverageFrom: [
     "calculators/**/*.ts",
     "!calculators/index.ts",

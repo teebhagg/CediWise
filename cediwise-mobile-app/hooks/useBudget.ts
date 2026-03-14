@@ -1,6 +1,8 @@
 import * as Haptics from "expo-haptics";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { DeviceEventEmitter } from "react-native";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useBudgetStore } from "../stores/budgetStore";
+import { usePersonalizationStore } from "../stores/personalizationStore";
+import { useProfileVitalsStore } from "../stores/profileVitalsStore";
 
 import {
   computeWeightedCategoryLimits,
@@ -25,7 +27,6 @@ import {
 import { hydrateBudgetStateFromRemote } from "../utils/budgetHydrate";
 import { recalculateBudgetFromAllocations } from "../utils/budgetRecalc";
 import {
-  BUDGET_CHANGED_EVENT,
   clearBudgetLocal,
   createEmptyBudgetState,
   enqueueMutation,
@@ -336,16 +337,19 @@ export type UseBudgetReturn = {
 };
 
 export function useBudget(userId?: string | null): UseBudgetReturn {
-  const [state, setState] = useState<BudgetState | null>(null);
-  const [queue, setQueue] = useState<BudgetQueue | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [lastSyncRunEndedAt, setLastSyncRunEndedAt] = useState<number | null>(null);
-  const [retryIn, setRetryIn] = useState<number | null>(null);
+  const store = useBudgetStore();
+  const {
+    state,
+    queue,
+    isLoading,
+    isSyncing,
+    lastSyncRunEndedAt,
+    retryIn,
+  } = store;
   const retryIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearSyncRunResult = useCallback(() => {
-    setLastSyncRunEndedAt(null);
+    useBudgetStore.getState().clearSyncRunResult();
   }, []);
 
   const cancelScheduledRetry = useCallback(() => {
@@ -353,7 +357,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       clearInterval(retryIntervalRef.current);
       retryIntervalRef.current = null;
     }
-    setRetryIn(null);
+    useBudgetStore.getState().setRetryIn(null);
   }, []);
 
   useEffect(() => {
@@ -366,41 +370,12 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
   }, []);
 
   const reload = useCallback(async () => {
-    if (!userId) {
-      setState(null);
-      setQueue(null);
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    const [s, q] = await Promise.all([
-      loadBudgetState(userId),
-      loadBudgetQueue(userId),
-    ]);
-    setState(s);
-    setQueue(q);
-    setIsLoading(false);
+    await useBudgetStore.getState().reload();
+  }, []);
+
+  useEffect(() => {
+    void useBudgetStore.getState().initForUser(userId ?? null);
   }, [userId]);
-
-  useEffect(() => {
-    reload();
-  }, [reload]);
-
-  // Cross-screen sync: if any screen changes budget state/queue, refresh here too.
-  useEffect(() => {
-    if (!userId) return;
-    const sub = DeviceEventEmitter.addListener(
-      BUDGET_CHANGED_EVENT,
-      (payload?: { userId?: string }) => {
-        if (payload?.userId === userId) {
-          reload();
-        }
-      }
-    );
-    return () => {
-      sub.remove();
-    };
-  }, [reload, userId]);
 
   const pendingCount = queue?.items.length ?? 0;
 
@@ -459,15 +434,12 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
   }, [state, activeCycle]);
 
   const persistState = useCallback(async (next: BudgetState) => {
-    setState(next);
-    await saveBudgetState(next);
+    await useBudgetStore.getState().persistState(next);
   }, []);
 
   const refreshQueue = useCallback(async () => {
-    if (!userId) return;
-    const q = await loadBudgetQueue(userId);
-    setQueue(q);
-  }, [userId]);
+    await useBudgetStore.getState().refreshQueue();
+  }, []);
 
   const enqueueAndTry = useCallback(
     async (mutation: Omit<BudgetMutation, "retryCount">) => {
@@ -1758,8 +1730,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     // Clear local immediately
     await clearBudgetLocal(userId);
     const empty = createEmptyBudgetState(userId);
-    setState(empty);
-    await saveBudgetState(empty);
+    await useBudgetStore.getState().persistState(empty);
     await refreshQueue();
 
     // Queue remote reset so it can retry offline
@@ -1778,8 +1749,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       // Local-first: clear local state now, queue remote reset for eventual sync.
       await clearBudgetLocal(userId);
       const empty = createEmptyBudgetState(userId);
-      setState(empty);
-      await saveBudgetState(empty);
+      await useBudgetStore.getState().persistState(empty);
       await refreshQueue();
 
       await enqueueAndTry({
@@ -1796,6 +1766,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       if (removeProfile) {
         await clearProfileVitalsCache(userId);
         await writePersonalizationStatusCache(userId, false);
+        void usePersonalizationStore.getState().refresh();
+        void useProfileVitalsStore.getState().refresh();
       }
     },
     [enqueueAndTry, refreshQueue, userId]
@@ -1805,7 +1777,9 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     if (!userId) return;
     cancelScheduledRetry();
 
-    setIsSyncing(true); // start tag: UI shows "Syncing…" for the whole run
+    const { setSyncing, setLastSyncRunEndedAt, setRetryIn } =
+      useBudgetStore.getState();
+    setSyncing(true); // start tag: UI shows "Syncing…" for the whole run
     let firstFailCount = 0;
     try {
       const first = await flushBudgetQueue(userId);
@@ -1813,7 +1787,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     } finally {
       await refreshQueue(); // queue state updates only at end (no per-item UI churn)
       setLastSyncRunEndedAt(Date.now()); // end tag: UI can show toast / final state
-      setIsSyncing(false);
+      setSyncing(false);
     }
 
     // If anything failed, wait before trying again.
@@ -1835,13 +1809,14 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           // Retry once (delayed), then stop (queue remains if still failing).
           void (async () => {
             if (!userId) return;
-            setIsSyncing(true); // start tag (retry run)
+            const store = useBudgetStore.getState();
+            store.setSyncing(true); // start tag (retry run)
             try {
               await flushBudgetQueue(userId);
             } finally {
-              await refreshQueue();
-              setLastSyncRunEndedAt(Date.now()); // end tag
-              setIsSyncing(false);
+              await store.refreshQueue();
+              store.setLastSyncRunEndedAt(Date.now()); // end tag
+              store.setSyncing(false);
             }
           })();
         }

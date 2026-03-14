@@ -1,9 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import {
-  fetchPersonalizationStatusRemote,
-  readPersonalizationStatusCache,
-  writePersonalizationStatusCache,
-} from "../utils/profileVitals";
+import { usePersonalizationStore } from "@/stores/personalizationStore";
+import { useEffect } from "react";
 
 export type UsePersonalizationStatus = {
   isLoading: boolean;
@@ -15,40 +11,12 @@ export type UsePersonalizationStatus = {
 export function usePersonalizationStatus(
   userId?: string | null
 ): UsePersonalizationStatus {
-  const [isLoading, setIsLoading] = useState(true);
-  const [setupCompleted, setSetupCompleted] = useState(false);
-  const [hasProfile, setHasProfile] = useState(false);
-
-  const refresh = useCallback(async () => {
-    if (!userId) {
-      setIsLoading(false);
-      setSetupCompleted(false);
-      setHasProfile(false);
-      return;
-    }
-
-    setIsLoading(true);
-    const cached = await readPersonalizationStatusCache(userId);
-    if (cached) {
-      setSetupCompleted(cached.setupCompleted);
-    }
-
-    try {
-      const remote = await fetchPersonalizationStatusRemote(userId);
-      setHasProfile(remote.exists);
-      setSetupCompleted(remote.setupCompleted);
-      await writePersonalizationStatusCache(userId, remote.setupCompleted);
-    } catch {
-      // offline: keep cached status
-      setHasProfile(false);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [userId]);
+  const { isLoading, setupCompleted, hasProfile, refresh } =
+    usePersonalizationStore();
 
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void usePersonalizationStore.getState().initForUser(userId ?? null);
+  }, [userId]);
 
   return { isLoading, setupCompleted, hasProfile, refresh };
 }

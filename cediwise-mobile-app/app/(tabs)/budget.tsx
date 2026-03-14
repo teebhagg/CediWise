@@ -315,7 +315,7 @@ export default function BudgetScreen() {
                   Budget data is tied to your account for syncing.
                 </Text>
               </Card>
-            ) : budget.isLoading || showPostVitalsSkeleton ? (
+            ) : (budget.isLoading && !budget.state) || showPostVitalsSkeleton ? (
               <BudgetLoadingSkeleton />
             ) : (
               <>

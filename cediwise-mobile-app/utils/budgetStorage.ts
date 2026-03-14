@@ -97,10 +97,15 @@ export async function loadBudgetState(userId: string): Promise<BudgetState> {
   }
 }
 
-export async function saveBudgetState(next: BudgetState): Promise<void> {
+export async function saveBudgetState(
+  next: BudgetState,
+  options?: { skipEmit?: boolean }
+): Promise<void> {
   const state: BudgetState = { ...next, updatedAt: new Date().toISOString() };
   await AsyncStorage.setItem(stateKey(state.userId), JSON.stringify(state));
-  emitBudgetChanged(state.userId);
+  if (!options?.skipEmit) {
+    emitBudgetChanged(state.userId);
+  }
 }
 
 export async function loadBudgetQueue(userId: string): Promise<BudgetQueue> {

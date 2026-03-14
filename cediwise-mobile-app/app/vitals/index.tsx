@@ -20,6 +20,8 @@ import { useBudget } from "@/hooks/useBudget";
 import { analytics } from "@/utils/analytics";
 import { isOnline } from "@/utils/connectivity";
 import { log } from "@/utils/logger";
+import { usePersonalizationStore } from "@/stores/personalizationStore";
+import { useProfileVitalsStore } from "@/stores/profileVitalsStore";
 import {
   writePersonalizationStatusCache,
   writeProfileVitalsCache,
@@ -423,6 +425,10 @@ export default function VitalsWizard() {
         wants_pct: computed.wantsPct,
         savings_pct: computed.savingsPct,
       });
+
+      // Refresh Zustand stores so budget/home screens show updated vitals
+      void usePersonalizationStore.getState().refresh();
+      void useProfileVitalsStore.getState().refresh();
 
       const existingPrimaryIncome = budget.state?.incomeSources?.find(
         (source) => source.type === "primary",

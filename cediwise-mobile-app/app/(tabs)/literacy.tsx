@@ -17,11 +17,12 @@ import { MODULES } from "@/constants/literacy";
 import { BUDGET_TOUR_READY_TIMEOUT_MS } from "@/constants/tourTokens";
 import { useTourContext } from "@/contexts/TourContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useConnectivity } from "@/hooks/useConnectivity";
 import { useLessons } from "@/hooks/useLessons";
 import { useProgress } from "@/hooks/useProgress";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
-import { BookMarked, ChevronRight } from "lucide-react-native";
+import { BookMarked, ChevronRight, WifiOff } from "lucide-react-native";
 import React, { useEffect } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { TourZone, useTour } from "react-native-lumen";
@@ -36,6 +37,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function LiteracyScreen() {
   const { user } = useAuth();
+  const { isConnected } = useConnectivity();
   const params = useLocalSearchParams<{ tour?: string }>();
   const {
     startLearnTour,
@@ -98,6 +100,16 @@ export default function LiteracyScreen() {
         scrollY={scrollY}
         title="Learn"
         subtitle="Financial literacy tailored for Ghana"
+        actions={[
+          isConnected === false && (
+            <View
+              key="offline"
+              className="mr-1 px-2 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 flex-row items-center gap-1">
+              <WifiOff size={12} color="#FCA5A5" />
+              <Text className="text-red-300 font-medium text-[10px]">Offline</Text>
+            </View>
+          ),
+        ].filter(Boolean)}
       />
       <Animated.ScrollView
         ref={scrollViewRef}

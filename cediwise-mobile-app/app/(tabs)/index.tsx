@@ -1,9 +1,11 @@
 import { usePathname, useRouter } from "expo-router";
+import { WifiOff } from "lucide-react-native";
 import { useCallback, useEffect } from "react";
 import {
   Platform,
   RefreshControl,
   StyleSheet,
+  Text,
   View,
   type StyleProp,
   type ViewStyle,
@@ -30,6 +32,7 @@ import { VitalHeroSkeleton } from "@/components/features/home/VitalHeroSkeleton"
 import { useHomeScreenState } from "@/components/features/home/useHomeScreenState";
 import { useTourContext } from "@/contexts/TourContext";
 import { useUpdateCheckContext } from "@/contexts/UpdateCheckContext";
+import { useConnectivity } from "@/hooks/useConnectivity";
 import { log } from "@/utils/logger";
 import { TourZone, useTour } from "react-native-lumen";
 
@@ -54,6 +57,7 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const { check: checkForUpdate } = useUpdateCheckContext();
+  const { isConnected } = useConnectivity();
   const { startHomeTour, hasSeenHomeTour } = useTourContext();
   const { scrollViewRef } = useTour();
   const scrollY = useSharedValue(0);
@@ -106,7 +110,7 @@ export default function DashboardScreen() {
         userId: user?.id,
       });
     }
-  }, []);
+  }, [hasSeenHomeTour, pathname, setupCompleted, startHomeTour, user?.id]);
 
   const handleSeeAllPress = useCallback(() => {
     router.push("/expenses");
@@ -120,6 +124,14 @@ export default function DashboardScreen() {
         collapsedTitle={headerCollapsedTitle}
         subtitle={headerSubtitle}
         actions={[
+          isConnected === false && (
+            <View
+              key="offline"
+              className="mr-1 px-2 py-1 rounded-full bg-rose-500/15 border border-rose-500/30 flex-row items-center gap-1">
+              <WifiOff size={12} color="#FCA5A5" />
+              <Text className="text-red-300 font-medium text-[10px]">Offline</Text>
+            </View>
+          ),
           !authLoading && (
             <TourZone
               stepKey="home-profile"

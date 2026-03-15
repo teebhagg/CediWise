@@ -1017,11 +1017,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           apply_deductions: source.applyDeductions,
         },
       });
-      if (syncResult && !syncResult.ok) {
-        return { syncError: syncResult.error };
-      }
 
-      // Persist recomputed category limits (if any)
+      // Persist recomputed category limits (if any); always enqueue so offline/failed sync still queues limits.
       if (activeCycleId && activeCycle) {
         const changed = nextCategories.filter(
           (c) => c.cycleId === activeCycleId
@@ -1042,6 +1039,9 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
             },
           });
         }
+      }
+      if (syncResult && !syncResult.ok) {
+        return { syncError: syncResult.error };
       }
     },
     [activeCycle, enqueueAndTry, persistState, state, userId]
@@ -1090,6 +1090,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       await persistState(next);
 
       // Persist income source to Supabase
+      let syncError: string | undefined;
       const src = updatedIncome.find((s) => s.id === incomeSourceId);
       if (src) {
         const syncResult = await enqueueAndTry({
@@ -1106,12 +1107,10 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
             apply_deductions: src.applyDeductions,
           },
         });
-        if (syncResult && !syncResult.ok) {
-          return { syncError: syncResult.error };
-        }
+        if (syncResult && !syncResult.ok) syncError = syncResult.error;
       }
 
-      // Persist recomputed category limits
+      // Persist recomputed category limits; always enqueue so offline/failed sync still queues limits.
       if (activeCycleId && activeCycle) {
         const changed = nextCategories.filter(
           (c) => c.cycleId === activeCycleId
@@ -1133,6 +1132,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           });
         }
       }
+      if (syncError) return { syncError };
     },
     [activeCycle, enqueueAndTry, persistState, state, userId]
   );
@@ -1169,11 +1169,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         kind: "delete_income_source",
         payload: { id: incomeSourceId, user_id: userId },
       });
-      if (syncResult && !syncResult.ok) {
-        return { syncError: syncResult.error };
-      }
 
-      // If we recomputed limits, queue upserts for affected categories
+      // If we recomputed limits, queue upserts for affected categories; always enqueue so offline/failed sync still queues limits.
       if (activeCycleId && activeCycle) {
         const changed = nextCategories.filter(
           (c) => c.cycleId === activeCycleId
@@ -1194,6 +1191,9 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
             },
           });
         }
+      }
+      if (syncResult && !syncResult.ok) {
+        return { syncError: syncResult.error };
       }
     },
     [activeCycle, enqueueAndTry, persistState, state, userId]

@@ -316,11 +316,13 @@ export async function initNotificationSystem(userId: string | null): Promise<voi
     log.warn("Notification init failed", error);
   }
 
-  // If user has already enabled notifications: ensure daily reminder is scheduled and token is fresh.
+  // If user has already enabled notifications (OS permission + not disabled in app): ensure reminder and token.
   void (async () => {
     try {
       const { granted } = await Notifications.getPermissionsAsync();
       if (!granted) return;
+      const enabled = await getNotificationsEnabled();
+      if (!enabled) return;
       await scheduleDailyExpenseReminder();
       await refreshPushTokenIfNeeded(userId);
     } catch {

@@ -2,10 +2,9 @@ import Constants from "expo-constants";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import {
-  CreditCard,
+  Bell,
   Database,
   DollarSign,
-  FileText,
   LogOut,
   Mail,
   Phone,
@@ -33,6 +32,15 @@ import { useTourContext } from "@/contexts/TourContext";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersonalizationStatus } from "@/hooks/usePersonalizationStatus";
+import {
+  disablePushNotifications,
+  enablePushNotifications,
+  getNotificationsEnabled,
+  getReminderFrequency,
+  type ReminderFrequency,
+  scheduleDailyExpenseReminder,
+  setReminderFrequency,
+} from "@/services/notifications";
 import { getDisplayContact } from "@/utils/auth";
 import { clearBudgetLocal } from "@/utils/budgetStorage";
 import { log } from "@/utils/logger";
@@ -65,12 +73,16 @@ function IconPrefix({
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { resetTourSeen } = useTourContext();
+  const { resetTourSeen, startHomeTour, startBudgetTour } = useTourContext();
   const { showError, showSuccess } = useAppToast();
   const personalization = usePersonalizationStatus(user?.id);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [enableAutoReallocation, setEnableAutoReallocation] = useState(false);
   const [autoReallocationLoading, setAutoReallocationLoading] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [reminderFrequency, setReminderFrequencyState] = useState<ReminderFrequency>("daily");
+  const [reminderFrequencyLoading, setReminderFrequencyLoading] = useState(false);
 
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
@@ -98,6 +110,16 @@ export default function ProfileScreen() {
       }
     })();
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    void getNotificationsEnabled().then(setNotificationsEnabled);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!notificationsEnabled) return;
+    void getReminderFrequency().then(setReminderFrequencyState);
+  }, [notificationsEnabled]);
 
   const handleAutoReallocationChange = useCallback(
     async (value: boolean) => {
@@ -172,6 +194,62 @@ export default function ProfileScreen() {
       showError("Error", "Could not clear local storage");
     }
   }, [user?.id, showSuccess, showError]);
+
+  const handleNotificationsToggle = useCallback(
+    async (value: boolean) => {
+      if (!user?.id) return;
+      setNotificationsLoading(true);
+      const previous = notificationsEnabled;
+      setNotificationsEnabled(value);
+      try {
+        if (value) {
+          const ok = await enablePushNotifications(user.id);
+          if (!ok) {
+            setNotificationsEnabled(false);
+            showError(
+              "Couldn’t enable",
+              "Check your connection and try again, or enable in system settings.",
+            );
+          } else {
+            showSuccess("Notifications on", "You’ll get expense reminders and updates.");
+          }
+        } else {
+          await disablePushNotifications(user.id);
+          showSuccess("Notifications off", "Reminders and push updates are disabled.");
+        }
+      } catch (e) {
+        log.error("Notifications toggle failed:", e);
+        setNotificationsEnabled(previous);
+        showError(
+          "Couldn’t update",
+          value ? "Check your connection and try again." : "Something went wrong.",
+        );
+      } finally {
+        setNotificationsLoading(false);
+      }
+    },
+    [user?.id, notificationsEnabled, showSuccess, showError],
+  );
+
+  const handleReminderFrequencyChange = useCallback(
+    async (freq: ReminderFrequency) => {
+      if (reminderFrequencyLoading || reminderFrequency === freq) return;
+      setReminderFrequencyLoading(true);
+      try {
+        await setReminderFrequency(freq);
+        setReminderFrequencyState(freq);
+        await scheduleDailyExpenseReminder();
+        const label = freq === "daily" ? "Daily" : "Weekly";
+        showSuccess("Reminder updated", `${label} at 6 PM`);
+      } catch (e) {
+        log.error("Reminder frequency change failed:", e);
+        showError("Couldn't update", "Try again.");
+      } finally {
+        setReminderFrequencyLoading(false);
+      }
+    },
+    [reminderFrequency, reminderFrequencyLoading, showSuccess, showError],
+  );
 
   const handleLogoutConfirm = async () => {
     try {
@@ -264,9 +342,107 @@ export default function ProfileScreen() {
             </View>
           </Card>
 
-          {/* Account Settings */}
+          {/* Notifications */}
           <View>
-            <Text className={SECTION_LABEL_CLASS}>Account</Text>
+            <Text className={SECTION_LABEL_CLASS}>Notifications</Text>
+            <ListGroup variant="tertiary" className={LIST_GROUP_CONTAINER_CLASS}>
+              <ListGroup.Item disabled>
+                <ListGroup.ItemPrefix>
+                  <IconPrefix icon={Bell} color="#10B981" />
+                </ListGroup.ItemPrefix>
+                <ListGroup.ItemContent>
+                  <ListGroup.ItemTitle>Push notifications</ListGroup.ItemTitle>
+                  <ListGroup.ItemDescription>
+                    Expense reminders and updates
+                  </ListGroup.ItemDescription>
+                </ListGroup.ItemContent>
+                <ListGroup.ItemSuffix>
+                  {notificationsLoading ? (
+                    <Text className="text-slate-400 text-sm">
+                      {notificationsEnabled ? "Turning off…" : "Turning on…"}
+                    </Text>
+                  ) : (
+                    <Switch
+                      value={notificationsEnabled}
+                      onValueChange={handleNotificationsToggle}
+                      trackColor={{ false: "#334155", true: "#22C55E" }}
+                      thumbColor="#fff"
+                    />
+                  )}
+                </ListGroup.ItemSuffix>
+              </ListGroup.Item>
+              {notificationsEnabled ? (
+                <>
+                  <Separator className="mx-4" />
+                  <ListGroup.Item disabled>
+                    <ListGroup.ItemPrefix />
+                    <ListGroup.ItemContent>
+                      <ListGroup.ItemTitle>Reminder frequency</ListGroup.ItemTitle>
+                      <ListGroup.ItemDescription>
+                        {reminderFrequency === "daily"
+                          ? "Every day at 6 PM"
+                          : "Once a week at 6 PM"}
+                      </ListGroup.ItemDescription>
+                    </ListGroup.ItemContent>
+                    <ListGroup.ItemSuffix>
+                      {reminderFrequencyLoading ? (
+                        <Text className="text-slate-400 text-sm">Updating…</Text>
+                      ) : (
+                        <View className="flex-row gap-2">
+                          <PressableFeedback
+                            animation={false}
+                            onPress={onItemPress(() => handleReminderFrequencyChange("daily"))}
+                          >
+                            <PressableFeedback.Ripple />
+                            <View
+                              className={`rounded-lg px-3 py-2 ${
+                                reminderFrequency === "daily" ? "bg-emerald-500/30" : "bg-slate-500/20"
+                              }`}
+                            >
+                              <Text
+                                className={
+                                  reminderFrequency === "daily"
+                                    ? "font-semibold text-emerald-400"
+                                    : "text-slate-400"
+                                }
+                              >
+                                Daily
+                              </Text>
+                            </View>
+                          </PressableFeedback>
+                          <PressableFeedback
+                            animation={false}
+                            onPress={onItemPress(() => handleReminderFrequencyChange("weekly"))}
+                          >
+                            <PressableFeedback.Ripple />
+                            <View
+                              className={`rounded-lg px-3 py-2 ${
+                                reminderFrequency === "weekly" ? "bg-emerald-500/30" : "bg-slate-500/20"
+                              }`}
+                            >
+                              <Text
+                                className={
+                                  reminderFrequency === "weekly"
+                                    ? "font-semibold text-emerald-400"
+                                    : "text-slate-400"
+                                }
+                              >
+                                Weekly
+                              </Text>
+                            </View>
+                          </PressableFeedback>
+                        </View>
+                      )}
+                    </ListGroup.ItemSuffix>
+                  </ListGroup.Item>
+                </>
+              ) : null}
+            </ListGroup>
+          </View>
+
+          {/* Profile and personalization */}
+          <View>
+            <Text className={SECTION_LABEL_CLASS}>Profile and personalization</Text>
             <ListGroup variant="tertiary" className={LIST_GROUP_CONTAINER_CLASS}>
               <ListGroup.Item disabled>
                 <ListGroup.ItemPrefix>
@@ -278,6 +454,27 @@ export default function ProfileScreen() {
                 </ListGroup.ItemContent>
                 <ListGroup.ItemSuffix />
               </ListGroup.Item>
+              <Separator className="mx-4" />
+              <PressableFeedback animation={false} onPress={onItemPress(() => router.push("/vitals?mode=edit"))}>
+                <PressableFeedback.Scale />
+                <PressableFeedback.Ripple />
+                <ListGroup.Item disabled>
+                  <ListGroup.ItemPrefix>
+                    <IconPrefix icon={UserIcon} color="#10B981" />
+                  </ListGroup.ItemPrefix>
+                  <ListGroup.ItemContent>
+                    <ListGroup.ItemTitle>Personalization settings</ListGroup.ItemTitle>
+                    <ListGroup.ItemDescription>
+                      {personalization.isLoading
+                        ? "Checking…"
+                        : personalization.setupCompleted
+                          ? "Completed"
+                          : "Not set"}
+                    </ListGroup.ItemDescription>
+                  </ListGroup.ItemContent>
+                  <ListGroup.ItemSuffix />
+                </ListGroup.Item>
+              </PressableFeedback>
             </ListGroup>
           </View>
 
@@ -305,84 +502,6 @@ export default function ProfileScreen() {
                   />
                 </ListGroup.ItemSuffix>
               </ListGroup.Item>
-            </ListGroup>
-          </View>
-
-          {/* Personalization */}
-          <View>
-            <Text className={SECTION_LABEL_CLASS}>Personalization</Text>
-            <PressableFeedback animation={false} onPress={onItemPress(() => router.push("/vitals?mode=edit"))}>
-              <PressableFeedback.Scale />
-              <PressableFeedback.Ripple />
-              <ListGroup variant="tertiary" className={LIST_GROUP_CONTAINER_CLASS}>
-                <ListGroup.Item disabled>
-                  <ListGroup.ItemPrefix>
-                    <IconPrefix icon={UserIcon} color="#10B981" />
-                  </ListGroup.ItemPrefix>
-                  <ListGroup.ItemContent>
-                    <ListGroup.ItemTitle>Personalization settings</ListGroup.ItemTitle>
-                    <ListGroup.ItemDescription>
-                      {personalization.isLoading
-                        ? "Checking…"
-                        : personalization.setupCompleted
-                          ? "Completed"
-                          : "Not set"}
-                    </ListGroup.ItemDescription>
-                  </ListGroup.ItemContent>
-                  <ListGroup.ItemSuffix />
-                </ListGroup.Item>
-              </ListGroup>
-            </PressableFeedback>
-          </View>
-
-          {/* Budget tools */}
-          <View>
-            <Text className={SECTION_LABEL_CLASS}>Budget tools</Text>
-            <ListGroup variant="tertiary" className={LIST_GROUP_CONTAINER_CLASS}>
-              <PressableFeedback animation={false} onPress={onItemPress(() => router.push("/recurring-expenses"))}>
-                <PressableFeedback.Scale />
-                <PressableFeedback.Ripple />
-                <ListGroup.Item disabled>
-                  <ListGroup.ItemPrefix>
-                    <IconPrefix icon={CreditCard} color="#F59E0B" />
-                  </ListGroup.ItemPrefix>
-                  <ListGroup.ItemContent>
-                    <ListGroup.ItemTitle>Recurring Expenses</ListGroup.ItemTitle>
-                    <ListGroup.ItemDescription>Subscriptions & regular payments</ListGroup.ItemDescription>
-                  </ListGroup.ItemContent>
-                  <ListGroup.ItemSuffix />
-                </ListGroup.Item>
-              </PressableFeedback>
-              <Separator className="mx-4" />
-              <PressableFeedback animation={false} onPress={onItemPress(() => router.push("/debt-dashboard"))}>
-                <PressableFeedback.Scale />
-                <PressableFeedback.Ripple />
-                <ListGroup.Item disabled>
-                  <ListGroup.ItemPrefix>
-                    <IconPrefix icon={DollarSign} color="#EF4444" />
-                  </ListGroup.ItemPrefix>
-                  <ListGroup.ItemContent>
-                    <ListGroup.ItemTitle>Debt Dashboard</ListGroup.ItemTitle>
-                    <ListGroup.ItemDescription>Loans & credit</ListGroup.ItemDescription>
-                  </ListGroup.ItemContent>
-                  <ListGroup.ItemSuffix />
-                </ListGroup.Item>
-              </PressableFeedback>
-              <Separator className="mx-4" />
-              <PressableFeedback animation={false} onPress={onItemPress(() => router.push("/budget-templates"))}>
-                <PressableFeedback.Scale />
-                <PressableFeedback.Ripple />
-                <ListGroup.Item disabled>
-                  <ListGroup.ItemPrefix>
-                    <IconPrefix icon={FileText} color="#10B981" />
-                  </ListGroup.ItemPrefix>
-                  <ListGroup.ItemContent>
-                    <ListGroup.ItemTitle>Budget Templates</ListGroup.ItemTitle>
-                    <ListGroup.ItemDescription>Life-stage templates</ListGroup.ItemDescription>
-                  </ListGroup.ItemContent>
-                  <ListGroup.ItemSuffix />
-                </ListGroup.Item>
-              </PressableFeedback>
             </ListGroup>
           </View>
 
@@ -430,6 +549,56 @@ export default function ProfileScreen() {
               </ListGroup>
             </View>
           ) : null}
+
+          {/* Guides */}
+          <View>
+            <Text className={SECTION_LABEL_CLASS}>Guides</Text>
+            <ListGroup variant="tertiary" className={LIST_GROUP_CONTAINER_CLASS}>
+              <PressableFeedback
+                animation={false}
+                onPress={onItemPress(() => {
+                  router.replace("/(tabs)");
+                  setTimeout(startHomeTour, 600);
+                })}>
+                <PressableFeedback.Scale />
+                <PressableFeedback.Ripple />
+                <ListGroup.Item disabled>
+                  <ListGroup.ItemPrefix>
+                    <IconPrefix icon={Sparkles} color="#22C55E" />
+                  </ListGroup.ItemPrefix>
+                  <ListGroup.ItemContent>
+                    <ListGroup.ItemTitle>Replay home tour</ListGroup.ItemTitle>
+                    <ListGroup.ItemDescription>
+                      Walk through the home screen and Learn tab.
+                    </ListGroup.ItemDescription>
+                  </ListGroup.ItemContent>
+                  <ListGroup.ItemSuffix />
+                </ListGroup.Item>
+              </PressableFeedback>
+              <Separator className="mx-4" />
+              <PressableFeedback
+                animation={false}
+                onPress={onItemPress(() => {
+                  router.replace("/(tabs)/budget");
+                  setTimeout(startBudgetTour, 600);
+                })}>
+                <PressableFeedback.Scale />
+                <PressableFeedback.Ripple />
+                <ListGroup.Item disabled>
+                  <ListGroup.ItemPrefix>
+                    <IconPrefix icon={DollarSign} color="#22C55E" />
+                  </ListGroup.ItemPrefix>
+                  <ListGroup.ItemContent>
+                    <ListGroup.ItemTitle>Replay budget tour</ListGroup.ItemTitle>
+                    <ListGroup.ItemDescription>
+                      Walk through the budget setup flow.
+                    </ListGroup.ItemDescription>
+                  </ListGroup.ItemContent>
+                  <ListGroup.ItemSuffix />
+                </ListGroup.Item>
+              </PressableFeedback>
+            </ListGroup>
+          </View>
 
           {/* Account Actions */}
           <View>

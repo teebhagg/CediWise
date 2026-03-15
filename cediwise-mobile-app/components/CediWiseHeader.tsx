@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   /* Left-aligned title: small gap from leading */
   titleLeft: {
     alignItems: "flex-start",
-    paddingLeft: 4,
+    paddingLeft: 16,
   },
 
   /* Centered title: text centred within the flex-1 cell */

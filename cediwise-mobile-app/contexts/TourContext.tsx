@@ -2,6 +2,7 @@ import { CediTourCard } from "@/components/tour/CediTourCard";
 import {
   BUDGET_TOUR,
   HOME_TOUR,
+  LEARN_TOUR,
   STEPS_ORDER,
 } from "@/constants/tourSteps";
 import {
@@ -19,27 +20,37 @@ import {
   useRef,
   useState,
 } from "react";
-import { View } from "react-native";
+import { Alert, View } from "react-native";
 import {
   TourProvider as LumenTourProvider,
   useTour,
   type CardProps,
 } from "react-native-lumen";
 import { useAuth } from "../hooks/useAuth";
+import { analytics } from "../utils/analytics";
+import { isValueFirstOnboardingEnabled } from "../utils/featureFlags";
 import {
   clearTourSeen,
   readTourSeen,
   writeTourSeen,
 } from "../utils/tourStorage";
 
+type TourId = "home" | "budget" | "learn";
+type TourEndReason = "completed" | "skipped";
+
 type TourContextType = {
   startHomeTour: () => void;
   startBudgetTour: () => void;
+  startLearnTour: () => void;
   /** Mark budget tour as seen without starting. Use when zones are not ready after timeout. */
   skipBudgetTour: () => Promise<void>;
+  /** Mark learn tour as seen without starting. Use when zones are not ready after timeout. */
+  skipLearnTour: () => Promise<void>;
   /** null = not yet loaded from storage; false = never seen; true = has seen */
   hasSeenHomeTour: boolean | null;
   hasSeenBudgetTour: boolean | null;
+  hasSeenLearnTour: boolean | null;
+  valueFirstOnboardingEnabled: boolean;
   /** Clear tour seen flags. For __DEV__ testing only. */
   resetTourSeen: () => Promise<void>;
 };
@@ -56,9 +67,13 @@ export const useTourContext = () => {
 const NO_OP_TOUR_CONTEXT: TourContextType = {
   startHomeTour: () => { },
   startBudgetTour: () => { },
+  startLearnTour: () => { },
   skipBudgetTour: async () => { },
+  skipLearnTour: async () => { },
   hasSeenHomeTour: null,
   hasSeenBudgetTour: null,
+  hasSeenLearnTour: null,
+  valueFirstOnboardingEnabled: false,
   resetTourSeen: async () => { },
 };
 
@@ -71,13 +86,14 @@ export function TourProviderFallback({ children }: { children: ReactNode }) {
   );
 }
 
-
 export function TourProvider({ children }: { children: ReactNode }) {
-  const activeTourRef = useRef<"home" | "budget">("home");
+  const activeTourRef = useRef<TourId>("home");
 
   // Ref for tour end handler - set by TourContextInnerWithRef when it mounts
   // Use a ref so the renderCard can call the latest handler.
-  const onTourEndRef = useRef<(tour: "home" | "budget") => void>(() => { });
+  const onTourEndRef = useRef<(tour: TourId, reason: TourEndReason) => void>(
+    () => { },
+  );
 
   const renderCardWithHandler = useCallback(
     (props: CardProps) => {
@@ -89,26 +105,25 @@ export function TourProvider({ children }: { children: ReactNode }) {
       };
 
       const wrappedStop = () => {
-        onTourEndRef.current(activeTourRef.current);
+        onTourEndRef.current(activeTourRef.current, "skipped");
         props.stop();
       };
 
       const wrappedNextForLast = () => {
-        if (props.isLast) {
-          onTourEndRef.current(activeTourRef.current);
-        }
+        onTourEndRef.current(activeTourRef.current, "completed");
         props.next();
       };
 
       const endsTour =
         HOME_TOUR.endsAt.includes(props.step.key) ||
-        BUDGET_TOUR.endsAt.includes(props.step.key);
+        BUDGET_TOUR.endsAt.includes(props.step.key) ||
+        LEARN_TOUR.endsAt.includes(props.step.key);
       const isLastForCurrentTour = props.isLast || endsTour;
 
       const handleNext =
         props.step.key === "home-nav"
           ? () => {
-            onTourEndRef.current("home");
+            onTourEndRef.current("home", "completed");
             props.stop();
           }
           : isLastForCurrentTour
@@ -132,8 +147,6 @@ export function TourProvider({ children }: { children: ReactNode }) {
           </View>
         );
       }
-
-
 
       return card;
     },
@@ -175,8 +188,8 @@ function TourContextInnerWithRef({
   activeTourRef,
 }: {
   children: ReactNode;
-  onTourEndRef: React.MutableRefObject<(tour: "home" | "budget") => void>;
-  activeTourRef: React.MutableRefObject<"home" | "budget">;
+  onTourEndRef: React.MutableRefObject<(tour: TourId, reason: TourEndReason) => void>;
+  activeTourRef: React.MutableRefObject<TourId>;
 }) {
   const { user, isLoading: authLoading } = useAuth();
   const userId = user?.id;
@@ -186,24 +199,128 @@ function TourContextInnerWithRef({
   const [hasSeenBudgetTour, setHasSeenBudgetTour] = useState<boolean | null>(
     null,
   );
+  const [hasSeenLearnTour, setHasSeenLearnTour] = useState<boolean | null>(null);
+  const [valueFirstOnboardingEnabled, setValueFirstOnboardingEnabled] =
+    useState(false);
 
   useEffect(() => {
-    if (authLoading) return;
-    if (userId) {
-      readTourSeen(userId, "home").then(setHasSeenHomeTour);
-      readTourSeen(userId, "budget").then(setHasSeenBudgetTour);
+    let mounted = true;
+
+    async function loadState() {
+      if (authLoading) return;
+      if (!userId) {
+        if (!mounted) return;
+        setHasSeenHomeTour(null);
+        setHasSeenBudgetTour(null);
+        setHasSeenLearnTour(null);
+        setValueFirstOnboardingEnabled(false);
+        return;
+      }
+
+      const [homeSeen, budgetSeen, learnSeen, valueFirstEnabled] = await Promise.all([
+        readTourSeen(userId, "home"),
+        readTourSeen(userId, "budget"),
+        readTourSeen(userId, "learn"),
+        isValueFirstOnboardingEnabled(userId),
+      ]);
+
+      if (!mounted) return;
+      setHasSeenHomeTour(homeSeen);
+      setHasSeenBudgetTour(budgetSeen);
+      setHasSeenLearnTour(learnSeen);
+      setValueFirstOnboardingEnabled(valueFirstEnabled);
     }
-  }, [userId, authLoading]);
+
+    void loadState();
+    return () => {
+      mounted = false;
+    };
+  }, [authLoading, userId]);
+
+  const promptBudgetHandoff = useCallback(() => {
+    if (!userId) return;
+    analytics.tourHandoffHomeToBudget({ userId });
+    Alert.alert(
+      "Continue onboarding?",
+      "Next up: a quick Budget tour. You can skip anytime.",
+      [
+        {
+          text: "Skip",
+          style: "cancel",
+          onPress: () => {
+            analytics.tourHandoffSkip({ userId, from: "home", to: "budget" });
+          },
+        },
+        {
+          text: "Continue",
+          onPress: () => {
+            analytics.tourHandoffAccept({ userId, from: "home", to: "budget" });
+            router.replace("/(tabs)/budget?tour=budget");
+          },
+        },
+      ],
+      { cancelable: true },
+    );
+  }, [userId]);
+
+  const promptLearnHandoff = useCallback(() => {
+    if (!userId) return;
+    analytics.tourHandoffBudgetToLearn({ userId });
+    Alert.alert(
+      "One last quick tour",
+      "Want a short Learn tour to see lessons and glossary?",
+      [
+        {
+          text: "Skip",
+          style: "cancel",
+          onPress: () => {
+            analytics.tourHandoffSkip({ userId, from: "budget", to: "learn" });
+          },
+        },
+        {
+          text: "Continue",
+          onPress: () => {
+            analytics.tourHandoffAccept({ userId, from: "budget", to: "learn" });
+            router.replace("/(tabs)/literacy?tour=learn");
+          },
+        },
+      ],
+      { cancelable: true },
+    );
+  }, [userId]);
 
   const handleTourEnd = useCallback(
-    (tour: "home" | "budget") => {
-      if (userId) {
-        writeTourSeen(userId, tour);
-        if (tour === "home") setHasSeenHomeTour(true);
-        else setHasSeenBudgetTour(true);
+    (tour: TourId, reason: TourEndReason) => {
+      if (!userId) return;
+
+      void writeTourSeen(userId, tour);
+
+      if (tour === "home") setHasSeenHomeTour(true);
+      if (tour === "budget") {
+        setHasSeenBudgetTour(true);
+        if (reason === "completed") analytics.tourCompletedCoreBudget({ userId });
+        if (reason === "skipped") analytics.tourSkippedCoreBudget({ userId });
+      }
+      if (tour === "learn") setHasSeenLearnTour(true);
+
+      if (!valueFirstOnboardingEnabled || reason !== "completed") return;
+
+      if (tour === "home" && hasSeenBudgetTour === false) {
+        promptBudgetHandoff();
+      }
+
+      if (tour === "budget" && hasSeenLearnTour === false) {
+        promptLearnHandoff();
       }
     },
-    [userId],
+    [
+      hasSeenBudgetTour,
+      hasSeenLearnTour,
+      promptBudgetHandoff,
+      promptLearnHandoff,
+      userId,
+      valueFirstOnboardingEnabled,
+    ],
   );
 
   useEffect(() => {
@@ -211,26 +328,43 @@ function TourContextInnerWithRef({
   }, [handleTourEnd, onTourEndRef]);
 
   const startHomeTour = useCallback(() => {
+    if (valueFirstOnboardingEnabled && userId) {
+      analytics.onboardingValueFirstStart({ userId });
+    }
     activeTourRef.current = "home";
     setTimeout(() => start(HOME_TOUR.firstStep), TOUR_START_DELAY_MS);
-  }, [start, activeTourRef]);
+  }, [activeTourRef, start, userId, valueFirstOnboardingEnabled]);
 
   const startBudgetTour = useCallback(() => {
     activeTourRef.current = "budget";
+    analytics.tourStartedCoreBudget({ userId });
     setTimeout(() => start(BUDGET_TOUR.firstStep), TOUR_START_DELAY_MS);
-  }, [start, activeTourRef]);
+  }, [activeTourRef, start, userId]);
+
+  const startLearnTour = useCallback(() => {
+    activeTourRef.current = "learn";
+    setTimeout(() => start(LEARN_TOUR.firstStep), TOUR_START_DELAY_MS);
+  }, [activeTourRef, start]);
 
   const resetTourSeen = useCallback(async () => {
     if (!userId) return;
     await clearTourSeen(userId);
     setHasSeenHomeTour(false);
     setHasSeenBudgetTour(false);
+    setHasSeenLearnTour(false);
   }, [userId]);
 
   const skipBudgetTour = useCallback(async () => {
     if (!userId) return;
+    analytics.tourSkippedCoreBudget({ userId });
     await writeTourSeen(userId, "budget");
     setHasSeenBudgetTour(true);
+  }, [userId]);
+
+  const skipLearnTour = useCallback(async () => {
+    if (!userId) return;
+    await writeTourSeen(userId, "learn");
+    setHasSeenLearnTour(true);
   }, [userId]);
 
   return (
@@ -238,9 +372,13 @@ function TourContextInnerWithRef({
       value={{
         startHomeTour,
         startBudgetTour,
+        startLearnTour,
         skipBudgetTour,
+        skipLearnTour,
         hasSeenHomeTour,
         hasSeenBudgetTour,
+        hasSeenLearnTour,
+        valueFirstOnboardingEnabled,
         resetTourSeen,
       }}>
       {children}

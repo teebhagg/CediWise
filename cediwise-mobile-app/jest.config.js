@@ -10,6 +10,7 @@ module.exports = {
   testMatch: [
     "**/calculators/__tests__/**/*.test.ts",
     "**/stores/__tests__/**/*.test.ts",
+    "**/utils/__tests__/**/*.test.ts",
   ],
   collectCoverageFrom: [
     "calculators/**/*.ts",

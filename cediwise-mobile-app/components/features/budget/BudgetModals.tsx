@@ -1,4 +1,4 @@
-import type { BudgetBucket, BudgetCategory } from '../../../types/budget';
+import type { BudgetBucket, BudgetCategory, IncomeSource } from '../../../types/budget';
 import type { AllocationExceededResult } from '../../../utils/allocationExceeded';
 import type { SpendingInsight } from '../../../utils/spendingPatterns';
 import { computeSuggestedLimit } from '../../../utils/spendingPatternsLogic';
@@ -17,13 +17,8 @@ interface PendingConfirm {
   note?: string;
 }
 
-interface IncomeToEdit {
-  id: string;
-  name: string;
-  type: 'primary' | 'side';
-  amount: number;
-  applyDeductions: boolean;
-}
+/** Editable fields for income source (subset of IncomeSource) */
+type IncomeToEdit = Pick<IncomeSource, 'id' | 'name' | 'type' | 'amount' | 'applyDeductions'>;
 
 interface EditingLimit {
   id: string;

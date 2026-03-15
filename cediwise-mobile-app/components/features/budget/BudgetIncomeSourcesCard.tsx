@@ -3,19 +3,13 @@ import { Pencil, Plus, Trash2 } from 'lucide-react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { Platform, Pressable, Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
+import { useState } from 'react';
+import type { IncomeSource, IncomeSourceType } from '../../../types/budget';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { AppTextField } from '../../AppTextField';
 import { Card } from '../../Card';
 import { PrimaryButton } from '../../PrimaryButton';
 import { BucketChip } from './BucketChip';
-
-interface IncomeSource {
-  id: string;
-  name: string;
-  type: 'primary' | 'side';
-  amount: number;
-  applyDeductions: boolean;
-}
 
 interface BudgetIncomeSourcesCardProps {
   cycleIsSet: boolean;
@@ -24,8 +18,8 @@ interface BudgetIncomeSourcesCardProps {
   onToggleIncomeForm: () => void;
   incomeName: string;
   setIncomeName: (v: string) => void;
-  incomeType: 'primary' | 'side';
-  setIncomeType: (v: 'primary' | 'side') => void;
+  incomeType: IncomeSourceType;
+  setIncomeType: (v: IncomeSourceType) => void;
   incomeAmount: string;
   setIncomeAmount: (v: string) => void;
   applyDeductions: boolean;
@@ -56,6 +50,18 @@ export function BudgetIncomeSourcesCard({
   onEditIncome,
   onDeleteIncome,
 }: BudgetIncomeSourcesCardProps) {
+  const [isSavingIncome, setIsSavingIncome] = useState(false);
+
+  const handleAddIncome = async () => {
+    if (!cycleIsSet || isSavingIncome) return;
+    setIsSavingIncome(true);
+    try {
+      await onAddIncome();
+    } finally {
+      setIsSavingIncome(false);
+    }
+  };
+
   return (
     <Card className="">
       <View className="flex-row justify-between items-center gap-3">
@@ -127,15 +133,18 @@ export function BudgetIncomeSourcesCard({
             inputClassName={cycleIsSet ? '' : 'opacity-50'}
           />
 
-          <PrimaryButton onPress={onAddIncome} disabled={!cycleIsSet}>
-            Add income
+          <PrimaryButton
+            onPress={handleAddIncome}
+            disabled={!cycleIsSet || isSavingIncome}
+          >
+            {isSavingIncome ? 'Saving…' : 'Add income'}
           </PrimaryButton>
         </View>
       )}
 
       {incomeSources.length > 0 ? (
         <View className="mt-3 gap-3">
-          {incomeSources.slice(0, 5).map((src, idx) => {
+          {incomeSources.map((src, idx) => {
             const accent = incomeAccentColors[idx % incomeAccentColors.length];
             return (
               <View
@@ -143,7 +152,6 @@ export function BudgetIncomeSourcesCard({
                 className="rounded-[20px] p-3.5 border bg-slate-950/95"
                 style={{ borderColor: `${accent}40` }}
               >
-                {/* TODO: Add edit and delete buttons */}
                 <View className="absolute top-2.5 right-2.5 flex-row gap-2.5">
                   <Pressable
                     onPress={async () => {
@@ -153,7 +161,8 @@ export function BudgetIncomeSourcesCard({
                     }}
                     accessibilityRole="button"
                     accessibilityLabel={`Edit ${src.name}`}
-                    className={`w-9 h-9 rounded-full justify-center items-center bg-slate-400/20 border border-slate-400/25 active:bg-slate-400/30 ${cycleIsSet ? 'opacity-100' : 'opacity-40'
+                    style={{ minWidth: 44, minHeight: 44 }}
+                    className={`rounded-full justify-center items-center bg-slate-400/20 border border-slate-400/25 active:bg-slate-400/30 ${cycleIsSet ? 'opacity-100' : 'opacity-40'
                       }`}
                   >
                     <Pencil size={16} color="#CBD5F5" />
@@ -167,7 +176,8 @@ export function BudgetIncomeSourcesCard({
                     }}
                     accessibilityRole="button"
                     accessibilityLabel={`Remove ${src.name}`}
-                    className={`w-9 h-9 rounded-full justify-center items-center bg-red-500/20 border border-red-500/25 active:bg-red-500/30 ${cycleIsSet ? 'opacity-100' : 'opacity-40'
+                    style={{ minWidth: 44, minHeight: 44 }}
+                    className={`rounded-full justify-center items-center bg-red-500/20 border border-red-500/25 active:bg-red-500/30 ${cycleIsSet ? 'opacity-100' : 'opacity-40'
                       }`}
                   >
                     <Trash2 size={16} color="#FCA5A5" />

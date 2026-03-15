@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { Button, Dialog } from "heroui-native";
-import { Banknote, PiggyBank, X } from "lucide-react-native";
+import { AlertTriangle, Banknote, PiggyBank, X } from "lucide-react-native";
 import { Platform, StyleSheet, Text, View } from "react-native";
 
 import { GlassView } from "@/components/GlassView";
@@ -58,15 +58,23 @@ export function DeficitResolutionModal({
           />
         )}
         <Dialog.Content
-          className="max-w-[360px] w-full rounded-xl overflow-hidden bg-slate-900/95 p-0"
+          className="max-w-[360px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
         >
           <Dialog.Close
             variant="ghost"
-            className="absolute top-4 right-4 p-1 z-10"
+            className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-slate-600/60 border border-slate-500/50"
+            iconProps={{ size: 20, color: "#e2e8f0" }}
             onPress={handleClose}
           />
           <View style={styles.content}>
-            <Text style={styles.title}>Overspend last cycle</Text>
+            <View style={styles.header}>
+              <View style={[styles.iconWrap, { backgroundColor: "rgba(251, 191, 36, 0.2)" }]}>
+                <AlertTriangle size={22} color="#fbbf24" />
+              </View>
+              <Text numberOfLines={2} style={styles.title}>
+                Overspend last cycle
+              </Text>
+            </View>
             <Text style={styles.description}>
               You spent {formatCurrency(deficitAmount)} more than your income for{" "}
               {cycleLabel}. How did you cover it?
@@ -111,19 +119,33 @@ export function DeficitResolutionModal({
 const styles = StyleSheet.create({
   content: {
     padding: 24,
-    paddingTop: 40,
+    paddingTop: 28,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 12,
+  },
+  iconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
   title: {
     fontSize: 20,
     fontWeight: "700",
     color: "#F1F5F9",
-    textAlign: "center",
-    marginBottom: 12,
+    flex: 1,
+    textAlign: "left",
   },
   description: {
     fontSize: 15,
     color: "#94A3B8",
-    textAlign: "center",
+    textAlign: "left",
     lineHeight: 22,
     marginBottom: 24,
   },

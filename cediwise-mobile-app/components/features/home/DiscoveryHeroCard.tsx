@@ -1,14 +1,24 @@
+import { useAuth } from '@/hooks/useAuth';
+import { analytics } from '@/utils/analytics';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Calculator } from 'lucide-react-native';
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect, useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
 import { Card } from '../../Card';
 import { PrimaryButton } from '../../PrimaryButton';
 
 export const DiscoveryHeroCard = memo(function DiscoveryHeroCard() {
+  const { user } = useAuth();
   const router = useRouter();
+  const didTrackViewRef = useRef(false);
+
+  useEffect(() => {
+    if (didTrackViewRef.current) return;
+    didTrackViewRef.current = true;
+    analytics.personalizationBannerView({ userId: user?.id, placement: 'home' });
+  }, [user?.id]);
 
   const handleVitalsPress = useCallback(async () => {
     try {
@@ -16,8 +26,10 @@ export const DiscoveryHeroCard = memo(function DiscoveryHeroCard() {
     } catch {
       // ignore
     }
+    analytics.personalizationBannerClick({ userId: user?.id, placement: 'home' });
+    analytics.vitalsStartFromBanner({ userId: user?.id, placement: 'home' });
     router.push('/vitals?mode=edit');
-  }, [router]);
+  }, [router, user?.id]);
 
   const handleCalculatorPress = useCallback(async () => {
     try {
@@ -32,10 +44,10 @@ export const DiscoveryHeroCard = memo(function DiscoveryHeroCard() {
     <Card className="mb-16">
       <View className="gap-4">
         <Text className="text-white text-lg font-semibold">
-          Set up your financial profile
+          Personalize your budget
         </Text>
         <Text className="text-slate-400 text-sm">
-          Add your income and budget preferences so we can show your net income and spending at a glance.
+          Get a tailored plan in about 2 minutes. You can continue without this and come back anytime.
         </Text>
         <PrimaryButton
           onPress={handleVitalsPress}

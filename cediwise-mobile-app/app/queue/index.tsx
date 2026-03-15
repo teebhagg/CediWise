@@ -2,7 +2,7 @@ import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { RefreshCcw, Trash2 } from 'lucide-react-native';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
@@ -49,6 +49,8 @@ function kindLabel(kind: string) {
       return 'Reset budget';
     case 'apply_reallocation':
       return 'Reallocation';
+    case 'apply_template':
+      return 'Template';
     default:
       return kind;
   }
@@ -108,8 +110,33 @@ export default function BudgetQueueScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const { showSuccess, showError } = useAppToast();
-  const { queue, pendingCount, isLoading, syncNow, retryMutation, reload, clearLocal } = useBudget(user?.id);
+  const {
+    queue,
+    pendingCount,
+    isLoading,
+    isSyncing,
+    lastSyncRunEndedAt,
+    clearSyncRunResult,
+    syncNow,
+    retryMutation,
+    reload,
+    clearLocal,
+  } = useBudget(user?.id);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+
+  // React only to sync run end: show one toast per run (only if run ended recently), then clear.
+  useEffect(() => {
+    if (lastSyncRunEndedAt == null) return;
+    const age = Date.now() - lastSyncRunEndedAt;
+    if (age <= 2000) {
+      if (pendingCount === 0) {
+        showSuccess('Sync complete', 'All changes saved.');
+      } else {
+        showSuccess('Sync complete', `${pendingCount} item(s) still pending.`);
+      }
+    }
+    clearSyncRunResult();
+  }, [lastSyncRunEndedAt, pendingCount, clearSyncRunResult, showSuccess]);
 
   const listHeader = useMemo(
     () => (
@@ -117,11 +144,19 @@ export default function BudgetQueueScreen() {
         <Card className="mb-4">
           <View className="flex-row items-center justify-between">
             <View style={queueStyles.flex1}>
-              <Text className="text-white text-base font-semibold" style={queueStyles.textBase}>
-                Pending: {pendingCount}
-              </Text>
+              {isSyncing ? (
+                <Text className="text-white text-base font-semibold" style={queueStyles.textBase}>
+                  Syncing…
+                </Text>
+              ) : (
+                <Text className="text-white text-base font-semibold" style={queueStyles.textBase}>
+                  Pending: {pendingCount}
+                </Text>
+              )}
               <Text className="text-muted-foreground text-xs mt-1" style={queueStyles.textMuted}>
-                Pull-to-refresh isn’t wired here yet — use Retry all.
+                {isSyncing
+                  ? 'Sync run in progress — UI updates when run finishes.'
+                  : 'Pull-to-refresh isn’t wired here yet — use Retry all.'}
               </Text>
             </View>
             <View style={queueStyles.buttonsRow}>
@@ -132,16 +167,16 @@ export default function BudgetQueueScreen() {
                   try {
                     await syncNow();
                     await reload();
-                    showSuccess('Sync complete', 'Pending items have been synced');
+                    // Toast is shown by the lastSyncRunEndedAt effect with up-to-date pendingCount.
                   } catch (e) {
                     showError('Sync failed', e instanceof Error ? e.message : 'Could not sync');
                   }
                 }}
                 style={queueStyles.retryAllButton}
-                disabled={isLoading || pendingCount === 0}
+                disabled={isLoading || isSyncing || pendingCount === 0}
               >
                 <RefreshCcw size={18} color="#020617" />
-                <Text style={queueStyles.retryAllText}>Retry all</Text>
+                <Text style={queueStyles.retryAllText}>{isSyncing ? 'Syncing…' : 'Retry all'}</Text>
               </PrimaryButton>
             </View>
           </View>
@@ -159,7 +194,7 @@ export default function BudgetQueueScreen() {
         ) : null}
       </>
     ),
-    [pendingCount, isLoading, showSuccess, showError]
+    [pendingCount, isLoading, isSyncing, showSuccess, showError]
   );
 
   const renderItem = useCallback(

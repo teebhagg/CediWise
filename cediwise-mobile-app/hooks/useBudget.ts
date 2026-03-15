@@ -43,7 +43,7 @@ import {
   syncCycleDirect,
   trySyncMutation,
 } from "../utils/budgetSync";
-import { computeGhanaTax2026Monthly } from "../utils/ghanaTax";
+import { getMonthlyNetIncome } from "../utils/incomeCalculations";
 import { calculateRollover } from "../utils/reallocationEngine";
 import { uuidv4 } from "../utils/uuid";
 
@@ -264,7 +264,7 @@ export type UseBudgetReturn = {
     type: IncomeSourceType;
     amount: number;
     applyDeductions: boolean;
-  }) => Promise<void>;
+  }) => Promise<{ syncError?: string } | void>;
   updateIncomeSource: (
     incomeSourceId: string,
     patch: {
@@ -273,7 +273,7 @@ export type UseBudgetReturn = {
       amount: number;
       applyDeductions: boolean;
     }
-  ) => Promise<void>;
+  ) => Promise<{ syncError?: string } | void>;
   addTransaction: (params: {
     bucket: BudgetBucket;
     categoryId?: string | null;
@@ -294,7 +294,7 @@ export type UseBudgetReturn = {
     }
   ) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
-  deleteIncomeSource: (incomeSourceId: string) => Promise<void>;
+  deleteIncomeSource: (incomeSourceId: string) => Promise<{ syncError?: string } | void>;
   addCategory: (params: {
     name: string;
     bucket: BudgetBucket;
@@ -401,12 +401,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
   const totals = useMemo(() => {
     if (!state || !activeCycle) return null;
 
-    const monthlyNetIncome = state.incomeSources.reduce((sum, src) => {
-      if (src.type === "primary" && src.applyDeductions) {
-        return sum + computeGhanaTax2026Monthly(src.amount).netTakeHome;
-      }
-      return sum + src.amount;
-    }, 0);
+    const monthlyNetIncome = getMonthlyNetIncome(state.incomeSources);
 
     const needsLimit = monthlyNetIncome * activeCycle.needsPct;
     const wantsLimit = monthlyNetIncome * activeCycle.wantsPct;
@@ -524,12 +519,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         ];
       }
 
-      const monthlyNetIncome = current.incomeSources.reduce((sum, src) => {
-        if (src.type === "primary" && src.applyDeductions) {
-          return sum + computeGhanaTax2026Monthly(src.amount).netTakeHome;
-        }
-        return sum + src.amount;
-      }, 0);
+      const monthlyNetIncome = getMonthlyNetIncome(current.incomeSources);
       const bucketTotals: Record<BudgetBucket, number> = {
         needs: monthlyNetIncome * needsPct,
         wants: monthlyNetIncome * wantsPct,
@@ -673,12 +663,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     const prevCycle = activeCycle ?? current.cycles[0];
     if (!prevCycle) return null;
 
-    const monthlyNetIncome = current.incomeSources.reduce((sum, src) => {
-      if (src.type === "primary" && src.applyDeductions) {
-        return sum + computeGhanaTax2026Monthly(src.amount).netTakeHome;
-      }
-      return sum + src.amount;
-    }, 0);
+    const monthlyNetIncome = getMonthlyNetIncome(current.incomeSources);
     if (monthlyNetIncome <= 0) return null;
 
     // If total expenses for the cycle are greater than or equal to income,
@@ -766,12 +751,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       const prevCycle = activeCycle ?? current.cycles[0];
       if (!prevCycle) return null;
 
-      const monthlyNetIncome = current.incomeSources.reduce((sum, src) => {
-        if (src.type === "primary" && src.applyDeductions) {
-          return sum + computeGhanaTax2026Monthly(src.amount).netTakeHome;
-        }
-        return sum + src.amount;
-      }, 0);
+      const monthlyNetIncome = getMonthlyNetIncome(current.incomeSources);
       if (monthlyNetIncome <= 0) return null;
 
       const { rollover } = preview;
@@ -896,12 +876,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     const baseTime = Date.now();
     const cycleId = uuidv4();
     const cycleCreatedAt = new Date(baseTime - 1).toISOString();
-    const monthlyNetIncome = current.incomeSources.reduce((sum, src) => {
-      if (src.type === "primary" && src.applyDeductions) {
-        return sum + computeGhanaTax2026Monthly(src.amount).netTakeHome;
-      }
-      return sum + src.amount;
-    }, 0);
+    const monthlyNetIncome = getMonthlyNetIncome(current.incomeSources);
     const rollover =
       monthlyNetIncome > 0
         ? calculateRollover(prevCycle, current.transactions, monthlyNetIncome)
@@ -1028,7 +1003,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       };
       await persistState(next);
 
-      await enqueueAndTry({
+      const syncResult = await enqueueAndTry({
         id: makeQueueId(),
         userId,
         createdAt: now,
@@ -1043,7 +1018,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         },
       });
 
-      // Persist recomputed category limits (if any)
+      // Persist recomputed category limits (if any); always enqueue so offline/failed sync still queues limits.
       if (activeCycleId && activeCycle) {
         const changed = nextCategories.filter(
           (c) => c.cycleId === activeCycleId
@@ -1064,6 +1039,9 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
             },
           });
         }
+      }
+      if (syncResult && !syncResult.ok) {
+        return { syncError: syncResult.error };
       }
     },
     [activeCycle, enqueueAndTry, persistState, state, userId]
@@ -1112,9 +1090,10 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       await persistState(next);
 
       // Persist income source to Supabase
+      let syncError: string | undefined;
       const src = updatedIncome.find((s) => s.id === incomeSourceId);
       if (src) {
-        await enqueueAndTry({
+        const syncResult = await enqueueAndTry({
           id: makeQueueId(),
           userId,
           createdAt: now,
@@ -1128,9 +1107,10 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
             apply_deductions: src.applyDeductions,
           },
         });
+        if (syncResult && !syncResult.ok) syncError = syncResult.error;
       }
 
-      // Persist recomputed category limits
+      // Persist recomputed category limits; always enqueue so offline/failed sync still queues limits.
       if (activeCycleId && activeCycle) {
         const changed = nextCategories.filter(
           (c) => c.cycleId === activeCycleId
@@ -1152,6 +1132,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           });
         }
       }
+      if (syncError) return { syncError };
     },
     [activeCycle, enqueueAndTry, persistState, state, userId]
   );
@@ -1181,7 +1162,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       await persistState(next);
 
       // Queue delete in DB
-      await enqueueAndTry({
+      const syncResult = await enqueueAndTry({
         id: makeQueueId(),
         userId,
         createdAt: new Date().toISOString(),
@@ -1189,7 +1170,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         payload: { id: incomeSourceId, user_id: userId },
       });
 
-      // If we recomputed limits, queue upserts for affected categories
+      // If we recomputed limits, queue upserts for affected categories; always enqueue so offline/failed sync still queues limits.
       if (activeCycleId && activeCycle) {
         const changed = nextCategories.filter(
           (c) => c.cycleId === activeCycleId
@@ -1210,6 +1191,9 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
             },
           });
         }
+      }
+      if (syncResult && !syncResult.ok) {
+        return { syncError: syncResult.error };
       }
     },
     [activeCycle, enqueueAndTry, persistState, state, userId]

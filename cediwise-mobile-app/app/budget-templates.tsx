@@ -1,13 +1,16 @@
 import { FlashList } from "@shopify/flash-list";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
-import { CheckCircle2, ChevronRight, Info } from "lucide-react-native";
+import { Button, Dialog } from "heroui-native";
+import { CheckCircle2, ChevronRight, Info, LayoutTemplate } from "lucide-react-native";
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Alert,
+  ActivityIndicator,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
+  StyleSheet,
   Text,
   View,
 } from "react-native";
@@ -18,7 +21,10 @@ import { Card } from "@/components/Card";
 import { StandardHeader } from "@/components/CediWiseHeader";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
+import { useBudget } from "@/hooks/useBudget";
 import type { BudgetTemplate, LifeStage } from "@/types/budget";
+import { analytics } from "@/utils/analytics";
+import { emitBudgetChangedNow } from "@/utils/budgetStorage";
 import { log } from "@/utils/logger";
 import { formatAllocation } from "@/utils/reallocationEngine";
 import { supabase } from "@/utils/supabase";
@@ -32,12 +38,18 @@ const LIFE_STAGE_FILTERS: { value: LifeStage | "all"; label: string }[] = [
 ];
 
 export default function BudgetTemplatesScreen() {
-  useAuth();
+  const { user } = useAuth();
+  const budget = useBudget(user?.id);
   const { showSuccess, showError, showInfo } = useAppToast();
+  const activeCycleId = budget.activeCycle?.id;
   const [templates, setTemplates] = useState<BudgetTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedLifeStage, setSelectedLifeStage] = useState<LifeStage | "all">("all");
+  const [applyModalVisible, setApplyModalVisible] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<BudgetTemplate | null>(null);
+  const [isApplying, setIsApplying] = useState(false);
+  const [shouldNavigateBackAfterApply, setShouldNavigateBackAfterApply] = useState(false);
 
   const loadTemplates = useCallback(async () => {
     if (!supabase) {
@@ -86,33 +98,55 @@ export default function BudgetTemplatesScreen() {
     setRefreshing(false);
   }, [loadTemplates]);
 
-  const handleApplyTemplate = useCallback(
-    (template: BudgetTemplate) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const openApplyModal = useCallback((template: BudgetTemplate) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!activeCycleId) {
+      showError("No active budget", "Create a budget first, then apply a template.");
+      return;
+    }
+    setSelectedTemplate(template);
+    setApplyModalVisible(true);
+  }, [activeCycleId, showError]);
 
-      Alert.alert(
-        "Apply Template",
-        `Apply "${template.name}" template?\n\nThis will update your budget allocation to ${formatAllocation(template.needsPct, template.wantsPct, template.savingsPct)}.`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Apply",
-            onPress: async () => {
-              // TODO: Implement template application
-              // This should:
-              // 1. Update current cycle percentages
-              // 2. Optionally seed new categories based on template
-              // 3. Log the adjustment
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              showSuccess("Success", "Template applied successfully!");
-              router.back();
-            },
-          },
-        ]
-      );
-    },
-    [showSuccess]
-  );
+  const closeApplyModal = useCallback(() => {
+    if (!isApplying) {
+      setApplyModalVisible(false);
+      setSelectedTemplate(null);
+    }
+  }, [isApplying]);
+
+  const handleConfirmApply = useCallback(async () => {
+    if (!selectedTemplate || !activeCycleId || !user?.id) return;
+    setIsApplying(true);
+    try {
+      await budget.applyTemplate(activeCycleId, {
+        needsPct: selectedTemplate.needsPct,
+        wantsPct: selectedTemplate.wantsPct,
+        savingsPct: selectedTemplate.savingsPct,
+      });
+      await budget.syncNow();
+      await budget.reload();
+      emitBudgetChangedNow(user.id);
+      analytics.budgetTemplateApplied({ templateId: selectedTemplate.id, templateName: selectedTemplate.name });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setApplyModalVisible(false);
+      setSelectedTemplate(null);
+      setShouldNavigateBackAfterApply(true);
+      showSuccess("Success", "Template applied successfully!");
+    } catch (e) {
+      log.error("Failed to apply template:", e);
+      showError("Error", "Could not apply template. Please try again.");
+    } finally {
+      setIsApplying(false);
+    }
+  }, [activeCycleId, budget, selectedTemplate, user?.id, showError, showSuccess]);
+
+  useEffect(() => {
+    if (!applyModalVisible && shouldNavigateBackAfterApply) {
+      setShouldNavigateBackAfterApply(false);
+      router.back();
+    }
+  }, [applyModalVisible, shouldNavigateBackAfterApply]);
 
   const handlePreview = useCallback((template: BudgetTemplate) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -125,11 +159,15 @@ export default function BudgetTemplatesScreen() {
     (t) => selectedLifeStage === "all" || t.lifeStage === selectedLifeStage
   );
 
+  const allocationPreview = selectedTemplate
+    ? formatAllocation(selectedTemplate.needsPct, selectedTemplate.wantsPct, selectedTemplate.savingsPct)
+    : "";
+
   const lifeStageBottom = (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{flexDirection: "row", gap: 10, alignItems: "center",}}
+      contentContainerStyle={{ flexDirection: "row", gap: 10, alignItems: "center", }}
     >
       {LIFE_STAGE_FILTERS.map(({ value, label }) => (
         <FilterChip
@@ -157,12 +195,12 @@ export default function BudgetTemplatesScreen() {
         renderItem={({ item }) => (
           <TemplateCard
             template={item}
-            onApply={handleApplyTemplate}
+            onApply={openApplyModal}
             onPreview={handlePreview}
             delay={0}
           />
         )}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32, gap: 16, marginTop: 164}}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32, gap: 16, marginTop: 164 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -178,9 +216,122 @@ export default function BudgetTemplatesScreen() {
           ) : null
         }
       />
+
+      <Dialog isOpen={applyModalVisible} onOpenChange={(open) => !open && closeApplyModal()}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="bg-black/65" />
+          <Dialog.Content
+            className="max-w-[360px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
+            style={applyModalStyles.contentShadow}
+          >
+            <Dialog.Close
+              variant="ghost"
+              className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-slate-600/60 border border-slate-500/50"
+              iconProps={{ size: 20, color: "#e2e8f0" }}
+              onPress={closeApplyModal}
+              isDisabled={isApplying}
+            />
+            <View style={applyModalStyles.content}>
+              <View style={applyModalStyles.header}>
+                <View style={[applyModalStyles.iconWrap, { backgroundColor: "rgba(16, 185, 129, 0.2)" }]}>
+                  <LayoutTemplate size={22} color="#10b981" />
+                </View>
+                <Text numberOfLines={2} style={applyModalStyles.headerTitle}>
+                  Apply Template
+                </Text>
+              </View>
+              <Text style={applyModalStyles.description}>
+                {selectedTemplate
+                  ? `Apply "${selectedTemplate.name}"? This will update your budget allocation to ${allocationPreview}.`
+                  : "—"}
+              </Text>
+
+              {isApplying ? (
+                <View style={applyModalStyles.loaderRow}>
+                  <ActivityIndicator size="large" color="#22C55E" />
+                  <Text className="text-slate-400 text-sm mt-3" style={{ fontFamily: "Figtree-Regular" }}>
+                    Saving…
+                  </Text>
+                </View>
+              ) : (
+                <View className="gap-3">
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onPress={handleConfirmApply}
+                    className="w-full h-12 rounded-xl bg-emerald-500"
+                  >
+                    <Button.Label className="text-slate-900 font-semibold">Apply</Button.Label>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    onPress={closeApplyModal}
+                    className="w-full h-12 rounded-xl bg-slate-600/80 border-0"
+                  >
+                    <Button.Label className="text-white font-semibold">Cancel</Button.Label>
+                  </Button>
+                </View>
+              )}
+            </View>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog>
     </View>
   );
 }
+
+const applyModalStyles = StyleSheet.create({
+  contentShadow: {
+    ...Platform.select({
+      ios: {
+        shadowColor: "#020617",
+        shadowOpacity: 0.35,
+        shadowRadius: 28,
+        shadowOffset: { width: 0, height: 12 },
+      },
+      android: { elevation: 18 },
+    }),
+  },
+  content: {
+    padding: 24,
+    paddingTop: 28,
+    gap: 12,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 12,
+  },
+  iconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#f1f5f9",
+    flex: 1,
+    textAlign: "left",
+  },
+  description: {
+    fontSize: 15,
+    color: "#94a3b8",
+    lineHeight: 22,
+    marginBottom: 16,
+    textAlign: "left",
+  },
+  loaderRow: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+  },
+});
 
 // Filter Chip Component
 const FilterChip = React.memo(function FilterChip({

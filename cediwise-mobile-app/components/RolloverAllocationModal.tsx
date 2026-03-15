@@ -4,7 +4,7 @@ import * as Haptics from "expo-haptics";
 import { Button, Dialog } from "heroui-native";
 import { CheckIcon, ChevronDown } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, Text, useWindowDimensions, View } from "react-native";
+import { Platform, Pressable, ScrollView, Text, useWindowDimensions, View } from "react-native";
 import Animated, {
   Easing,
   interpolate,
@@ -262,20 +262,21 @@ export function RolloverAllocationModal({
   return (
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="bg-black/60" />
-        <GlassView
+        <Dialog.Overlay className="bg-black/65" />
+        {Platform.OS === 'ios' && <GlassView
           intensity={7}
           tint="dark"
           className="absolute inset-0"
           onTouchEnd={handleClose}
-        />
+        />}
         <Dialog.Content
-          className="max-w-[360px] w-full rounded-xl overflow-hidden bg-slate-900/95 p-0"
+          className="max-w-[360px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
           style={{ maxHeight: maxModalHeight }}
         >
           <Dialog.Close
-            variant="secondary"
-            className="absolute top-4 right-4 p-1 z-10 bg-slate-800/70 rounded-full blur-2xl"
+            variant="ghost"
+            className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-slate-600/60 border border-slate-500/50"
+            iconProps={{ size: 20, color: "#e2e8f0" }}
             onPress={handleClose}
           />
           <ScrollView

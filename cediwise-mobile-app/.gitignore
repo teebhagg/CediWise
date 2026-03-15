@@ -46,3 +46,7 @@ builds/
 # generated native folders
 /ios
 /android
+
+
+.vscode/
+*.sql

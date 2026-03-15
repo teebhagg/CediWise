@@ -1,17 +1,11 @@
-import type { GlassBottomSheetHandle } from "@/components/GlassBottomSheet";
-import { GlassBottomSheet } from "@/components/GlassBottomSheet";
+import { CustomBottomSheet } from "@/components/common/CustomBottomSheet";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/utils/supabase";
-import {
-  BottomSheetScrollView,
-  BottomSheetTextInput,
-} from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
-import { MessageCircle, X } from "lucide-react-native";
-import React, { useEffect, useRef, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import React, { useState } from "react";
+import { Pressable, Text, TextInput, View } from "react-native";
 
 type FeedbackType = "helpful" | "unclear" | "incorrect" | "suggestion" | "other";
 
@@ -29,24 +23,10 @@ export function LessonFeedbackModal({
   onClose,
 }: LessonFeedbackModalProps) {
   const { user } = useAuth();
-  const sheetRef = useRef<GlassBottomSheetHandle>(null);
   const [rating, setRating] = useState<number | null>(null);
   const [feedbackType, setFeedbackType] = useState<FeedbackType | null>(null);
   const [comment, setComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (visible) {
-      sheetRef.current?.expand();
-    } else {
-      sheetRef.current?.close();
-    }
-  }, [visible]);
-
-  const handleClose = () => {
-    sheetRef.current?.close();
-    // onClose is called by GlassBottomSheet's onChange when sheet reaches index -1
-  };
 
   const handleSubmit = async () => {
     if (!user?.id || !rating || !feedbackType) return;
@@ -64,7 +44,7 @@ export function LessonFeedbackModal({
       });
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      handleClose();
+      onClose();
     } catch (error) {
       console.error("[LessonFeedback] Failed to submit:", error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -85,39 +65,15 @@ export function LessonFeedbackModal({
       { type: "other", label: "Other", emoji: "💬" },
     ];
 
-  if (!visible) return null;
-
   return (
-    <GlassBottomSheet
-      ref={sheetRef}
-      snapPoints={["82%"]}
-      initialIndex={0}
-      onClose={onClose}
-      keyboardBehavior="extend"
-      keyboardBlurBehavior="restore"
+    <CustomBottomSheet
+      title={`Feedback: ${lessonTitle}`}
+      isOpen={visible}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
     >
-      <BottomSheetScrollView
-        contentContainerStyle={{ paddingBottom: 24 }}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Header */}
-        <View className="flex-row justify-between items-center mb-6">
-          <View className="flex-row items-center gap-2 flex-1">
-            <MessageCircle size={22} color="#10b981" />
-            <Text
-              className="text-white text-lg font-bold flex-1"
-              style={{ fontFamily: "Figtree-Bold" }}
-              numberOfLines={2}
-            >
-              Feedback: {lessonTitle}
-            </Text>
-          </View>
-          <Pressable onPress={handleClose} hitSlop={12} className="p-1 -mr-2">
-            <X size={22} color="#94a3b8" />
-          </Pressable>
-        </View>
-
+      <View style={{ paddingBottom: 24 }}>
         {/* Rating */}
         <Text
           className="text-slate-300 text-sm mb-3"
@@ -175,14 +131,14 @@ export function LessonFeedbackModal({
           ))}
         </View>
 
-        {/* Comment - BottomSheetTextInput for keyboard coordination */}
+        {/* Comment */}
         <Text
           className="text-slate-300 text-sm mb-3"
           style={{ fontFamily: "Figtree-Medium" }}
         >
           Additional comments (optional)
         </Text>
-        <BottomSheetTextInput
+        <TextInput
           placeholder="Tell us more..."
           placeholderTextColor="#64748b"
           multiline
@@ -220,7 +176,7 @@ export function LessonFeedbackModal({
               </Text>
             </PrimaryButton>
           </View>
-          <SecondaryButton onPress={handleClose}>
+          <SecondaryButton onPress={onClose}>
             <Text
               className="text-slate-300 font-medium"
               style={{ fontFamily: "Figtree-Medium" }}
@@ -229,7 +185,7 @@ export function LessonFeedbackModal({
             </Text>
           </SecondaryButton>
         </View>
-      </BottomSheetScrollView>
-    </GlassBottomSheet>
+      </View>
+    </CustomBottomSheet>
   );
 }

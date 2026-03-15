@@ -98,20 +98,21 @@ export function AddRecurringExpenseModal({
   return (
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="bg-black/60" />
-        <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />
+        <Dialog.Overlay className="bg-black/65" />
+        {Platform.OS === 'ios' && <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />}
         <KeyboardAvoidingView
           behavior="padding"
           style={{ flex: 1, justifyContent: "center" }}
           keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 40}
         >
           <Dialog.Content
-            className="max-w-[380px] w-full rounded-xl overflow-hidden bg-slate-900/95 p-0"
+            className="max-w-[380px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
             style={styles.contentShadow}
           >
             <Dialog.Close
               variant="ghost"
-              className="absolute top-4 right-4 w-10 h-10 rounded-full z-10"
+              className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-slate-600/60 border border-slate-500/50"
+              iconProps={{ size: 20, color: "#e2e8f0" }}
               onPress={handleClose}
             />
             <View style={styles.content}>

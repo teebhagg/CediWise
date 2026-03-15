@@ -1,6 +1,7 @@
 import { FlashList } from "@shopify/flash-list";
 import * as Haptics from "expo-haptics";
 import {
+  Banknote,
   Calendar,
   DollarSign,
   Edit2,
@@ -14,6 +15,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AddDebtModal } from "@/components/AddDebtModal";
+import { AppDialog } from "@/components/AppDialog";
 import { AppTextField } from "@/components/AppTextField";
 import { BackButton } from "@/components/BackButton";
 import { Card } from "@/components/Card";
@@ -24,7 +26,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useBudget } from "@/hooks/useBudget";
 import { useDebts } from "@/hooks/useDebts";
 import type { BudgetBucket, Debt } from "@/types/budget";
-import { Button, Dialog } from "heroui-native";
+import { Button } from "heroui-native";
 
 export default function DebtDashboardScreen() {
   const { user } = useAuth();
@@ -274,8 +276,8 @@ export default function DebtDashboardScreen() {
       />
 
       {/* Record Payment Modal */}
-      <Dialog
-        isOpen={!!paymentDebt}
+      <AppDialog
+        visible={!!paymentDebt}
         onOpenChange={(open) => {
           if (!open) {
             setPaymentDebt(null);
@@ -283,112 +285,88 @@ export default function DebtDashboardScreen() {
             setPaymentError(null);
           }
         }}
+        icon={
+          <View style={styles.paymentModalIconWrap}>
+            <Banknote size={22} color="#10b981" />
+          </View>
+        }
+        title="Record Payment"
+        description={
+          paymentDebt
+            ? `Enter payment amount for ${paymentDebt.name}`
+            : "Enter payment amount."
+        }
+        primaryLabel="Save payment"
+        onPrimary={async () => {
+          if (!paymentDebt) return;
+          const amount = parseFloat(paymentAmount || "0");
+          if (
+            Number.isNaN(amount) ||
+            amount <= 0 ||
+            amount > paymentDebt.remainingAmount
+          ) {
+            setPaymentError(
+              `Enter an amount between 0 and ₵${paymentDebt.remainingAmount.toLocaleString(
+                "en-GB",
+              )}`,
+            );
+            return;
+          }
+          try {
+            await recordPayment(paymentDebt.id, amount);
+            const categories = budget.state?.categories ?? [];
+            const activeCycleId = budget.activeCycle?.id;
+            const debtPaymentsCategory = categories.find(
+              (c) =>
+                c.name === "Debt Payments" &&
+                (!activeCycleId || c.cycleId === activeCycleId),
+            );
+            const bucket: BudgetBucket = "needs";
+            await budget.addTransaction({
+              bucket,
+              categoryId: debtPaymentsCategory?.id ?? null,
+              amount,
+              note: "Debt Payment",
+              occurredAt: new Date(),
+              debtId: paymentDebt.id,
+            });
+            await Haptics.notificationAsync(
+              Haptics.NotificationFeedbackType.Success,
+            );
+            showSuccess("Payment recorded", "Debt updated successfully");
+            setPaymentDebt(null);
+            setPaymentAmount("");
+            setPaymentError(null);
+          } catch (err) {
+            showError(
+              "Error",
+              err instanceof Error ? err.message : "Failed to record payment",
+            );
+          }
+        }}
+        secondaryLabel="Cancel"
+        onSecondary={() => {
+          setPaymentDebt(null);
+          setPaymentAmount("");
+          setPaymentError(null);
+        }}
       >
-        <Dialog.Portal>
-          <Dialog.Overlay className="bg-black/65" />
-          <Dialog.Content className="max-w-[360px] w-full rounded-xl overflow-hidden bg-slate-900/95 p-0">
-            <View style={styles.paymentModalContent}>
-              <Dialog.Title className="text-[20px] font-bold text-slate-100 text-center mb-1.5">
-                Record Payment
-              </Dialog.Title>
-              <Dialog.Description className="text-[14px] text-slate-400 text-center mb-4 leading-[20px]">
-                {paymentDebt
-                  ? `Enter payment amount for ${paymentDebt.name}`
-                  : ""}
-              </Dialog.Description>
-
-              <View style={{ gap: 6, marginBottom: 8 }}>
-                <AppTextField
-                  label="Amount (GHS)"
-                  value={paymentAmount}
-                  onChangeText={setPaymentAmount}
-                  keyboardType="decimal-pad"
-                  placeholder="0.00"
-                />
-              </View>
-
-              {paymentError ? (
-                <Text style={styles.paymentErrorText}>{paymentError}</Text>
-              ) : null}
-
-              <View style={{ gap: 10, marginTop: 8 }}>
-                <Button
-                  onPress={async () => {
-                    if (!paymentDebt) return;
-                    const amount = parseFloat(paymentAmount || "0");
-                    if (
-                      Number.isNaN(amount) ||
-                      amount <= 0 ||
-                      amount > paymentDebt.remainingAmount
-                    ) {
-                      setPaymentError(
-                        `Enter an amount between 0 and ₵${paymentDebt.remainingAmount.toLocaleString(
-                          "en-GB",
-                        )}`,
-                      );
-                      return;
-                    }
-                    try {
-                      await recordPayment(paymentDebt.id, amount);
-                      const categories = budget.state?.categories ?? [];
-                      const activeCycleId = budget.activeCycle?.id;
-                      const debtPaymentsCategory = categories.find(
-                        (c) =>
-                          c.name === "Debt Payments" &&
-                          (!activeCycleId || c.cycleId === activeCycleId),
-                      );
-                      // Debt payments are always treated as Needs.
-                      const bucket: BudgetBucket = "needs";
-                      await budget.addTransaction({
-                        bucket,
-                        categoryId: debtPaymentsCategory?.id ?? null,
-                        amount,
-                        note: "Debt Payment",
-                        occurredAt: new Date(),
-                        debtId: paymentDebt.id,
-                      });
-                      await Haptics.notificationAsync(
-                        Haptics.NotificationFeedbackType.Success,
-                      );
-                      showSuccess(
-                        "Payment recorded",
-                        "Debt updated successfully",
-                      );
-                      setPaymentDebt(null);
-                      setPaymentAmount("");
-                      setPaymentError(null);
-                    } catch (err) {
-                      showError(
-                        "Error",
-                        err instanceof Error
-                          ? err.message
-                          : "Failed to record payment",
-                      );
-                    }
-                  }}
-                  className="h-11 rounded-full bg-emerald-500"
-                >
-                  <Button.Label className="text-slate-900 font-semibold">
-                    Save payment
-                  </Button.Label>
-                </Button>
-                <Button
-                  variant="ghost"
-                  onPress={() => {
-                    setPaymentDebt(null);
-                    setPaymentAmount("");
-                    setPaymentError(null);
-                  }}
-                >
-                  <Button.Label className="text-slate-400">
-                    Cancel
-                  </Button.Label>
-                </Button>
-              </View>
-            </View>
-          </Dialog.Content>
-        </Dialog.Portal>
-      </Dialog>
+        <View style={{ gap: 6, marginBottom: 4 }}>
+          <AppTextField
+            label="Amount (GHS)"
+            value={paymentAmount}
+            onChangeText={(v) => {
+              setPaymentAmount(v);
+              if (paymentError) setPaymentError(null);
+            }}
+            keyboardType="decimal-pad"
+            placeholder="0.00"
+          />
+        </View>
+        {paymentError ? (
+          <Text style={styles.paymentErrorText}>{paymentError}</Text>
+        ) : null}
+      </AppDialog>
     </View>
   );
 }
@@ -769,10 +747,13 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(148, 163, 184, 0.1)",
   },
-  paymentModalContent: {
-    padding: 24,
-    paddingTop: 32,
-    gap: 8,
+  paymentModalIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(16, 185, 129, 0.15)",
   },
   paymentErrorText: {
     color: "#FCA5A5",

@@ -13,11 +13,19 @@ const LAST_SYNC_KEY = "@cediwise_notification_last_sync";
 const TOKEN_KEY = "@cediwise_notification_expo_token";
 const GATE_COMPLETED_KEY = "@cediwise_notification_gate_completed";
 const NEXT_ROUTE_KEY = "@cediwise_notification_gate_next_route";
-const REMINDER_VERSION = "v1";
+const DISABLED_BY_USER_KEY = "@cediwise_notification_disabled_by_user";
+const REMINDER_FREQUENCY_KEY = "@cediwise_notification_reminder_frequency";
+const REMINDER_WEEKDAY_KEY = "@cediwise_notification_reminder_weekday";
+const REMINDER_VERSION = "v3";
 const DEFAULT_CHANNEL_ID = "cediwise-default";
+const TOKEN_REFRESH_THROTTLE_MS = 24 * 60 * 60 * 1000; // 24h
 
 let responseListener: Notifications.EventSubscription | null = null;
 let receiveListener: Notifications.EventSubscription | null = null;
+
+const NAV_DEBOUNCE_MS = 2000;
+let lastNavTime = 0;
+let lastNavLink: string | null = null;
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -52,11 +60,14 @@ async function ensureAndroidChannel() {
 
 function handleNotificationNavigation(data: Record<string, unknown> | undefined) {
   const deepLink = typeof data?.deep_link === "string" ? data.deep_link : null;
-  if (deepLink && deepLink.startsWith("/")) {
-    router.push(deepLink as never);
+  const target = deepLink && deepLink.startsWith("/") ? deepLink : "/";
+  const now = Date.now();
+  if (target === lastNavLink && now - lastNavTime < NAV_DEBOUNCE_MS) {
     return;
   }
-  router.push("/" as never);
+  lastNavLink = target;
+  lastNavTime = now;
+  router.push(target as never);
 }
 
 async function ensurePermissions(): Promise<boolean> {
@@ -84,6 +95,30 @@ export async function consumePendingNotificationRoute(): Promise<string | null> 
     await AsyncStorage.removeItem(NEXT_ROUTE_KEY);
   }
   return route;
+}
+
+/** Reminder frequency: daily or weekly. Weekly uses weekday from when user selected it. */
+export type ReminderFrequency = "daily" | "weekly";
+
+export async function getReminderFrequency(): Promise<ReminderFrequency> {
+  const stored = await AsyncStorage.getItem(REMINDER_FREQUENCY_KEY);
+  return stored === "weekly" ? "weekly" : "daily";
+}
+
+/** JS getDay(): 0=Sun, 1=Mon, ... 6=Sat. Expo weekday: 1=Mon, ..., 7=Sun. */
+function jsDayToExpoWeekday(jsDay: number): number {
+  return jsDay === 0 ? 7 : jsDay;
+}
+
+export async function setReminderFrequency(freq: ReminderFrequency): Promise<void> {
+  await AsyncStorage.setItem(REMINDER_FREQUENCY_KEY, freq);
+  if (freq === "weekly") {
+    await AsyncStorage.setItem(REMINDER_WEEKDAY_KEY, String(jsDayToExpoWeekday(new Date().getDay())));
+  } else {
+    await AsyncStorage.removeItem(REMINDER_WEEKDAY_KEY);
+  }
+  // Force reschedule (clearing version makes scheduleDailyExpenseReminder run and cancel + reschedule)
+  await AsyncStorage.removeItem(REMINDER_VERSION_KEY);
 }
 
 async function upsertPushDevice(userId: string, expoPushToken: string) {
@@ -115,6 +150,7 @@ async function upsertPushDevice(userId: string, expoPushToken: string) {
 export async function scheduleDailyExpenseReminder(): Promise<void> {
   const storedVersion = await AsyncStorage.getItem(REMINDER_VERSION_KEY);
   const existingReminderId = await AsyncStorage.getItem(REMINDER_ID_KEY);
+  const frequency = (await AsyncStorage.getItem(REMINDER_FREQUENCY_KEY)) === "weekly" ? "weekly" : "daily";
 
   if (storedVersion === REMINDER_VERSION && existingReminderId) {
     return;
@@ -137,12 +173,27 @@ export async function scheduleDailyExpenseReminder(): Promise<void> {
         deep_link: "/expenses",
       },
     },
-    trigger: {
-      hour: 18,
-      minute: 0,
-      repeats: true,
-      channelId: Platform.OS === "android" ? DEFAULT_CHANNEL_ID : undefined,
-    },
+    trigger: (await (async () => {
+      if (frequency === "weekly") {
+        const weekdayStr = await AsyncStorage.getItem(REMINDER_WEEKDAY_KEY);
+        const weekday = weekdayStr ? parseInt(weekdayStr, 10) : jsDayToExpoWeekday(new Date().getDay());
+        const t: { type: "weekly"; weekday: number; hour: number; minute: number; channelId?: string } = {
+          type: "weekly",
+          weekday,
+          hour: 18,
+          minute: 0,
+        };
+        if (Platform.OS === "android") t.channelId = DEFAULT_CHANNEL_ID;
+        return t;
+      }
+      const t: { type: "daily"; hour: number; minute: number; channelId?: string } = {
+        type: "daily",
+        hour: 18,
+        minute: 0,
+      };
+      if (Platform.OS === "android") t.channelId = DEFAULT_CHANNEL_ID;
+      return t;
+    })()),
   });
 
   await AsyncStorage.multiSet([
@@ -175,6 +226,21 @@ export async function syncExpoPushToken(userId: string): Promise<void> {
   ]);
 }
 
+/** Syncs push token if permission granted and last sync was longer than throttle ago (or never). */
+export async function refreshPushTokenIfNeeded(userId: string): Promise<void> {
+  if (!isPushEnabled() || !userId) return;
+  try {
+    const { granted } = await Notifications.getPermissionsAsync();
+    if (!granted) return;
+    const lastSyncStr = await AsyncStorage.getItem(LAST_SYNC_KEY);
+    const lastSync = lastSyncStr ? new Date(lastSyncStr).getTime() : 0;
+    if (Date.now() - lastSync < TOKEN_REFRESH_THROTTLE_MS) return;
+    await syncExpoPushToken(userId);
+  } catch {
+    // ignore
+  }
+}
+
 export async function deactivateCurrentDeviceToken(userId: string): Promise<void> {
   if (!userId || !supabase) return;
 
@@ -190,6 +256,34 @@ export async function deactivateCurrentDeviceToken(userId: string): Promise<void
   if (error) {
     log.warn("Failed to deactivate push token", error.message);
   }
+}
+
+/** True if permission granted and user has not turned notifications off in app. */
+export async function getNotificationsEnabled(): Promise<boolean> {
+  try {
+    const { granted } = await Notifications.getPermissionsAsync();
+    if (!granted) return false;
+    const disabled = await AsyncStorage.getItem(DISABLED_BY_USER_KEY);
+    return disabled !== "true";
+  } catch {
+    return false;
+  }
+}
+
+/** Turn off push: cancel local reminder and deactivate token. Does not revoke system permission. */
+export async function disablePushNotifications(userId: string): Promise<void> {
+  const existingReminderId = await AsyncStorage.getItem(REMINDER_ID_KEY);
+  if (existingReminderId) {
+    try {
+      await Notifications.cancelScheduledNotificationAsync(existingReminderId);
+    } catch {
+      // ignore
+    }
+    await AsyncStorage.removeItem(REMINDER_ID_KEY);
+    await AsyncStorage.removeItem(REMINDER_VERSION_KEY);
+  }
+  await deactivateCurrentDeviceToken(userId);
+  await AsyncStorage.setItem(DISABLED_BY_USER_KEY, "true");
 }
 
 export async function initNotificationSystem(userId: string | null): Promise<void> {
@@ -221,6 +315,20 @@ export async function initNotificationSystem(userId: string | null): Promise<voi
   } catch (error) {
     log.warn("Notification init failed", error);
   }
+
+  // If user has already enabled notifications (OS permission + not disabled in app): ensure reminder and token.
+  void (async () => {
+    try {
+      const { granted } = await Notifications.getPermissionsAsync();
+      if (!granted) return;
+      const enabled = await getNotificationsEnabled();
+      if (!enabled) return;
+      await scheduleDailyExpenseReminder();
+      await refreshPushTokenIfNeeded(userId);
+    } catch {
+      // ignore
+    }
+  })();
 }
 
 export async function enablePushNotifications(userId: string): Promise<boolean> {
@@ -242,6 +350,7 @@ export async function enablePushNotifications(userId: string): Promise<boolean> 
   try {
     await scheduleDailyExpenseReminder();
     await syncExpoPushToken(userId);
+    await AsyncStorage.removeItem(DISABLED_BY_USER_KEY);
     return true;
   } catch (error) {
     log.warn("Push enable flow failed", error);

@@ -7,7 +7,7 @@ import {
   blendAllocation,
   getHistoricalAvgByCategory,
 } from "./allocationBlending";
-import { computeGhanaTax2026Monthly } from "./ghanaTax";
+import { getMonthlyNetIncome } from "./incomeCalculations";
 
 /**
  * Recalculate category limits from current allocations using weighted distribution.
@@ -20,12 +20,7 @@ export function recalculateBudgetFromAllocations(
   const activeCycle = getActiveCycle(state);
   if (!activeCycle) return state;
 
-  const monthlyNetIncome = state.incomeSources.reduce((sum, src) => {
-    if (src.type === "primary" && src.applyDeductions) {
-      return sum + computeGhanaTax2026Monthly(src.amount).netTakeHome;
-    }
-    return sum + src.amount;
-  }, 0);
+  const monthlyNetIncome = getMonthlyNetIncome(state.incomeSources);
 
   const bucketTotals: Record<BudgetBucket, number> = {
     needs: monthlyNetIncome * activeCycle.needsPct,

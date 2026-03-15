@@ -1,4 +1,3 @@
-import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { BottomSheet, Separator } from "heroui-native";
 import { ScrollView } from 'react-native-gesture-handler'
 import { Dimensions, StyleSheet, Text, View } from "react-native";
@@ -36,10 +35,10 @@ export function CustomBottomSheet({
         <BottomSheet.Trigger asChild>{triggerComponent}</BottomSheet.Trigger>
       ) : null}
       <BottomSheet.Portal>
-        <BottomSheet.Overlay />
+        <BottomSheet.Overlay className="bg-black/65" />
         <BottomSheet.Content
           detached={false}
-          backgroundClassName={`rounded-t-[50px] bg-slate-900`}
+          backgroundClassName="rounded-t-[50px] bg-[rgba(18,22,33,0.98)]"
           //   containerClassName="max-h-[80%]"
           // handleClassName="max-h-[80%]"
           contentContainerClassName={`max-h-[700px] flex-1`}

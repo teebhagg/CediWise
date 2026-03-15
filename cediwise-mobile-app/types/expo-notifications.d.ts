@@ -49,12 +49,31 @@ declare module "expo-notifications" {
       body: string;
       data?: Record<string, unknown>;
     };
-    trigger: {
-      hour: number;
-      minute: number;
-      repeats?: boolean;
-      channelId?: string;
-    };
+    trigger:
+      | {
+          hour: number;
+          minute: number;
+          repeats?: boolean;
+          channelId?: string;
+        }
+      | {
+          type: "date";
+          date: Date;
+          channelId?: string;
+        }
+      | {
+          type: "daily";
+          hour: number;
+          minute: number;
+          channelId?: string;
+        }
+      | {
+          type: "weekly";
+          weekday: number;
+          hour: number;
+          minute: number;
+          channelId?: string;
+        };
   }): Promise<string>;
 
   export function cancelScheduledNotificationAsync(identifier: string): Promise<void>;

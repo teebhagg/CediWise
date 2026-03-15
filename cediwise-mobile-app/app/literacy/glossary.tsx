@@ -14,7 +14,7 @@ import {
   DEFAULT_STANDARD_HEIGHT,
   ExpandedHeader,
 } from "@/components/CediWiseHeader";
-import { GlassBottomSheet } from "@/components/GlassBottomSheet";
+import { CustomBottomSheet } from "@/components/common/CustomBottomSheet";
 import {
   GLOSSARY,
   getGlossarySections,
@@ -28,7 +28,6 @@ import React, { memo, useCallback, useMemo, useRef, useState } from "react";
 import {
   Linking,
   Pressable,
-  ScrollView,
   SectionList,
   StyleSheet,
   Text,
@@ -37,7 +36,6 @@ import {
 } from "react-native";
 import Animated, {
   FadeInDown,
-  FadeInUp,
   useAnimatedScrollHandler,
   useSharedValue,
 } from "react-native-reanimated";
@@ -106,42 +104,19 @@ function TermDetailModal({
     }
   }, [term?.source?.url, showError]);
 
-  if (!term) return null;
-
   return (
-    <GlassBottomSheet
-      // ref={sheetRef}
-      // snapPoints={["42%"]}
-      initialIndex={0}
-      onClose={onClose}>
-      {/* <Pressable style={styles.modalBackdrop} onPress={onClose} /> */}
-      <Animated.View
-        entering={FadeInUp.duration(300).springify()}
-        style={styles.sheet}>
-        {/* Handle */}
-        {/* <View style={styles.sheetHandle} /> */}
-
-        {/* Header */}
-        <View style={styles.sheetHeader}>
-          <View style={styles.sheetTitleWrap}>
-            <Text style={styles.sheetTerm}>{term.term}</Text>
-            {term.full_form && (
-              <Text style={styles.sheetFullForm}>{term.full_form}</Text>
-            )}
-          </View>
-          <Pressable onPress={onClose} style={styles.sheetCloseBtn}>
-            <X size={18} color="#64748b" />
-          </Pressable>
-        </View>
-
-        <ScrollView
-          style={styles.sheetScroll}
-          contentContainerStyle={styles.sheetScrollContent}
-          showsVerticalScrollIndicator={false}>
-          {/* Definition */}
+    <CustomBottomSheet
+      title={term?.term ?? ""}
+      description={term?.full_form ?? undefined}
+      isOpen={!!term}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      {term ? (
+        <View style={styles.sheetScrollContent}>
           <Text style={styles.sheetDefinition}>{term.definition}</Text>
 
-          {/* Module tags */}
           {term.module_tags && term.module_tags.length > 0 && (
             <View style={styles.sheetTagsRow}>
               {term.module_tags.map((tag) => (
@@ -152,7 +127,6 @@ function TermDetailModal({
             </View>
           )}
 
-          {/* Source */}
           {term.source && (
             <Pressable style={styles.sheetSource} onPress={handleOpenSource}>
               <Text style={styles.sheetSourceLabel}>
@@ -161,9 +135,9 @@ function TermDetailModal({
               {term.source.url && <ExternalLink size={13} color="#64748b" />}
             </Pressable>
           )}
-        </ScrollView>
-      </Animated.View>
-    </GlassBottomSheet>
+        </View>
+      ) : null}
+    </CustomBottomSheet>
   );
 }
 
@@ -447,57 +421,6 @@ const styles = StyleSheet.create({
   },
 
   // Term detail modal
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-  },
-  sheet: {
-    // backgroundColor: "#111111",
-    // borderTopLeftRadius: 20,
-    // borderTopRightRadius: 20,
-    // borderWidth: 1,
-    // borderColor: "rgba(255,255,255,0.08)",
-    // maxHeight: "75%",
-    paddingTop: 12,
-  },
-  sheetHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.2)",
-    alignSelf: "center",
-    marginBottom: 12,
-  },
-  sheetHeader: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.07)",
-  },
-  sheetTitleWrap: {
-    flex: 1,
-    gap: 2,
-  },
-  sheetTerm: {
-    fontSize: 20,
-    fontFamily: "Figtree-Bold",
-    color: "#f1f5f9",
-  },
-  sheetFullForm: {
-    fontSize: 13,
-    fontFamily: "Figtree-Regular",
-    color: "#C9A84C",
-  },
-  sheetCloseBtn: {
-    padding: 4,
-    marginLeft: 12,
-  },
-  sheetScroll: {
-    flex: 1,
-  },
   sheetScrollContent: {
     padding: 20,
     gap: 16,

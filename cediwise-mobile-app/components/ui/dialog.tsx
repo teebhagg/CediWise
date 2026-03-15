@@ -23,7 +23,7 @@ export function CustomDialog({ visible, onChange, children }: DialogProps) {
     return (
         <Dialog isOpen={visible} onOpenChange={onChange}>
             <Dialog.Portal>
-                <Dialog.Overlay />
+                <Dialog.Overlay className="bg-black/65" />
                 <Dialog.Content>
                     {children}
                 </Dialog.Content>

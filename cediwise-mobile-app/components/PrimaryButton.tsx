@@ -10,6 +10,8 @@ type Props = {
   onPress?: () => void;
   className?: string;
   style?: object;
+  accessibilityLabel?: string;
+  accessibilityRole?: 'button' | 'link' | 'none';
 };
 
 const primaryClass =
@@ -23,6 +25,8 @@ export function PrimaryButton({
   onPress,
   className,
   style,
+  accessibilityLabel,
+  accessibilityRole = 'button',
 }: Props) {
   const handlePress = async () => {
     if (disabled || loading) return;
@@ -38,6 +42,8 @@ export function PrimaryButton({
     <Button
       isDisabled={disabled || loading}
       onPress={handlePress}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole={accessibilityRole}
       className={
         disabled || loading
           ? `${primaryClass} ${disabledClass} ${className ?? ''}`

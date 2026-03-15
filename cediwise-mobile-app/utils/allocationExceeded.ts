@@ -2,8 +2,9 @@ import type {
   BudgetBucket,
   BudgetCategory,
   BudgetCycle,
+  IncomeSource,
 } from "../types/budget";
-import { computeGhanaTax2026Monthly } from "./ghanaTax";
+import { getMonthlyNetIncome } from "./incomeCalculations";
 
 export type AllocationExceededResult = {
   exceedsBucket: boolean;
@@ -21,17 +22,6 @@ export type AllocationExceededResult = {
   message: string;
 };
 
-function getMonthlyNetIncome(
-  incomeSources: { type: string; amount: number; applyDeductions: boolean }[]
-): number {
-  return incomeSources.reduce((sum, src) => {
-    if (src.type === "primary" && src.applyDeductions) {
-      return sum + computeGhanaTax2026Monthly(src.amount).netTakeHome;
-    }
-    return sum + src.amount;
-  }, 0);
-}
-
 /**
  * Check impact of adding or updating a category with the given limit.
  * Returns whether bucket/income is exceeded and suggested allocation or debt.
@@ -39,7 +29,7 @@ function getMonthlyNetIncome(
 export function checkCategoryLimitImpact(params: {
   cycle: BudgetCycle;
   categories: BudgetCategory[];
-  incomeSources: { type: string; amount: number; applyDeductions: boolean }[];
+  incomeSources: IncomeSource[];
   bucket: BudgetBucket;
   newLimit: number;
   categoryId?: string | null;

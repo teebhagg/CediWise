@@ -1,7 +1,7 @@
 import { GlassView } from '@/components/GlassView';
 import * as Haptics from 'expo-haptics';
 import { Button, Dialog } from 'heroui-native';
-import { Check } from 'lucide-react-native';
+import { AlertTriangle, Check, Trash2 } from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
@@ -111,21 +111,27 @@ export function DeleteAllBudgetDataModal({
           {!isDeleting && (
             <Dialog.Close
               variant="ghost"
-              className="absolute top-4 right-4 w-10 h-10 rounded-full z-10"
+              className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-slate-600/60 border border-slate-500/50"
+              iconProps={{ size: 20, color: '#e2e8f0' }}
               onPress={handleClose}
             />
           )}
 
           {step === 'warning' && (
             <View style={styles.content}>
-              <Dialog.Title className="text-[26px] font-bold text-slate-200 text-center mb-1.5">
-                Delete all budget data?
-              </Dialog.Title>
-              <Dialog.Description className="text-[15px] text-slate-400 text-center mb-3 leading-[22px]">
+              <View style={styles.header}>
+                <View style={[styles.iconWrap, { backgroundColor: 'rgba(249, 115, 22, 0.2)' }]}>
+                  <AlertTriangle size={22} color="#f97316" />
+                </View>
+                <Text numberOfLines={2} style={styles.title}>
+                  Delete all budget data?
+                </Text>
+              </View>
+              <Text style={styles.description}>
                 This will permanently delete all your budget data from this device and the server:
                 cycles, categories, transactions, income sources, and related data. This action
                 cannot be undone.
-              </Dialog.Description>
+              </Text>
 
               <Pressable
                 onPress={toggleRemoveProfile}
@@ -149,25 +155,25 @@ export function DeleteAllBudgetDataModal({
                 </Text>
               </Pressable>
 
-              <View style={styles.buttonContainer}>
-                <Button
-                  variant="ghost"
-                  size="md"
-                  onPress={handleClose}
-                  className="flex-1 h-[52px] rounded-[22px] bg-slate-400/25 border border-slate-400/45"
-                >
-                  <Button.Label className="text-slate-200 font-semibold">
-                    Cancel
-                  </Button.Label>
-                </Button>
+              <View className="gap-3">
                 <Button
                   variant="primary"
                   size="md"
                   onPress={handleContinue}
-                  className="flex-1 h-[52px] rounded-[22px] bg-orange-500"
+                  className="w-full h-12 rounded-xl bg-orange-500"
                 >
                   <Button.Label className="text-slate-900 font-semibold">
                     Continue
+                  </Button.Label>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="md"
+                  onPress={handleClose}
+                  className="w-full h-12 rounded-xl bg-slate-600/80 border-0"
+                >
+                  <Button.Label className="text-white font-semibold">
+                    Cancel
                   </Button.Label>
                 </Button>
               </View>
@@ -176,32 +182,37 @@ export function DeleteAllBudgetDataModal({
 
           {step === 'confirm' && (
             <View style={styles.content}>
-              <Dialog.Title className="text-[26px] font-bold text-slate-200 text-center mb-1.5">
-                Are you sure?
-              </Dialog.Title>
-              <Dialog.Description className="text-[15px] text-slate-400 text-center mb-3 leading-[22px]">
+              <View style={styles.header}>
+                <View style={[styles.iconWrap, { backgroundColor: 'rgba(239, 68, 68, 0.2)' }]}>
+                  <Trash2 size={22} color="#ef4444" />
+                </View>
+                <Text numberOfLines={2} style={styles.title}>
+                  Are you sure?
+                </Text>
+              </View>
+              <Text style={styles.description}>
                 This cannot be undone. All budget data will be permanently deleted.
-              </Dialog.Description>
+              </Text>
 
-              <View style={styles.buttonContainer}>
-                <Button
-                  variant="ghost"
-                  size="md"
-                  onPress={handleClose}
-                  className="flex-1 h-[52px] rounded-[22px] bg-slate-400/25 border border-slate-400/45"
-                >
-                  <Button.Label className="text-slate-200 font-semibold">
-                    Cancel
-                  </Button.Label>
-                </Button>
+              <View className="gap-3">
                 <Button
                   variant="primary"
                   size="md"
                   onPress={handleFinalConfirm}
-                  className="flex-1 h-[52px] rounded-[22px] bg-red-600"
+                  className="w-full h-12 rounded-xl bg-red-600"
                 >
                   <Button.Label className="text-white font-semibold">
                     Yes, delete everything
+                  </Button.Label>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="md"
+                  onPress={handleClose}
+                  className="w-full h-12 rounded-xl bg-slate-600/80 border-0"
+                >
+                  <Button.Label className="text-white font-semibold">
+                    Cancel
                   </Button.Label>
                 </Button>
               </View>
@@ -238,7 +249,36 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 24,
+    paddingTop: 28,
     gap: 12,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  iconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#f1f5f9',
+    flex: 1,
+    textAlign: 'left',
+  },
+  description: {
+    fontSize: 15,
+    color: '#94a3b8',
+    lineHeight: 22,
+    marginBottom: 12,
+    textAlign: 'left',
   },
   deletingContent: {
     minHeight: 140,
@@ -263,9 +303,5 @@ const styles = StyleSheet.create({
   checkboxChecked: {
     backgroundColor: '#f97316',
     borderColor: '#f97316',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: 12,
   },
 });

@@ -1,6 +1,7 @@
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { authTokens } from "@/constants/authTokens";
+import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
 import {
   completeNotificationGate,
@@ -18,6 +19,7 @@ const defaultNextRoute = "/(tabs)";
 
 export default function NotificationsScreen() {
   const { user, isLoading } = useAuth();
+  const { showError, showSuccess } = useAppToast();
   const [submitting, setSubmitting] = useState(false);
   const [nextRoute, setNextRoute] = useState(defaultNextRoute);
   const [routeReady, setRouteReady] = useState(false);
@@ -55,9 +57,26 @@ export default function NotificationsScreen() {
   const onEnable = useCallback(async () => {
     if (submitting || !user?.id) return;
     setSubmitting(true);
-    await enablePushNotifications(user.id);
-    continueToNextRoute();
-  }, [continueToNextRoute, submitting, user?.id]);
+    try {
+      const ok = await enablePushNotifications(user.id);
+      if (ok) {
+        showSuccess("Notifications on", "You’ll get reminders and updates.");
+        continueToNextRoute();
+      } else {
+        showError(
+          "Couldn’t enable",
+          "Check your connection and try again, or enable in Profile later.",
+        );
+        setSubmitting(false);
+      }
+    } catch {
+      showError(
+        "Couldn’t enable",
+        "Check your connection and try again, or enable in Profile later.",
+      );
+      setSubmitting(false);
+    }
+  }, [continueToNextRoute, submitting, user?.id, showError, showSuccess]);
 
   useEffect(() => {
     if (!isLoading && !user?.id) {
@@ -91,7 +110,11 @@ export default function NotificationsScreen() {
       <View className="flex-1 px-7 pt-6 pb-8 justify-between">
         <View className="flex-1 items-center justify-center">
           <View className="items-center">
-            <View className="mb-16 h-28 w-28 items-center justify-center">
+            <View
+              className="mb-16 h-28 w-28 items-center justify-center"
+              accessibilityLabel="Notifications"
+              accessibilityRole="image"
+            >
               <View className="absolute inset-0 items-center justify-center">
                 <Bell size={80} color="#10b981" strokeWidth={2.4} />
               </View>
@@ -118,8 +141,8 @@ export default function NotificationsScreen() {
           <PrimaryButton
             loading={submitting}
             onPress={onEnable}
-            // style={{ backgroundColor: "#FFFFFF" }}
-            // className="h-[70px]"
+            accessibilityLabel="Enable push notifications"
+            accessibilityRole="button"
           >
             Enable push notifications
           </PrimaryButton>
@@ -127,6 +150,8 @@ export default function NotificationsScreen() {
             disabled={submitting}
             onPress={onSkip}
             className="border-0 bg-white/18"
+            accessibilityLabel="Not now"
+            accessibilityRole="button"
           >
             Not now
           </SecondaryButton>

@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export async function readTourSeen(
   userId: string,
-  tourId: "home" | "budget"
+  tourId: "home" | "budget" | "learn"
 ): Promise<boolean> {
   try {
     const key = `@cediwise_tour_${tourId}_seen:${userId}`;
@@ -15,7 +15,7 @@ export async function readTourSeen(
 
 export async function writeTourSeen(
   userId: string,
-  tourId: "home" | "budget"
+  tourId: "home" | "budget" | "learn"
 ): Promise<void> {
   try {
     const key = `@cediwise_tour_${tourId}_seen:${userId}`;
@@ -30,7 +30,8 @@ export async function clearTourSeen(userId: string): Promise<void> {
   try {
     const homeKey = `@cediwise_tour_home_seen:${userId}`;
     const budgetKey = `@cediwise_tour_budget_seen:${userId}`;
-    await AsyncStorage.multiRemove([homeKey, budgetKey]);
+    const learnKey = `@cediwise_tour_learn_seen:${userId}`;
+    await AsyncStorage.multiRemove([homeKey, budgetKey, learnKey]);
   } catch {
     // Swallow storage errors
   }

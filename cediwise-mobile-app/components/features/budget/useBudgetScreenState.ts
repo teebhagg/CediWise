@@ -15,10 +15,17 @@ import {
 } from "../../../calculators/budget-advisor";
 import { useAuth } from "../../../hooks/useAuth";
 import { useBudget } from "../../../hooks/useBudget";
+import { useDebts } from "../../../hooks/useDebts";
 import { usePersonalizationStatus } from "../../../hooks/usePersonalizationStatus";
 import { useProfileVitals } from "../../../hooks/useProfileVitals";
 import type { BudgetBucket } from "../../../types/budget";
 import { checkCategoryLimitImpact } from "../../../utils/allocationExceeded";
+import {
+  computeCycleDeficit,
+  getResolutionForCycle,
+  saveDeficitResolution,
+  type CycleDeficitResolutionChoice,
+} from "../../../utils/cycleDeficit";
 import { computeGhanaTax2026Monthly } from "../../../utils/ghanaTax";
 import {
   analyzeAndSuggestReallocation,
@@ -54,7 +61,6 @@ export function useBudgetScreenState() {
     updateCategoryLimit,
     updateCycleDay,
     updateCycleAllocation,
-    insertDebt,
     resetBudget,
     deleteAllBudgetData,
     computeNewCyclePreview,
@@ -65,6 +71,8 @@ export function useBudgetScreenState() {
     reload,
     syncNow,
   } = useBudget(user?.id);
+
+  const { addDebt } = useDebts(totals?.monthlyNetIncome ?? 0);
 
   const [refreshing, setRefreshing] = useState(false);
   const didVitalsRefreshRef = useRef(false);
@@ -185,6 +193,19 @@ export function useBudgetScreenState() {
     durationUnit: "days" | "months";
     durationMonths?: number;
     paydayDay: number;
+  } | null>(null);
+
+  const [pendingDeficit, setPendingDeficit] = useState<{
+    cycleId: string;
+    cycleLabel: string;
+    deficitAmount: number;
+  } | null>(null);
+
+  /** When user chose "Financed" in deficit modal – show Add Debt with prefill */
+  const [pendingAddDebtFromDeficit, setPendingAddDebtFromDeficit] = useState<{
+    cycleId: string;
+    cycleLabel: string;
+    deficitAmount: number;
   } | null>(null);
 
   useEffect(() => {
@@ -665,14 +686,8 @@ export function useBudgetScreenState() {
         allocationExceededResult.suggestedAllocation,
       );
     }
-    if (allocationExceededResult.debtAmount > 0) {
-      await insertDebt({
-        name: `Budget overrun – ${activeCycle?.startDate ?? "cycle"}`,
-        totalAmount: allocationExceededResult.debtAmount,
-        remainingAmount: allocationExceededResult.debtAmount,
-        monthlyPayment: allocationExceededResult.debtAmount,
-      });
-    }
+    // Debt is no longer auto-created from allocation overrun.
+    // Overspend → debt flow is expense-triggered (deficit prompt at rollover).
     if (pendingCategoryAction.type === "add") {
       await addCategory(pendingCategoryAction.params);
     } else {
@@ -694,7 +709,6 @@ export function useBudgetScreenState() {
     addCategory,
     updateCategoryLimit,
     updateCycleAllocation,
-    insertDebt,
     syncNow,
     reload,
   ]);
@@ -706,6 +720,36 @@ export function useBudgetScreenState() {
   }, []);
 
   const handleStartNewCycle = useCallback(async () => {
+    // Check for deficit before rollover: if active cycle overspent and not yet resolved, show deficit prompt first
+    if (
+      activeCycle &&
+      totals &&
+      user?.id &&
+      totals.monthlyNetIncome > 0
+    ) {
+      const totalSpent =
+        totals.spentByBucket.needs +
+        totals.spentByBucket.wants +
+        totals.spentByBucket.savings;
+      const deficit = computeCycleDeficit({
+        cycleId: activeCycle.id,
+        transactions: state?.transactions ?? [],
+        monthlyNetIncome: totals.monthlyNetIncome,
+      });
+      if (deficit) {
+        const existing = await getResolutionForCycle(user.id, activeCycle.id);
+        if (!existing) {
+          const cycleLabel = `${activeCycle.startDate} – ${activeCycle.endDate}`;
+          setPendingDeficit({
+            cycleId: activeCycle.id,
+            cycleLabel,
+            deficitAmount: deficit.deficitAmount,
+          });
+          return;
+        }
+      }
+    }
+
     const preview = computeNewCyclePreview();
     if (!preview) {
       await createNewCycleImmediate();
@@ -713,7 +757,15 @@ export function useBudgetScreenState() {
       return;
     }
     setPendingRollover(preview);
-  }, [computeNewCyclePreview, createNewCycleImmediate, reload]);
+  }, [
+    activeCycle,
+    totals,
+    state?.transactions,
+    user?.id,
+    computeNewCyclePreview,
+    createNewCycleImmediate,
+    reload,
+  ]);
 
   const handleRolloverConfirm = useCallback(
     async (
@@ -731,6 +783,87 @@ export function useBudgetScreenState() {
     },
     [pendingRollover, createNewCycleFromPreview, reload],
   );
+
+  const handleDeficitResolve = useCallback(
+    async (choice: CycleDeficitResolutionChoice) => {
+      if (!pendingDeficit || !user?.id) return;
+      if (choice === "financed") {
+        setPendingAddDebtFromDeficit({
+          cycleId: pendingDeficit.cycleId,
+          cycleLabel: pendingDeficit.cycleLabel,
+          deficitAmount: pendingDeficit.deficitAmount,
+        });
+        setPendingDeficit(null);
+        return;
+      }
+      await saveDeficitResolution(user.id, {
+        cycleId: pendingDeficit.cycleId,
+        choice,
+        debtId: null,
+      });
+      setPendingDeficit(null);
+      const preview = computeNewCyclePreview();
+      if (!preview) {
+        await createNewCycleImmediate();
+        await reload();
+        return;
+      }
+      setPendingRollover(preview);
+    },
+    [
+      pendingDeficit,
+      user?.id,
+      computeNewCyclePreview,
+      createNewCycleImmediate,
+      reload,
+    ],
+  );
+
+  const handleCloseDeficitModal = useCallback(() => {
+    setPendingDeficit(null);
+  }, []);
+
+  const handleAddDebtFromDeficitSubmit = useCallback(
+    async (params: {
+      name: string;
+      totalAmount: number;
+      remainingAmount: number;
+      monthlyPayment: number;
+      interestRate?: number | null;
+      sourceCycleId?: string | null;
+    }) => {
+      if (!pendingAddDebtFromDeficit || !user?.id) return;
+      await addDebt({
+        ...params,
+        sourceCycleId: pendingAddDebtFromDeficit.cycleId,
+      });
+      await saveDeficitResolution(user.id, {
+        cycleId: pendingAddDebtFromDeficit.cycleId,
+        choice: "financed",
+        debtId: null,
+      });
+      setPendingAddDebtFromDeficit(null);
+      const preview = computeNewCyclePreview();
+      if (!preview) {
+        await createNewCycleImmediate();
+        await reload();
+        return;
+      }
+      setPendingRollover(preview);
+    },
+    [
+      pendingAddDebtFromDeficit,
+      user?.id,
+      addDebt,
+      computeNewCyclePreview,
+      createNewCycleImmediate,
+      reload,
+    ],
+  );
+
+  const handleCloseAddDebtFromDeficit = useCallback(() => {
+    setPendingAddDebtFromDeficit(null);
+  }, []);
 
   return {
     router,
@@ -850,6 +983,14 @@ export function useBudgetScreenState() {
       handleUpdateCategoryLimit,
       handleStartNewCycle,
       handleRolloverConfirm,
+      pendingDeficit,
+      showDeficitModal: !!pendingDeficit,
+      handleDeficitResolve,
+      handleCloseDeficitModal,
+      pendingAddDebtFromDeficit,
+      showAddDebtFromDeficitModal: !!pendingAddDebtFromDeficit,
+      handleAddDebtFromDeficitSubmit,
+      handleCloseAddDebtFromDeficit,
     },
   };
 }

@@ -1,8 +1,8 @@
 /**
- * Tour structure: steps order and boundaries for home vs budget tours.
+ * Tour structure: steps order and boundaries for onboarding tours.
  */
 
-export type TourId = "home" | "budget";
+export type TourId = "home" | "budget" | "learn";
 
 export type TourDefinition = {
   id: TourId;

@@ -109,14 +109,19 @@ export default function BudgetIncomeScreen() {
           onAddIncome={async () => {
             try {
               const amt = parseFloat(form.incomeAmount) || 0;
-              await budget.addIncomeSource({
+              const result = await budget.addIncomeSource({
                 name: form.incomeName,
                 type: form.incomeType,
                 amount: amt,
                 applyDeductions: form.applyDeductions,
               });
               form.setIncomeAmount('');
-              showSuccess('Income saved', 'Using local values; syncing in background.');
+              if (result?.syncError) {
+                showSuccess('Income saved', 'Saved locally; sync failed. It will retry.');
+                showError('Sync failed', result.syncError);
+              } else {
+                showSuccess('Income saved', 'Using local values; syncing in background.');
+              }
             } catch (e) {
               showError(
                 'Could not save income',
@@ -167,8 +172,11 @@ export default function BudgetIncomeScreen() {
         showDeleteIncomeConfirm={modals.showDeleteIncomeConfirm}
         setShowDeleteIncomeConfirm={modals.setShowDeleteIncomeConfirm}
         onDeleteIncomeSource={async (id) => {
-          await budget.deleteIncomeSource(id);
+          const result = await budget.deleteIncomeSource(id);
           await budget.reload();
+          if (result?.syncError) {
+            showError('Sync failed', result.syncError);
+          }
         }}
         incomeToEdit={modals.incomeToEdit}
         setIncomeToEdit={modals.setIncomeToEdit}
@@ -176,14 +184,19 @@ export default function BudgetIncomeScreen() {
         setShowEditIncomeModal={modals.setShowEditIncomeModal}
         onUpdateIncomeSource={async (id, next) => {
           if (!modals.incomeToEdit) return;
-          await budget.updateIncomeSource(id, {
+          const result = await budget.updateIncomeSource(id, {
             name: next.name ?? modals.incomeToEdit.name,
             type: next.type ?? modals.incomeToEdit.type,
             amount: next.amount ?? modals.incomeToEdit.amount,
             applyDeductions: next.applyDeductions ?? modals.incomeToEdit.applyDeductions,
           });
           await budget.reload();
-          showSuccess('Income updated', 'Your income source has been updated.');
+          if (result?.syncError) {
+            showSuccess('Income updated', 'Saved locally; sync failed. It will retry.');
+            showError('Sync failed', result.syncError);
+          } else {
+            showSuccess('Income updated', 'Your income source has been updated.');
+          }
         }}
         editingLimit={null}
         setEditingLimit={() => { }}

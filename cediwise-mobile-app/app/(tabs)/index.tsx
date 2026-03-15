@@ -106,7 +106,7 @@ export default function DashboardScreen() {
         userId: user?.id,
       });
     }
-  }, [setupCompleted, hasSeenHomeTour, user?.id, startHomeTour]);
+  }, []);
 
   const handleSeeAllPress = useCallback(() => {
     router.push("/expenses");
@@ -178,7 +178,7 @@ export default function DashboardScreen() {
             <TourZone
               stepKey="home-setup"
               name="Set up profile"
-              description="Add income and budget prefs to get personalized insights."
+              description="Use this personalization banner to tailor your budget in about 2 minutes. You can skip for now."
               shape="rounded-rect"
               borderRadius={16}>
               <View collapsable={false}>

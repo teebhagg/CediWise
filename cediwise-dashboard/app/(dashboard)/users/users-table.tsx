@@ -11,13 +11,14 @@ import { ArrowRight01Icon, UserSearch01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface UsersTableProps {
   users: UserWithProfile[];
   total: number;
   page: number;
   perPage: number;
+  searchQuery?: string;
 }
 
 export function UsersTable({
@@ -25,32 +26,51 @@ export function UsersTable({
   total,
   page,
   perPage,
+  searchQuery,
 }: UsersTableProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchQuery ?? "");
   const [selectedIds, setSelectedIds] = useState<Array<string>>([]);
 
-  function onPageChange(newPage: number) {
+  function updateParams(updates: Record<string, string | undefined>) {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("page", String(newPage));
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === undefined || value === "") {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    });
     router.push(`/users?${params.toString()}`);
   }
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return users;
-    return users.filter(
-      (u) =>
-        u.email?.toLowerCase().includes(q) ||
-        u.phone?.toLowerCase().includes(q) ||
-        u.name?.toLowerCase().includes(q) ||
-        u.id.toLowerCase().includes(q)
-    );
-  }, [users, search]);
+  function onPageChange(newPage: number) {
+    updateParams({ page: String(newPage) });
+  }
+
+  function onPerPageChange(newPerPage: number) {
+    updateParams({ perPage: String(newPerPage), page: "1" });
+  }
+
+  function handleSearch(val: string) {
+    updateParams({ search: val.trim() || undefined, page: "1" });
+  }
+
+  // Debounced search effect
+  useEffect(() => {
+    // Skip if searchQuery matches search (e.g. initial mount or after manual Enter/params update)
+    if ((searchQuery ?? "") === search.trim()) return;
+
+    const timer = setTimeout(() => {
+      handleSearch(search);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [search, searchQuery]);
 
   const selectedRecipients = useMemo(() => {
-    return filtered
+    return users
       .filter((u) => selectedIds.includes(u.id))
       .map((u) => ({
         userId: u.id,
@@ -58,13 +78,13 @@ export function UsersTable({
         name: u.name ?? undefined,
       }))
       .filter((recipient) => recipient.email.trim().length > 0);
-  }, [filtered, selectedIds]);
+  }, [users, selectedIds]);
 
   const selectedMissingEmailCount = useMemo(() => {
-    return filtered.filter((u) => selectedIds.includes(u.id) && !u.email).length;
-  }, [filtered, selectedIds]);
+    return users.filter((u) => selectedIds.includes(u.id) && !u.email).length;
+  }, [users, selectedIds]);
 
-  const allVisibleSelected = filtered.length > 0 && selectedIds.length === filtered.length;
+  const allVisibleSelected = users.length > 0 && selectedIds.length === users.length;
 
   function toggleRow(userId: string, checked: boolean) {
     setSelectedIds((prev) => {
@@ -78,7 +98,7 @@ export function UsersTable({
       setSelectedIds([]);
       return;
     }
-    setSelectedIds(filtered.map((user) => user.id));
+    setSelectedIds(users.map((user) => user.id));
   }
 
   return (
@@ -119,6 +139,11 @@ export function UsersTable({
           placeholder="Search by name, email, phone, or ID..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              handleSearch(search);
+            }
+          }}
           className="pl-9"
         />
       </div>
@@ -143,17 +168,17 @@ export function UsersTable({
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {users.length === 0 ? (
                 <tr>
                   <td
                     colSpan={6}
                     className="h-24 px-4 text-center text-muted-foreground"
                   >
-                    {users.length === 0 ? "No users found." : "No matches for your search."}
+                    {searchQuery ? "No matches for your search." : "No users found."}
                   </td>
                 </tr>
               ) : (
-                filtered.map((u) => {
+                users.map((u) => {
                   const { primary, secondary } = getPrimaryContact(u.email, u.phone);
                   const hasEmail = !!u.email;
                   return (
@@ -247,6 +272,7 @@ export function UsersTable({
           perPage={perPage}
           total={total}
           onPageChange={onPageChange}
+          onPerPageChange={onPerPageChange}
         />
       </div>
     </div>

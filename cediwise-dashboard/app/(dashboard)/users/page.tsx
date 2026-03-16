@@ -5,15 +5,15 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Suspense } from "react";
 import { UsersTable } from "./users-table";
 
-const PER_PAGE = 20;
 
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; perPage?: string; search?: string }>;
 }) {
-  const { page: pageStr } = await searchParams;
+  const { page: pageStr, perPage: perPageStr, search } = await searchParams;
   const page = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
+  const perPage = Math.max(1, parseInt(perPageStr ?? "20", 10) || 20);
 
   return (
     <div className="space-y-6">
@@ -34,7 +34,7 @@ export default async function UsersPage({
         </CardHeader>
         <CardContent>
           <Suspense fallback={<UsersTableSkeleton />}>
-            <UsersTableWrapper page={page} perPage={PER_PAGE} />
+            <UsersTableWrapper page={page} perPage={perPage} search={search} />
           </Suspense>
         </CardContent>
       </Card>
@@ -45,17 +45,20 @@ export default async function UsersPage({
 async function UsersTableWrapper({
   page,
   perPage,
+  search,
 }: {
   page: number;
   perPage: number;
+  search?: string;
 }) {
-  const { users, total } = await listUsersWithProfiles(page, perPage);
+  const { users, total } = await listUsersWithProfiles(page, perPage, search);
   return (
     <UsersTable
       users={users}
       total={total}
       page={page}
       perPage={perPage}
+      searchQuery={search}
     />
   );
 }

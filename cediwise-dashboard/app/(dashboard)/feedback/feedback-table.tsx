@@ -30,7 +30,7 @@ import type {
 import { Search01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface FeedbackTableProps {
   feedback: FeedbackRecord[];
@@ -83,9 +83,26 @@ export function FeedbackTable({
     updateParams({ page: String(newPage) }, { resetPage: false });
   }
 
+  function onPerPageChange(newPerPage: number) {
+    updateParams({ perPage: String(newPerPage), page: "1" });
+  }
+
   function resetFilters() {
     router.push("/feedback?page=1");
   }
+
+  // Debounced search effect
+  useEffect(() => {
+    // Skip if searchQuery matches search (e.g. initial mount or after manual Enter/params update)
+    const currentSearch = filters.search ?? "";
+    if (currentSearch === searchInput.trim()) return;
+
+    const timer = setTimeout(() => {
+      updateParams({ search: searchInput.trim() || undefined });
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput, filters.search]);
 
   const hasActiveFilters = useMemo(() => {
     return !!(
@@ -364,7 +381,13 @@ export function FeedbackTable({
           </table>
         </div>
 
-        <Pagination page={page} perPage={perPage} total={total} onPageChange={onPageChange} />
+        <Pagination
+          page={page}
+          perPage={perPage}
+          total={total}
+          onPageChange={onPageChange}
+          onPerPageChange={onPerPageChange}
+        />
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import type { ProgressRow } from "@/lib/actions/progress";
 import { UserSearch01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface ProgressTableProps {
   progress: ProgressRow[];
@@ -19,6 +19,16 @@ export function ProgressTable({ progress, total, page, perPage }: ProgressTableP
   const router = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   function onPageChange(newPage: number) {
     const params = new URLSearchParams(searchParams.toString());
@@ -26,15 +36,22 @@ export function ProgressTable({ progress, total, page, perPage }: ProgressTableP
     router.push(`/learning-data/progress?${params.toString()}`);
   }
 
+  function onPerPageChange(newPerPage: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("perPage", String(newPerPage));
+    params.set("page", "1");
+    router.push(`/learning-data/progress?${params.toString()}`);
+  }
+
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = debouncedSearch.trim().toLowerCase();
     if (!q) return progress;
     return progress.filter(
       (p) =>
         p.user_id.toLowerCase().includes(q) ||
         p.lesson_id.toLowerCase().includes(q)
     );
-  }, [progress, search]);
+  }, [progress, debouncedSearch]);
 
   return (
     <div className="space-y-4">
@@ -101,6 +118,7 @@ export function ProgressTable({ progress, total, page, perPage }: ProgressTableP
           perPage={perPage}
           total={total}
           onPageChange={onPageChange}
+          onPerPageChange={onPerPageChange}
         />
       </div>
     </div>

@@ -3,7 +3,6 @@ import { listFeedback, type FeedbackCategory, type FeedbackListFilters } from "@
 import { Suspense } from "react";
 import { FeedbackTable } from "./feedback-table";
 
-const PER_PAGE = 20;
 
 function parseIntParam(value: string | undefined, fallback: number) {
   const parsed = Number.parseInt(value ?? "", 10);
@@ -35,6 +34,7 @@ export default async function FeedbackPage({
 }) {
   const params = await searchParams;
   const page = Math.max(1, parseIntParam(params.page, 1));
+  const perPage = Math.max(1, parseIntParam(params.perPage, 20));
   const filters = parseFilters(params);
 
   return (
@@ -54,7 +54,7 @@ export default async function FeedbackPage({
         </CardHeader>
         <CardContent>
           <Suspense fallback={<div className="h-48 animate-pulse rounded-lg bg-muted/50" />}>
-            <FeedbackTableWrapper page={page} perPage={PER_PAGE} filters={filters} />
+            <FeedbackTableWrapper page={page} perPage={perPage} filters={filters} />
           </Suspense>
         </CardContent>
       </Card>

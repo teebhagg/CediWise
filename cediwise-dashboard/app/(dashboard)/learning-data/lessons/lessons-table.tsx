@@ -9,7 +9,7 @@ import { Delete02Icon, Edit01Icon, UserSearch01Icon } from "@hugeicons/core-free
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface LessonsTableProps {
   lessons: LessonRow[];
@@ -40,10 +40,28 @@ export function LessonsTable({
     p.set("page", String(newPage));
     router.push(`/learning-data/lessons?${p.toString()}`);
   }
+
+  function onPerPageChange(newPerPage: number) {
+    const p = new URLSearchParams(searchParams.toString());
+    p.set("perPage", String(newPerPage));
+    p.set("page", "1");
+    router.push(`/learning-data/lessons?${p.toString()}`);
+  }
+
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounced search effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = debouncedSearch.trim().toLowerCase();
     if (!q) return lessons;
     return lessons.filter(
       (l) =>
@@ -51,7 +69,7 @@ export function LessonsTable({
         l.title.toLowerCase().includes(q) ||
         l.module.toLowerCase().includes(q)
     );
-  }, [lessons, search]);
+  }, [lessons, debouncedSearch]);
 
   function buildHref(mod?: string, diff?: string, pg?: number) {
     const p = new URLSearchParams(searchParams.toString());
@@ -170,6 +188,7 @@ export function LessonsTable({
           perPage={perPage}
           total={total}
           onPageChange={onPageChange}
+          onPerPageChange={onPerPageChange}
         />
       </div>
     </div>

@@ -8,7 +8,7 @@ const corsHeaders = {
 
 type Campaign = {
   id: string;
-  template_key: "general_update" | "support_response" | "feedback_followup" | "join_beta";
+  template_key: "general_update" | "support_response" | "feedback_followup" | "join_beta" | "app_update" | "customer_checkin" | "maintenance_notice" | "educational_tip";
   subject: string;
   message_body: string;
   message_body_html: string | null;
@@ -30,6 +30,10 @@ type SenderConfig = {
   senderEmail: string;
   logoUrl: string;
 };
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -54,13 +58,13 @@ function paragraphize(value: string) {
     .filter(Boolean)
     .map(
       (chunk) =>
-        `<p style=\"margin:0 0 14px;color:#E4E4E7;line-height:1.72;font-size:15px;\">${escapeHtml(chunk).replaceAll("\n", "<br />")}</p>`,
+        `<p style=\"margin:0 0 14px;color:#D4D4D8;line-height:1.72;font-size:15px;\">${escapeHtml(chunk).replaceAll("\n", "<br />")}</p>`,
     )
     .join("\n");
 }
 
 function getSenderConfig(): SenderConfig {
-  const senderName = Deno.env.get("EMAIL_SENDER_NAME") || "Joshua Ansah";
+  const senderName = Deno.env.get("EMAIL_SENDER_NAME") || "Joshua Ansah @ CediWise";
   const senderEmail = Deno.env.get("EMAIL_SENDER_EMAIL") || "joshua.ansah@cediwise.app";
   const logoUrl =
     Deno.env.get("EMAIL_LOGO_URL") ||
@@ -86,18 +90,47 @@ function renderEmailTemplate(
         ? "A quick update from CediWise support"
         : campaign.template_key === "join_beta"
           ? "Join the CediWise beta in 2 minutes"
-          : "An update from CediWise";
+          : campaign.template_key === "app_update"
+            ? "New features are now available on CediWise!"
+            : campaign.template_key === "customer_checkin"
+              ? "We're checking in on your experience"
+              : campaign.template_key === "educational_tip"
+                ? "A quick tip for your financial growth"
+                : campaign.template_key === "maintenance_notice"
+                  ? "Scheduled Maintenance: CediWise App"
+                  : "An update from CediWise";
 
   const ctaBlock = campaign.cta_url
     ? `<a href=\"${escapeHtml(campaign.cta_url)}\" style=\"display:inline-block;padding:12px 20px;border-radius:999px;background:#34D399;color:#052E22;text-decoration:none;font-weight:700;font-size:14px;\">${escapeHtml(campaign.cta_label || "Open CediWise")}</a>`
     : "";
 
-  const bodyHtml = campaign.message_body_html?.trim() || paragraphize(campaign.message_body || "");
+  function inlineBodyStyles(html: string) {
+    return html
+      .replace(/<p>/g, '<p style="margin:0 0 14px;color:#D4D4D8;line-height:1.7;">')
+      .replace(/<ul>/g, '<ul style="margin:0 0 14px;padding-left:20px;color:#D4D4D8;">')
+      .replace(/<ol>/g, '<ol style="margin:0 0 14px;padding-left:20px;color:#D4D4D8;">')
+      .replace(/<li>/g, '<li style="margin:0 0 8px;color:#D4D4D8;">')
+      .replace(/<h2>/g, '<h2 style="margin:18px 0 12px;color:#F4F4F5;font-size:18px;font-weight:700;">')
+      .replace(/<h3>/g, '<h3 style="margin:16px 0 10px;color:#F4F4F5;font-size:16px;font-weight:700;">')
+      .replace(/<strong>/g, '<strong style="color:#F4F4F5;font-weight:700;">')
+      .replace(/<blockquote>/g, '<blockquote style="margin:0 0 14px;padding-left:16px;border-left:2px solid #34D399;font-style:italic;color:#A1A1AA;">');
+  }
+
+  const rawBodyHtml = campaign.message_body_html?.trim() || paragraphize(campaign.message_body || "");
+  const bodyHtml = inlineBodyStyles(rawBodyHtml);
   const bodyText = campaign.message_body_text?.trim() || campaign.message_body || "";
 
   const html = `<!doctype html>
 <html>
-  <body style="margin:0;padding:0;background:#070A09;font-family:Inter,Segoe UI,Arial,sans-serif;">
+  <head>
+    <style>
+      body, table, td, p, a, li, blockquote { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+      p, li, blockquote { color: #D4D4D8; }
+      h1, h2, h3 { color: #F4F4F5; }
+      a { color: #34D399; }
+    </style>
+  </head>
+  <body style="margin:0;padding:0;background:#070A09;color:#D4D4D8;font-family:Inter,Segoe UI,Arial,sans-serif;">
     <span style="display:none;opacity:0;visibility:hidden;height:0;width:0;overflow:hidden;">${escapeHtml(preheader)}</span>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:28px 14px;background:#070A09;">
       <tr>
@@ -113,10 +146,10 @@ function renderEmailTemplate(
               </td>
             </tr>
             <tr>
-              <td style="padding:24px 24px 10px;">
+              <td style="padding:24px 24px 10px;color:#D4D4D8;">
                 <h1 style="margin:0 0 12px;color:#F4F4F5;font-size:24px;line-height:1.3;letter-spacing:-0.25px;">${escapeHtml(campaign.subject)}</h1>
                 <p style="margin:0 0 14px;color:#D4D4D8;font-size:15px;line-height:1.7;">Hi ${escapeHtml(name)},</p>
-                ${bodyHtml}
+                <div style="color:#D4D4D8;">${bodyHtml}</div>
                 ${ctaBlock ? `<div style=\"margin-top:18px;\">${ctaBlock}</div>` : ""}
                 <p style="margin:18px 0 0;color:#D4D4D8;font-size:15px;line-height:1.7;">
                   Best regards,<br />
@@ -247,7 +280,8 @@ Deno.serve(async (req) => {
     let success = 0;
     let failed = 0;
 
-    for (const recipient of rows) {
+    for (let index = 0; index < rows.length; index++) {
+      const recipient = rows[index];
       attempted += 1;
       const rendered = renderEmailTemplate(campaign, recipient, sender);
 
@@ -278,19 +312,22 @@ Deno.serve(async (req) => {
             error_message: text.slice(0, 300),
           })
           .eq("id", recipient.id);
-        continue;
+      } else {
+        const payload = await resendRes.json();
+        success += 1;
+        await admin
+          .from("email_recipients")
+          .update({
+            delivery_status: "sent",
+            provider_message_id: typeof payload?.id === "string" ? payload.id : null,
+            sent_at: new Date().toISOString(),
+          })
+          .eq("id", recipient.id);
       }
 
-      const payload = await resendRes.json();
-      success += 1;
-      await admin
-        .from("email_recipients")
-        .update({
-          delivery_status: "sent",
-          provider_message_id: typeof payload?.id === "string" ? payload.id : null,
-          sent_at: new Date().toISOString(),
-        })
-        .eq("id", recipient.id);
+      if (index < rows.length - 1) {
+        await sleep(1000);
+      }
     }
 
     const status = failed === 0 ? "sent" : success > 0 ? "partial_failed" : "failed";

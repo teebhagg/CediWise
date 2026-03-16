@@ -8,15 +8,14 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { LessonsTable } from "./lessons-table";
 
-const PER_PAGE = 20;
-
 export default async function LessonsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ module?: string; difficulty?: string; page?: string }>;
+  searchParams: Promise<{ module?: string; difficulty?: string; page?: string; perPage?: string }>;
 }) {
   const params = await searchParams;
   const page = Math.max(1, parseInt(params.page ?? "1", 10) || 1);
+  const perPage = Math.max(1, parseInt(params.perPage ?? "20", 10) || 20);
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -46,7 +45,7 @@ export default async function LessonsPage({
               module={params.module}
               difficulty={params.difficulty}
               page={page}
-              perPage={PER_PAGE}
+              perPage={perPage}
             />
           </Suspense>
         </CardContent>

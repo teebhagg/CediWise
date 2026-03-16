@@ -50,8 +50,12 @@ interface EmailComposerDialogProps {
 
 const templateOptions: Array<{ label: string; value: EmailTemplateKey }> = [
   { label: "General update", value: "general_update" },
+  { label: "New update (App)", value: "app_update" },
+  { label: "Checking in (Satisfaction)", value: "customer_checkin" },
   { label: "Support response", value: "support_response" },
   { label: "Feedback follow-up", value: "feedback_followup" },
+  { label: "Educational Tip", value: "educational_tip" },
+  { label: "Maintenance Notice", value: "maintenance_notice" },
   { label: "Join Beta", value: "join_beta" },
 ];
 
@@ -60,6 +64,18 @@ const templateDefaults: Record<EmailTemplateKey, { subject: string; html: string
     subject: "A quick update from CediWise",
     html: "<p>Thanks for being part of CediWise. We wanted to share a quick update with you.</p>",
   },
+  app_update: {
+    subject: "New features are now available on CediWise!",
+    html: "<p>We've just released a new update for CediWise with improved features to help you manage your money better. Update your app now to enjoy the latest improvements.</p><p>If you cannot access the Application, you probably haven't joined the beta test yet. Do so at <a href='https://cediwise.app'>CediWise Website</a>, instructions to join are in the \"Join Beta Test\" button.</p><p>Don't forget to leave feedback, it helps us improve the application for you. Leave your feedback at <a href='https://cediwise.app/feedback'>CediWise Feedback :)</a></p>",
+    ctaLabel: "Update App Now",
+    ctaUrl: "https://play.google.com/store/apps/details?id=com.cediwise.app",
+  },
+  customer_checkin: {
+    subject: "How is your experience with CediWise so far?",
+    html: "<p>We're checking in to see how your experience with CediWise has been. Your satisfaction is our priority, and we'd love to hear if there's anything we can do to help you reach your financial goals faster.</p>",
+    ctaLabel: "Share Feedback",
+    ctaUrl: "https://cediwise.app",
+  },
   support_response: {
     subject: "CediWise support update",
     html: "<p>Thanks for reaching out. Here is an update from our support team.</p>",
@@ -67,6 +83,16 @@ const templateDefaults: Record<EmailTemplateKey, { subject: string; html: string
   feedback_followup: {
     subject: "Thanks for your feedback on CediWise",
     html: "<p>Thank you for sharing your feedback. Your input helps us improve CediWise.</p>",
+  },
+  educational_tip: {
+    subject: "A quick tip for your financial growth",
+    html: "<p>Did you know that small consistent habits lead to big financial shifts? Here's a quick tip from our team to help you stay on track this week.</p>",
+    ctaLabel: "Read More Tips",
+    ctaUrl: "https://cediwise.app/blog",
+  },
+  maintenance_notice: {
+    subject: "Scheduled Maintenance: CediWise App",
+    html: "<p>We'll be performing a quick system maintenance to keep things running smoothly. The app might be temporarily unavailable during this period. We apologize for any inconvenience.</p>",
   },
   join_beta: {
     subject: "Join the CediWise Beta in 2 minutes",
@@ -275,8 +301,8 @@ export function EmailComposerDialog({
             ) : (
               <Field>
                 <FieldLabel>Email preview</FieldLabel>
-                <div className="rounded-xl border border-input bg-background p-4">
-                  <div className="mb-4 rounded-lg border bg-muted/20 p-3 text-center">
+                <div className="rounded-xl border border-input bg-[#070A09] p-4 text-[#D4D4D8] scheme-dark">
+                  <div className="mb-4 rounded-lg border border-[#1F2937] bg-[#0E1210] p-3 text-center">
                     <Image
                       src="https://cediwise.app/cediwise-smooth-light-logo.png"
                       alt="CediWise"
@@ -284,18 +310,20 @@ export function EmailComposerDialog({
                       height={40}
                       className="mx-auto mb-2 rounded-md"
                     />
-                    <p className="text-lg font-bold">CediWise</p>
-                    <p className="text-xs text-muted-foreground">Smart money decisions for Ghana</p>
+                    <p className="text-lg font-bold text-[#ECFEF6]">CediWise</p>
+                    <p className="text-xs text-[#9CA3AF]">Smart money decisions for Ghana</p>
                   </div>
-                  <h3 className="mb-2 text-xl font-semibold">{subject}</h3>
+                  <h3 className="mb-2 text-xl font-semibold text-[#F4F4F5]">{subject}</h3>
                   <div
-                    className="prose prose-sm max-w-none dark:prose-invert [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_blockquote]:border-l [&_blockquote]:border-muted-foreground/40 [&_blockquote]:pl-3 [&_blockquote]:italic [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-3 [&_h3]:text-sm [&_h3]:font-semibold"
+                    className="prose prose-sm max-w-none prose-invert [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_blockquote]:border-l [&_blockquote]:border-[#1F2937] [&_blockquote]:pl-3 [&_blockquote]:italic [&_h2]:text-base [&_h2]:font-semibold [&_h2]:mt-3 [&_h2]:text-[#F4F4F5] [&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-[#F4F4F5] [&_p]:text-[#D4D4D8] [&_li]:text-[#D4D4D8] [&_strong]:text-[#F4F4F5]"
                     dangerouslySetInnerHTML={{ __html: messageBodyHtml }}
                   />
                   {ctaUrl ? (
-                    <a href={ctaUrl} className="mt-4 inline-flex rounded-full bg-emerald-400 px-4 py-2 text-sm font-bold text-emerald-950">
-                      {ctaLabel || "Open CediWise"}
-                    </a>
+                    <div className="mt-4">
+                      <a href={ctaUrl} className="inline-flex rounded-full bg-[#34D399] px-4 py-2 text-sm font-bold text-[#052E22] no-underline">
+                        {ctaLabel || "Open CediWise"}
+                      </a>
+                    </div>
                   ) : null}
                 </div>
               </Field>

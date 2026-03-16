@@ -4,15 +4,14 @@ import { Suspense } from "react";
 import { AddTbillRateForm } from "./add-tbill-rate-form";
 import { TbillRatesTable } from "./tbill-rates-table";
 
-const PER_PAGE = 20;
-
 export default async function TbillRatesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; perPage?: string }>;
 }) {
-  const { page: pageStr } = await searchParams;
+  const { page: pageStr, perPage: perPageStr } = await searchParams;
   const page = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
+  const perPage = Math.max(1, parseInt(perPageStr ?? "20", 10) || 20);
 
   return (
     <div className="space-y-6">
@@ -42,7 +41,7 @@ export default async function TbillRatesPage({
         </CardHeader>
         <CardContent>
           <Suspense fallback={<div className="h-48 animate-pulse rounded-lg bg-muted/50" />}>
-            <TbillRatesTableWrapper page={page} perPage={PER_PAGE} />
+            <TbillRatesTableWrapper page={page} perPage={perPage} />
           </Suspense>
         </CardContent>
       </Card>

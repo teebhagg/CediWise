@@ -24,6 +24,13 @@ export function FeedbackTable({ feedback, total, page, perPage }: FeedbackTableP
     params.set("page", String(newPage));
     router.push(`/learning-data/feedback?${params.toString()}`);
   }
+
+  function onPerPageChange(newPerPage: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("perPage", String(newPerPage));
+    params.set("page", "1");
+    router.push(`/learning-data/feedback?${params.toString()}`);
+  }
   const [resolving, setResolving] = useState<string | null>(null);
 
   async function handleResolve(id: string) {
@@ -103,6 +110,7 @@ export function FeedbackTable({ feedback, total, page, perPage }: FeedbackTableP
           perPage={perPage}
           total={total}
           onPageChange={onPageChange}
+          onPerPageChange={onPerPageChange}
         />
       </div>
     </div>

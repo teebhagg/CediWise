@@ -20,6 +20,13 @@ export function TbillRatesTable({ rates, total, page, perPage }: TbillRatesTable
     params.set("page", String(newPage));
     router.push(`/learning-data/tbill-rates?${params.toString()}`);
   }
+
+  function onPerPageChange(newPerPage: number) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("perPage", String(newPerPage));
+    params.set("page", "1");
+    router.push(`/learning-data/tbill-rates?${params.toString()}`);
+  }
   return (
     <div className="rounded-lg border overflow-hidden">
       <div className="overflow-x-auto">
@@ -56,12 +63,13 @@ export function TbillRatesTable({ rates, total, page, perPage }: TbillRatesTable
           </tbody>
         </table>
       </div>
-      <Pagination
-        page={page}
-        perPage={perPage}
-        total={total}
-        onPageChange={onPageChange}
-      />
+        <Pagination
+          page={page}
+          perPage={perPage}
+          total={total}
+          onPageChange={onPageChange}
+          onPerPageChange={onPerPageChange}
+        />
     </div>
   );
 }

@@ -2,17 +2,18 @@ import { EmailComposerDialog } from "@/components/emails/email-composer-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { listEmailCampaigns } from "@/lib/actions/emails";
 
-const PER_PAGE = 20;
+import { CampaignsTable } from "./campaigns-table";
 
 export default async function EmailsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; perPage?: string }>;
 }) {
-  const { page: pageStr } = await searchParams;
+  const { page: pageStr, perPage: perPageStr } = await searchParams;
   const page = Math.max(1, Number.parseInt(pageStr ?? "1", 10) || 1);
+  const perPage = Math.max(1, Number.parseInt(perPageStr ?? "20", 10) || 20);
 
-  const { data, total } = await listEmailCampaigns(page, PER_PAGE);
+  const { data, total } = await listEmailCampaigns(page, perPage);
 
   return (
     <div className="space-y-6">
@@ -38,49 +39,7 @@ export default async function EmailsPage({
           <CardDescription>Delivery history and outcomes for queued email campaigns.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-lg border overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="h-10 px-4 text-left font-medium">Created</th>
-                    <th className="h-10 px-4 text-left font-medium">Subject</th>
-                    <th className="h-10 px-4 text-left font-medium">Template</th>
-                    <th className="h-10 px-4 text-left font-medium">Source</th>
-                    <th className="h-10 px-4 text-left font-medium">Recipients</th>
-                    <th className="h-10 px-4 text-left font-medium">Result</th>
-                    <th className="h-10 px-4 text-left font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="h-24 px-4 text-center text-muted-foreground">
-                        No email campaigns yet.
-                      </td>
-                    </tr>
-                  ) : (
-                    data.map((campaign) => (
-                      <tr key={campaign.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                          {new Date(campaign.created_at).toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3 max-w-[320px] truncate" title={campaign.subject}>
-                          {campaign.subject}
-                        </td>
-                        <td className="px-4 py-3">{campaign.template_key}</td>
-                        <td className="px-4 py-3">{campaign.source}</td>
-                        <td className="px-4 py-3">{campaign.recipient_count}</td>
-                        <td className="px-4 py-3">{campaign.success_count}/{campaign.recipient_count}</td>
-                        <td className="px-4 py-3">{campaign.status}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-            <div className="border-t px-4 py-3 text-sm text-muted-foreground">Total campaigns: {total}</div>
-          </div>
+          <CampaignsTable data={data} total={total} page={page} perPage={perPage} />
         </CardContent>
       </Card>
     </div>

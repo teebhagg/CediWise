@@ -32,7 +32,8 @@ export type ListUsersResult = {
 
 export async function listUsersWithProfiles(
   page = 1,
-  perPage = 20
+  perPage = 20,
+  search?: string
 ): Promise<ListUsersResult> {
   const admin = createAdminClient();
   const { data: authData, error: authError } = await admin.auth.admin.listUsers(
@@ -41,10 +42,24 @@ export async function listUsersWithProfiles(
 
   if (authError) throw new Error(authError.message);
 
-  const allUsers = authData.users;
-  const total = allUsers.length;
+  let filteredUsers = authData.users;
+
+  if (search) {
+    const q = search.toLowerCase();
+    filteredUsers = filteredUsers.filter((u) => {
+      const email = u.email?.toLowerCase() ?? "";
+      const phone = u.phone?.toLowerCase() ?? "";
+      const meta = u.user_metadata as Record<string, any> | undefined;
+      const name = (meta?.full_name ?? meta?.name ?? "").toLowerCase();
+      const id = u.id.toLowerCase();
+
+      return email.includes(q) || phone.includes(q) || name.includes(q) || id.includes(q);
+    });
+  }
+
+  const total = filteredUsers.length;
   const start = (page - 1) * perPage;
-  const paginatedUsers = allUsers.slice(start, start + perPage);
+  const paginatedUsers = filteredUsers.slice(start, start + perPage);
   const userIds = paginatedUsers.map((u) => u.id);
 
   const { data: profiles } = await admin

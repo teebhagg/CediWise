@@ -11,7 +11,11 @@ export type EmailTemplateKey =
   | "general_update"
   | "support_response"
   | "feedback_followup"
-  | "join_beta";
+  | "join_beta"
+  | "app_update"
+  | "customer_checkin"
+  | "maintenance_notice"
+  | "educational_tip";
 export type EmailAudienceType = "single" | "selected_users" | "feedback_reply";
 export type EmailSource =
   | "users_tab"

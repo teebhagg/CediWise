@@ -8,10 +8,9 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 
 const navItems = [
-  { label: 'Salary & Tax', to: '/salary-calculator' },
-  { label: 'Budgeting', to: '/budgeting-tool' },
-  { label: 'SME Ledger', to: '/sme-ledger' },
-  { label: 'Financial Literacy', to: '/financial-literacy' },
+  { label: 'Feedback', to: '/feedback' },
+  { label: 'About', to: '/about' },
+  { label: 'Contact', to: '/contact' },
 ]
 
 export function Header() {
@@ -69,6 +68,7 @@ export function Header() {
                 src="/cediwise-smooth-light-logo.png"
                 alt="CediWise Logo"
                 className="h-10 w-auto"
+                loading="lazy"
               />
             </div>
           </Link>
@@ -160,6 +160,7 @@ export function Header() {
                     src="/cediwise-smooth-light-logo.png"
                     alt="CediWise"
                     className="h-10 w-auto"
+                    loading="lazy"
                   />
                   <span className="text-2xl font-bold text-white tracking-tighter">
                     CediWise

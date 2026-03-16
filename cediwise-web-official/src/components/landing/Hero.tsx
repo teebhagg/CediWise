@@ -26,8 +26,8 @@ export function Hero() {
               <span className="text-primary">CediWise</span>
             </h1>
             <p className="mt-8 text-lg leading-relaxed text-zinc-400">
-              Salary calculator, budgeting, SME ledger, and financial literacy —
-              all in one premium platform. Built for the modern Ghanaian worker.
+              Salary calculator, budgeting, small and medium enterprise (SME) ledger, and financial
+              literacy — all in one premium platform. Built for the modern Ghanaian worker.
             </p>
             <div className="mt-12 flex flex-col gap-4 sm:flex-row">
               {/* <a
@@ -85,9 +85,10 @@ export function Hero() {
             <div className="absolute left-[12%] z-0 w-[28%] transition-transform hover:translate-x-[-10px] hover:-rotate-2">
               <div className="aspect-9/19 overflow-hidden shadow-xl opacity-90">
                 <img
-                  src="/assets/img_3.png"
+                  src="/assets/android/img-3.png"
                   alt="CediWise SME Ledger and expense tracking screenshot"
                   className="h-full w-full object-cover"
+                  loading="lazy"
                 />
               </div>
             </div>
@@ -96,9 +97,10 @@ export function Hero() {
             <div className="absolute right-[12%] z-0 w-[28%] transition-transform hover:translate-x-[10px] hover:rotate-2">
               <div className="aspect-9/19 overflow-hidden shadow-xl opacity-90">
                 <img
-                  src="/assets/img_4.png"
+                  src="/assets/android/img-15.png"
                   alt="CediWise financial literacy and analytics dashboard"
                   className="h-full w-full object-cover"
+                  loading="lazy"
                 />
               </div>
             </div>
@@ -107,9 +109,10 @@ export function Hero() {
             <div className="relative z-10 w-[38%] transition-transform hover:scale-[1.05]">
               <div className="aspect-9/19 overflow-hidden shadow-2xl">
                 <img
-                  src="/assets/img_1.png"
+                  src="/assets/android/img-14.png"
                   alt="CediWise salary calculator and budgeting app interface"
                   className="h-full w-full object-cover"
+                  loading="lazy"
                 />
               </div>
             </div>
@@ -194,7 +197,7 @@ export function Hero() {
                 </div>
                 <div>
                   <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
-                    Tax & SSNIT
+                    Tax & Social Security (SSNIT)
                   </p>
                   <p className="text-sm font-bold text-white">-GHS 1,240.00</p>
                 </div>
@@ -222,7 +225,7 @@ export function Hero() {
                 </div>
                 <div>
                   <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
-                    SME Expenses
+                    Small Business (SME) Expenses
                   </p>
                   <p className="text-sm font-bold text-white">GHS 3,120.00</p>
                 </div>

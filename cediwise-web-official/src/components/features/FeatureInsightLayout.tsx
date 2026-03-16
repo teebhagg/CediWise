@@ -10,7 +10,7 @@ interface FeatureInsightLayoutProps {
   title: string
   tagline: string
   description: string
-  icon: React.ComponentType<{ className?: string }>
+  icon: any
   iconBgColor: string
   children: React.ReactNode
   highlights?: { title: string; description: string }[]
@@ -78,13 +78,14 @@ export function FeatureInsightLayout({
               >
                 {image ? (
                   <div className="relative mx-auto max-w-sm">
-                    <div className="aspect-[9/19] overflow-hidden rounded-[2.5rem] border border-white/10 bg-zinc-900/50 shadow-2xl">
+                    {/* <div className="aspect-[9/19] overflow-hidden rounded-[2.5rem] border border-white/10 bg-zinc-900/50 shadow-2xl"> */}
                       <img
                         src={image}
                         alt={title}
                         className="h-full w-full object-cover"
+                        loading="lazy"
                       />
-                    </div>
+                    {/* </div> */}
                     <div className="absolute -inset-4 -z-10 rounded-[3rem] bg-primary/20 blur-3xl opacity-50" />
                   </div>
                 ) : (

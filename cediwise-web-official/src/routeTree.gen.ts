@@ -10,11 +10,13 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as SpendingInsightsRouteImport } from './routes/spending-insights'
 import { Route as SmeLedgerRouteImport } from './routes/sme-ledger'
 import { Route as SalaryCalculatorRouteImport } from './routes/salary-calculator'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as FinancialLiteracyRouteImport } from './routes/financial-literacy'
 import { Route as FeedbackRouteImport } from './routes/feedback'
+import { Route as DebtDashboardRouteImport } from './routes/debt-dashboard'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as BudgetingToolRouteImport } from './routes/budgeting-tool'
 import { Route as AboutRouteImport } from './routes/about'
@@ -23,6 +25,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SpendingInsightsRoute = SpendingInsightsRouteImport.update({
+  id: '/spending-insights',
+  path: '/spending-insights',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SmeLedgerRoute = SmeLedgerRouteImport.update({
@@ -48,6 +55,11 @@ const FinancialLiteracyRoute = FinancialLiteracyRouteImport.update({
 const FeedbackRoute = FeedbackRouteImport.update({
   id: '/feedback',
   path: '/feedback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DebtDashboardRoute = DebtDashboardRouteImport.update({
+  id: '/debt-dashboard',
+  path: '/debt-dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -76,11 +88,13 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/budgeting-tool': typeof BudgetingToolRoute
   '/contact': typeof ContactRoute
+  '/debt-dashboard': typeof DebtDashboardRoute
   '/feedback': typeof FeedbackRoute
   '/financial-literacy': typeof FinancialLiteracyRoute
   '/privacy': typeof PrivacyRoute
   '/salary-calculator': typeof SalaryCalculatorRoute
   '/sme-ledger': typeof SmeLedgerRoute
+  '/spending-insights': typeof SpendingInsightsRoute
   '/terms': typeof TermsRoute
 }
 export interface FileRoutesByTo {
@@ -88,11 +102,13 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/budgeting-tool': typeof BudgetingToolRoute
   '/contact': typeof ContactRoute
+  '/debt-dashboard': typeof DebtDashboardRoute
   '/feedback': typeof FeedbackRoute
   '/financial-literacy': typeof FinancialLiteracyRoute
   '/privacy': typeof PrivacyRoute
   '/salary-calculator': typeof SalaryCalculatorRoute
   '/sme-ledger': typeof SmeLedgerRoute
+  '/spending-insights': typeof SpendingInsightsRoute
   '/terms': typeof TermsRoute
 }
 export interface FileRoutesById {
@@ -101,11 +117,13 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/budgeting-tool': typeof BudgetingToolRoute
   '/contact': typeof ContactRoute
+  '/debt-dashboard': typeof DebtDashboardRoute
   '/feedback': typeof FeedbackRoute
   '/financial-literacy': typeof FinancialLiteracyRoute
   '/privacy': typeof PrivacyRoute
   '/salary-calculator': typeof SalaryCalculatorRoute
   '/sme-ledger': typeof SmeLedgerRoute
+  '/spending-insights': typeof SpendingInsightsRoute
   '/terms': typeof TermsRoute
 }
 export interface FileRouteTypes {
@@ -115,11 +133,13 @@ export interface FileRouteTypes {
     | '/about'
     | '/budgeting-tool'
     | '/contact'
+    | '/debt-dashboard'
     | '/feedback'
     | '/financial-literacy'
     | '/privacy'
     | '/salary-calculator'
     | '/sme-ledger'
+    | '/spending-insights'
     | '/terms'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -127,11 +147,13 @@ export interface FileRouteTypes {
     | '/about'
     | '/budgeting-tool'
     | '/contact'
+    | '/debt-dashboard'
     | '/feedback'
     | '/financial-literacy'
     | '/privacy'
     | '/salary-calculator'
     | '/sme-ledger'
+    | '/spending-insights'
     | '/terms'
   id:
     | '__root__'
@@ -139,11 +161,13 @@ export interface FileRouteTypes {
     | '/about'
     | '/budgeting-tool'
     | '/contact'
+    | '/debt-dashboard'
     | '/feedback'
     | '/financial-literacy'
     | '/privacy'
     | '/salary-calculator'
     | '/sme-ledger'
+    | '/spending-insights'
     | '/terms'
   fileRoutesById: FileRoutesById
 }
@@ -152,11 +176,13 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   BudgetingToolRoute: typeof BudgetingToolRoute
   ContactRoute: typeof ContactRoute
+  DebtDashboardRoute: typeof DebtDashboardRoute
   FeedbackRoute: typeof FeedbackRoute
   FinancialLiteracyRoute: typeof FinancialLiteracyRoute
   PrivacyRoute: typeof PrivacyRoute
   SalaryCalculatorRoute: typeof SalaryCalculatorRoute
   SmeLedgerRoute: typeof SmeLedgerRoute
+  SpendingInsightsRoute: typeof SpendingInsightsRoute
   TermsRoute: typeof TermsRoute
 }
 
@@ -167,6 +193,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/spending-insights': {
+      id: '/spending-insights'
+      path: '/spending-insights'
+      fullPath: '/spending-insights'
+      preLoaderRoute: typeof SpendingInsightsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sme-ledger': {
@@ -202,6 +235,13 @@ declare module '@tanstack/react-router' {
       path: '/feedback'
       fullPath: '/feedback'
       preLoaderRoute: typeof FeedbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/debt-dashboard': {
+      id: '/debt-dashboard'
+      path: '/debt-dashboard'
+      fullPath: '/debt-dashboard'
+      preLoaderRoute: typeof DebtDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -240,11 +280,13 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   BudgetingToolRoute: BudgetingToolRoute,
   ContactRoute: ContactRoute,
+  DebtDashboardRoute: DebtDashboardRoute,
   FeedbackRoute: FeedbackRoute,
   FinancialLiteracyRoute: FinancialLiteracyRoute,
   PrivacyRoute: PrivacyRoute,
   SalaryCalculatorRoute: SalaryCalculatorRoute,
   SmeLedgerRoute: SmeLedgerRoute,
+  SpendingInsightsRoute: SpendingInsightsRoute,
   TermsRoute: TermsRoute,
 }
 export const routeTree = rootRouteImport

@@ -16,7 +16,7 @@ const footerLinks = [
     links: [
       { name: 'Salary Calculator', href: '/salary-calculator' },
       { name: 'Budgeting Tool', href: '/budgeting-tool' },
-      { name: 'SME Ledger', href: '/sme-ledger' },
+  { name: 'Small & Medium Enterprise (SME) Ledger', href: '/sme-ledger' },
       { name: 'Financial Literacy', href: '/financial-literacy' },
       { name: 'Feedback', href: '/feedback' },
     ],
@@ -34,7 +34,7 @@ const footerLinks = [
 
 const socialLinks = [
   { icon: TwitterIcon, href: '#', label: 'Twitter' },
-  { icon: InstagramIcon, href: '#', label: 'Instagram' },
+  { icon: InstagramIcon, href: 'https://www.instagram.com/cediwiseapp/', label: 'Instagram' },
   { icon: Linkedin01Icon, href: '#', label: 'LinkedIn' },
 ]
 
@@ -50,6 +50,7 @@ export function Footer() {
                 src="/cediwise-smooth-light-logo.png"
                 alt="CediWise"
                 className="h-10 w-auto"
+                loading="lazy"
               />
               <span className="text-2xl font-bold text-white tracking-tighter">
                 CediWise
@@ -57,13 +58,15 @@ export function Footer() {
             </div>
             <p className="text-zinc-400 text-sm leading-relaxed max-w-xs mb-8">
               Empowering Ghanaians with smart financial tools. Manage your
-              salary, track your SME expenses, and build wealth with confidence.
+            salary, track your small and medium enterprise (SME) expenses, and build wealth with confidence.
             </p>
             <div className="flex gap-4">
               {socialLinks.map((social) => (
                 <motion.a
                   key={social.label}
                   href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   whileHover={{ y: -3, color: 'var(--primary)' }}
                   className="size-10 rounded-full bg-white/5 flex items-center justify-center text-zinc-400 transition-colors hover:bg-white/10"
                 >

@@ -41,7 +41,7 @@ export function BottomCTA() {
 
             <p className="mx-auto mt-8 max-w-xl text-lg text-zinc-400">
               Join thousands of Ghanaians using CediWise to track salaries,
-              manage SME budgets, and grow their wealth with confidence.
+              manage Small Business (SME) budgets, and grow their wealth with confidence.
             </p>
 
             <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">

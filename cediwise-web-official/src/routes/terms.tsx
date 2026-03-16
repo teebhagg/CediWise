@@ -31,7 +31,7 @@ function TermsPage() {
 
           <h2>2. Services & eligibility</h2>
           <p>
-            CediWise provides budgeting, salary, SME ledger, and financial
+            CediWise provides budgeting, salary, small and medium enterprise (SME) ledger, and financial
             literacy tools. You must be at least 13 to use the Services (or have
             parental permission). We may refuse service to anyone.
           </p>

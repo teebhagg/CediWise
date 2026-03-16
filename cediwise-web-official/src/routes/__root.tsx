@@ -20,12 +20,12 @@ export const Route = createRootRoute({
       {
         name: 'description',
         content:
-          'Empowering Ghanaians with smart financial tools. Manage your salary, track your SME expenses, and build wealth with confidence.',
+          'Empowering Ghanaians with smart financial tools. Manage your salary, track your small and medium enterprise (SME) expenses, and build wealth with confidence.',
       },
       {
         name: 'keywords',
         content:
-          'CediWise, Ghana, finance, salary calculator, budgeting, SME ledger, financial literacy, wealth management, money tracker',
+          'CediWise, Ghana, finance, salary calculator, budgeting, small and medium enterprise (SME) ledger, financial literacy, wealth management, money tracker, smart budget, smart saving, expense tracking, financial empowerment',
       },
       { property: 'og:url', content: SITE_URL },
       { property: 'og:site_name', content: 'CediWise' },
@@ -37,7 +37,7 @@ export const Route = createRootRoute({
       {
         property: 'og:description',
         content:
-          'Empowering Ghanaians with smart financial tools. Manage your salary, track your SME expenses, and build wealth with confidence.',
+          'Empowering Ghanaians with smart financial tools. Manage your salary, track your small and medium enterprise (SME) expenses, and build wealth with confidence.',
       },
       { property: 'og:image', content: OG_IMAGE },
       {
@@ -55,13 +55,13 @@ export const Route = createRootRoute({
       {
         name: 'twitter:description',
         content:
-          'Empowering Ghanaians with smart financial tools. Manage your salary, track your SME expenses, and build wealth with confidence.',
+          'Empowering Ghanaians with smart financial tools. Manage your salary, track your small and medium enterprise (SME) expenses, and build wealth with confidence.',
       },
       { name: 'twitter:image', content: OG_IMAGE },
       {
         name: 'author',
         content:
-          'Joshua Ansah, khalijonez777@gmail.com, joshua.albert.ansah@gmail.com',
+          'Joshua Ansah, khalijonez777@gmail.com, mr.joshua.ansah@gmail.com',
       },
       {
         name: 'publisher',
@@ -99,7 +99,7 @@ const ORGANIZATION_JSON_LD = {
   name: 'CediWise',
   url: SITE_URL,
   description:
-    'Smart finance for Ghana. Salary calculator, budgeting, SME ledger, and financial literacy tools.',
+    'Smart finance for Ghana. Salary calculator, budgeting, small and medium enterprise (SME) ledger, and financial literacy tools.',
   areaServed: { '@type': 'Country', name: 'Ghana' },
 }
 

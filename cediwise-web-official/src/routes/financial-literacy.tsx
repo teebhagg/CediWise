@@ -23,7 +23,7 @@ const highlights = [
   {
     title: 'Ghana context',
     description:
-      'Content tailored to Ghana — mobile money, Treasury Bills, GSE, local banks, and real-life scenarios.',
+      'Content tailored to Ghana — mobile money, Treasury Bills, Ghana Stock Exchange (GSE), local banks, and real-life scenarios.',
   },
   {
     title: 'Learn at your pace',
@@ -55,7 +55,7 @@ function FinancialLiteracyPage() {
       description="Level up your money game with curated tips and insights. Built to help every Ghanaian worker build wealth."
       icon={Book04Icon}
       iconBgColor="bg-orange-500/30"
-      image="/assets/img_4.png"
+      image="/assets/android/img-8.png"
       highlights={highlights}
     >
       <h2>How it works</h2>

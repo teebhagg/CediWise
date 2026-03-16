@@ -8,7 +8,7 @@ export const SITE_URL =
     (import.meta as any).env?.PUBLIC_SITE_URL) ||
   'https://cediwise.app'
 
-export const OG_IMAGE = `${SITE_URL}/cediwise-smooth-light-logo.png`
+export const OG_IMAGE = `${SITE_URL}/banner.png`
 
 export function absoluteUrl(path: string) {
   const clean = path.startsWith('/') ? path : `/${path}`

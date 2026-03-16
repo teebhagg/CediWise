@@ -1,7 +1,7 @@
 'use client'
 
-import { cn } from '@/lib/utils'
 import {
+  ArrowUpRight01Icon,
   Book04Icon,
   ChartLineDataIcon,
   CreditCardIcon,
@@ -9,8 +9,11 @@ import {
   SmartPhone01Icon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
+import { useRouter } from '@tanstack/react-router'
 import { motion, useInView } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 
 const features = [
   {
@@ -18,9 +21,10 @@ const features = [
     icon: CreditCardIcon,
     title: 'Salary & Tax',
     description:
-      'Calculate SSNIT, PAYE, and net take-home for Ghana 2026. Know exactly what stays in your pocket after all deductions.',
-    image: '/assets/img_1.png',
+      'Calculate Social Security (SSNIT) and Income Tax or Pay As You Earn (PAYE) for Ghana 2026. Know exactly what stays in your pocket after all deductions.',
+    image: '/assets/android/img-11.png',
     color: 'bg-emerald-500',
+    to: '/salary-calculator',
   },
   {
     id: 2,
@@ -28,17 +32,19 @@ const features = [
     title: 'Smart Budgeting',
     description:
       'Category-based budgets with spent vs. remaining progress. Stay on track without the headache of spreadsheets.',
-    image: '/assets/img_2.png',
+    image: '/assets/android/img-2.png',
     color: 'bg-primary',
+    to: '/budgeting-tool',
   },
   {
     id: 3,
     icon: Invoice02Icon,
-    title: 'SME Ledger',
+    title: 'Small & Medium Enterprise (SME) Ledger',
     description:
       'Sales and expenses with automatic 20% VAT calculations. Get alerted as you approach the GHS 750K VAT threshold.',
-    image: '/assets/img_3.png',
+    image: '/assets/android/img-6.png',
     color: 'bg-blue-500',
+    to: '/sme-ledger',
   },
   {
     id: 4,
@@ -46,32 +52,34 @@ const features = [
     title: 'Financial Literacy',
     description:
       'Level up your money game with curated tips and insights. Built to help every Ghanaian worker build wealth.',
-    image: '/assets/img_4.png',
+    image: '/assets/android/img-8.png',
     color: 'bg-orange-500',
+    to: '/financial-literacy',
   },
   {
     id: 5,
     icon: ChartLineDataIcon,
-    title: 'Market Insights',
+    title: 'Spending Insights',
     description:
-      'Stay updated with GSE stocks and performance charts. Make informed decisions about your investment portfolio.',
-    image: '/assets/img_5.png',
+      'Visualize your spending with charts, trends, and category breakdowns so you always know where your money is going.',
+    image: '/assets/android/img-3.png',
     color: 'bg-purple-500',
+    to: '/spending-insights',
   },
   {
     id: 6,
     icon: SmartPhone01Icon,
-    title: 'T-Bill Rates',
+    title: 'Debt Dashboard',
     description:
-      'Real-time Treasury Bill rates at your fingertips. Compare terms and maximize your interest returns automatically.',
-    image: '/assets/img_6.png',
-    color: 'bg-sky-500',
+      'Track your loans and debts in one place. See total debt, monthly payments, payoff timelines, and debt-to-income ratio.',
+    image: '/assets/android/img-1.png',
+    color: 'bg-rose-500',
+    to: '/debt-dashboard',
   },
 ]
 
 export function FeatureSwitcher() {
   const [activeFeature, setActiveFeature] = useState(1)
-
   return (
     <section className="relative mx-auto max-w-7xl px-6 py-24 lg:py-32">
       <div className="mb-20 text-center">
@@ -101,6 +109,7 @@ export function FeatureSwitcher() {
                     src={feature.image}
                     alt={`CediWise ${feature.title} feature screenshot`}
                     className="h-full mx-auto object-cover"
+                    loading="lazy"
                   />
                   {/* <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent" /> */}
                 </div>
@@ -136,6 +145,7 @@ function FeatureItem({
     margin: '-45% 0px -45% 0px',
     once: false,
   })
+  const router = useRouter()
 
   useEffect(() => {
     if (isInView) {
@@ -170,9 +180,19 @@ function FeatureItem({
         </p>
       </div>
 
-      <div className="flex items-center gap-4 text-sm font-bold text-primary">
+      <div className="flex items-center gap-3">
         <span className="h-px w-8 bg-primary/30" />
-        <span>LEARN MORE</span>
+        <Button
+          variant="secondary"
+          size="lg"
+          className="rounded-full p-5 bg-primary/10 hover:bg-primary/20"
+          onClick={() => {
+            router.navigate({ to: feature.to })
+          }}
+        >
+          <span>Learn more</span>
+          <HugeiconsIcon icon={ArrowUpRight01Icon} className="size-3.5 -rotate-12" />
+        </Button>
       </div>
     </div>
   )

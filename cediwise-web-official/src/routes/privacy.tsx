@@ -25,7 +25,7 @@ function PrivacyPage() {
           <h2>1. Introduction</h2>
           <p>
             CediWise (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) provides a
-            salary calculator, budgeting, SME ledger, and financial literacy
+            salary calculator, budgeting, small and medium enterprise (SME) ledger, and financial literacy
             tools via web and mobile applications (the &quot;Services&quot;).
             This Privacy Policy describes what personal information we collect,
             how we use it, with whom we share it, and your rights. By using our
@@ -47,7 +47,7 @@ function PrivacyPage() {
             </li>
             <li>
               <strong>Financial & usage data:</strong> salary inputs, budgets,
-              SME ledger entries, transactions you input (stored to provide the
+              small and medium enterprise (SME) ledger entries, transactions you input (stored to provide the
               service).
             </li>
             <li>

@@ -119,6 +119,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <Header />
         {children}
         <Scripts />
+        <script src="//code.tidio.co/m4zgi8lwubbj3tbwxk6ketesara9be0m.js" async></script>
       </body>
     </html>
   )

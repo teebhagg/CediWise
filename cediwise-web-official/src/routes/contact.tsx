@@ -40,7 +40,7 @@ const contactMethods = [
     links: [
       {
         label: 'Open an issue on GitHub',
-        href: 'https://github.com/cediwise/cediwise/issues',
+        href: 'https://github.com/teebhagg/CediWise/issues',
       },
     ],
   },

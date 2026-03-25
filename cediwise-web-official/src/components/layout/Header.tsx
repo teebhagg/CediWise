@@ -10,6 +10,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 
 const navItems = [
+  { label: 'Pricing', to: '/pricing' },
   { label: 'Feedback', to: '/feedback' },
   { label: 'About', to: '/about' },
   { label: 'Contact', to: '/contact' },

@@ -14,6 +14,7 @@ import { Route as SpendingInsightsRouteImport } from './routes/spending-insights
 import { Route as SmeLedgerRouteImport } from './routes/sme-ledger'
 import { Route as SalaryCalculatorRouteImport } from './routes/salary-calculator'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as FinancialLiteracyRouteImport } from './routes/financial-literacy'
 import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as DebtDashboardRouteImport } from './routes/debt-dashboard'
@@ -45,6 +46,11 @@ const SalaryCalculatorRoute = SalaryCalculatorRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FinancialLiteracyRoute = FinancialLiteracyRouteImport.update({
@@ -91,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/debt-dashboard': typeof DebtDashboardRoute
   '/feedback': typeof FeedbackRoute
   '/financial-literacy': typeof FinancialLiteracyRoute
+  '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/salary-calculator': typeof SalaryCalculatorRoute
   '/sme-ledger': typeof SmeLedgerRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/debt-dashboard': typeof DebtDashboardRoute
   '/feedback': typeof FeedbackRoute
   '/financial-literacy': typeof FinancialLiteracyRoute
+  '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/salary-calculator': typeof SalaryCalculatorRoute
   '/sme-ledger': typeof SmeLedgerRoute
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/debt-dashboard': typeof DebtDashboardRoute
   '/feedback': typeof FeedbackRoute
   '/financial-literacy': typeof FinancialLiteracyRoute
+  '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
   '/salary-calculator': typeof SalaryCalculatorRoute
   '/sme-ledger': typeof SmeLedgerRoute
@@ -136,6 +145,7 @@ export interface FileRouteTypes {
     | '/debt-dashboard'
     | '/feedback'
     | '/financial-literacy'
+    | '/pricing'
     | '/privacy'
     | '/salary-calculator'
     | '/sme-ledger'
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/debt-dashboard'
     | '/feedback'
     | '/financial-literacy'
+    | '/pricing'
     | '/privacy'
     | '/salary-calculator'
     | '/sme-ledger'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/debt-dashboard'
     | '/feedback'
     | '/financial-literacy'
+    | '/pricing'
     | '/privacy'
     | '/salary-calculator'
     | '/sme-ledger'
@@ -179,6 +191,7 @@ export interface RootRouteChildren {
   DebtDashboardRoute: typeof DebtDashboardRoute
   FeedbackRoute: typeof FeedbackRoute
   FinancialLiteracyRoute: typeof FinancialLiteracyRoute
+  PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
   SalaryCalculatorRoute: typeof SalaryCalculatorRoute
   SmeLedgerRoute: typeof SmeLedgerRoute
@@ -221,6 +234,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/financial-literacy': {
@@ -283,6 +303,7 @@ const rootRouteChildren: RootRouteChildren = {
   DebtDashboardRoute: DebtDashboardRoute,
   FeedbackRoute: FeedbackRoute,
   FinancialLiteracyRoute: FinancialLiteracyRoute,
+  PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
   SalaryCalculatorRoute: SalaryCalculatorRoute,
   SmeLedgerRoute: SmeLedgerRoute,

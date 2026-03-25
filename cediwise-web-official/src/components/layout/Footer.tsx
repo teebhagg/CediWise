@@ -14,6 +14,7 @@ const footerLinks = [
   {
     title: 'Product',
     links: [
+      { name: 'Pricing', href: '/pricing' },
       { name: 'Salary Calculator', href: '/salary-calculator' },
       { name: 'Budgeting Tool', href: '/budgeting-tool' },
   { name: 'Small & Medium Enterprise (SME) Ledger', href: '/sme-ledger' },

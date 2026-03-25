@@ -74,7 +74,7 @@ function DebtDashboardPage() {
         description="Track loans, credit, and other debts with clarity. See totals, monthly payments, payoff dates, and debt-to-income ratio in one dashboard."
         icon={TrendingDown}
         iconBgColor="bg-rose-500/20"
-        image="/assets/android/img-1.png"
+        image="/assets/android/img-1.webp"
         highlights={highlights}
       >
         <h2>How it works</h2>

@@ -74,7 +74,7 @@ function BudgetingToolPage() {
         description="Category-based budgets with spent vs. remaining progress. Stay on track without the headache of spreadsheets."
         icon={ChartLineDataIcon}
         iconBgColor="bg-primary/30"
-        image="/assets/android/img-2.png"
+        image="/assets/android/img-2.webp"
         highlights={highlights}
       >
         <h2>How it works</h2>

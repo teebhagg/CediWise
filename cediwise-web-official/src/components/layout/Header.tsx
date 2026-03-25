@@ -1,6 +1,8 @@
 'use client'
 
-import { JoinBetaButton } from '@/components/landing/JoinBetaButton'
+// Replaced: beta CTA with Android download CTA
+import { HugeiconsIcon } from '@hugeicons/react'
+import { SmartPhone01Icon } from '@hugeicons/core-free-icons'
 import { MenuVertical } from '@/components/ui/menu-vertical'
 import { cn } from '@/lib/utils'
 import { Link } from '@tanstack/react-router'
@@ -85,7 +87,17 @@ export function Header() {
                 <span className="absolute -bottom-1 left-0 h-px w-0 bg-primary transition-all duration-300 group-hover:w-full" />
               </Link>
             ))}
-            <JoinBetaButton className="h-10 rounded-xl px-6 text-sm font-bold shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all hover:scale-105" />
+            <a
+              href="https://play.google.com/store/apps/details?id=com.cediwise.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                'inline-flex items-center gap-2 h-10 rounded-xl border border-emerald-300/60 bg-emerald-600/70 px-6 text-sm font-bold text-white backdrop-blur-md hover:bg-emerald-600/80 hover:border-emerald-400/60 transition duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-emerald-300/40',
+              )}
+            >
+              <HugeiconsIcon icon={SmartPhone01Icon} className="size-5" />
+              Android App
+            </a>
           </div>
 
           {/* Mobile Burger (Framer Component Style) */}
@@ -181,7 +193,15 @@ export function Header() {
 
               <div className="mt-12 px-10 flex justify-center">
                 <div onClick={() => setIsOpen(false)}>
-                  <JoinBetaButton className="h-16 w-full max-w-sm rounded-[2rem] bg-primary text-xl font-bold text-black shadow-lg" />
+                  <a
+                    href="https://play.google.com/store/apps/details?id=com.cediwise.app"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 h-16 w-full max-w-sm rounded-[2rem] border border-emerald-300/60 bg-emerald-600/70 px-8 text-xl font-bold text-white backdrop-blur-md hover:bg-emerald-600/80 hover:border-emerald-400/60 transition duration-200 transform hover:scale-105"
+                  >
+                    <HugeiconsIcon icon={SmartPhone01Icon} className="size-6" />
+                    Android App
+                  </a>
                 </div>
               </div>
             </motion.div>

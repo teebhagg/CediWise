@@ -113,7 +113,7 @@ function SalaryCalculatorPage() {
         description="Calculate SSNIT (Social Security), PAYE (Income Tax), and net take-home for Ghana 2026. Know exactly what stays in your pocket after all deductions."
         icon={CreditCardIcon}
         iconBgColor="bg-emerald-500/20"
-        image="/assets/android/img-11.png"
+        image="/assets/android/img-11.webp"
         highlights={highlights}
       >
         <h2>How it works</h2>

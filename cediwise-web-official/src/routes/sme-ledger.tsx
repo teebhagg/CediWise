@@ -74,7 +74,7 @@ function SMELedgerPage() {
         description="Sales and expenses for small and medium enterprises (SMEs), with automatic 20% VAT calculations. Get alerted as you approach the GHS 750K VAT threshold."
         icon={Invoice02Icon}
         iconBgColor="bg-blue-500/30"
-        image="/assets/android/img-6.png"
+        image="/assets/android/img-6.webp"
         highlights={highlights}
       >
         <h2>How it works</h2>

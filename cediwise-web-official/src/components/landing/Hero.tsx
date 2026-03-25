@@ -1,5 +1,8 @@
 import { motion } from 'framer-motion'
-import { JoinBetaButton } from './JoinBetaButton'
+// Removed: JoinBetaButton import (beta CTA deprecated)
+import { cn } from '~/lib/utils'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { SmartPhone01Icon } from '@hugeicons/core-free-icons'
 
 export function Hero() {
   return (
@@ -42,38 +45,27 @@ export function Hero() {
                 <HugeiconsIcon icon={SmartPhone01Icon} className="size-5" />
                 Download for iOS
               </a> */}
-              {/* <a
-                href="https://play.google.com/store/apps/details?id=com.cediwise"
+              <a
+                href="https://play.google.com/store/apps/details?id=com.cediwise.app"
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(
-                  buttonVariants({ variant: 'outline', size: 'lg' }),
-                  'h-14 gap-2 rounded-xl border-zinc-800 bg-white/5 px-8 text-base font-semibold text-white backdrop-blur-sm hover:bg-white/10',
+                  'inline-flex items-center gap-2 h-14 rounded-xl border border-emerald-300/60 bg-emerald-600/70 px-8 text-base font-semibold text-white backdrop-blur-md hover:bg-emerald-600/80 hover:border-emerald-400/60 transition duration-200 transform hover:scale-105 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300/40',
                 )}
               >
                 <HugeiconsIcon icon={SmartPhone01Icon} className="size-5" />
                 Get it on Android
-              </a> */}
-              <div className="flex flex-col items-start gap-2">
-                <span className="text-amber-500 font-medium text-sm">
-                  The application is currently in beta.
-                </span>
-                <JoinBetaButton className="cursor-pointer">
-                  Join Beta Test
-                </JoinBetaButton>
-              </div>
-              {/* <a
-                href="/api/download-latest-apk"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  buttonVariants({ size: 'lg' }),
-                  'h-14 gap-2 rounded-xl bg-primary px-8 text-base font-semibold text-primary-foreground hover:bg-primary/90',
-                )}
+              </a>
+              <button
+                aria-disabled="true"
+                disabled
+                className={
+                  'inline-flex items-center gap-2 h-14 px-8 rounded-xl border border-white/40 bg-white/25 text-white backdrop-blur-md opacity-60 cursor-not-allowed'
+                }
               >
                 <HugeiconsIcon icon={SmartPhone01Icon} className="size-5" />
-                Download APK
-              </a> */}
+                iOS Coming Soon
+              </button>
             </div>
           </div>
         </div>
@@ -85,7 +77,7 @@ export function Hero() {
             <div className="absolute left-[12%] z-0 w-[28%] transition-transform hover:translate-x-[-10px] hover:-rotate-2">
               <div className="aspect-9/19 overflow-hidden shadow-xl opacity-90">
                 <img
-                  src="/assets/android/img-3.png"
+                  src="/assets/android/img-3.webp"
                   alt="CediWise SME Ledger and expense tracking screenshot"
                   className="h-full w-full object-cover"
                   loading="lazy"
@@ -97,7 +89,7 @@ export function Hero() {
             <div className="absolute right-[12%] z-0 w-[28%] transition-transform hover:translate-x-[10px] hover:rotate-2">
               <div className="aspect-9/19 overflow-hidden shadow-xl opacity-90">
                 <img
-                  src="/assets/android/img-15.png"
+                  src="/assets/android/img-15.webp"
                   alt="CediWise financial literacy and analytics dashboard"
                   className="h-full w-full object-cover"
                   loading="lazy"
@@ -109,7 +101,7 @@ export function Hero() {
             <div className="relative z-10 w-[38%] transition-transform hover:scale-[1.05]">
               <div className="aspect-9/19 overflow-hidden shadow-2xl">
                 <img
-                  src="/assets/android/img-14.png"
+                  src="/assets/android/img-14.webp"
                   alt="CediWise salary calculator and budgeting app interface"
                   className="h-full w-full object-cover"
                   loading="lazy"

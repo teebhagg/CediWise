@@ -74,7 +74,7 @@ function SpendingInsightsPage() {
         description="Visualize your spending with charts, trends, and category breakdowns. Understand your habits so you can change them."
         icon={ChartLineDataIcon}
         iconBgColor="bg-primary/30"
-        image="/assets/android/img-3.png"
+        image="/assets/android/img-3.webp"
         highlights={highlights}
       >
         <h2>How it works</h2>

@@ -1,9 +1,9 @@
 'use client'
 
-import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
+import { ArrowRight01Icon, Download01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { motion } from 'framer-motion'
-import { JoinBetaButton } from './JoinBetaButton'
+// Replaced: beta CTA with Android download CTA
 
 export function BottomCTA() {
   return (
@@ -77,12 +77,15 @@ export function BottomCTA() {
               </motion.a> */}
 
               <div className="flex flex-col items-center gap-2">
-                <span className="text-amber-500 font-medium text-sm">
-                  The application is currently in beta.
-                </span>
-                <JoinBetaButton className="h-16 gap-3 rounded-2xl bg-primary px-8 text-lg font-bold text-black transition-all hover:bg-primary/90">
-                  🚀 Join Beta Test
-                </JoinBetaButton>
+                <a
+                  href="https://play.google.com/store/apps/details?id=com.cediwise.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 h-16 rounded-2xl border border-emerald-300/60 bg-emerald-600/70 px-8 text-lg font-bold text-white backdrop-blur-md hover:bg-emerald-600/80 hover:border-emerald-400/60 transition duration-200 transform hover:scale-105"
+                >
+                  <HugeiconsIcon icon={Download01Icon} className="size-6" />
+                  Android App
+                </a>
               </div>
               {/* <motion.a
                 whileHover={{ scale: 1.05 }}

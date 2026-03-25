@@ -55,7 +55,7 @@ function FinancialLiteracyPage() {
       description="Level up your money game with curated tips and insights. Built to help every Ghanaian worker build wealth."
       icon={Book04Icon}
       iconBgColor="bg-orange-500/30"
-      image="/assets/android/img-8.png"
+      image="/assets/android/img-8.webp"
       highlights={highlights}
     >
       <h2>How it works</h2>

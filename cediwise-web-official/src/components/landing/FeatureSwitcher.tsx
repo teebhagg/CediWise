@@ -22,7 +22,7 @@ const features = [
     title: 'Salary & Tax',
     description:
       'Calculate Social Security (SSNIT) and Income Tax or Pay As You Earn (PAYE) for Ghana 2026. Know exactly what stays in your pocket after all deductions.',
-    image: '/assets/android/img-11.png',
+    image: '/assets/android/img-11.webp',
     color: 'bg-emerald-500',
     to: '/salary-calculator',
   },
@@ -32,7 +32,7 @@ const features = [
     title: 'Smart Budgeting',
     description:
       'Category-based budgets with spent vs. remaining progress. Stay on track without the headache of spreadsheets.',
-    image: '/assets/android/img-2.png',
+    image: '/assets/android/img-2.webp',
     color: 'bg-primary',
     to: '/budgeting-tool',
   },
@@ -42,7 +42,7 @@ const features = [
     title: 'Small & Medium Enterprise (SME) Ledger',
     description:
       'Sales and expenses with automatic 20% VAT calculations. Get alerted as you approach the GHS 750K VAT threshold.',
-    image: '/assets/android/img-6.png',
+    image: '/assets/android/img-6.webp',
     color: 'bg-blue-500',
     to: '/sme-ledger',
   },
@@ -52,7 +52,7 @@ const features = [
     title: 'Financial Literacy',
     description:
       'Level up your money game with curated tips and insights. Built to help every Ghanaian worker build wealth.',
-    image: '/assets/android/img-8.png',
+    image: '/assets/android/img-8.webp',
     color: 'bg-orange-500',
     to: '/financial-literacy',
   },
@@ -62,7 +62,7 @@ const features = [
     title: 'Spending Insights',
     description:
       'Visualize your spending with charts, trends, and category breakdowns so you always know where your money is going.',
-    image: '/assets/android/img-3.png',
+    image: '/assets/android/img-3.webp',
     color: 'bg-purple-500',
     to: '/spending-insights',
   },
@@ -72,7 +72,7 @@ const features = [
     title: 'Debt Dashboard',
     description:
       'Track your loans and debts in one place. See total debt, monthly payments, payoff timelines, and debt-to-income ratio.',
-    image: '/assets/android/img-1.png',
+    image: '/assets/android/img-1.webp',
     color: 'bg-rose-500',
     to: '/debt-dashboard',
   },

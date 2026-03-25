@@ -66,7 +66,7 @@ const templateDefaults: Record<EmailTemplateKey, { subject: string; html: string
   },
   app_update: {
     subject: "New features are now available on CediWise!",
-    html: "<p>We've just released a new update for CediWise with improved features to help you manage your money better. Update your app now to enjoy the latest improvements.</p><p>If you cannot access the Application, you probably haven't joined the beta test yet. Do so at <a href='https://cediwise.app'>CediWise Website</a>, instructions to join are in the \"Join Beta Test\" button.</p><p>Don't forget to leave feedback, it helps us improve the application for you. Leave your feedback at <a href='https://cediwise.app/feedback'>CediWise Feedback :)</a></p>",
+    html: "<p>We've just released a new update for CediWise with improved features to help you manage your money better. Update your app now to enjoy the latest improvements.</p><p>Android App: <a href='https://play.google.com/store/apps/details?id=com.cediwise.app'>Play Store</a>. iOS coming soon.</p><p>Don't forget to leave feedback, it helps us improve the application for you. Leave your feedback at <a href='https://cediwise.app/feedback'>CediWise Feedback :)</a></p>",
     ctaLabel: "Update App Now",
     ctaUrl: "https://play.google.com/store/apps/details?id=com.cediwise.app",
   },

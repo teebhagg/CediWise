@@ -36,6 +36,7 @@ import {
   Settings01Icon,
   Mail01Icon,
   UserGroupIcon,
+  Invoice01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
@@ -49,6 +50,7 @@ const navItems = [
   { href: "/feedback", label: "App Feedback", icon: MessageQuestionIcon },
   { href: "/emails", label: "Emails", icon: Mail01Icon },
   { href: "/notifications", label: "Notifications", icon: Notification01Icon },
+  { href: "/tax-config", label: "Tax Configuration", icon: Invoice01Icon },
   { href: "/announcements", label: "Announcements", icon: Notification01Icon },
   { href: "/settings", label: "Settings", icon: Settings01Icon },
 ] as const;

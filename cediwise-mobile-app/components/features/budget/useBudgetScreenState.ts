@@ -18,8 +18,12 @@ import { useBudget } from "../../../hooks/useBudget";
 import { useDebts } from "../../../hooks/useDebts";
 import { usePersonalizationStatus } from "../../../hooks/usePersonalizationStatus";
 import { useProfileVitals } from "../../../hooks/useProfileVitals";
-import type { BudgetBucket } from "../../../types/budget";
+import type { BudgetBucket, BudgetEngineMode } from "../../../types/budget";
 import { checkCategoryLimitImpact } from "../../../utils/allocationExceeded";
+import {
+  normalizeBudgetEngineMode,
+  shouldShowBudgetEngineRecommendations,
+} from "../../../utils/budgetEngine";
 import {
   computeCycleDeficit,
   getResolutionForCycle,
@@ -27,6 +31,7 @@ import {
   type CycleDeficitResolutionChoice,
 } from "../../../utils/cycleDeficit";
 import { computeGhanaTax2026Monthly } from "../../../utils/ghanaTax";
+import { getActiveTaxConfig, type TaxConfig } from "../../../utils/taxSync";
 import {
   analyzeAndSuggestReallocation,
   type ReallocationSuggestion,
@@ -35,7 +40,6 @@ import {
   getSpendingInsights,
   type SpendingInsight,
 } from "../../../utils/spendingPatterns";
-import { supabase } from "../../../utils/supabase";
 import { DEFAULT_MIN_LIVING_BUFFER } from "../vitals/utils";
 
 export function useBudgetScreenState() {
@@ -61,6 +65,7 @@ export function useBudgetScreenState() {
     updateCategoryLimit,
     updateCycleDay,
     updateCycleAllocation,
+    updateBudgetEngineMode,
     resetBudget,
     deleteAllBudgetData,
     computeNewCyclePreview,
@@ -82,6 +87,7 @@ export function useBudgetScreenState() {
   const [incomeName, setIncomeName] = useState("Primary Salary");
   const [incomeType, setIncomeType] = useState<"primary" | "side">("primary");
   const [incomeAmount, setIncomeAmount] = useState("");
+  const [salaryError, setSalaryError] = useState<string | null>(null);
   const [applyDeductions, setApplyDeductions] = useState(true);
 
   const [filter, setFilter] = useState<"all" | BudgetBucket>("all");
@@ -165,25 +171,13 @@ export function useBudgetScreenState() {
     score: number;
     summary: string;
   } | null>(null);
-  const [spendingInsightsLoading, setSpendingInsightsLoading] = useState(false);
-  const [enableAutoReallocation, setEnableAutoReallocation] = useState(true);
-
-  const fetchEnableAutoReallocation = useCallback(async () => {
-    if (!user?.id || !supabase) return;
-    const { data } = await supabase
-      .from("profiles")
-      .select("enable_auto_reallocation")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (data && typeof (data as any).enable_auto_reallocation === "boolean") {
-      setEnableAutoReallocation((data as any).enable_auto_reallocation);
-    }
-  }, [user?.id]);
+  const [taxConfig, setTaxConfig] = useState<TaxConfig | null>(null);
 
   useEffect(() => {
-    void fetchEnableAutoReallocation();
-  }, [fetchEnableAutoReallocation]);
+    getActiveTaxConfig().then(setTaxConfig);
+  }, []);
 
+  const [spendingInsightsLoading, setSpendingInsightsLoading] = useState(false);
   const [pendingRollover, setPendingRollover] = useState<{
     rollover: { needs: number; wants: number; savings: number };
     savingsCategories: { id: string; name: string }[];
@@ -257,6 +251,12 @@ export function useBudgetScreenState() {
     return sorted[0] ?? null;
   }, [state?.cycles]);
 
+  const budgetEngineMode = useMemo<BudgetEngineMode>(
+    () =>
+      normalizeBudgetEngineMode(state?.prefs?.budgetEngineMode ?? null),
+    [state?.prefs?.budgetEngineMode],
+  );
+
   const previousCycle = useMemo(() => {
     const sorted = [...(state?.cycles ?? [])].sort(
       (a, b) =>
@@ -266,6 +266,9 @@ export function useBudgetScreenState() {
   }, [state?.cycles]);
 
   const reallocationSuggestion = useMemo((): ReallocationSuggestion | null => {
+    if (!shouldShowBudgetEngineRecommendations(budgetEngineMode)) {
+      return null;
+    }
     if (!previousCycle) {
       if (__DEV__ && (state?.cycles?.length ?? 0) >= 1) {
         console.log(
@@ -315,6 +318,7 @@ export function useBudgetScreenState() {
     totals,
     state?.transactions,
     activeCycle?.reallocationApplied,
+    budgetEngineMode,
   ]);
 
   const cycleIsSet = !!state?.prefs?.paydayDay && !!activeCycleId;
@@ -327,7 +331,7 @@ export function useBudgetScreenState() {
     const v = profileVitals.vitals;
     if (!v?.setup_completed) return null;
     const netSalary = v.auto_tax
-      ? computeGhanaTax2026Monthly(v.stable_salary).netTakeHome
+      ? computeGhanaTax2026Monthly(v.stable_salary, taxConfig ?? undefined).netTakeHome
       : v.stable_salary;
     const netIncome = Math.max(0, netSalary + v.side_income);
     const fixedCosts = Math.max(
@@ -563,7 +567,6 @@ export function useBudgetScreenState() {
       await syncNow(); // Sync the budget state with the remote
       await hydrateFromRemote({ force: true }); // Hydrate the budget state from the remote
       await profileVitals.refresh(); // Refresh the profile vitals
-      await fetchEnableAutoReallocation(); // Fetch the enable auto reallocation setting
       await reload(); // Reload the budget state
       await recalculateBudget(); // Recalculate the budget
     } catch {
@@ -587,6 +590,18 @@ export function useBudgetScreenState() {
       setCycleDayError("Day must be between 1 and 31");
     } else {
       setCycleDayError(null);
+    }
+  };
+
+  const handleSalaryChange = (v: string) => {
+    setIncomeAmount(v);
+    const n = parseFloat(v.replace(/,/g, ""));
+    if (!v) {
+      setSalaryError("Salary is required");
+    } else if (isNaN(n) || n <= 0) {
+      setSalaryError("Enter a valid positive amount");
+    } else {
+      setSalaryError(null);
     }
   };
 
@@ -719,6 +734,24 @@ export function useBudgetScreenState() {
     setPendingCategoryAction(null);
   }, []);
 
+  const autoApplyRollover = useCallback(
+    async (
+      preview: NonNullable<ReturnType<typeof computeNewCyclePreview>>
+    ) => {
+      if (preview.savingsCategories.length === 0 || preview.rollover.savings <= 0) {
+        await createNewCycleImmediate();
+        await reload();
+        return;
+      }
+      const destinationId = preview.savingsCategories[0].id;
+      await createNewCycleFromPreview(preview, {
+        [destinationId]: preview.rollover.savings,
+      });
+      await reload();
+    },
+    [createNewCycleFromPreview, createNewCycleImmediate, reload],
+  );
+
   const handleStartNewCycle = useCallback(async () => {
     // Check for deficit before rollover: if active cycle overspent and not yet resolved, show deficit prompt first
     if (
@@ -727,10 +760,6 @@ export function useBudgetScreenState() {
       user?.id &&
       totals.monthlyNetIncome > 0
     ) {
-      const totalSpent =
-        totals.spentByBucket.needs +
-        totals.spentByBucket.wants +
-        totals.spentByBucket.savings;
       const deficit = computeCycleDeficit({
         cycleId: activeCycle.id,
         transactions: state?.transactions ?? [],
@@ -756,14 +785,20 @@ export function useBudgetScreenState() {
       await reload();
       return;
     }
+    if (budgetEngineMode === "auto_apply_safe_rules") {
+      await autoApplyRollover(preview);
+      return;
+    }
     setPendingRollover(preview);
   }, [
     activeCycle,
     totals,
     state?.transactions,
     user?.id,
+    budgetEngineMode,
     computeNewCyclePreview,
     createNewCycleImmediate,
+    autoApplyRollover,
     reload,
   ]);
 
@@ -808,13 +843,19 @@ export function useBudgetScreenState() {
         await reload();
         return;
       }
+      if (budgetEngineMode === "auto_apply_safe_rules") {
+        await autoApplyRollover(preview);
+        return;
+      }
       setPendingRollover(preview);
     },
     [
       pendingDeficit,
       user?.id,
+      budgetEngineMode,
       computeNewCyclePreview,
       createNewCycleImmediate,
+      autoApplyRollover,
       reload,
     ],
   );
@@ -849,14 +890,20 @@ export function useBudgetScreenState() {
         await reload();
         return;
       }
+      if (budgetEngineMode === "auto_apply_safe_rules") {
+        await autoApplyRollover(preview);
+        return;
+      }
       setPendingRollover(preview);
     },
     [
       pendingAddDebtFromDeficit,
       user?.id,
       addDebt,
+      budgetEngineMode,
       computeNewCyclePreview,
       createNewCycleImmediate,
+      autoApplyRollover,
       reload,
     ],
   );
@@ -887,6 +934,7 @@ export function useBudgetScreenState() {
       deleteCategories,
       updateCategoryLimit,
       updateCycleAllocation,
+      updateBudgetEngineMode,
       updateCycleDay,
       resetBudget,
       deleteAllBudgetData,
@@ -907,6 +955,8 @@ export function useBudgetScreenState() {
       setIncomeType,
       incomeAmount,
       setIncomeAmount,
+      salaryError,
+      handleSalaryChange,
       applyDeductions,
       setApplyDeductions,
     },
@@ -927,7 +977,7 @@ export function useBudgetScreenState() {
       incomeAccentColors,
       incomeToggleChevronStyle,
       reallocationSuggestion,
-      enableAutoReallocation,
+      budgetEngineMode,
     },
     ui: {
       filter,

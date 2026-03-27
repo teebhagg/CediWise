@@ -57,11 +57,9 @@ export function BudgetCurrentCycleCard({
           cycle.rolloverFromPrevious.wants > 0 ||
           cycle.rolloverFromPrevious.savings > 0) && (
           <View className="mt-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-            <Text className="text-emerald-300 text-xs font-medium">Rollover from last cycle</Text>
+            <Text className="text-emerald-300 text-xs font-medium">Unspent carried forward</Text>
             <Text className="text-slate-400 text-[11px] mt-0.5">
-              Needs ₵{Math.round(cycle.rolloverFromPrevious.needs).toLocaleString()} • Wants ₵
-              {Math.round(cycle.rolloverFromPrevious.wants).toLocaleString()} • Savings ₵
-              {Math.round(cycle.rolloverFromPrevious.savings).toLocaleString()}
+              Savings ₵{Math.round(cycle.rolloverFromPrevious.savings).toLocaleString()}
             </Text>
           </View>
         )}

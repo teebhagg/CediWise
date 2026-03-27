@@ -9,6 +9,8 @@ interface BucketTotals {
   needsLimit: number;
   wantsLimit: number;
   savingsLimit: number;
+  spentTotal: number;
+  unspentThisMonth: number;
 }
 
 interface BudgetAllocationCardProps {
@@ -76,6 +78,13 @@ export function BudgetAllocationCard({
             />
           </View>
         </View>
+      </View>
+
+      <View className="mt-3 pt-3 border-t border-slate-400/20 flex-row justify-between items-center">
+        <Text className="text-slate-400 text-sm font-medium">Unspent this month</Text>
+        <Text className="text-emerald-400 font-bold text-base">
+          ₵{formatCurrency(totals.unspentThisMonth)}
+        </Text>
       </View>
     </Card>
   );

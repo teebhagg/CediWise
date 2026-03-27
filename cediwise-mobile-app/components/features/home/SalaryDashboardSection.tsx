@@ -146,6 +146,7 @@ function SalaryDashboardSectionInner({
             salary={incomeTaxSummary.gross}
             breakdown={{
               ssnit: incomeTaxSummary.totalSsnit,
+              nhis: incomeTaxSummary.totalNhis,
               paye: incomeTaxSummary.totalPaye,
               netTakeHome: incomeTaxSummary.net,
               gross: incomeTaxSummary.gross,

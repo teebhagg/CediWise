@@ -1,15 +1,15 @@
 import * as Haptics from "expo-haptics";
-import { Button, Dialog } from "heroui-native";
+import { CreditCard } from 'lucide-react-native';
 import { useEffect, useState } from "react";
 import {
-  KeyboardAvoidingView,
   Platform,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-
-import { GlassView } from "@/components/GlassView";
+import { Keyboard } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AppDialog } from './AppDialog';
 import { AppTextField } from "./AppTextField";
 
 export type AddDebtSubmitPayload = {
@@ -51,6 +51,22 @@ export function AddDebtModal({
   const [monthlyPayment, setMonthlyPayment] = useState("");
   const [interestRate, setInterestRate] = useState("");
   const [error, setError] = useState<string | undefined>();
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -121,93 +137,72 @@ export function AddDebtModal({
     onClose();
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="bg-black/65" />
-        {Platform.OS === 'ios' && <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />}
-        <KeyboardAvoidingView
-          behavior="padding"
-          style={{ flex: 1, justifyContent: "center" }}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 40}
-        >
-          <Dialog.Content
-            className="max-w-[380px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
-            style={styles.contentShadow}
-          >
-            <Dialog.Close
-              variant="ghost"
-              className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-slate-600/60 border border-slate-500/50"
-              iconProps={{ size: 20, color: "#e2e8f0" }}
-              onPress={handleClose}
-            />
-            <View style={styles.content}>
-              <Dialog.Title className="text-[26px] font-bold text-slate-200 text-center mb-1.5">
-                Add Debt
-              </Dialog.Title>
-              <Dialog.Description className="text-[15px] text-slate-400 text-center mb-3 leading-[22px]">
-                Loans, credit cards, or other debts
-              </Dialog.Description>
+    <AppDialog
+      visible={visible}
+      onOpenChange={handleOpenChange}
+      icon={<CreditCard size={22} color="#10B981" />}
+      title="Add Debt"
+      description="Loans, credit cards, or other debts"
+      primaryLabel="Add"
+      onPrimary={handleSubmit}
+      onClose={handleClose}
+    >
+      <View className="gap-3">
+        <View style={styles.field}>
+          <AppTextField
+            label="Name"
+            value={name}
+            onChangeText={setName}
+            placeholder="e.g. Student Loan, Credit Card"
+          />
+        </View>
 
-              <View style={styles.field}>
-                <AppTextField
-                  label="Name"
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="e.g. Student Loan, Credit Card"
-                />
-              </View>
+        <View style={styles.field}>
+          <AppTextField
+            label="Total Amount (GHS)"
+            value={totalAmount}
+            onChangeText={setTotalAmount}
+            keyboardType="decimal-pad"
+            placeholder="0.00"
+          />
+        </View>
 
-              <View style={styles.field}>
-                <AppTextField
-                  label="Total Amount (GHS)"
-                  value={totalAmount}
-                  onChangeText={setTotalAmount}
-                  keyboardType="decimal-pad"
-                  placeholder="0.00"
-                />
-              </View>
+        <View style={styles.field}>
+          <AppTextField
+            label="Remaining Balance (GHS)"
+            value={remainingAmount}
+            onChangeText={setRemainingAmount}
+            keyboardType="decimal-pad"
+            placeholder="0.00"
+          />
+        </View>
 
-              <View style={styles.field}>
-                <AppTextField
-                  label="Remaining Balance (GHS)"
-                  value={remainingAmount}
-                  onChangeText={setRemainingAmount}
-                  keyboardType="decimal-pad"
-                  placeholder="0.00"
-                />
-              </View>
+        <View style={styles.field}>
+          <AppTextField
+            label="Monthly Payment (GHS)"
+            value={monthlyPayment}
+            onChangeText={setMonthlyPayment}
+            keyboardType="decimal-pad"
+            placeholder="0.00"
+          />
+        </View>
 
-              <View style={styles.field}>
-                <AppTextField
-                  label="Monthly Payment (GHS)"
-                  value={monthlyPayment}
-                  onChangeText={setMonthlyPayment}
-                  keyboardType="decimal-pad"
-                  placeholder="0.00"
-                />
-              </View>
+        <View style={styles.field}>
+          <AppTextField
+            label="Interest Rate % (optional)"
+            value={interestRate}
+            onChangeText={setInterestRate}
+            keyboardType="decimal-pad"
+            placeholder="e.g. 12"
+          />
+        </View>
 
-              <View style={styles.field}>
-                <AppTextField
-                  label="Interest Rate % (optional)"
-                  value={interestRate}
-                  onChangeText={setInterestRate}
-                  keyboardType="decimal-pad"
-                  placeholder="e.g. 12"
-                />
-              </View>
-
-              {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-              <Button variant="primary" onPress={handleSubmit} className="mt-1.5 h-12 rounded-full bg-emerald-500">
-                <Button.Label className="text-slate-900 font-semibold">Add</Button.Label>
-              </Button>
-            </View>
-          </Dialog.Content>
-        </KeyboardAvoidingView>
-      </Dialog.Portal>
-    </Dialog>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      </View>
+    </AppDialog>
   );
 }
 

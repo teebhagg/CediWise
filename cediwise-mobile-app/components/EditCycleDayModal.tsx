@@ -51,22 +51,20 @@ export function EditCycleDayModal({ visible, currentDay, onClose, onSave }: Prop
       secondaryLabel="Cancel"
       onSecondary={onClose}
     >
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={{ gap: 6 }}>
-          <AppTextField
-            label="Payday day (1–31)"
-            value={value}
-            onChangeText={(v) => {
-              setValue(v);
-              if (error) setError(undefined);
-            }}
-            keyboardType="number-pad"
-            placeholder="25"
-            returnKeyType="done"
-            error={error ?? undefined}
-          />
-        </View>
-      </KeyboardAvoidingView>
+      <View style={{ gap: 6 }}>
+        <AppTextField
+          label="Payday day (1–31)"
+          value={value}
+          onChangeText={(v) => {
+            setValue(v);
+            if (error) setError(undefined);
+          }}
+          keyboardType="number-pad"
+          placeholder="25"
+          returnKeyType="done"
+          error={error ?? undefined}
+        />
+      </View>
     </AppDialog>
   );
 }

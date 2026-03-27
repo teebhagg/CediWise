@@ -1,8 +1,7 @@
 import * as Haptics from "expo-haptics";
-import { Button, Dialog } from "heroui-native";
+import { CalendarClock } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import {
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
@@ -10,9 +9,8 @@ import {
   View,
 } from "react-native";
 
-import { GlassView } from "@/components/GlassView";
 import type { BudgetBucket, RecurringExpenseFrequency } from "@/types/budget";
-import { ScrollView } from "react-native";
+import { AppDialog } from './AppDialog';
 import { AppTextField } from "./AppTextField";
 
 const FREQUENCIES: { value: RecurringExpenseFrequency; label: string }[] = [
@@ -96,120 +94,93 @@ export function AddRecurringExpenseModal({
   };
 
   return (
-    <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="bg-black/65" />
-        {Platform.OS === 'ios' && <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />}
-        <KeyboardAvoidingView
-          behavior="padding"
-          style={{ flex: 1, justifyContent: "center" }}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 40}
+    <AppDialog
+      visible={visible}
+      onOpenChange={handleOpenChange}
+      icon={<CalendarClock size={22} color="#10B981" />}
+      title="Add Recurring Expense"
+      description="Subscriptions, memberships, or regular payments"
+      primaryLabel="Add"
+      onPrimary={handleSubmit}
+      onClose={handleClose}
+    >
+      <View className="gap-3">
+        <View style={styles.field}>
+          <AppTextField
+            label="Name"
+            value={name}
+            onChangeText={setName}
+            placeholder="e.g. Netflix, Gym"
+          />
+        </View>
+
+        <View style={styles.field}>
+          <AppTextField
+            label="Amount (GHS)"
+            value={amount}
+            onChangeText={setAmount}
+            keyboardType="decimal-pad"
+            placeholder="0.00"
+            returnKeyType="done"
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>Frequency</Text>
+          <View style={styles.rowWrap}>
+            {FREQUENCIES.map((f) => (
+              <Pressable
+                key={f.value}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => { });
+                  setFrequency(f.value);
+                }}
+                style={[styles.chip, frequency === f.value && styles.chipActive]}
+              >
+                <Text style={[styles.chipText, frequency === f.value && styles.chipTextActive]}>
+                  {f.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>Bucket</Text>
+          <View style={styles.row}>
+            {BUCKETS.map((b) => (
+              <Pressable
+                key={b.value}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => { });
+                  setBucket(b.value);
+                }}
+                style={[styles.chip, bucket === b.value && styles.chipActive]}
+              >
+                <Text style={[styles.chipText, bucket === b.value && styles.chipTextActive]}>
+                  {b.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        <Pressable
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => { });
+            setAutoAllocate((v) => !v);
+          }}
+          style={styles.toggleRow}
         >
-          <Dialog.Content
-            className="max-w-[380px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
-            style={styles.contentShadow}
-          >
-            <Dialog.Close
-              variant="ghost"
-              className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-slate-600/60 border border-slate-500/50"
-              iconProps={{ size: 20, color: "#e2e8f0" }}
-              onPress={handleClose}
-            />
-            <View style={styles.content}>
-              <Dialog.Title className="text-[26px] font-bold text-slate-200 text-center mb-1.5">
-                Add Recurring Expense
-              </Dialog.Title>
-              <Dialog.Description className="text-[15px] text-slate-400 text-center mb-3 leading-[22px]">
-                Subscriptions, memberships, or regular payments
-              </Dialog.Description>
+          <Text style={styles.toggleLabel}>Auto-allocate each cycle</Text>
+          <View style={[styles.toggle, autoAllocate && styles.toggleOn]}>
+            <View style={[styles.toggleThumb, autoAllocate && styles.toggleThumbOn]} />
+          </View>
+        </Pressable>
 
-              <ScrollView >
-                <View className="gap-3">
-                  <View style={styles.field}>
-                    <AppTextField
-                      label="Name"
-                      value={name}
-                      onChangeText={setName}
-                      placeholder="e.g. Netflix, Gym"
-                    />
-                  </View>
-
-                  <View style={styles.field}>
-                    <AppTextField
-                      label="Amount (GHS)"
-                      value={amount}
-                      onChangeText={setAmount}
-                      keyboardType="decimal-pad"
-                      placeholder="0.00"
-                      returnKeyType="done"
-                    />
-                  </View>
-
-                  <View style={styles.field}>
-                    <Text style={styles.fieldLabel}>Frequency</Text>
-                    <View style={styles.rowWrap}>
-                      {FREQUENCIES.map((f) => (
-                        <Pressable
-                          key={f.value}
-                          onPress={() => {
-                            Haptics.selectionAsync().catch(() => { });
-                            setFrequency(f.value);
-                          }}
-                          style={[styles.chip, frequency === f.value && styles.chipActive]}
-                        >
-                          <Text style={[styles.chipText, frequency === f.value && styles.chipTextActive]}>
-                            {f.label}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  </View>
-
-                  <View style={styles.field}>
-                    <Text style={styles.fieldLabel}>Bucket</Text>
-                    <View style={styles.row}>
-                      {BUCKETS.map((b) => (
-                        <Pressable
-                          key={b.value}
-                          onPress={() => {
-                            Haptics.selectionAsync().catch(() => { });
-                            setBucket(b.value);
-                          }}
-                          style={[styles.chip, bucket === b.value && styles.chipActive]}
-                        >
-                          <Text style={[styles.chipText, bucket === b.value && styles.chipTextActive]}>
-                            {b.label}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  </View>
-
-                  <Pressable
-                    onPress={() => {
-                      Haptics.selectionAsync().catch(() => { });
-                      setAutoAllocate((v) => !v);
-                    }}
-                    style={styles.toggleRow}
-                  >
-                    <Text style={styles.toggleLabel}>Auto-allocate each cycle</Text>
-                    <View style={[styles.toggle, autoAllocate && styles.toggleOn]}>
-                      <View style={[styles.toggleThumb, autoAllocate && styles.toggleThumbOn]} />
-                    </View>
-                  </Pressable>
-
-                  {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-                  <Button variant="primary" onPress={handleSubmit} className="mt-1.5 h-12 rounded-full bg-emerald-500">
-                    <Button.Label className="text-slate-900 font-semibold">Add</Button.Label>
-                  </Button>
-                </View>
-              </ScrollView>
-            </View>
-          </Dialog.Content>
-        </KeyboardAvoidingView>
-      </Dialog.Portal>
-    </Dialog>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      </View>
+    </AppDialog>
   );
 }
 

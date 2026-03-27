@@ -41,7 +41,7 @@ export const DiscoveryHeroCard = memo(function DiscoveryHeroCard() {
   }, [router]);
 
   return (
-    <Card className="mb-16">
+    <Card>
       <View className="gap-4">
         <Text className="text-white text-lg font-semibold">
           Personalize your budget

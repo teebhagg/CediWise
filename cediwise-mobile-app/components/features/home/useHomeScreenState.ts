@@ -169,10 +169,11 @@ export function useHomeScreenState(): UseHomeScreenStateReturn {
           estimateTaxEnabled && src.type === "primary" && !!src.applyDeductions;
         const tax = taxable
           ? computeGhanaTax2026Monthly(src.amount)
-          : { ssnit: 0, paye: 0, netTakeHome: src.amount };
+          : { ssnit: 0, nhis: 0, paye: 0, netTakeHome: src.amount };
         return { src, taxable, tax };
       });
       const totalSsnit = breakdowns.reduce((s, b) => s + b.tax.ssnit, 0);
+      const totalNhis = breakdowns.reduce((s, b) => s + b.tax.nhis, 0);
       const totalPaye = breakdowns.reduce((s, b) => s + b.tax.paye, 0);
       const net = estimateTaxEnabled
         ? budgetTotals?.monthlyNetIncome ??
@@ -185,6 +186,7 @@ export function useHomeScreenState(): UseHomeScreenStateReturn {
         net,
         deductions,
         totalSsnit,
+        totalNhis,
         totalPaye,
         breakdowns,
       };
@@ -197,6 +199,7 @@ export function useHomeScreenState(): UseHomeScreenStateReturn {
       estimateTaxEnabled && (incomeMode === "manual" ? true : !!v?.auto_tax);
     const base = computeGhanaTax2026Monthly(gross);
     const ssnit = applyTax ? base.ssnit : 0;
+    const nhis = applyTax ? base.nhis : 0;
     const paye = applyTax ? base.paye : 0;
     const netTakeHome = applyTax ? base.netTakeHome : gross;
     return {
@@ -205,6 +208,7 @@ export function useHomeScreenState(): UseHomeScreenStateReturn {
       net: netTakeHome,
       deductions: ssnit + paye,
       totalSsnit: ssnit,
+      totalNhis: nhis,
       totalPaye: paye,
       breakdowns: [],
     };

@@ -263,34 +263,48 @@ export const buildInsightsRangeData = ({
   const maxValue = Math.max(1, ...seriesValues.map(clampNumber));
 
   const rangeTransactions = getRangeTransactions(range, cycles, transactions, now);
-  const totalsByCategory = new Map<string, { amount: number; count: number }>();
+  const categoriesById = new Map(categories.map((c) => [c.id, c]));
+  
+  // Grouping by name instead of categoryId to aggregate across cycles
+  const totalsByName = new Map<string, { 
+    amount: number; 
+    count: number; 
+    categoryId: string; 
+    icon: CategoryIconName; 
+    displayName: string 
+  }>();
+  
   for (const tx of rangeTransactions) {
-    const key = tx.debtId ? DEBT_CATEGORY_ID : tx.categoryId;
-    if (!key) continue;
-    const current = totalsByCategory.get(key) ?? { amount: 0, count: 0 };
-    totalsByCategory.set(key, {
+    const isDebt = !!tx.debtId;
+    const category = tx.categoryId ? categoriesById.get(tx.categoryId) : null;
+    const name = isDebt ? 'Debt Payment' : (category?.name ?? 'Uncategorized');
+    
+    const key = name.toLowerCase().trim();
+    const current = totalsByName.get(key) ?? { 
+      amount: 0, 
+      count: 0, 
+      categoryId: tx.categoryId ?? (isDebt ? DEBT_CATEGORY_ID : 'uncategorized'),
+      icon: (isDebt ? 'Receipt' : category?.icon ?? getCategoryIcon(name)) as CategoryIconName,
+      displayName: name // Keep the first one we find for display
+    };
+    
+    totalsByName.set(key, {
+      ...current,
       amount: current.amount + Math.abs(tx.amount || 0),
       count: current.count + 1,
     });
   }
 
-  const categoriesById = new Map(categories.map((c) => [c.id, c]));
-  const breakdown = Array.from(totalsByCategory.entries())
-    .map(([categoryId, summary], index) => {
-      const isDebt = categoryId === DEBT_CATEGORY_ID;
-      const category = categoriesById.get(categoryId);
-      const name = isDebt ? 'Debt Payment' : category?.name ?? 'Uncategorized';
-      const icon = (
-        isDebt ? 'Receipt' : category?.icon ?? getCategoryIcon(name)
-      ) as CategoryIconName;
+  const breakdown = Array.from(totalsByName.values())
+    .map((summary, index) => {
       const color = CATEGORY_ICON_COLORS[index % CATEGORY_ICON_COLORS.length];
       const percent = totalSpent > 0 ? summary.amount / totalSpent : 0;
       return {
-        categoryId,
-        name,
+        categoryId: summary.categoryId, 
+        name: summary.displayName,
         amount: summary.amount,
         percent,
-        icon,
+        icon: summary.icon,
         color,
         count: summary.count,
       };

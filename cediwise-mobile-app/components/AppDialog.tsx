@@ -4,8 +4,11 @@
  * Matches the phone confirmation / confirm flow design.
  */
 import * as Haptics from "expo-haptics";
-import { Button, Dialog } from "heroui-native";
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
+import { Button, Dialog, ScrollShadow } from "heroui-native";
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { useEffect, useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { GlassView } from "@/components/GlassView";
 
@@ -20,8 +23,9 @@ export type AppDialogProps = {
   primaryLabel: string;
   onPrimary: () => void;
   /** Secondary action (bottom button): dark grey bg, white text */
-  secondaryLabel: string;
-  onSecondary: () => void;
+  secondaryLabel?: string;
+  onSecondary?: () => void;
+  onClose?: () => void;
   loading?: boolean;
   /** Optional extra content between description and buttons */
   children?: React.ReactNode;
@@ -37,9 +41,27 @@ export function AppDialog({
   onPrimary,
   secondaryLabel,
   onSecondary,
+  onClose,
   loading = false,
   children,
 }: AppDialogProps) {
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      () => setKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => setKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   const handleOpenChange = (open: boolean) => {
     if (!open) onOpenChange(false);
   };
@@ -51,7 +73,13 @@ export function AppDialog({
     } catch {
       // ignore
     }
-    onSecondary();
+    if (onSecondary) {
+      onSecondary();
+    } else if (onClose) {
+      onClose();
+    } else {
+      onOpenChange(false);
+    }
   };
 
   const handlePrimary = async () => {
@@ -63,6 +91,8 @@ export function AppDialog({
     }
     onPrimary();
   };
+
+  const insets = useSafeAreaInsets();
 
   return (
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
@@ -76,62 +106,81 @@ export function AppDialog({
             onTouchEnd={handleSecondary}
           />
         )}
-        <Dialog.Content
-          className="max-w-[360px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
-          style={styles.contentShadow}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ 
+            flex: 1, 
+            justifyContent: isKeyboardVisible ? 'flex-end' : 'center', 
+            alignItems: 'center',
+            paddingTop: insets.top + 16,
+            paddingBottom: isKeyboardVisible ? 12 : insets.bottom + 16,
+            paddingHorizontal: 16
+          }}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
-          {!loading && (
-            <Dialog.Close
-              variant="ghost"
-              className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-slate-600/60 border border-slate-500/50"
-              iconProps={{ size: 20, color: "#e2e8f0" }}
-              onPress={handleSecondary}
-            />
-          )}
-          <View style={styles.content}>
-            {/* Header: icon + title */}
-            <View style={styles.header}>
-              {icon ? <View style={styles.iconWrap}>{icon}</View> : null}
-              <Text numberOfLines={2} style={styles.title}>
-                {title}
-              </Text>
-            </View>
-
-            <Text style={styles.description}>{description}</Text>
-
-            {children ? <View style={styles.extra}>{children}</View> : null}
-
-            {/* Actions: vertical stack, primary on top, secondary below */}
-            {loading ? (
-              <View style={styles.loaderWrap}>
-                <ActivityIndicator size="large" color="#10b981" />
-              </View>
-            ) : (
-              <View style={styles.actions}>
-                <Button
-                  variant="primary"
-                  size="md"
-                  onPress={handlePrimary}
-                  className="w-full h-12 rounded-xl bg-emerald-500"
-                >
-                  <Button.Label className="text-slate-950 font-semibold">
-                    {primaryLabel}
-                  </Button.Label>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="md"
-                  onPress={handleSecondary}
-                  className="w-full h-12 rounded-xl bg-slate-600/80 border-0"
-                >
-                  <Button.Label className="text-white font-semibold">
-                    {secondaryLabel}
-                  </Button.Label>
-                </Button>
-              </View>
+          <Dialog.Content
+            className="max-w-[360px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
+            style={[styles.contentShadow, isKeyboardVisible && { maxHeight: '100%' }]}
+          >
+            {!loading && (
+              <Dialog.Close
+                variant="ghost"
+                className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-slate-600/60 border border-slate-500/50"
+                iconProps={{ size: 20, color: "#e2e8f0" }}
+                onPress={handleSecondary}
+              />
             )}
-          </View>
-        </Dialog.Content>
+            <ScrollShadow color="#121621" LinearGradientComponent={LinearGradient}>
+              <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+                <View style={[styles.content, isKeyboardVisible && { paddingVertical: 20 }]}>
+                  {/* Header: icon + title */}
+                  <View style={styles.header}>
+                    {icon ? <View style={styles.iconWrap}>{icon}</View> : null}
+                    <Text numberOfLines={2} style={styles.title}>
+                      {title}
+                    </Text>
+                  </View>
+
+                  <Text style={styles.description}>{description}</Text>
+
+                  {children ? <View style={styles.extra}>{children}</View> : null}
+
+                  {/* Actions: vertical stack, primary on top, secondary below */}
+                  {loading ? (
+                    <View style={styles.loaderWrap}>
+                      <ActivityIndicator size="large" color="#10b981" />
+                    </View>
+                  ) : (
+                    <View style={styles.actions}>
+                      <Button
+                        variant="primary"
+                        size="md"
+                        onPress={handlePrimary}
+                        className="w-full h-12 rounded-xl bg-emerald-500"
+                      >
+                        <Button.Label className="text-slate-950 font-semibold">
+                          {primaryLabel}
+                        </Button.Label>
+                      </Button>
+                      {secondaryLabel && (
+                        <Button
+                          variant="ghost"
+                          size="md"
+                          onPress={handleSecondary}
+                          className="w-full h-12 rounded-xl bg-slate-600/80 border-0"
+                        >
+                          <Button.Label className="text-white font-semibold">
+                            {secondaryLabel}
+                          </Button.Label>
+                        </Button>
+                      )}
+                    </View>
+                  )}
+                </View>
+              </ScrollView>
+            </ScrollShadow>
+          </Dialog.Content>
+        </KeyboardAvoidingView>
       </Dialog.Portal>
     </Dialog>
   );

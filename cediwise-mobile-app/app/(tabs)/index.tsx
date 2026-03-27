@@ -1,4 +1,4 @@
-import { usePathname, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { WifiOff } from "lucide-react-native";
 import { useCallback, useEffect } from "react";
 import {
@@ -33,7 +33,6 @@ import { useHomeScreenState } from "@/components/features/home/useHomeScreenStat
 import { useTourContext } from "@/contexts/TourContext";
 import { useUpdateCheckContext } from "@/contexts/UpdateCheckContext";
 import { useConnectivity } from "@/hooks/useConnectivity";
-import { log } from "@/utils/logger";
 import { TourZone, useTour } from "react-native-lumen";
 
 const styles = StyleSheet.create({
@@ -55,10 +54,15 @@ const styles = StyleSheet.create({
 export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const pathname = usePathname();
   const { check: checkForUpdate } = useUpdateCheckContext();
   const { isConnected } = useConnectivity();
-  const { startHomeTour, hasSeenHomeTour } = useTourContext();
+  const {
+    startActiveOnboardingIfEligible,
+    onboardingLoaded,
+    activeOnboardingState,
+    state1Status,
+    state2Status,
+  } = useTourContext();
   const { scrollViewRef } = useTour();
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((event) => {
@@ -93,24 +97,31 @@ export default function DashboardScreen() {
     void checkForUpdate();
   }, [handleRefresh, checkForUpdate]);
 
+  const tourZonesReady = !isHomeLoading && onboardingLoaded;
+
   useEffect(() => {
-    if (
-      !setupCompleted &&
-      hasSeenHomeTour === false &&
-      user?.id
-      // Current screen is the home screen
-      && (pathname === "/(tabs)/index" || pathname === "/")
-    ) {
-      log.debug("[Tour] Starting home tour");
-      startHomeTour();
-    } else {
-      log.debug("[Tour] Home tour not started", {
-        setupCompleted,
-        hasSeenHomeTour,
-        userId: user?.id,
-      });
+    if (!onboardingLoaded || !tourZonesReady || !activeOnboardingState) {
+      return;
     }
-  }, [hasSeenHomeTour, pathname, setupCompleted, startHomeTour, user?.id]);
+
+    const currentStatus =
+      activeOnboardingState === "state_1_unpersonalized"
+        ? state1Status
+        : state2Status;
+
+    if (currentStatus !== "never_seen") {
+      return;
+    }
+
+    void startActiveOnboardingIfEligible("home");
+  }, [
+    activeOnboardingState,
+    onboardingLoaded,
+    startActiveOnboardingIfEligible,
+    state1Status,
+    state2Status,
+    tourZonesReady,
+  ]);
 
   const handleSeeAllPress = useCallback(() => {
     router.push("/expenses");
@@ -133,29 +144,23 @@ export default function DashboardScreen() {
             </View>
           ),
           !authLoading && (
-            <TourZone
-              stepKey="home-profile"
-              name="Your Profile"
-              description="Your profile lives here. Tap anytime to edit."
-              shape="circle">
-              <View collapsable={false} style={{ position: "relative", width: 36, height: 36 }}>
-                <Pressable
-                  onPress={handleProfilePress}
-                  style={({ pressed }) => [
-                    styles.profileButton,
-                    { opacity: pressed ? 0.7 : 1 },
-                  ]}>
-                  <Avatar alt={user?.name ?? "User"} size="sm">
-                    {user?.avatar && (
-                      <Avatar.Image source={{ uri: user.avatar }} />
-                    )}
-                    <Avatar.Fallback>
-                      {user?.name?.charAt(0) ?? "U"}
-                    </Avatar.Fallback>
-                  </Avatar>
-                </Pressable>
-              </View>
-            </TourZone>
+            <View collapsable={false} style={{ position: "relative", width: 36, height: 36 }}>
+              <Pressable
+                onPress={handleProfilePress}
+                style={({ pressed }) => [
+                  styles.profileButton,
+                  { opacity: pressed ? 0.7 : 1 },
+                ]}>
+                <Avatar alt={user?.name ?? "User"} size="sm">
+                  {user?.avatar && (
+                    <Avatar.Image source={{ uri: user.avatar }} />
+                  )}
+                  <Avatar.Fallback>
+                    {user?.name?.charAt(0) ?? "U"}
+                  </Avatar.Fallback>
+                </Avatar>
+              </Pressable>
+            </View>
           ),
         ].filter(Boolean)}
       />
@@ -188,11 +193,11 @@ export default function DashboardScreen() {
             <VitalHeroSkeleton />
           ) : !setupCompleted ? (
             <TourZone
-              stepKey="home-setup"
-              name="Set up profile"
-              description="Use this personalization banner to tailor your budget in about 2 minutes. You can skip for now."
+              stepKey="state1-home-setup"
+              name="Start with your budget profile"
+              description="Begin here to build a budget around your payday and spending style. It takes about 2 minutes."
               shape="rounded-rect"
-              borderRadius={16}>
+              borderRadius={35}>
               <View collapsable={false}>
                 <DiscoveryHeroCard />
               </View>
@@ -200,9 +205,9 @@ export default function DashboardScreen() {
           ) : (
             <>
               <TourZone
-                stepKey="home-setup"
-                name="Financial overview"
-                description="Your financial overview at a glance."
+                stepKey="state2-home-vitals"
+                name="Your money snapshot"
+                description="This card gives you a quick view of your financial position so you know where you stand at a glance."
                 shape="rounded-rect"
                 borderRadius={16}>
                 <View collapsable={false}>
@@ -213,14 +218,23 @@ export default function DashboardScreen() {
                   />
                 </View>
               </TourZone>
-              <MonthlyActivitiesCard
-                recentExpenses={recentExpenses}
-                budgetState={budgetState}
-                hasActiveCycle={!!activeCycleId}
-                onRecordExpensePress={() => setShowExpenseModal(true)}
-                onSeeAllPress={handleSeeAllPress}
-                animatedStyle={overviewAnimStyle as StyleProp<ViewStyle>}
-              />
+              <TourZone
+                stepKey="state2-home-activities"
+                name="Your recent activity"
+                description="Use this area to review recent activity and add expenses so your budget stays accurate."
+                shape="rounded-rect"
+                borderRadius={16}>
+                <View collapsable={false}>
+                  <MonthlyActivitiesCard
+                    recentExpenses={recentExpenses}
+                    budgetState={budgetState}
+                    hasActiveCycle={!!activeCycleId}
+                    onRecordExpensePress={() => setShowExpenseModal(true)}
+                    onSeeAllPress={handleSeeAllPress}
+                    animatedStyle={overviewAnimStyle as StyleProp<ViewStyle>}
+                  />
+                </View>
+              </TourZone>
               <BudgetTransactionModal
                 visible={showExpenseModal}
                 categories={cycleCategories}

@@ -77,6 +77,7 @@ export const CATEGORY_NAME_TO_ICON: Record<string, CategoryIconName> = {
   ECG: 'Zap',
   'Ghana Water': 'Droplets',
   Trash: 'Trash2',
+  Emergency: 'Shield',
   Healthcare: 'Heart',
   'Essential Bills': 'Receipt',
   'Debt Payments': 'Receipt',
@@ -111,9 +112,7 @@ export const CATEGORY_NAME_TO_ICON: Record<string, CategoryIconName> = {
   'Child Allowance': 'Baby',
 
   // Savings
-  'Emergency Fund': 'Shield',
-  'Susu/Project Savings': 'PiggyBank',
-  'T-Bills': 'Landmark',
+  Savings: 'PiggyBank',
   'Education Fund': 'GraduationCap',
   'Healthcare Reserve': 'Heart',
   'Debt Payoff Fund': 'TrendingUp',
@@ -128,6 +127,7 @@ export const PREDEFINED_CATEGORIES: { name: string; bucket: BudgetBucket; icon: 
   { name: 'Ghana Water', bucket: 'needs', icon: 'Droplets' },
   { name: 'School Fees', bucket: 'needs', icon: 'GraduationCap' },
   { name: 'Tithes/Church', bucket: 'needs', icon: 'Church' },
+  { name: 'Emergency', bucket: 'needs', icon: 'Shield' },
   { name: 'Healthcare', bucket: 'needs', icon: 'Heart' },
   { name: 'Utilities', bucket: 'needs', icon: 'Zap' },
   { name: 'Data Bundles', bucket: 'wants', icon: 'Smartphone' },
@@ -140,9 +140,7 @@ export const PREDEFINED_CATEGORIES: { name: string; bucket: BudgetBucket; icon: 
   { name: 'Self-care', bucket: 'wants', icon: 'Sparkles' },
   { name: 'Shopping', bucket: 'wants', icon: 'ShoppingCart' },
   { name: 'General', bucket: 'wants', icon: 'Wallet' },
-  { name: 'Emergency Fund', bucket: 'savings', icon: 'Shield' },
-  { name: 'Susu/Project Savings', bucket: 'savings', icon: 'PiggyBank' },
-  { name: 'T-Bills', bucket: 'savings', icon: 'Landmark' },
+  { name: 'Savings', bucket: 'savings', icon: 'PiggyBank' },
 ];
 
 /**

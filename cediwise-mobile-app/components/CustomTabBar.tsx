@@ -140,18 +140,9 @@ export function CustomTabBar(props: BottomTabBarProps) {
                 const iconWithTour =
                   route.name === "budget" ? (
                     <TourZone
-                      stepKey="budget-tab"
-                      name="Create your first budget"
-                      description="Let's build your budget now. Use the tools above to set up your first cycle."
-                      shape="circle"
-                      zoneStyle={{ padding: 16 }}>
-                      <View collapsable={false}>{icon}</View>
-                    </TourZone>
-                  ) : route.name === "literacy" ? (
-                    <TourZone
-                      stepKey="home-learn-tab"
-                      name="Learn"
-                      description="Explore lessons and glossary here—no profile needed."
+                      stepKey="state1-home-budget-tab"
+                      name="Budget lives here"
+                      description="This tab is where CediWise turns your payday into a working budget and helps you manage it over time."
                       shape="circle"
                       zoneStyle={{ padding: 16 }}>
                       <View collapsable={false}>{icon}</View>

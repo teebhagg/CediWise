@@ -31,12 +31,6 @@ function BudgetSnapshotSectionInner({
       ? budgetTotals.spentByBucket.savings / budgetTotals.savingsLimit
       : 0;
 
-  const spent =
-    budgetTotals.spentByBucket.needs +
-    budgetTotals.spentByBucket.wants +
-    budgetTotals.spentByBucket.savings;
-  const remaining = Math.max(0, budgetTotals.monthlyNetIncome - spent);
-
   return (
     <AnimatedView style={animatedStyle} className="mb-7 gap-3">
       <Card>
@@ -100,12 +94,12 @@ function BudgetSnapshotSectionInner({
       <Card>
         <View className="flex-row justify-between items-center gap-3">
           <View className="flex-1">
-            <Text className="text-slate-200 font-medium text-sm">Remaining this month</Text>
+            <Text className="text-slate-200 font-medium text-sm">Unspent this month</Text>
             <Text className="text-slate-500 text-xs mt-1">
-              After logged expenses across Needs, Wants, and Savings.
+              Rolls into Savings automatically at the end of the cycle.
             </Text>
           </View>
-          <Text className="text-emerald-500 font-bold text-lg">₵{formatCurrency(remaining)}</Text>
+          <Text className="text-emerald-500 font-bold text-lg">₵{formatCurrency(budgetTotals.unspentThisMonth)}</Text>
         </View>
       </Card>
     </AnimatedView>

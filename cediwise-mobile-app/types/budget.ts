@@ -1,5 +1,9 @@
 // Utilities are treated as part of Needs (v1).
 export type BudgetBucket = "needs" | "wants" | "savings";
+export type BudgetEngineMode =
+  | "recommend_only"
+  | "auto_apply_safe_rules"
+  | "manual_off";
 
 export type IncomeSourceType = "primary" | "side";
 
@@ -75,6 +79,7 @@ export type BudgetProfilePrefs = {
   interests?: string[];
   /** For weighted category allocation */
   lifeStage?: "student" | "young_professional" | "family" | "retiree" | null;
+  budgetEngineMode?: BudgetEngineMode;
 };
 
 export type BudgetState = {
@@ -220,6 +225,7 @@ export type ExtendedBudgetProfilePrefs = BudgetProfilePrefs & {
   financialPriority?: FinancialPriority | null;
   enableAutoReallocation: boolean;
   rolloverEnabled: boolean;
+  budgetEngineMode?: BudgetEngineMode;
 };
 
 export type BudgetMutationKind =

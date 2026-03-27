@@ -1,10 +1,10 @@
+import Constants from "expo-constants";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 // import { StatusBar } from 'expo-status-bar';
 import { TriggerProvider } from "@/contexts/TriggerContext";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
-import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import * as WebBrowser from "expo-web-browser";
 import { HeroUINativeProvider } from "heroui-native";
 import { useEffect, useState } from "react";
@@ -26,7 +26,10 @@ import {
 } from "../contexts/TourContext";
 import { useAuthRefresh } from "../hooks/useAuthRefresh";
 import { useBudget } from "../hooks/useBudget";
+import { usePersonalizationStore } from "../stores/personalizationStore";
+import { useProfileVitalsStore } from "../stores/profileVitalsStore";
 import { initNotificationSystem } from "../services/notifications";
+import { syncTaxConfig } from "../utils/taxSync";
 import {
   hasHydratedThisSession,
   setHydratedThisSession,
@@ -55,11 +58,19 @@ function AppShell() {
     return () => sub.remove();
   }, [user?.id]);
 
-  // Single app-level hydrate once per session (avoids duplicate when Home + Budget mount).
+  // Central Bootstrap: Initialize all critical data stores as soon as user is ready.
   useEffect(() => {
-    if (!user?.id || hasHydratedThisSession()) return;
-    setHydratedThisSession();
-    void hydrateFromRemote();
+    if (!user?.id) return;
+    
+    // 1. Personalization & Profile Vitals (Parallel)
+    void usePersonalizationStore.getState().initForUser(user.id);
+    void useProfileVitalsStore.getState().initForUser(user.id);
+
+    // 2. Budget Hydration (Once per session)
+    if (!hasHydratedThisSession()) {
+      setHydratedThisSession();
+      void hydrateFromRemote();
+    }
   }, [user?.id, hydrateFromRemote]);
 
   return (
@@ -134,9 +145,17 @@ export default function RootLayout() {
     }
 
     WebBrowser.maybeCompleteAuthSession();
+    void syncTaxConfig(); // Sync tax rates for offline usage and global calculations
 
-    if (Platform.OS === "ios" || Platform.OS === "android") {
+
+    // Only configure native Google Sign-In when not in Expo Go (dynamic require avoids loading native module in Expo Go).
+    const isExpoGo = (Constants.appOwnership ?? "") === "expo";
+    if (
+      (Platform.OS === "ios" || Platform.OS === "android") &&
+      !isExpoGo
+    ) {
       try {
+        const { GoogleSignin } = require("@react-native-google-signin/google-signin");
         GoogleSignin.configure({
           // Web client ID from google-services.json (client_type: 3)
           webClientId:

@@ -1,5 +1,7 @@
 import AnimatedPhoneNumberInput from '@/components/AnimatedPhoneNumberInput';
 import { Card } from '@/components/Card';
+import PhonenNumberInput from '@/components/common/PhonenNumberInput';
+import { Google } from '@/components/icons/GoogleIcon';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useAppToast } from '@/hooks/useAppToast';
 import { useAuth } from '@/hooks/useAuth';
@@ -58,16 +60,16 @@ export default function AuthLandingScreen() {
 
     const onSendCode = async () => {
         setError(undefined);
-        if (!phone.startsWith('+233') && !phone.startsWith('0')) {
-            // setError('Enter a valid Ghanaian number');
-            showError('Error', 'Enter a valid Ghanaian number');
+        const cleaned = phone.replace(/\D/g, '');
+        if (cleaned.length < 9) {
+            setError('Enter a valid phone number');
             return;
         }
         setLoading(true);
         const result = await requestOtp(phone);
+        console.log(result)
         setLoading(false);
         if (!result.success) {
-            // setError(result.error);
             showError('Error', result.error);
             return;
         }
@@ -123,18 +125,19 @@ export default function AuthLandingScreen() {
                                     <Text className="text-muted-foreground text-sm mb-3 text-center">
                                         Sign in with your phone number or continue with Google.
                                     </Text>
-
-                                    {error && (
-                                        <Text className="text-red-400 text-sm mb-4 text-center">
-                                            {error}
-                                        </Text>
-                                    )}
                                 </Animated.View>
 
                                 <Text className="text-muted-foreground mb-2 text-sm">Phone number</Text>
 
                                 <Animated.View style={inputsStyle}>
-                                    <AnimatedPhoneNumberInput value={phone} onChange={setPhone} />
+                                    <PhonenNumberInput 
+                                        phoneNumber={phone} 
+                                        setPhoneNumber={(val) => {
+                                            setPhone(val);
+                                            if (error) setError(undefined);
+                                        }} 
+                                        error={error}
+                                    />
                                 </Animated.View>
 
                                 <Animated.View style={buttonsStyle} className="mt-2">
@@ -154,7 +157,10 @@ export default function AuthLandingScreen() {
                                         style={{ backgroundColor: '#FFFFFF' }}
                                         className="mt-2"
                                     >
-                                        Continue with Google
+                                        <View className="flex-row items-center justify-center gap-3">
+                                            <Google.Color size={22} />
+                                            <Text className="text-slate-900 font-semibold text-base">Continue with Google</Text>
+                                        </View>
                                     </PrimaryButton>
                                 </Animated.View>
                             </Card>

@@ -14,16 +14,13 @@ import {
 } from "@/components/CediWiseHeader";
 import { ModuleCard } from "@/components/features/literacy/ModuleCard";
 import { MODULES } from "@/constants/literacy";
-import { BUDGET_TOUR_READY_TIMEOUT_MS } from "@/constants/tourTokens";
-import { useTourContext } from "@/contexts/TourContext";
-import { useAuth } from "@/hooks/useAuth";
 import { useConnectivity } from "@/hooks/useConnectivity";
 import { useLessons } from "@/hooks/useLessons";
 import { useProgress } from "@/hooks/useProgress";
 import * as Haptics from "expo-haptics";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 import { BookMarked, ChevronRight, WifiOff } from "lucide-react-native";
-import React, { useEffect } from "react";
+import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { TourZone, useTour } from "react-native-lumen";
 import Animated, {
@@ -36,63 +33,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 // ─── Main Tab Screen ──────────────────────────────────────────────────────────
 
 export default function LiteracyScreen() {
-  const { user } = useAuth();
   const { isConnected } = useConnectivity();
-  const params = useLocalSearchParams<{ tour?: string }>();
-  const {
-    startLearnTour,
-    skipLearnTour,
-    hasSeenLearnTour,
-    valueFirstOnboardingEnabled,
-  } = useTourContext();
   const { loading } = useLessons();
   const { scrollViewRef } = useTour();
   const { isCompleted } = useProgress();
-  const learnTourTriggeredRef = React.useRef(false);
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((event) => {
     scrollY.value = event.contentOffset.y;
   });
-
-  useEffect(() => {
-    const shouldStartForGuidedFlow =
-      params.tour === "learn" && hasSeenLearnTour === false && !!user?.id;
-    const shouldStartForContextualFallback =
-      valueFirstOnboardingEnabled &&
-      params.tour !== "learn" &&
-      hasSeenLearnTour === false &&
-      !!user?.id;
-
-    if ((!shouldStartForGuidedFlow && !shouldStartForContextualFallback) || loading) {
-      return;
-    }
-    if (learnTourTriggeredRef.current) return;
-
-    learnTourTriggeredRef.current = true;
-    startLearnTour();
-
-    if (shouldStartForGuidedFlow) {
-      const timeoutId = setTimeout(() => {
-        void skipLearnTour();
-      }, BUDGET_TOUR_READY_TIMEOUT_MS);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [
-    hasSeenLearnTour,
-    loading,
-    params.tour,
-    skipLearnTour,
-    startLearnTour,
-    user?.id,
-    valueFirstOnboardingEnabled,
-  ]);
-
-  useEffect(() => {
-    if (hasSeenLearnTour === true) {
-      learnTourTriggeredRef.current = false;
-    }
-  }, [hasSeenLearnTour]);
 
   return (
     <View style={styles.root} collapsable={false}>

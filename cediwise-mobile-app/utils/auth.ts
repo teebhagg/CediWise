@@ -1,8 +1,4 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import {
-  GoogleSignin,
-  statusCodes,
-} from "@react-native-google-signin/google-signin";
 import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
@@ -94,6 +90,11 @@ const CEDIWISE_AUTH_SECURE_KEY = "cediwise_auth";
 const CEDIWISE_STORAGE_PREFIX = "@cediwise_";
 
 const isWeb = Platform.OS === "web";
+/** Use OAuth + WebBrowser for Google sign-in on web and in Expo Go (no native Google Sign-In SDK). */
+const useWebGoogleSignIn =
+  isWeb ||
+  ((Platform.OS === "ios" || Platform.OS === "android") &&
+    (Constants.appOwnership ?? "") === "expo");
 
 async function setAuthStorage(value: string): Promise<void> {
   if (isWeb) {
@@ -561,8 +562,8 @@ export function extractUserData(user: any): StoredUserData {
 export async function signInWithGoogle(): Promise<AuthResult> {
   if (!supabase) return { success: false, error: "App not configured" };
 
-  // Web: keep existing Supabase OAuth + browser flow.
-  if (isWeb) {
+  // Web or Expo Go: Supabase OAuth + browser flow (native Google Sign-In SDK not available in Expo Go).
+  if (useWebGoogleSignIn) {
     try {
       const redirectUrl = Linking.createURL("auth/callback");
 
@@ -667,17 +668,21 @@ export async function signInWithGoogle(): Promise<AuthResult> {
     }
   }
 
-  // Native (iOS / Android): use Google Sign-In SDK + Supabase signInWithIdToken.
+  // Native dev/production build (not Expo Go): use Google Sign-In SDK + Supabase signInWithIdToken.
+  // Dynamic require so Expo Go never loads the native module (avoids TurboModuleRegistry error).
+  const { GoogleSignin: GoogleSigninNative, statusCodes: statusCodesNative } =
+    require("@react-native-google-signin/google-signin");
+
   try {
     // Ensure Google Play services / native SDK is available (Android).
     if (Platform.OS === "android") {
-      await GoogleSignin.hasPlayServices({
+      await GoogleSigninNative.hasPlayServices({
         showPlayServicesUpdateDialog: true,
       });
     }
 
-    const userInfo = await GoogleSignin.signIn();
-    const tokens = await GoogleSignin.getTokens();
+    const userInfo = await GoogleSigninNative.signIn();
+    const tokens = await GoogleSigninNative.getTokens();
     const idToken = tokens.idToken || (userInfo as any)?.idToken;
 
     if (!idToken) {
@@ -723,18 +728,18 @@ export async function signInWithGoogle(): Promise<AuthResult> {
   } catch (e) {
     if (e && typeof e === "object" && "code" in e) {
       const code = (e as any).code;
-      if (code === statusCodes.SIGN_IN_CANCELLED) {
+      if (code === statusCodesNative.SIGN_IN_CANCELLED) {
         log.debug("Google Sign-In cancelled by user");
         return { success: false, error: "Sign-in cancelled" };
       }
-      if (code === statusCodes.IN_PROGRESS) {
+      if (code === statusCodesNative.IN_PROGRESS) {
         log.debug("Google Sign-In already in progress");
         return {
           success: false,
           error: "Sign-in already in progress. Please wait.",
         };
       }
-      if (code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+      if (code === statusCodesNative.PLAY_SERVICES_NOT_AVAILABLE) {
         log.error("Google Play services not available");
         return {
           success: false,

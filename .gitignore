@@ -2,3 +2,9 @@
 cediwise-mobile-app/dist/
 cediwise-web-official/dist/
 cediwise-web-official/.vercel/
+# *.md
+*.example
+/supabase
+
+/docs
+.github/*.md

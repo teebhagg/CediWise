@@ -154,18 +154,16 @@ export async function getPostAuthRoute(
     try {
       const status = await fetchPersonalizationStatusRemote(userId);
       await writePersonalizationStatusCache(userId, status.setupCompleted);
-      return status.setupCompleted ? "/(tabs)" : "/vitals";
+      return "/(tabs)";
     } catch {
       if (attempt === 0) {
         await new Promise((r) => setTimeout(r, retryDelayMs));
         continue;
       }
-      return cached?.setupCompleted || cached?.skippedVitals
-        ? "/(tabs)"
-        : "/vitals";
+      return "/(tabs)";
     }
   }
-  return "/vitals";
+  return "/(tabs)";
 }
 
 export async function fetchPersonalizationStatusRemote(

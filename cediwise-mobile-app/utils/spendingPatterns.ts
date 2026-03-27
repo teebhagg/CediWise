@@ -239,6 +239,27 @@ export async function getSpendingInsights(
         )
         .reduce((sum, t) => sum + t.amount, 0);
 
+      if (category.limitAmount <= 0 && category.name.trim().toLowerCase() === "emergency") {
+        insights.push({
+          categoryId: category.id,
+          categoryName: category.name,
+          spent,
+          limit: 0,
+          avgSpent: 0,
+          trend: "stable",
+          status: "under",
+          suggestion:
+            spent > 0
+              ? `Emergency spend is uncapped and counted under Needs. You spent ₵${spent.toFixed(
+                  0
+                )} this cycle.`
+              : "Emergency spending is uncapped and counted under Needs.",
+          variance: 0,
+          confidence: 0,
+        });
+        continue;
+      }
+
       const pattern = patternsMap.get(category.id);
       const avgSpent = pattern?.avg_spent ?? 0;
       const variance = pattern?.variance ?? 0;

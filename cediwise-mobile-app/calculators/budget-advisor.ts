@@ -77,7 +77,7 @@ const CATEGORY_IMPORTANCE: Record<string, number> = {
   "Data Bundles": 0.7,
   Clothing: 0.6,
   Subscriptions: 0.6,
-  "Emergency Fund": 1.5,
+  Emergency: 1.5,
   Savings: 1.2,
 };
 
@@ -168,6 +168,29 @@ export function generateAdvisorRecommendations(
   for (const ins of insights) {
     const spent = safeNum(ins.spent);
     const limit = safeNum(ins.limit);
+
+    if (ins.categoryName.trim().toLowerCase() === "emergency") {
+      if (spent > 0) {
+        const key = `emergency-${ins.categoryId}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          recs.push({
+            id: key,
+            type: "warning",
+            priority: "low",
+            title: MESSAGES.emergencySpend.title(),
+            message: MESSAGES.emergencySpend.message(spent),
+            amount: spent,
+            context: "Emergency",
+            actionLabel: "Review",
+            _utilization: 0,
+            _daysRemaining: daysRemaining,
+          });
+        }
+      }
+      continue;
+    }
+
     if (limit < THRESHOLDS.MIN_LIMIT_FOR_ALERTS) continue;
     const utilization = limit > 0 ? spent / limit : 0;
     const bucket = ins.bucket ?? "wants";

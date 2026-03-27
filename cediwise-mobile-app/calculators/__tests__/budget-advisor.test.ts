@@ -33,6 +33,20 @@ describe("generateAdvisorRecommendations", () => {
     expect(underspend).toBeDefined();
   });
 
+  it("treats emergency spending as uncapped but still explains it", () => {
+    const recs = generateAdvisorRecommendations([
+      {
+        categoryId: "emergency-1",
+        categoryName: "Emergency",
+        bucket: "needs",
+        spent: 750,
+        limit: 0,
+      },
+    ]);
+    expect(recs.some((r) => r.context === "Emergency")).toBe(true);
+    expect(recs.some((r) => r.type === "warning")).toBe(true);
+  });
+
   it("Phase 2: does not suggest underspend for needs bucket", () => {
     const recs = generateAdvisorRecommendations([
       {

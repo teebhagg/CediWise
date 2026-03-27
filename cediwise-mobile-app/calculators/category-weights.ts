@@ -18,6 +18,7 @@ const NEEDS_WEIGHTS: Record<string, number> = {
   ECG: 0.04,
   "Ghana Water": 0.03,
   Trash: 0.01,
+  Emergency: 0.03,
   Healthcare: 0.06,
   "Essential Bills": 0.01,
   "Debt Payments": 0.05,
@@ -48,9 +49,7 @@ const WANTS_WEIGHTS: Record<string, number> = {
 
 /** Default weights for savings categories */
 const SAVINGS_WEIGHTS: Record<string, number> = {
-  "Emergency Fund": 0.4,
-  "Susu/Project Savings": 0.25,
-  "T-Bills": 0.2,
+  Savings: 1,
   "Education Fund": 0.15,
   "Healthcare Reserve": 0.15,
   "Debt Payoff Fund": 0.25,

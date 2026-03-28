@@ -79,7 +79,6 @@ export async function syncTaxConfig(): Promise<void> {
 
       activeTaxConfig = config;
       await AsyncStorage.setItem(TAX_CONFIG_CACHE_KEY, JSON.stringify(config));
-      console.log("Tax config synced successfully.");
     }
   } catch (e) {
     console.error("Failed to sync tax config:", e);

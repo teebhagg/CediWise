@@ -12,6 +12,11 @@ import {
   RotateCcw,
   Sparkles,
   User as UserIcon,
+  Crown,
+  Zap,
+  CreditCard,
+  Clock,
+  Calendar,
 } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import { Pressable, Switch, Text, View } from "react-native";
@@ -34,6 +39,7 @@ import { useTourContext } from "@/contexts/TourContext";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersonalizationStatus } from "@/hooks/usePersonalizationStatus";
+import { useTierContext } from "@/contexts/TierContext";
 import {
   disablePushNotifications,
   enablePushNotifications,
@@ -94,6 +100,7 @@ export default function ProfileScreen() {
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [reminderFrequency, setReminderFrequencyState] = useState<ReminderFrequency>("daily");
   const [reminderFrequencyLoading, setReminderFrequencyLoading] = useState(false);
+  const { effectiveTier, isOnTrial, trialEndsAt, pendingTier, pendingTierStartDate } = useTierContext();
 
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
@@ -259,6 +266,16 @@ export default function ProfileScreen() {
   };
 
   const contact = getDisplayContact(user);
+  
+  const getTrialDaysLeft = (endsAt: string | null) => {
+    if (!endsAt) return 0;
+    const end = new Date(endsAt);
+    const now = new Date();
+    const diff = end.getTime() - now.getTime();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  };
+  
+  const trialDaysLeft = getTrialDaysLeft(trialEndsAt);
 
   const getInitials = (name?: string) => {
     if (!name) return "U";
@@ -370,6 +387,70 @@ export default function ProfileScreen() {
               </View>
             </View>
           </Card>
+          
+          {/* Subscription Status Card */}
+          <PressableFeedback animation={false} onPress={onItemPress(() => router.push(effectiveTier === "free" ? "/upgrade" : "/subscription"))}>
+            <PressableFeedback.Scale />
+            <PressableFeedback.Ripple />
+            <Card className="border-emerald-500/30 overflow-hidden">
+               {/* Premium Glow effect for trial/pro users */}
+               {(isOnTrial || effectiveTier !== "free") && (
+                 <View className="absolute top-0 right-0 h-32 w-32 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+               )}
+               
+               <View className="flex-row items-center justify-between">
+                 <View className="flex-row items-center gap-3">
+                   <View className={`w-12 h-12 rounded-2xl items-center justify-center ${effectiveTier === "free" ? "bg-slate-800" : "bg-emerald-500/20"}`}>
+                      {effectiveTier === "sme" ? (
+                        <Crown color="#10B981" size={24} />
+                      ) : effectiveTier === "budget" ? (
+                        <Zap color="#10B981" size={24} />
+                      ) : (
+                        <CreditCard color="#94A3B8" size={24} />
+                      )}
+                   </View>
+                   <View>
+                     <Text className="text-white text-lg font-bold">
+                       {effectiveTier === "sme" ? "SME Ledger" : effectiveTier === "budget" ? "Smart Budget" : "Free Plan"}
+                     </Text>
+                      <View className="flex-row items-center gap-1.5">
+                       {isOnTrial ? (
+                         <>
+                           <Clock color="#F59E0B" size={12} />
+                           <Text className="text-amber-500 text-xs font-semibold">
+                             Trial: {trialDaysLeft} days left
+                           </Text>
+                         </>
+                      ) : effectiveTier !== "free" ? (
+                         <Text className="text-emerald-400 text-xs font-semibold">Premium Active</Text>
+                      ) : (
+                         <Text className="text-slate-500 text-xs font-medium">Limited features</Text>
+                      )}
+                      </View>
+                      {pendingTier && pendingTierStartDate && (
+                        <View className="flex-row items-center gap-1.5 mt-1">
+                          <Calendar color="#F59E0B" size={12} />
+                          <Text className="text-amber-400 text-xs font-medium">
+                            {pendingTier === "free"
+                              ? "Plan ends on"
+                              : pendingTier === "sme"
+                                ? "SME Ledger starts on"
+                                : "Smart Budget starts on"}
+                            {" "}{new Date(pendingTierStartDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                          </Text>
+                        </View>
+                      )}
+                   </View>
+                 </View>
+                 
+                 <View className="bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-2xl">
+                   <Text className="text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                     {effectiveTier === "free" ? "Upgrade" : "Manage"}
+                   </Text>
+                 </View>
+               </View>
+            </Card>
+          </PressableFeedback>
 
           {/* Notifications */}
           <View>

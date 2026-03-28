@@ -1,13 +1,13 @@
 import { CustomTabBar } from "@/components/CustomTabBar";
+import { useTierContext } from "@/contexts/TierContext";
 // import { UpdateDialog } from '@/components/UpdateDialog';
 import { UpdateCheckProvider } from "@/contexts/UpdateCheckContext";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Tabs } from "expo-router";
-import { BookOpen, TrendingUp, Wallet, Zap } from "lucide-react-native";
+import { BookOpen, BriefcaseBusiness, TrendingUp, Wallet, Zap } from "lucide-react-native";
 
 function TabLayoutContent() {
-  // const { updateInfo, dismiss } = useUpdateCheckContext();
-  // const showUpdateDialog = Platform.OS === 'android' && updateInfo !== null;
+  const { canAccessSME } = useTierContext();
 
   return (
     <>
@@ -44,11 +44,11 @@ function TabLayoutContent() {
           }}
         />
         <Tabs.Screen
-          name="investment"
+          name="sme"
           options={{
-            title: "Invest",
+            title: "Business",
             tabBarIcon: ({ color, size }) => (
-              <TrendingUp color={color as string} size={size} />
+              <BriefcaseBusiness color={color as string} size={size} />
             ),
           }}
         />

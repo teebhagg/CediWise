@@ -1,5 +1,6 @@
 import { FlashList } from "@shopify/flash-list";
 import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
 import { Edit2, Plus, Trash2 } from "lucide-react-native";
 import React, { useCallback, useMemo, useState } from "react";
 import {
@@ -18,6 +19,7 @@ import { BackButton } from "@/components/BackButton";
 import { Card } from "@/components/Card";
 import { StandardHeader } from "@/components/CediWiseHeader";
 import { PrimaryButton } from "@/components/PrimaryButton";
+import { useTierContext } from "@/contexts/TierContext";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useRecurringExpenses } from "@/hooks/useRecurringExpenses";
 import type {
@@ -44,6 +46,15 @@ const BUCKET_COLORS: Record<BudgetBucket, string> = {
 };
 
 export default function RecurringExpensesScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { canAccessBudget } = useTierContext();
+
+  if (!canAccessBudget) {
+    router.replace("/(tabs)/budget");
+    return null;
+  }
+
   const { showSuccess, showInfo } = useAppToast();
   const {
     recurringExpenses,
@@ -55,7 +66,6 @@ export default function RecurringExpensesScreen() {
     refresh,
   } = useRecurringExpenses();
 
-  const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 

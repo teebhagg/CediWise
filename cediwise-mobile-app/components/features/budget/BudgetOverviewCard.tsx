@@ -1,4 +1,5 @@
 import { Text, View } from 'react-native';
+import { Lock } from 'lucide-react-native';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { Card } from '../../Card';
 import { ProgressBar } from './ProgressBar';
@@ -59,6 +60,7 @@ export interface BudgetOverviewCardProps {
   healthScore?: number | null;
   healthLabel?: string;
   healthSummary?: string | null;
+  canAccessBudget?: boolean;
 }
 
 export function BudgetOverviewCard({
@@ -68,6 +70,7 @@ export function BudgetOverviewCard({
   healthScore,
   healthLabel,
   healthSummary,
+  canAccessBudget = true,
 }: BudgetOverviewCardProps) {
   if (!visible || !totals) return null;
 
@@ -77,6 +80,55 @@ export function BudgetOverviewCard({
   const strategyLabel = cycle ? getStrategyLabel(cycle.needsPct, cycle.wantsPct, cycle.savingsPct) : '';
   const strategyPercents = cycle ? `${Math.round(cycle.needsPct * 100)}/${Math.round(cycle.wantsPct * 100)}/${Math.round(cycle.savingsPct * 100)}` : '';
 
+  // ─── Free user: limited view ──────────────────────────
+  if (!canAccessBudget) {
+    const totalSpentPct = totals.monthlyNetIncome > 0
+      ? totals.spentTotal / totals.monthlyNetIncome
+      : 0;
+
+    return (
+      <Card className="border border-emerald-500/20">
+        <View className="flex-row items-center justify-between gap-3 mb-3">
+          <View className="flex-1">
+            <Text className="text-white text-lg font-semibold">Budget Overview</Text>
+            {cycle ? (
+              <Text className="text-muted-foreground text-[13px] mt-0.5">
+                {formatDate(cycle.startDate)} — {formatDate(cycle.endDate)}
+                {daysLeft > 0 ? ` • ${daysLeft} days left` : ' • Cycle ended'}
+              </Text>
+            ) : (
+              <Text className="text-muted-foreground text-sm mt-0.5">
+                Net income: ₵{formatCurrency(totals.monthlyNetIncome)}
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* Single spent bar */}
+        <View>
+          <View className="flex-row justify-between">
+            <Text className="text-slate-200 font-medium text-sm">Total Spent</Text>
+            <Text className="text-slate-400 font-medium text-sm">
+              ₵{formatCurrency(totals.spentTotal)} / ₵{formatCurrency(totals.monthlyNetIncome)}
+            </Text>
+          </View>
+          <View className="mt-1.5">
+            <ProgressBar value={totalSpentPct} />
+          </View>
+        </View>
+
+        {/* Upgrade nudge */}
+        <View className="mt-3 pt-3 border-t border-slate-400/20 flex-row items-center gap-2">
+          <Lock color="#6B7280" size={14} />
+          <Text className="text-slate-500 text-[12px] flex-1">
+            Upgrade to Smart Budget for Needs/Wants/Savings breakdown, health score, and insights.
+          </Text>
+        </View>
+      </Card>
+    );
+  }
+
+  // ─── Paid user: full view ──────────────────────────
   return (
     <Card className="border border-emerald-500/20">
       <View className="flex-row items-center justify-between gap-3 mb-3">

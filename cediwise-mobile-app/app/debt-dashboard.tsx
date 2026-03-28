@@ -1,5 +1,6 @@
 import { FlashList } from "@shopify/flash-list";
 import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
 import {
   Banknote,
   Calendar,
@@ -24,12 +25,22 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
 import { useBudget } from "@/hooks/useBudget";
+import { useTierContext } from "@/contexts/TierContext";
 import { useDebts } from "@/hooks/useDebts";
 import type { BudgetBucket, Debt } from "@/types/budget";
 import { Button } from "heroui-native";
 
 export default function DebtDashboardScreen() {
   const { user } = useAuth();
+  const { canAccessBudget } = useTierContext();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+
+  if (!canAccessBudget) {
+    router.replace("/(tabs)/budget");
+    return null;
+  }
+
   const { showSuccess, showError, showInfo } = useAppToast();
   const budget = useBudget(user?.id);
   const monthlyIncome = budget.totals?.monthlyNetIncome || 0;
@@ -46,7 +57,6 @@ export default function DebtDashboardScreen() {
     refresh,
   } = useDebts(monthlyIncome);
 
-  const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [paymentDebt, setPaymentDebt] = useState<Debt | null>(null);

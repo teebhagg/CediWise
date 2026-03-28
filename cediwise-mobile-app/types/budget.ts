@@ -250,7 +250,14 @@ export type BudgetMutationKind =
   | "apply_reallocation"
   | "log_budget_adjustment"
   | "archive_category"
-  | "update_category_limit";
+  | "update_category_limit"
+  // SME Ledger mutations
+  | "sme_upsert_profile"
+  | "sme_upsert_category"
+  | "sme_delete_category"
+  | "sme_insert_transaction"
+  | "sme_update_transaction"
+  | "sme_delete_transaction";
 
 export type BudgetMutation = {
   id: string;

@@ -17,6 +17,7 @@ import { BudgetSetupCycleCard } from "@/components/features/budget/BudgetSetupCy
 import { BudgetToolsCard } from "@/components/features/budget/BudgetToolsCard";
 import { StartNewCycleCard } from "@/components/features/budget/StartNewCycleCard";
 import { useBudgetScreenState } from "@/components/features/budget/useBudgetScreenState";
+import { useTierContext } from "@/contexts/TierContext";
 import { useTourContext } from "@/contexts/TourContext";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useConnectivity } from "@/hooks/useConnectivity";
@@ -60,6 +61,7 @@ export default function BudgetScreen() {
     ui,
     modals,
   } = useBudgetScreenState();
+  const { canAccessBudget } = useTierContext();
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((event) => {
@@ -258,8 +260,8 @@ export default function BudgetScreen() {
                     showError("Error", "Failed to sync budget");
                   });
               }}
-              tintColor="#22C55E"
-              colors={["#22C55E"]}
+              tintColor="#10B981"
+              colors={["#10B981"]}
               progressViewOffset={Platform.OS === "android" ? 60 : undefined}
             />
           }>
@@ -436,6 +438,7 @@ export default function BudgetScreen() {
                             : "At risk"
                       }
                       healthSummary={ui.budgetHealthScore?.summary}
+                      canAccessBudget={canAccessBudget}
                     />
                   </View>
                 </TourZone>

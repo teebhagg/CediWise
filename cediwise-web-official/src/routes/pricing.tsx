@@ -21,10 +21,11 @@ export const Route = createFileRoute('/pricing')({
 
 const comparisonFeatures = [
   {
-    category: 'Calculators & Planning',
+    category: 'Calculators & Education',
     features: [
-      { name: '2026 PAYE + SSNIT Calculator', free: true, budget: true, sme: true },
-      { name: 'Future NHIS & Tax Updates', free: true, budget: true, sme: true },
+      { name: '2026 PAYE & SSNIT (incl. NHIS)', free: true, budget: true, sme: true },
+      { name: 'Free Financial Education Modules', free: true, budget: true, sme: true },
+      { name: 'Future GRA Tax Updates', free: true, budget: true, sme: true },
     ]
   },
   {
@@ -41,8 +42,8 @@ const comparisonFeatures = [
     features: [
       { name: 'Sales & Expenses Ledger', free: false, budget: false, sme: true },
       { name: 'Auto 20% VAT + GHS 750k Alert', free: false, budget: false, sme: true },
-      { name: 'GRA-Ready Exports & Invoices', free: false, budget: false, sme: true },
-      { name: 'Accountant Reports', free: false, budget: false, sme: true },
+      { name: 'CSV Export for Accountant', free: false, budget: false, sme: true },
+      { name: 'Monthly P&L Summary', free: false, budget: false, sme: true },
     ]
   }
 ]
@@ -142,8 +143,9 @@ function PricingPage() {
                   <span className="text-zinc-500 font-medium">/forever</span>
                 </div>
                 <ul className="mt-8 space-y-4 text-zinc-300 text-sm">
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> 2026 PAYE + SSNIT calculator</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Future NHIS &amp; updates</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> 2026 PAYE &amp; SSNIT (incl. NHIS)</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Free Financial Education modules</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Future GRA tax updates</li>
                   <li className="flex items-center gap-3 text-zinc-500 opacity-60"><HugeiconsIcon icon={Cancel01Icon} className="size-5 text-zinc-600 shrink-0" /> Smart budget, debt, SME ledger</li>
                 </ul>
               </div>
@@ -228,8 +230,9 @@ function PricingPage() {
                   <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Everything in Budget tier</li>
                   <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Sales &amp; expenses ledger</li>
                   <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Auto 20% VAT + GHS 750k alert</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> GRA-ready exports &amp; invoices</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Accountant reports</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> CSV export for accountant</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Monthly P&amp;L summary</li>
+                  <li className="flex items-center gap-3 opacity-60"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-zinc-600 shrink-0" /> Invoices &amp; GRA Export <span className="ml-auto text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">Coming Q2</span></li>
                 </ul>
               </div>
               <a href="https://play.google.com/store/apps/details?id=com.cediwise.app"

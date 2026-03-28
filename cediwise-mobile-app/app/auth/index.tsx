@@ -67,7 +67,6 @@ export default function AuthLandingScreen() {
         }
         setLoading(true);
         const result = await requestOtp(phone);
-        console.log(result)
         setLoading(false);
         if (!result.success) {
             showError('Error', result.error);

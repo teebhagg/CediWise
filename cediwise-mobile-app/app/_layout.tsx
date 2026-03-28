@@ -19,6 +19,7 @@ import { Uniwind } from "uniwind";
 import { RootErrorBoundary } from "../components/RootErrorBoundary";
 import { TourErrorBoundary } from "../components/tour/TourErrorBoundary";
 import { AuthProvider } from "../contexts/AuthContext";
+import { TierProvider } from "../contexts/TierContext";
 import { useAuth } from "../hooks/useAuth";
 import {
   TourProvider,
@@ -28,8 +29,10 @@ import { useAuthRefresh } from "../hooks/useAuthRefresh";
 import { useBudget } from "../hooks/useBudget";
 import { usePersonalizationStore } from "../stores/personalizationStore";
 import { useProfileVitalsStore } from "../stores/profileVitalsStore";
+import { useSMELedgerStore } from "../stores/smeLedgerStore";
 import { initNotificationSystem } from "../services/notifications";
 import { syncTaxConfig } from "../utils/taxSync";
+import { PaystackProvider } from "react-native-paystack-webview";
 import {
   hasHydratedThisSession,
   setHydratedThisSession,
@@ -62,14 +65,19 @@ function AppShell() {
   useEffect(() => {
     if (!user?.id) return;
     
-    // 1. Personalization & Profile Vitals (Parallel)
+    // 1. Personalization & Profile Vitals & SME Data (Parallel)
     void usePersonalizationStore.getState().initForUser(user.id);
     void useProfileVitalsStore.getState().initForUser(user.id);
+    void useSMELedgerStore.getState().initForUser(user.id);
 
     // 2. Budget Hydration (Once per session)
     if (!hasHydratedThisSession()) {
       setHydratedThisSession();
-      void hydrateFromRemote();
+      void (async () => {
+        await hydrateFromRemote();
+        await useSMELedgerStore.getState().initForUser(user.id); // Ensure SME is ready
+        await import("../utils/smeSync").then((m) => m.flushSMEQueue(user.id!));
+      })();
     }
   }, [user?.id, hydrateFromRemote]);
 
@@ -119,6 +127,9 @@ function AppShell() {
           />
           <Stack.Screen name="terms" options={{ headerShown: false }} />
           <Stack.Screen name="privacy" options={{ headerShown: false }} />
+          <Stack.Screen name="(sme)" options={{ headerShown: false }} />
+          <Stack.Screen name="upgrade" options={{ headerShown: false }} />
+          <Stack.Screen name="subscription" options={{ headerShown: false }} />
         </Stack>
       </SafeAreaListener>
     </View>
@@ -187,22 +198,26 @@ export default function RootLayout() {
               },
             }}>
             <SafeAreaProvider>
-              <AuthProvider>
-                <TourErrorBoundary
-                  fallback={
-                    <TourProviderFallback>
-                      <TriggerProvider>
-                        <AppShell />
-                      </TriggerProvider>
-                    </TourProviderFallback>
-                  }>
-                  <TourProvider>
-                    <TriggerProvider>
-                      <AppShell />
-                    </TriggerProvider>
-                  </TourProvider>
-                </TourErrorBoundary>
-              </AuthProvider>
+              <PaystackProvider publicKey={process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY || ""}>
+                <AuthProvider>
+                  <TierProvider>
+                    <TourErrorBoundary
+                      fallback={
+                        <TourProviderFallback>
+                          <TriggerProvider>
+                            <AppShell />
+                          </TriggerProvider>
+                        </TourProviderFallback>
+                      }>
+                      <TourProvider>
+                        <TriggerProvider>
+                          <AppShell />
+                        </TriggerProvider>
+                      </TourProvider>
+                    </TourErrorBoundary>
+                  </TierProvider>
+                </AuthProvider>
+              </PaystackProvider>
             </SafeAreaProvider>
           </HeroUINativeProvider>
         </BottomSheetModalProvider>

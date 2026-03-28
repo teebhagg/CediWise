@@ -270,48 +270,22 @@ export function useBudgetScreenState() {
       return null;
     }
     if (!previousCycle) {
-      if (__DEV__ && (state?.cycles?.length ?? 0) >= 1) {
-        console.log(
-          "[Reallocation] No previous cycle – need at least 2 cycles",
-        );
-      }
       return null;
     }
     if (!totals || totals.monthlyNetIncome <= 0) {
-      if (__DEV__) {
-        console.log(
-          "[Reallocation] No income – monthlyNetIncome:",
-          totals?.monthlyNetIncome ?? 0,
-        );
-      }
       return null;
     }
     if (!state?.transactions?.length) {
-      if (__DEV__) {
-        console.log("[Reallocation] No transactions in state");
-      }
       return null;
     }
     if (activeCycle?.reallocationApplied) {
-      if (__DEV__) console.log("[Reallocation] Already applied for this cycle");
       return null;
-    }
-    const prevTxCount = state.transactions.filter(
-      (t) => t.cycleId === previousCycle.id,
-    ).length;
-    if (prevTxCount === 0 && __DEV__) {
-      console.log("[Reallocation] Previous cycle has no transactions");
     }
     const suggestion = analyzeAndSuggestReallocation(
       previousCycle,
       state.transactions,
       totals.monthlyNetIncome,
     );
-    if (__DEV__ && !suggestion.shouldReallocate) {
-      console.log(
-        "[Reallocation] Engine returned shouldReallocate=false (need both >8% overspend and >12% underspend by bucket)",
-      );
-    }
     return suggestion.shouldReallocate ? suggestion : null;
   }, [
     previousCycle,

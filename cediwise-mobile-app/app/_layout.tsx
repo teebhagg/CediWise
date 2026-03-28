@@ -16,6 +16,8 @@ import {
   SafeAreaProvider,
 } from "react-native-safe-area-context";
 import { Uniwind } from "uniwind";
+import { PostHogProvider } from 'posthog-react-native';
+
 import { RootErrorBoundary } from "../components/RootErrorBoundary";
 import { TourErrorBoundary } from "../components/tour/TourErrorBoundary";
 import { AuthProvider } from "../contexts/AuthContext";
@@ -38,6 +40,26 @@ import {
   setHydratedThisSession,
 } from "../utils/budgetHydrateSession";
 import "./globals.css";
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: 'https://e80f09f6a8433bd0fe6d1f0643d1eee4@o4511124714094592.ingest.de.sentry.io/4511124717043792',
+
+  // Adds more context data to events (IP address, cookies, user, etc.)
+  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
+  sendDefaultPii: true,
+
+  // Enable Logs
+  enableLogs: true,
+
+  // Configure Session Replay
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1,
+  integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration()],
+
+  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
+  // spotlight: __DEV__,
+});
 
 // Apply dark theme before first paint (same as NativeWind dark app)
 Uniwind.setTheme("dark");
@@ -136,7 +158,7 @@ function AppShell() {
   );
 }
 
-export default function RootLayout() {
+export default Sentry.wrap(function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
 
   // Keeps tokens fresh while app is in foreground/resumed.
@@ -183,45 +205,51 @@ export default function RootLayout() {
   }
 
   return (
-    <RootErrorBoundary>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <BottomSheetModalProvider>
-          <HeroUINativeProvider
-            config={{
-              devInfo: { stylingPrinciples: false },
-              toast: {
-                defaultProps: {
-                  variant: "accent",
-                  placement: "top",
-                  animation: true,
+    <PostHogProvider
+      apiKey={process.env.EXPO_PUBLIC_POSTHOG_API_KEY || ""}
+      options={{
+        host: process.env.EXPO_PUBLIC_POSTHOG_HOST || "",
+      }}>
+      <RootErrorBoundary>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <BottomSheetModalProvider>
+            <HeroUINativeProvider
+              config={{
+                devInfo: { stylingPrinciples: false },
+                toast: {
+                  defaultProps: {
+                    variant: "accent",
+                    placement: "top",
+                    animation: true,
+                  },
                 },
-              },
-            }}>
-            <SafeAreaProvider>
-              <PaystackProvider publicKey={process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY || ""}>
-                <AuthProvider>
-                  <TierProvider>
-                    <TourErrorBoundary
-                      fallback={
-                        <TourProviderFallback>
+              }}>
+              <SafeAreaProvider>
+                <PaystackProvider publicKey={process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY || ""}>
+                  <AuthProvider>
+                    <TierProvider>
+                      <TourErrorBoundary
+                        fallback={
+                          <TourProviderFallback>
+                            <TriggerProvider>
+                              <AppShell />
+                            </TriggerProvider>
+                          </TourProviderFallback>
+                        }>
+                        <TourProvider>
                           <TriggerProvider>
                             <AppShell />
                           </TriggerProvider>
-                        </TourProviderFallback>
-                      }>
-                      <TourProvider>
-                        <TriggerProvider>
-                          <AppShell />
-                        </TriggerProvider>
-                      </TourProvider>
-                    </TourErrorBoundary>
-                  </TierProvider>
-                </AuthProvider>
-              </PaystackProvider>
-            </SafeAreaProvider>
-          </HeroUINativeProvider>
-        </BottomSheetModalProvider>
-      </GestureHandlerRootView>
-    </RootErrorBoundary>
+                        </TourProvider>
+                      </TourErrorBoundary>
+                    </TierProvider>
+                  </AuthProvider>
+                </PaystackProvider>
+              </SafeAreaProvider>
+            </HeroUINativeProvider>
+          </BottomSheetModalProvider>
+        </GestureHandlerRootView>
+      </RootErrorBoundary>
+    </PostHogProvider>
   );
-}
+});

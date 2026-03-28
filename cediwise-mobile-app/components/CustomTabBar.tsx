@@ -91,7 +91,7 @@ export function CustomTabBar(props: BottomTabBarProps) {
       <TourZone
         stepKey="home-nav"
         name="Navigation"
-        description="Switch between Home, Budget, Learn, and Invest anytime."
+        description="Switch between Home, Budget, Learn, and Business anytime."
         shape="rounded-rect"
         borderRadius={28}>
         <View collapsable={false}>

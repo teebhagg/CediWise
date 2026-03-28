@@ -5,6 +5,7 @@ import type {
   BudgetTransaction,
   IncomeSource,
 } from "../types/budget";
+import { normalizeBudgetEngineMode } from "./budgetEngine";
 import { isOnline } from "./connectivity";
 import { supabase } from "./supabase";
 
@@ -53,6 +54,9 @@ export async function fetchBudgetStateRemote(
         (x) => typeof x === "string"
       )
     : undefined;
+  
+  // budgetEngineMode is persisted locally only and not stored in the profiles table.
+  const budgetEngineMode = normalizeBudgetEngineMode(null);
 
   // Income sources
   const incomeRes = await supabase
@@ -210,6 +214,7 @@ export async function fetchBudgetStateRemote(
     prefs: {
       ...(paydayDay ? { paydayDay } : {}),
       ...(interests ? { interests } : {}),
+      budgetEngineMode,
     },
     incomeSources,
     cycles,

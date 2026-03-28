@@ -50,3 +50,5 @@ builds/
 
 .vscode/
 *.sql
+
+.docs

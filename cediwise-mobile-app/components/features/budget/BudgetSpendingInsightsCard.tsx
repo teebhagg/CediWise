@@ -120,9 +120,9 @@ export function BudgetSpendingInsightsCard({
                     : insight.status === 'near'
                       ? 'text-amber-300'
                       : 'text-slate-400'
-                    }`}
+                  }`}
                 >
-                  ₵{formatCurrency(insight.spent)} / ₵{formatCurrency(insight.limit)}
+                  ₵{formatCurrency(insight.spent)} / {insight.limit <= 0 ? "Uncapped" : `₵${formatCurrency(insight.limit)}`}
                 </Text>
                 <View
                   className={`mt-1 px-1.5 py-0.5 rounded-md ${insight.status === 'over'

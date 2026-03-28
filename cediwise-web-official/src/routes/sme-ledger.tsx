@@ -23,7 +23,7 @@ const APP_JSON_LD = {
   url: absoluteUrl('/sme-ledger'),
   offers: {
     '@type': 'Offer',
-    price: '0.00',
+    price: '25.00',
     priceCurrency: 'GHS',
   },
   areaServed: {
@@ -41,17 +41,17 @@ const highlights = [
   {
     title: 'Automatic 20% VAT',
     description:
-      'VAT-inclusive and VAT-exclusive amounts calculated automatically. No manual math.',
+      'VAT-inclusive and VAT-exclusive amounts calculated automatically under Act 1151. No manual math.',
   },
   {
     title: 'VAT threshold alert',
     description:
-      'Get notified as you approach the GHS 750,000 annual turnover threshold for VAT registration.',
+      'Get notified as you approach the GHS 750,000 annual turnover threshold for VAT registration (goods only). Service providers are always required to register.',
   },
   {
-    title: 'Simple reports',
+    title: 'Monthly P&L summary',
     description:
-      'See total revenue, expenses, and profit at a glance. Export for your accountant or the Ghana Revenue Authority (GRA).',
+      'See total revenue, expenses, and profit at a glance. Export CSV for your accountant.',
   },
   {
     title: 'Business-ready',
@@ -81,16 +81,18 @@ function SMELedgerPage() {
         <p>
           Add your sales and expenses with date, amount, and category. CediWise automatically applies
           20% VAT where relevant and keeps a running total of your turnover. As you approach GHS
-          750,000 in annual turnover, you&apos;ll get a heads-up — so you can plan for VAT registration
-          if needed.
+          750,000 in annual turnover (for goods businesses), you&apos;ll get a heads-up — so you can plan for VAT registration
+          if needed. Service providers are always required to register regardless of turnover under Act 1151.
         </p>
 
-        <h2>Built for Ghanaian small & medium enterprises (SMEs)</h2>
+        <h2>Built for Ghanaian small &amp; medium enterprises (SMEs)</h2>
         <p>
           Many small business owners in Ghana manage money in notebooks or scattered spreadsheets. The
           SME Ledger gives you a clean, digital record. When it&apos;s time to file taxes or talk to an
           accountant, you&apos;re ready.
         </p>
+
+
 
         <h2>Why it matters</h2>
         <p>

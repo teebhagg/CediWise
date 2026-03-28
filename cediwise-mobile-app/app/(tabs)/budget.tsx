@@ -17,6 +17,7 @@ import { BudgetSetupCycleCard } from "@/components/features/budget/BudgetSetupCy
 import { BudgetToolsCard } from "@/components/features/budget/BudgetToolsCard";
 import { StartNewCycleCard } from "@/components/features/budget/StartNewCycleCard";
 import { useBudgetScreenState } from "@/components/features/budget/useBudgetScreenState";
+import { useTierContext } from "@/contexts/TierContext";
 import { useTourContext } from "@/contexts/TourContext";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useConnectivity } from "@/hooks/useConnectivity";
@@ -60,6 +61,7 @@ export default function BudgetScreen() {
     ui,
     modals,
   } = useBudgetScreenState();
+  const { canAccessBudget } = useTierContext();
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((event) => {
@@ -68,10 +70,8 @@ export default function BudgetScreen() {
   const { showSuccess, showError } = useAppToast();
   const params = useLocalSearchParams<{ tour?: string; fromVitals?: string }>();
   const {
-    startBudgetTour,
-    skipBudgetTour,
-    hasSeenBudgetTour,
-    valueFirstOnboardingEnabled,
+    startActiveOnboardingIfEligible,
+    onboardingLoaded,
   } = useTourContext();
   const { scrollViewRef } = useTour();
   const { isConnected } = useConnectivity();
@@ -105,48 +105,39 @@ export default function BudgetScreen() {
     !showPostVitalsSkeleton;
 
   useEffect(() => {
-    const shouldStartForGuidedFlow =
-      params.tour === "budget" && hasSeenBudgetTour === false && !!user?.id;
-    const shouldStartForContextualFallback =
-      valueFirstOnboardingEnabled &&
-      params.tour !== "budget" &&
-      hasSeenBudgetTour === false &&
-      !!user?.id;
-
-    if (!shouldStartForGuidedFlow && !shouldStartForContextualFallback) {
-      return;
-    }
-    if (budgetTourTriggeredRef.current) return;
-
-    if (tourZonesReady) {
-      budgetTourTriggeredRef.current = true;
-      startBudgetTour();
+    if (!user?.id || !onboardingLoaded || budget.isLoading || budgetTourTriggeredRef.current) {
       return;
     }
 
-    if (shouldStartForGuidedFlow) {
-      budgetTourTriggeredRef.current = true;
+    const state1BudgetStepKey =
+      !personalization.isLoading && !personalization.hasProfile
+        ? "state1-budget-personalization"
+        : "state1-budget-payday";
+
+    if (!tourZonesReady) {
       const timeoutId = setTimeout(() => {
-        void skipBudgetTour();
+        budgetTourTriggeredRef.current = false;
       }, BUDGET_TOUR_READY_TIMEOUT_MS);
-
       return () => clearTimeout(timeoutId);
     }
+
+    budgetTourTriggeredRef.current = true;
+    void startActiveOnboardingIfEligible("budget", { state1BudgetStepKey });
   }, [
-    hasSeenBudgetTour,
-    params.tour,
-    skipBudgetTour,
-    startBudgetTour,
+    budget.isLoading,
+    onboardingLoaded,
+    personalization.hasProfile,
+    personalization.isLoading,
     tourZonesReady,
     user?.id,
-    valueFirstOnboardingEnabled,
+    startActiveOnboardingIfEligible,
   ]);
 
   useEffect(() => {
-    if (hasSeenBudgetTour === true) {
+    if (!tourZonesReady) {
       budgetTourTriggeredRef.current = false;
     }
-  }, [hasSeenBudgetTour]);
+  }, [tourZonesReady]);
 
   useEffect(() => {
     if (!fromVitals || initialSyncRanRef.current || !user?.id) return;
@@ -269,23 +260,43 @@ export default function BudgetScreen() {
                     showError("Error", "Failed to sync budget");
                   });
               }}
-              tintColor="#22C55E"
-              colors={["#22C55E"]}
+              tintColor="#10B981"
+              colors={["#10B981"]}
               progressViewOffset={Platform.OS === "android" ? 60 : undefined}
             />
           }>
           <View className="gap-4 mb-6">
             {/* Onboarding: Personalize first (new users who haven't done vitals) */}
-            <BudgetPersonalizationCard
-              userId={user?.id}
-              showCta={
-                !!user &&
-                !personalization.isLoading &&
-                !personalization.setupCompleted
-              }
-              showSummary={false}
-              vitalsSummary={null}
-            />
+            {!!user &&
+            !personalization.isLoading &&
+            !personalization.setupCompleted &&
+            !personalization.hasProfile ? (
+              <TourZone
+                stepKey="state1-budget-personalization"
+                name="Set up your budget foundation"
+                description="Finish personalization here so CediWise can build a budget that matches your real payday and spending pattern."
+                shape="rounded-rect"
+                borderRadius={35}
+                style={{ width: "100%" }}>
+                <View collapsable={false}>
+                  <BudgetPersonalizationCard
+                    userId={user?.id}
+                    showCta
+                    showSummary={false}
+                    vitalsSummary={null}
+                  />
+                </View>
+              </TourZone>
+            ) : (
+              <View collapsable={false}>
+                <BudgetPersonalizationCard
+                  userId={user?.id}
+                  showCta={false}
+                  showSummary={false}
+                  vitalsSummary={null}
+                />
+              </View>
+            )}
 
             {/* Alert zone */}
             <StartNewCycleCard
@@ -320,21 +331,48 @@ export default function BudgetScreen() {
             ) : (
               <>
                 {!budget.state?.prefs?.paydayDay ? (
-                  <BudgetSetupCycleCard
-                    paydayDay={form.paydayDay}
-                    cycleDayError={form.cycleDayError}
-                    onPaydayChange={form.handlePaydayChange}
-                    onCreateBudget={async () => {
-                      const day = Math.max(
-                        1,
-                        Math.min(31, parseInt(form.paydayDay || "25", 10)),
-                      );
-                      await budget.setupBudget({
-                        paydayDay: day,
-                        seedCategories: false,
-                      });
-                    }}
-                  />
+                  <TourZone
+                    stepKey="state1-budget-payday"
+                    name="Set your payday"
+                    description="Set your payday here so your budget cycle lines up with the way money actually comes in."
+                    shape="rounded-rect"
+                    borderRadius={35}
+                    style={{ width: "100%" }}>
+                    <View collapsable={false}>
+                      <BudgetSetupCycleCard
+                        salary={form.incomeAmount}
+                        onSalaryChange={form.handleSalaryChange}
+                        salaryError={form.salaryError}
+                        applyDeductions={form.applyDeductions}
+                        onApplyDeductionsChange={form.setApplyDeductions}
+                        paydayDay={form.paydayDay}
+                        cycleDayError={form.cycleDayError}
+                        onPaydayChange={form.handlePaydayChange}
+                        onCreateBudget={async () => {
+                          const day = Math.max(
+                            1,
+                            Math.min(31, parseInt(form.paydayDay || "25", 10)),
+                          );
+                          const salary = parseFloat(form.incomeAmount.replace(/,/g, ""));
+                          if (isNaN(salary) || salary <= 0) return;
+
+                          // 1. Add income source first
+                          await budget.addIncomeSource({
+                            name: "Primary Salary",
+                            type: "primary",
+                            amount: salary,
+                            applyDeductions: form.applyDeductions,
+                          });
+
+                          // 2. Setup budget structure
+                          await budget.setupBudget({
+                            paydayDay: day,
+                            seedCategories: true, // Seed default categories now since we have income!
+                          });
+                        }}
+                      />
+                    </View>
+                  </TourZone>
                 ) : null}
 
                 {derived.cycleIsSet && !hasCategories ? (
@@ -360,27 +398,26 @@ export default function BudgetScreen() {
                     !!derived.reallocationSuggestion &&
                     !!derived.activeCycleId &&
                     !!derived.activeCycle &&
-                    derived.hasIncomeSources &&
-                    derived.enableAutoReallocation
+                    derived.hasIncomeSources
                   }
                   suggestion={derived.reallocationSuggestion ?? null}
                   onApply={async () => {
                     const s = derived.reallocationSuggestion;
                     if (!s?.changes || !derived.activeCycleId) return;
-                    await budget.updateCycleAllocation(
+                    const nextState = await budget.updateCycleAllocation(
                       derived.activeCycleId,
                       s.changes,
                       { reallocationReason: s.reason },
                     );
-                    await budget.recalculateBudget();
+                    await budget.recalculateBudget(nextState ?? undefined);
                     await budget.reload();
                   }}
                 />
 
                 <TourZone
-                  stepKey="budget-overview"
-                  name="Welcome to CediWise"
-                  description="If your profile is not set, use the personalization banner above for a tailored plan."
+                  stepKey="state2-budget-overview"
+                  name="Your budget overview"
+                  description="This overview shows how your money is allocated so you can quickly see whether your plan is on track."
                   shape="rounded-rect"
                   borderRadius={16}
                   style={{ width: "100%" }}>
@@ -401,51 +438,60 @@ export default function BudgetScreen() {
                             : "At risk"
                       }
                       healthSummary={ui.budgetHealthScore?.summary}
+                      canAccessBudget={canAccessBudget}
                     />
                   </View>
                 </TourZone>
 
                 <TourZone
-                  stepKey="budget-actions"
-                  name="Salary → Budget"
-                  description="Your income and expenses become a clear Needs / Wants / Savings plan."
+                  stepKey="state2-budget-tools"
+                  name="Organize your categories"
+                  description="Quickly manage your categories, income sources, and insights from here to keep your budget healthy."
                   shape="rounded-rect"
-                  borderRadius={16}
+                  borderRadius={12}
                   style={{ width: "100%" }}>
                   <View collapsable={false}>
                     <BudgetQuickActions
-                      visible={
-                        derived.cycleIsSet
-                      }
+                      visible={derived.cycleIsSet}
                       onLogExpense={() => modals.setShowTxModal(true)}
                       disabledLogExpense={!derived.activeCycleId}
                     />
                   </View>
                 </TourZone>
 
-                <BudgetExpensesCard
-                  visible={derived.cycleIsSet}
-                  activeCycleId={derived.activeCycleId}
-                  filter={ui.filter}
-                  setFilter={ui.setFilter}
-                  transactions={derived.cycleTransactions}
-                  categories={derived.cycleCategories.map((c) => ({
-                    id: c.id,
-                    name: c.name,
-                  }))}
-                  onLogExpense={() => {
-                    if (!derived.activeCycleId || derived.cycleHasEnded) {
-                      showError(
-                        "Start a new cycle",
-                        "Set up or start a new cycle to add expenses.",
-                      );
-                      return;
-                    }
-                    modals.setShowTxModal(true);
-                  }}
-                  onShowMore={() => router.push("/expenses")}
-                  previewCount={3}
-                />
+                <TourZone
+                  stepKey="state2-budget-expenses"
+                  name="Track your spending"
+                  description="Record and review expenses here so your budget reflects what is really happening month to month."
+                  shape="rounded-rect"
+                  borderRadius={16}
+                  style={{ width: "100%" }}>
+                  <View collapsable={false}>
+                    <BudgetExpensesCard
+                      visible={derived.cycleIsSet}
+                      activeCycleId={derived.activeCycleId}
+                      filter={ui.filter}
+                      setFilter={ui.setFilter}
+                      transactions={derived.cycleTransactions}
+                      categories={derived.cycleCategories.map((c) => ({
+                        id: c.id,
+                        name: c.name,
+                      }))}
+                      onLogExpense={() => {
+                        if (!derived.activeCycleId || derived.cycleHasEnded) {
+                          showError(
+                            "Start a new cycle",
+                            "Set up or start a new cycle to add expenses.",
+                          );
+                          return;
+                        }
+                        modals.setShowTxModal(true);
+                      }}
+                      onShowMore={() => router.push("/expenses")}
+                      previewCount={3}
+                    />
+                  </View>
+                </TourZone>
 
                 <BudgetToolsCard visible={!!user && derived.cycleIsSet} />
               </>

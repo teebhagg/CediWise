@@ -28,6 +28,11 @@ export const usePersonalizationStore = create<PersonalizationStore>(
     hasProfile: false,
 
     initForUser: async (userId: string | null) => {
+      const { userId: currentUserId, isLoading: currentLoading } = get();
+      if (userId === currentUserId && (currentLoading || currentUserId !== null)) {
+        return;
+      }
+
       set({ userId, isLoading: true });
       if (!userId) {
         set({ setupCompleted: false, hasProfile: false, isLoading: false });
@@ -48,7 +53,7 @@ export const usePersonalizationStore = create<PersonalizationStore>(
 
       const cached = await readPersonalizationStatusCache(startUserId);
       if (cached && get().userId === startUserId) {
-        set({ setupCompleted: cached.setupCompleted });
+        set({ setupCompleted: cached.setupCompleted, isLoading: false });
       }
 
       try {

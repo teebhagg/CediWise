@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BackButton } from '@/components/BackButton';
 import { DEFAULT_STANDARD_HEIGHT, StandardHeader } from '@/components/CediWiseHeader';
 import { BudgetModals } from '@/components/features/budget/BudgetModals';
@@ -7,12 +8,23 @@ import { useBudgetScreenState } from '@/components/features/budget/useBudgetScre
 import { useTourContext } from '@/contexts/TourContext';
 import { useAppToast } from '@/hooks/useAppToast';
 import { useAuth } from '@/hooks/useAuth';
+import { clearOnboardingLocalCache } from '@/utils/onboardingState';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { Settings, Sparkles, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const AUTH_STORAGE_KEYS = [
+  "sb-access-token",
+  "sb-refresh-token",
+  "supabase.auth.token",
+] as const;
+
+function authStorageKeyMatches(key: string): boolean {
+  return AUTH_STORAGE_KEYS.some((prefix) => key.includes(prefix));
+}
 
 export default function BudgetSettingsScreen() {
   const { user } = useAuth();
@@ -23,6 +35,28 @@ export default function BudgetSettingsScreen() {
   const { personalization, derived, budget, modals } = useBudgetScreenState();
   const [showDeleteAllBudgetModal, setShowDeleteAllBudgetModal] = useState(false);
   const headerPadding = DEFAULT_STANDARD_HEIGHT + insets.top;
+
+  const handleClearAllLocalStorage = async () => {
+    if (!user?.id) return;
+    try {
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Warning,
+      ).catch(() => {});
+      const allKeys = await AsyncStorage.getAllKeys();
+      const keysToRemove = allKeys.filter((key) => !authStorageKeyMatches(key));
+      if (keysToRemove.length > 0) {
+        await AsyncStorage.multiRemove(keysToRemove);
+      }
+      await clearOnboardingLocalCache(user.id);
+      router.replace("/(tabs)");
+      showSuccess(
+        "Cleared",
+        "App caches were cleared on this device while preserving auth state. Dev testing state is now clean.",
+      );
+    } catch {
+      showError("Error", "Could not clear local storage");
+    }
+  };
 
   if (!user?.id) {
     return (
@@ -85,28 +119,46 @@ export default function BudgetSettingsScreen() {
           </Pressable>
 
           {__DEV__ ? (
-            <Pressable
-              onPress={async () => {
-                try {
-                  await Haptics.notificationAsync(
-                    Haptics.NotificationFeedbackType.Success,
-                  ).catch(() => { });
-                  await resetTourSeen();
-                  showSuccess("Reset", "Tour seen flags cleared.");
-                } catch {
-                  showError("Error", "Could not reset tour");
-                }
-              }}
-              className="flex-row items-center justify-between py-4 px-4 rounded-xl bg-amber-500/10 border border-amber-500/30 active:bg-amber-500/20"
-            >
-              <View className="flex-row items-center gap-2">
-                <Sparkles size={18} color="#F59E0B" />
-                <Text className="text-amber-400 font-semibold">Reset tour seen</Text>
-              </View>
-              <Text className="text-slate-400 text-sm">
-                Dev only
-              </Text>
-            </Pressable>
+            <>
+              <Pressable
+                onPress={async () => {
+                  try {
+                    await Haptics.notificationAsync(
+                      Haptics.NotificationFeedbackType.Success,
+                    ).catch(() => { });
+                    await resetTourSeen();
+                    router.replace("/(tabs)");
+                    showSuccess(
+                      "Reset",
+                      "Onboarding state cleared locally and in your account. Home will reopen for fresh testing.",
+                    );
+                  } catch {
+                    showError("Error", "Could not reset tour");
+                  }
+                }}
+                className="flex-row items-center justify-between py-4 px-4 rounded-xl bg-amber-500/10 border border-amber-500/30 active:bg-amber-500/20"
+              >
+                <View className="flex-row items-center gap-2">
+                  <Sparkles size={18} color="#F59E0B" />
+                  <Text className="text-amber-400 font-semibold">Reset tour seen</Text>
+                </View>
+                <Text className="text-slate-400 text-sm">
+                  Dev only
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={handleClearAllLocalStorage}
+                className="flex-row items-center justify-between py-4 px-4 rounded-xl bg-orange-500/10 border border-orange-500/30 active:bg-orange-500/20"
+              >
+                <View className="flex-row items-center gap-2">
+                  <Trash2 size={18} color="#F97316" />
+                  <Text className="text-orange-400 font-semibold">Clear all local storage</Text>
+                </View>
+                <Text className="text-slate-400 text-sm">
+                  Dev only
+                </Text>
+              </Pressable>
+            </>
           ) : null}
         </View>
       </ScrollView>

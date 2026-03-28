@@ -46,12 +46,30 @@ export default function ExpensesScreen() {
     return state.categories.filter((c) => c.cycleId === activeCycleId);
   }, [state, activeCycleId]);
 
-  const cycleTransactions = useMemo(() => {
-    if (!state || !activeCycleId) return [];
-    const list = state.transactions.filter((t) => t.cycleId === activeCycleId);
+  const allTransactions = useMemo(() => {
+    if (!state) return [];
+    return state.transactions;
+  }, [state]);
+
+  const displayedTransactions = useMemo(() => {
+    let list = allTransactions;
+
+    // Optional: Only show current cycle by default if no filter? 
+    // Or show all but scoped by activeCycleId?
+    // The user said "include the months and years found in all expenses", 
+    // implying they want to see historical ones too.
+    
+    if (selectedMonthAndYear) {
+      list = list.filter((t) => {
+        const d = new Date(t.occurredAt);
+        const my = `${d.toLocaleString("default", { month: "long" })} ${d.getFullYear()}`;
+        return my === selectedMonthAndYear;
+      });
+    }
+
     if (filter === "all") return list;
     return list.filter((t) => t.bucket === filter);
-  }, [state, activeCycleId, filter]);
+  }, [allTransactions, selectedMonthAndYear, activeCycleId, filter]);
 
   const txModalVisible = showAddModal || !!editingTx;
 
@@ -105,8 +123,8 @@ export default function ExpensesScreen() {
   }, [deleteTransaction, txToDelete]);
 
   useEffect(() => {
-    setMonthAndYearOptions(getMonthsAndYearsFromExpenses(cycleTransactions));
-  }, [cycleTransactions]);
+    setMonthAndYearOptions(getMonthsAndYearsFromExpenses(allTransactions));
+  }, [allTransactions]);
 
   const handleMonthAndYearPress = useCallback(() => {
     setShowMonthAndYearPopover(true);
@@ -181,10 +199,18 @@ export default function ExpensesScreen() {
           centered={true}
           leading={<BackButton />}
           actions={[
-            <Select key="month-select">
+            <Select 
+              key="month-select" 
+              value={selectedMonthAndYear ? { label: selectedMonthAndYear, value: selectedMonthAndYear } : { label: "All Time", value: "" }} 
+              onValueChange={(v) => {
+                const choice = Array.isArray(v) ? v[0] : v;
+                setSelectedMonthAndYear(choice?.value || null);
+              }}
+            >
               <Select.Trigger asChild>
                 <Pressable
                   style={expensesHeaderStyles.actionTrigger}
+                  className={selectedMonthAndYear ? "bg-emerald-500/10 rounded-full" : ""}
                   onPress={() => {
                     try {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -194,7 +220,7 @@ export default function ExpensesScreen() {
                   }}
                   accessibilityLabel="Select month"
                   accessibilityRole="button">
-                  <Calendar size={20} color="#22c55e" />
+                  <Calendar size={20} color={selectedMonthAndYear ? "#10b981" : "#94a3b8"} />
                 </Pressable>
               </Select.Trigger>
               <Select.Portal>
@@ -207,8 +233,17 @@ export default function ExpensesScreen() {
                 <Select.Content
                   presentation="popover"
                   className="w-[250px] rounded-md">
+                  <Select.Item 
+                    key="all" 
+                    value="" 
+                    label="All Time" 
+                  />
                   {monthAndYearOptions.map((option) => (
-                    <Select.Item key={option} value={option} label={option} />
+                    <Select.Item 
+                      key={option} 
+                      value={option} 
+                      label={option} 
+                    />
                   ))}
                 </Select.Content>
               </Select.Portal>
@@ -255,9 +290,27 @@ export default function ExpensesScreen() {
 
         <View className="flex-1 px-5">
           <FlashList
-            data={cycleTransactions}
+            data={displayedTransactions}
             keyExtractor={(t) => t.id}
             contentContainerStyle={{ paddingBottom: 100 }}
+            ListHeaderComponent={
+              selectedMonthAndYear ? (
+                <View className="mb-4 flex-row items-center justify-between bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20">
+                  <View className="flex-row items-center gap-2">
+                    <Calendar size={16} color="#10b981" />
+                    <Text className="text-emerald-400 font-bold text-lg">
+                      {selectedMonthAndYear}
+                    </Text>
+                  </View>
+                  <Pressable 
+                    onPress={() => setSelectedMonthAndYear(null)}
+                    className="bg-emerald-500/20 px-3 py-1 rounded-full"
+                  >
+                    <Text className="text-emerald-400 text-xs font-medium">Clear</Text>
+                  </Pressable>
+                </View>
+              ) : null
+            }
             ListEmptyComponent={
               <Card>
                 <Text className="text-slate-400 py-4">
@@ -369,12 +422,15 @@ const expensesHeaderStyles = StyleSheet.create({
 // Get months from expenses
 const getMonthsAndYearsFromExpenses = (expenses: BudgetTransaction[]) => {
   const monthsAndYears = new Set<string>();
-  expenses.forEach((expense) => {
+  expenses?.forEach((expense) => {
     const date = new Date(expense.occurredAt);
     // Format to be human readable
     const month = date.toLocaleString("default", { month: "long" });
     const year = date.getFullYear();
     monthsAndYears.add(`${month} ${year}`);
   });
-  return Array.from(monthsAndYears);
+  
+  return Array.from(monthsAndYears).sort((a, b) => {
+    return new Date(b).getTime() - new Date(a).getTime();
+  });
 };

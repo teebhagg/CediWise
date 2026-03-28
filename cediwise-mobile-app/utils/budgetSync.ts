@@ -439,6 +439,19 @@ async function attemptMutationRemote(
       return { ok: true };
     }
 
+    // ─── SME Ledger mutations (delegate to smeSync handlers) ────────
+    if (
+      kind === "sme_upsert_profile" ||
+      kind === "sme_upsert_category" ||
+      kind === "sme_delete_category" ||
+      kind === "sme_insert_transaction" ||
+      kind === "sme_update_transaction" ||
+      kind === "sme_delete_transaction"
+    ) {
+      const { attemptSMEMutation } = await import("./smeSync");
+      return attemptSMEMutation(kind, payload);
+    }
+
     return { ok: false, error: `Unsupported mutation kind: ${kind}` };
   } catch (e) {
     return { ok: false, error: errorMessage(e) };
@@ -506,6 +519,13 @@ const MUTATION_DEPENDENCY_ORDER: Record<string, number> = {
   insert_transaction: 3,
   update_transaction: 4,
   delete_transaction: 5,
+  // SME mutations run after budget mutations
+  sme_upsert_profile: 10,
+  sme_upsert_category: 11,
+  sme_insert_transaction: 12,
+  sme_update_transaction: 13,
+  sme_delete_transaction: 14,
+  sme_delete_category: 15,
 };
 
 /** Processes one sync run (start→end). Caller must refresh queue only after this returns so UI updates only on run boundaries. */

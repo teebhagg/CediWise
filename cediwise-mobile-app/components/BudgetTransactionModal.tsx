@@ -1,10 +1,11 @@
 import * as Haptics from 'expo-haptics';
-import { Button, Dialog } from 'heroui-native';
+import { History, ReceiptText } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GlassView } from '@/components/GlassView';
 import type { BudgetBucket, BudgetCategory, BudgetTransaction } from '../types/budget';
+import { AppDialog } from './AppDialog';
 import { AppTextField } from './AppTextField';
 
 type Props = {
@@ -42,6 +43,23 @@ export function BudgetTransactionModal({
   );
 
   const isEditMode = !!initialTransaction;
+
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -133,115 +151,94 @@ export function BudgetTransactionModal({
     onClose();
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
-    <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="bg-black/65" />
-        {Platform.OS === 'ios' && <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />}
-        <KeyboardAvoidingView
-          behavior="padding"
-          style={{ flex: 1, justifyContent: 'center' }}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 40}
-        >
-          <Dialog.Content
-            className="max-w-[380px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
-            style={styles.contentShadow}
-          >
-            <Dialog.Close
-              variant="ghost"
-              className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-slate-600/60 border border-slate-500/50"
-              iconProps={{ size: 20, color: "#e2e8f0" }}
-              onPress={handleClose}
-            />
-            <View className="px-7 pt-[45px] pb-7 gap-3">
-              <Dialog.Title className="text-[26px] font-bold text-slate-200 mb-1.5 text-center">
-                {isEditMode ? 'Edit Expense' : 'Log Expense'}
-              </Dialog.Title>
-              <Dialog.Description className="text-[15px] text-slate-400 mb-3 text-center leading-[22px]">
-                {isEditMode ? 'Update bucket, category, amount or note.' : 'Pick a bucket and save. Category is optional if none exist yet.'}
-              </Dialog.Description>
-
-              <View className="gap-1.5">
-                <Text className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                  Bucket
+    <AppDialog
+      visible={visible}
+      onOpenChange={handleOpenChange}
+      icon={isEditMode ? <History size={22} color="#10B981" /> : <ReceiptText size={22} color="#10B981" />}
+      title={isEditMode ? 'Edit Expense' : 'Log Expense'}
+      description={isEditMode ? 'Update bucket, category, amount or note.' : 'Pick a bucket and save. Category is optional if none exist yet.'}
+      primaryLabel={isEditMode ? 'Update' : 'Save'}
+      onPrimary={handleSubmit}
+      onClose={handleClose}
+    >
+      <View className="gap-3">
+        <View className="gap-1.5">
+          <Text className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+            Bucket
+          </Text>
+          <View className="flex-row gap-2.5">
+            {(['needs', 'wants', 'savings'] as const).map((b) => (
+              <Pressable
+                key={b}
+                onPress={() => handleBucketPress(b)}
+                className={`px-3 py-2.5 rounded-full border ${bucket === b
+                  ? 'bg-emerald-500/20 border-emerald-500/45'
+                  : 'bg-slate-400/15 border-slate-400/25'
+                  }`}
+              >
+                <Text
+                  className={`text-[13px] ${bucket === b ? 'text-slate-50' : 'text-slate-300'}`}
+                >
+                  {b === 'needs' ? 'Needs' : b === 'wants' ? 'Wants' : 'Savings'}
                 </Text>
-                <View className="flex-row gap-2.5">
-                  {(['needs', 'wants', 'savings'] as const).map((b) => (
-                    <Pressable
-                      key={b}
-                      onPress={() => handleBucketPress(b)}
-                      className={`px-3 py-2.5 rounded-full border ${bucket === b
-                        ? 'bg-emerald-500/20 border-emerald-500/45'
-                        : 'bg-slate-400/15 border-slate-400/25'
-                        }`}
-                    >
-                      <Text
-                        className={`text-[13px] ${bucket === b ? 'text-slate-50' : 'text-slate-300'}`}
-                      >
-                        {b === 'needs' ? 'Needs' : b === 'wants' ? 'Wants' : 'Savings'}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
+              </Pressable>
+            ))}
+          </View>
+        </View>
 
-              <View className="gap-1.5">
-                <Text className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                  Category
-                </Text>
-                <View className="flex-row flex-wrap gap-2.5">
-                  {bucketCategories.length === 0 ? (
-                    <Text className="text-[13px] text-slate-400">No categories yet. You can still save this expense.</Text>
-                  ) : (
-                    bucketCategories.map((c) => (
-                      <Pressable
-                        key={c.id}
-                        onPress={() => handleCategoryPress(c.id)}
-                        className={`px-3 py-2.5 rounded-full border ${categoryId === c.id
-                          ? 'bg-emerald-500/20 border-emerald-500/45'
-                          : 'bg-slate-400/15 border-slate-400/25'
-                          }`}
-                      >
-                        <Text
-                          className={`text-[13px] ${categoryId === c.id ? 'text-slate-50' : 'text-slate-300'}`}
-                        >
-                          {c.name}
-                        </Text>
-                      </Pressable>
-                    ))
-                  )}
-                </View>
-              </View>
+        <View className="gap-1.5">
+          <Text className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+            Category
+          </Text>
+          <View className="flex-row flex-wrap gap-2.5">
+            {bucketCategories.length === 0 ? (
+              <Text className="text-[13px] text-slate-400">No categories yet. You can still save this expense.</Text>
+            ) : (
+              bucketCategories.map((c) => (
+                <Pressable
+                  key={c.id}
+                  onPress={() => handleCategoryPress(c.id)}
+                  className={`px-3 py-2.5 rounded-full border ${categoryId === c.id
+                    ? 'bg-emerald-500/20 border-emerald-500/45'
+                    : 'bg-slate-400/15 border-slate-400/25'
+                    }`}
+                >
+                  <Text
+                    className={`text-[13px] ${categoryId === c.id ? 'text-slate-50' : 'text-slate-300'}`}
+                  >
+                    {c.name}
+                  </Text>
+                </Pressable>
+              ))
+            )}
+          </View>
+        </View>
 
-              <AppTextField
-                label="Amount (GHS)"
-                value={amount}
-                onChangeText={setAmount}
-                keyboardType="decimal-pad"
-                placeholder="0.00"
-                returnKeyType="done"
-              />
+        <AppTextField
+          label="Amount (GHS)"
+          value={amount}
+          onChangeText={setAmount}
+          keyboardType="decimal-pad"
+          placeholder="0.00"
+          returnKeyType="done"
+        />
 
-              <AppTextField
-                label="Note (optional)"
-                value={note}
-                onChangeText={setNote}
-                placeholder="e.g. Groceries at Melcom"
-                returnKeyType="done"
-              />
+        <AppTextField
+          label="Note (optional)"
+          value={note}
+          onChangeText={setNote}
+          placeholder="e.g. Groceries at Melcom"
+          returnKeyType="done"
+        />
 
-              {error ? (
-                <Text className="text-red-300 text-xs mt-1 text-center">{error}</Text>
-              ) : null}
-
-              <Button variant="primary" onPress={handleSubmit} className="mt-1.5 h-12 rounded-full bg-emerald-500">
-                <Button.Label className="text-slate-900 font-semibold">{isEditMode ? 'Update' : 'Save'}</Button.Label>
-              </Button>
-            </View>
-          </Dialog.Content>
-        </KeyboardAvoidingView>
-      </Dialog.Portal>
-    </Dialog>
+        {error ? (
+          <Text className="text-red-300 text-xs mt-1 text-center">{error}</Text>
+        ) : null}
+      </View>
+    </AppDialog>
   );
 }
 

@@ -58,9 +58,7 @@ export function PrimaryButton({
           {children}
         </Button.Label>
       ) : (
-        <Text>
-          {children}
-        </Text>
+        <>{children}</>
       )}
     </Button>
   );

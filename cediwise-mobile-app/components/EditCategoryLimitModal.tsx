@@ -1,7 +1,9 @@
 import * as Haptics from 'expo-haptics';
-import { Button, Dialog } from 'heroui-native';
+import { Button, Dialog, ScrollShadow } from 'heroui-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Keyboard, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassView } from '@/components/GlassView';
 import { ArrowUpRightIcon } from 'lucide-react-native';
@@ -27,6 +29,22 @@ export function EditCategoryLimitModal({
 }: Props) {
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | undefined>();
+  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      () => setKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -63,19 +81,28 @@ export function EditCategoryLimitModal({
     onClose();
   };
 
+  const insets = useSafeAreaInsets();
+
   return (
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="bg-black/65" />
         {Platform.OS === 'ios' && <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />}
         <KeyboardAvoidingView
-          behavior="padding"
-          style={{ flex: 1, justifyContent: 'center' }}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 40}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ 
+            flex: 1, 
+            justifyContent: isKeyboardVisible ? 'flex-end' : 'center', 
+            alignItems: 'center',
+            paddingTop: insets.top + 16,
+            paddingBottom: isKeyboardVisible ? 12 : insets.bottom + 16,
+            paddingHorizontal: 16
+          }}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
           <Dialog.Content
             className="max-w-[400px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
-            style={styles.contentShadow}
+            style={[styles.contentShadow, isKeyboardVisible && { maxHeight: '100%' }]}
           >
             <Dialog.Close
               variant="ghost"
@@ -83,48 +110,52 @@ export function EditCategoryLimitModal({
               iconProps={{ size: 20, color: "#e2e8f0" }}
               onPress={handleClose}
             />
-            <View style={styles.content}>
-              <Dialog.Title className="text-[22px] font-bold text-slate-200 text-center mb-0.5">
-                Edit budget limit
-              </Dialog.Title>
-              <Dialog.Description className="text-[14px] text-slate-400 text-center mb-2.5 leading-5">
-                {categoryName}
-              </Dialog.Description>
+            <ScrollShadow color="#121621" LinearGradientComponent={LinearGradient} className="flex-1">
+              <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+                <View style={[styles.content, isKeyboardVisible && { paddingVertical: 16 }]}>
+                  <Dialog.Title className="text-[22px] font-bold text-slate-200 text-center mb-0.5">
+                    Edit budget limit
+                  </Dialog.Title>
+                  <Dialog.Description className="text-[14px] text-slate-400 text-center mb-2.5 leading-5">
+                    {categoryName}
+                  </Dialog.Description>
 
-              <View style={styles.field}>
-                <AppTextField
-                  label="Limit (GHS)"
-                  value={value}
-                  onChangeText={setValue}
-                  keyboardType="decimal-pad"
-                  placeholder="0.00"
-                  returnKeyType="done"
-                  error={error ?? undefined}
-                />
-                {suggestedLimit != null &&
-                  suggestedLimit > 0 &&
-                  suggestedLimit !== currentLimit && (
-                    <Pressable
-                      onPress={() => {
-                        setValue(String(suggestedLimit));
-                        setError(undefined);
-                      }}
-                      className="flex-row items-center justify-between mt-2 py-3 px-4 rounded-[24px] bg-emerald-500/15 border border-emerald-500/30"
-                    >
-                      <Text className="text-emerald-400 w-auto flex-1 text-sm font-medium">
-                        Use suggested: ₵{suggestedLimit.toLocaleString()} (from your spending)
-                      </Text>
-                      {/* <View className="w-10 h-10 flex items-center justify-center bg-emerald-500/15 rounded-full"> */}
-                      <ArrowUpRightIcon size={24} color="#1B6B3A" />
-                      {/* </View> */}
-                    </Pressable>
-                  )}
-              </View>
+                  <View style={styles.field}>
+                    <AppTextField
+                      label="Limit (GHS)"
+                      value={value}
+                      onChangeText={setValue}
+                      keyboardType="decimal-pad"
+                      placeholder="0.00"
+                      returnKeyType="done"
+                      error={error ?? undefined}
+                    />
+                    {suggestedLimit != null &&
+                      suggestedLimit > 0 &&
+                      suggestedLimit !== currentLimit && (
+                        <Pressable
+                          onPress={() => {
+                            setValue(String(suggestedLimit));
+                            setError(undefined);
+                          }}
+                          className="flex-row items-center justify-between mt-2 py-3 px-4 rounded-[24px] bg-emerald-500/15 border border-emerald-500/30"
+                        >
+                          <Text className="text-emerald-400 w-auto flex-1 text-sm font-medium">
+                            Use suggested: ₵{suggestedLimit.toLocaleString()} (from your spending)
+                          </Text>
+                          {/* <View className="w-10 h-10 flex items-center justify-center bg-emerald-500/15 rounded-full"> */}
+                          <ArrowUpRightIcon size={24} color="#1B6B3A" />
+                          {/* </View> */}
+                        </Pressable>
+                      )}
+                  </View>
 
-              <Button variant="primary" onPress={handleSave} className="mt-1.5 h-12 rounded-full bg-emerald-500">
-                <Button.Label className="text-slate-900 font-semibold">Save limit</Button.Label>
-              </Button>
-            </View>
+                  <Button variant="primary" onPress={handleSave} className="mt-1.5 h-12 rounded-full bg-emerald-500">
+                    <Button.Label className="text-slate-900 font-semibold">Save limit</Button.Label>
+                  </Button>
+                </View>
+              </ScrollView>
+            </ScrollShadow>
           </Dialog.Content>
         </KeyboardAvoidingView>
       </Dialog.Portal>

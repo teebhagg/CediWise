@@ -1,7 +1,8 @@
 import { GlassView } from "@/components/GlassView";
 import { formatCurrency } from "@/utils/formatCurrency";
 import * as Haptics from "expo-haptics";
-import { Button, Dialog } from "heroui-native";
+import { Button, Dialog, ScrollShadow } from "heroui-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { CheckIcon, ChevronDown } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, Pressable, ScrollView, Text, useWindowDimensions, View } from "react-native";
@@ -279,176 +280,178 @@ export function RolloverAllocationModal({
             iconProps={{ size: 20, color: "#e2e8f0" }}
             onPress={handleClose}
           />
-          <ScrollView
-            style={{ maxHeight: maxModalHeight - 60, paddingTop: 40 }}
-            contentContainerStyle={{ padding: 20, paddingBottom: 24 }}
-            showsVerticalScrollIndicator={true}
-            bounces={false}
-          >
-            <Text className="text-white text-lg font-bold text-left mb-1">
-              {totalAmount > 0 && destinations.length > 0
-                ? "Where should your unspent money go?"
-                : "Start new cycle"}
-            </Text>
-            {totalAmount > 0 && destinations.length > 0 ? (
-              <Text className="text-slate-400 text-sm text-center mb-4">
-                ₵{formatCurrency(totalAmount)} available to allocate
-              </Text>
-            ) : (
-              <Text className="text-slate-400 text-sm mb-4">
-                {formatCycleDates(nextCycleStart, nextCycleEnd)}
-              </Text>
-            )}
-
-            {totalAmount > 0 && destinations.length > 0 && (
-              <View className="flex-row gap-2 mb-4">
-                <Pressable
-                  onPress={handleAllToFirst}
-                  className={`flex-row gap-2 px-2 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/30 ${selectedOption === 'allToFirst' ? 'bg-emerald-500/30 border-emerald-500' : ''}`}
-                >
-                  <Text className={`text-slate-300 text-xs font-medium text-center ${selectedOption === 'allToFirst' ? 'text-emerald-500' : ''}`}>
-                    All to {destinations[0]?.name ?? "Emergency"}
-                  </Text>
-                  {selectedOption === 'allToFirst' && <CheckIcon size={16} color="#1B6B3A" />}
-                </Pressable>
-                <Pressable
-                  onPress={handleSplitEvenly}
-                  className={`flex-row gap-2 px-2 py-2 rounded-lg bg-slate-500/20 border border-slate-500/30 ${selectedOption === 'splitEvenly' ? 'bg-slate-500/30 border-slate-500' : ''}`}
-                >
-                  <Text className={`text-slate-300 text-xs font-medium text-center ${selectedOption === 'splitEvenly' ? 'text-emerald-500' : ''}`}>
-                    Split evenly
-                  </Text>
-                  {selectedOption === 'splitEvenly' && <CheckIcon size={16} color="#1B6B3A" />}
-                </Pressable>
-              </View>
-            )}
-
-            {destinations.length > 0 && (
-              <View className="gap-3 mb-4 max-h-56">
-                {destinations.map((d) => (
-                  <View
-                    key={d.id}
-                    className="flex-row items-center justify-between py-3.5 px-3 rounded-[16px] bg-slate-800/50"
-                  >
-                    <Text className="text-slate-200 font-medium text-sm flex-1">{d.name}</Text>
-                    <Text className="text-emerald-400 font-semibold">
-                      ₵{formatCurrency(amounts[d.id] ?? 0)}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            <View className="mb-4">
-              <Pressable
-                onPress={toggleOptions}
-                className="flex-row items-center justify-between py-3 px-3 rounded-[22px] bg-slate-800/40 active:bg-slate-800/60"
-              >
-                <View className="flex-1">
-                  <Text className="text-slate-400 text-xs mb-0.5">New cycle</Text>
-                  <Text className="text-slate-200 text-sm">
-                    {formatCycleSummary(
-                      nextCycleStart,
-                      previewEndDate,
-                      unitToggle,
-                      unitToggle === "days" ? (parseInt(duration, 10) || durationDays) : durationDays,
-                      unitToggle === "months" ? (parseInt(duration, 10) || durationMonths) : durationMonths,
-                      parseInt(payday, 10) || paydayDay
-                    )}
-                  </Text>
-                </View>
-                <Animated.View style={chevronAnimatedStyle} className="p-1.5 bg-slate-600/70 rounded-full">
-                  <ChevronDown size={20} color="#94A3B8" />
-                </Animated.View>
-              </Pressable>
-              <Animated.View style={expandContentAnimatedStyle}>
-                <View className="mt-3 gap-4 pl-0.5" style={{ minHeight: EXPANDED_CONTENT_HEIGHT }}>
-                  <View>
-                    <Text className="text-slate-400 text-xs font-medium uppercase tracking-wide mb-2">
-                      Duration (weeks/days/months)
-                    </Text>
-                    <View className="flex-row gap-2 mb-2">
-                      <Pressable
-                        onPress={() => {
-                          setUnitToggle("days");
-                          setDuration(String(durationDays));
-                        }}
-                        className={`flex-1 py-2.5 px-3 rounded-lg border ${unitToggle === "days"
-                          ? "bg-emerald-500/20 border-emerald-500/50"
-                          : "bg-slate-800/40 border-slate-500/30"
-                          }`}
-                      >
-                        <Text
-                          className={`text-sm font-medium text-center ${unitToggle === "days" ? "text-emerald-400" : "text-slate-400"
-                            }`}
-                        >
-                          Weeks (days)
-                        </Text>
-                      </Pressable>
-                      <Pressable
-                        onPress={() => {
-                          setUnitToggle("months");
-                          setDuration(String(durationMonths));
-                        }}
-                        className={`flex-1 py-2.5 px-3 rounded-lg border ${unitToggle === "months"
-                          ? "bg-emerald-500/20 border-emerald-500/50"
-                          : "bg-slate-800/40 border-slate-500/30"
-                          }`}
-                      >
-                        <Text
-                          className={`text-sm font-medium text-center ${unitToggle === "months" ? "text-emerald-400" : "text-slate-400"
-                            }`}
-                        >
-                          Months
-                        </Text>
-                      </Pressable>
-                    </View>
-                    <AppTextField
-                      label={unitToggle === "months" ? "Months" : "Days"}
-                      value={duration}
-                      onChangeText={setDuration}
-                      keyboardType="number-pad"
-                      returnKeyType="done"
-                      placeholder={String(unitToggle === "months" ? durationMonths : durationDays)}
-                    />
-                    <Text className="text-slate-500 text-xs mt-1">
-                      {unitToggle === "months"
-                        ? "Calendar months (30–31 days varies)"
-                        : "e.g. 7 weekly, 14 bi-weekly"}
-                    </Text>
-                  </View>
-                  <View>
-                    <Text className="text-slate-400 text-xs font-medium uppercase tracking-wide mb-2">
-                      Day of Pay
-                    </Text>
-                    <AppTextField
-                      label="Day of month (1–31)"
-                      value={payday}
-                      onChangeText={setPayday}
-                      keyboardType="number-pad"
-                      placeholder={`${paydayDay}`}
-                    />
-                    <Text className="text-slate-500 text-xs mt-1">
-                      Payday day. 30–31 use last day in February.
-                    </Text>
-                  </View>
-                </View>
-              </Animated.View>
-            </View>
-
-            <Button
-              variant="primary"
-              onPress={handleConfirm}
-              isDisabled={!isValid}
-              className="h-12 rounded-full bg-emerald-500"
+          <ScrollShadow color="#121621" LinearGradientComponent={LinearGradient} className="flex-1">
+            <ScrollView
+              style={{ maxHeight: maxModalHeight - 60, paddingTop: 40 }}
+              contentContainerStyle={{ padding: 20, paddingBottom: 24 }}
+              showsVerticalScrollIndicator={true}
+              bounces={false}
             >
-              <Button.Label className="text-slate-900 font-semibold">
+              <Text className="text-white text-lg font-bold text-left mb-1">
                 {totalAmount > 0 && destinations.length > 0
-                  ? "Confirm allocation"
-                  : "Start cycle"}
-              </Button.Label>
-            </Button>
-          </ScrollView>
+                  ? "Where should your unspent money go?"
+                  : "Start new cycle"}
+              </Text>
+              {totalAmount > 0 && destinations.length > 0 ? (
+                <Text className="text-slate-400 text-sm text-center mb-4">
+                  ₵{formatCurrency(totalAmount)} available to allocate
+                </Text>
+              ) : (
+                <Text className="text-slate-400 text-sm mb-4">
+                  {formatCycleDates(nextCycleStart, nextCycleEnd)}
+                </Text>
+              )}
+
+              {totalAmount > 0 && destinations.length > 0 && (
+                <View className="flex-row gap-2 mb-4">
+                  <Pressable
+                    onPress={handleAllToFirst}
+                    className={`flex-row gap-2 px-2 py-2 rounded-lg bg-emerald-500/20 border border-emerald-500/30 ${selectedOption === 'allToFirst' ? 'bg-emerald-500/30 border-emerald-500' : ''}`}
+                  >
+                    <Text className={`text-slate-300 text-xs font-medium text-center ${selectedOption === 'allToFirst' ? 'text-emerald-500' : ''}`}>
+                      All to {destinations[0]?.name ?? "Emergency"}
+                    </Text>
+                    {selectedOption === 'allToFirst' && <CheckIcon size={16} color="#1B6B3A" />}
+                  </Pressable>
+                  <Pressable
+                    onPress={handleSplitEvenly}
+                    className={`flex-row gap-2 px-2 py-2 rounded-lg bg-slate-500/20 border border-slate-500/30 ${selectedOption === 'splitEvenly' ? 'bg-slate-500/30 border-slate-500' : ''}`}
+                  >
+                    <Text className={`text-slate-300 text-xs font-medium text-center ${selectedOption === 'splitEvenly' ? 'text-emerald-500' : ''}`}>
+                      Split evenly
+                    </Text>
+                    {selectedOption === 'splitEvenly' && <CheckIcon size={16} color="#1B6B3A" />}
+                  </Pressable>
+                </View>
+              )}
+
+              {destinations.length > 0 && (
+                <View className="gap-3 mb-4 max-h-56">
+                  {destinations.map((d) => (
+                    <View
+                      key={d.id}
+                      className="flex-row items-center justify-between py-3.5 px-3 rounded-[16px] bg-slate-800/50"
+                    >
+                      <Text className="text-slate-200 font-medium text-sm flex-1">{d.name}</Text>
+                      <Text className="text-emerald-400 font-semibold">
+                        ₵{formatCurrency(amounts[d.id] ?? 0)}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              <View className="mb-4">
+                <Pressable
+                  onPress={toggleOptions}
+                  className="flex-row items-center justify-between py-3 px-3 rounded-[22px] bg-slate-800/40 active:bg-slate-800/60"
+                >
+                  <View className="flex-1">
+                    <Text className="text-slate-400 text-xs mb-0.5">New cycle</Text>
+                    <Text className="text-slate-200 text-sm">
+                      {formatCycleSummary(
+                        nextCycleStart,
+                        previewEndDate,
+                        unitToggle,
+                        unitToggle === "days" ? (parseInt(duration, 10) || durationDays) : durationDays,
+                        unitToggle === "months" ? (parseInt(duration, 10) || durationMonths) : durationMonths,
+                        parseInt(payday, 10) || paydayDay
+                      )}
+                    </Text>
+                  </View>
+                  <Animated.View style={chevronAnimatedStyle} className="p-1.5 bg-slate-600/70 rounded-full">
+                    <ChevronDown size={20} color="#94A3B8" />
+                  </Animated.View>
+                </Pressable>
+                <Animated.View style={expandContentAnimatedStyle}>
+                  <View className="mt-3 gap-4 pl-0.5" style={{ minHeight: EXPANDED_CONTENT_HEIGHT }}>
+                    <View>
+                      <Text className="text-slate-400 text-xs font-medium uppercase tracking-wide mb-2">
+                        Duration (weeks/days/months)
+                      </Text>
+                      <View className="flex-row gap-2 mb-2">
+                        <Pressable
+                          onPress={() => {
+                            setUnitToggle("days");
+                            setDuration(String(durationDays));
+                          }}
+                          className={`flex-1 py-2.5 px-3 rounded-lg border ${unitToggle === "days"
+                            ? "bg-emerald-500/20 border-emerald-500/50"
+                            : "bg-slate-800/40 border-slate-500/30"
+                            }`}
+                        >
+                          <Text
+                            className={`text-sm font-medium text-center ${unitToggle === "days" ? "text-emerald-400" : "text-slate-400"
+                              }`}
+                          >
+                            Weeks (days)
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => {
+                            setUnitToggle("months");
+                            setDuration(String(durationMonths));
+                          }}
+                          className={`flex-1 py-2.5 px-3 rounded-lg border ${unitToggle === "months"
+                            ? "bg-emerald-500/20 border-emerald-500/50"
+                            : "bg-slate-800/40 border-slate-500/30"
+                            }`}
+                        >
+                          <Text
+                            className={`text-sm font-medium text-center ${unitToggle === "months" ? "text-emerald-400" : "text-slate-400"
+                              }`}
+                          >
+                            Months
+                          </Text>
+                        </Pressable>
+                      </View>
+                      <AppTextField
+                        label={unitToggle === "months" ? "Months" : "Days"}
+                        value={duration}
+                        onChangeText={setDuration}
+                        keyboardType="number-pad"
+                        returnKeyType="done"
+                        placeholder={String(unitToggle === "months" ? durationMonths : durationDays)}
+                      />
+                      <Text className="text-slate-500 text-xs mt-1">
+                        {unitToggle === "months"
+                          ? "Calendar months (30–31 days varies)"
+                          : "e.g. 7 weekly, 14 bi-weekly"}
+                      </Text>
+                    </View>
+                    <View>
+                      <Text className="text-slate-400 text-xs font-medium uppercase tracking-wide mb-2">
+                        Day of Pay
+                      </Text>
+                      <AppTextField
+                        label="Day of month (1–31)"
+                        value={payday}
+                        onChangeText={setPayday}
+                        keyboardType="number-pad"
+                        placeholder={`${paydayDay}`}
+                      />
+                      <Text className="text-slate-500 text-xs mt-1">
+                        Payday day. 30–31 use last day in February.
+                      </Text>
+                    </View>
+                  </View>
+                </Animated.View>
+              </View>
+
+              <Button
+                variant="primary"
+                onPress={handleConfirm}
+                isDisabled={!isValid}
+                className="h-12 rounded-full bg-emerald-500"
+              >
+                <Button.Label className="text-slate-900 font-semibold">
+                  {totalAmount > 0 && destinations.length > 0
+                    ? "Confirm allocation"
+                    : "Start cycle"}
+                </Button.Label>
+              </Button>
+            </ScrollView>
+          </ScrollShadow>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog>

@@ -1,4 +1,5 @@
 import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import {
@@ -11,9 +12,14 @@ import {
   RotateCcw,
   Sparkles,
   User as UserIcon,
+  Crown,
+  Zap,
+  CreditCard,
+  Clock,
+  Calendar,
 } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
-import { Switch, Text, View } from "react-native";
+import { Pressable, Switch, Text, View } from "react-native";
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
@@ -28,10 +34,12 @@ import {
   ExpandedHeader,
 } from "@/components/CediWiseHeader";
 import { LogoutModal } from "@/components/LogoutModal";
+import { useBudgetScreenState } from "@/components/features/budget/useBudgetScreenState";
 import { useTourContext } from "@/contexts/TourContext";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
 import { usePersonalizationStatus } from "@/hooks/usePersonalizationStatus";
+import { useTierContext } from "@/contexts/TierContext";
 import {
   disablePushNotifications,
   enablePushNotifications,
@@ -44,7 +52,7 @@ import {
 import { getDisplayContact } from "@/utils/auth";
 import { clearBudgetLocal } from "@/utils/budgetStorage";
 import { log } from "@/utils/logger";
-import { supabase } from "@/utils/supabase";
+import { clearOnboardingLocalCache } from "@/utils/onboardingState";
 import {
   Avatar,
   ListGroup,
@@ -55,6 +63,15 @@ import {
 const SECTION_LABEL_CLASS = "text-slate-400 text-xs uppercase tracking-wider mb-2.5 ml-1";
 /** Matches Card / app container: rgba(18,22,33,0.9) */
 const LIST_GROUP_CONTAINER_CLASS = "rounded-xl overflow-hidden bg-[rgba(18,22,33,0.9)]";
+const AUTH_STORAGE_KEYS = [
+  "sb-access-token",
+  "sb-refresh-token",
+  "supabase.auth.token",
+] as const;
+
+function authStorageKeyMatches(key: string): boolean {
+  return AUTH_STORAGE_KEYS.some((prefix) => key.includes(prefix));
+}
 
 function IconPrefix({
   icon: Icon,
@@ -76,40 +93,20 @@ export default function ProfileScreen() {
   const { resetTourSeen, startHomeTour, startBudgetTour } = useTourContext();
   const { showError, showSuccess } = useAppToast();
   const personalization = usePersonalizationStatus(user?.id);
+  const { derived, budget } = useBudgetScreenState();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [enableAutoReallocation, setEnableAutoReallocation] = useState(false);
-  const [autoReallocationLoading, setAutoReallocationLoading] = useState(false);
+  const [budgetEngineLoading, setBudgetEngineLoading] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [reminderFrequency, setReminderFrequencyState] = useState<ReminderFrequency>("daily");
   const [reminderFrequencyLoading, setReminderFrequencyLoading] = useState(false);
+  const { effectiveTier, isOnTrial, trialEndsAt, pendingTier, pendingTierStartDate } = useTierContext();
 
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((event) => {
     scrollY.value = event.contentOffset.y;
   });
-
-  useEffect(() => {
-    if (!user?.id || !supabase) return;
-    void (async () => {
-      try {
-        const { data } = await supabase
-          .from("profiles")
-          .select("enable_auto_reallocation")
-          .eq("id", user.id)
-          .maybeSingle();
-        if (
-          data &&
-          typeof (data as any).enable_auto_reallocation === "boolean"
-        ) {
-          setEnableAutoReallocation((data as any).enable_auto_reallocation);
-        }
-      } catch {
-        /* ignore */
-      }
-    })();
-  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -120,31 +117,6 @@ export default function ProfileScreen() {
     if (!notificationsEnabled) return;
     void getReminderFrequency().then(setReminderFrequencyState);
   }, [notificationsEnabled]);
-
-  const handleAutoReallocationChange = useCallback(
-    async (value: boolean) => {
-      if (!user?.id || !supabase) return;
-      setEnableAutoReallocation(value);
-      setAutoReallocationLoading(true);
-      try {
-        const { error } = await supabase
-          .from("profiles")
-          .update({
-            enable_auto_reallocation: value,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", user.id);
-        if (error) throw error;
-      } catch (e) {
-        log.error("Failed to update auto-reallocation:", e);
-        setEnableAutoReallocation(!value);
-        showError("Error", "Could not update preference");
-      } finally {
-        setAutoReallocationLoading(false);
-      }
-    },
-    [user?.id, showError],
-  );
 
   const handleBackPress = async () => {
     try {
@@ -171,12 +143,16 @@ export default function ProfileScreen() {
         Haptics.NotificationFeedbackType.Success,
       ).catch(() => { });
       await resetTourSeen();
-      showSuccess("Reset", "Tour seen flags cleared. Tours will show again.");
+      router.replace("/(tabs)");
+      showSuccess(
+        "Reset",
+        "Onboarding state cleared locally and in your account. Home will reopen for fresh testing.",
+      );
     } catch (e) {
       log.error("Reset tour seen failed:", e);
       showError("Error", "Could not reset tour");
     }
-  }, [user?.id, resetTourSeen, showSuccess, showError]);
+  }, [user?.id, resetTourSeen, router, showSuccess, showError]);
 
   const handleClearBudgetLocal = useCallback(async () => {
     if (!user?.id) return;
@@ -194,6 +170,30 @@ export default function ProfileScreen() {
       showError("Error", "Could not clear local storage");
     }
   }, [user?.id, showSuccess, showError]);
+
+  const handleClearAllLocalStorage = useCallback(async () => {
+    try {
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Warning,
+      ).catch(() => {});
+      const allKeys = await AsyncStorage.getAllKeys();
+      const keysToRemove = allKeys.filter((key) => !authStorageKeyMatches(key));
+      if (keysToRemove.length > 0) {
+        await AsyncStorage.multiRemove(keysToRemove);
+      }
+      if (user?.id) {
+        await clearOnboardingLocalCache(user.id);
+      }
+      router.replace("/(tabs)");
+      showSuccess(
+        "Cleared",
+        "App caches were cleared on this device while preserving auth state. Dev testing state is now clean.",
+      );
+    } catch (e) {
+      log.error("Clear all local storage failed:", e);
+      showError("Error", "Could not clear local storage");
+    }
+  }, [router, showError, showSuccess, user?.id]);
 
   const handleNotificationsToggle = useCallback(
     async (value: boolean) => {
@@ -266,6 +266,16 @@ export default function ProfileScreen() {
   };
 
   const contact = getDisplayContact(user);
+  
+  const getTrialDaysLeft = (endsAt: string | null) => {
+    if (!endsAt) return 0;
+    const end = new Date(endsAt);
+    const now = new Date();
+    const diff = end.getTime() - now.getTime();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  };
+  
+  const trialDaysLeft = getTrialDaysLeft(trialEndsAt);
 
   const getInitials = (name?: string) => {
     if (!name) return "U";
@@ -286,6 +296,42 @@ export default function ProfileScreen() {
       fn();
     },
     [],
+  );
+
+  const budgetEngineMode = derived.budgetEngineMode ?? "auto_apply_safe_rules";
+
+  const budgetEngineOptions = [
+    {
+      value: "recommend_only" as const,
+      title: "Recommend only",
+      description: "Show suggestions, but let me approve everything.",
+    },
+    {
+      value: "auto_apply_safe_rules" as const,
+      title: "Auto-apply safe rules",
+      description: "Automatically move unspent money to Savings.",
+    },
+    {
+      value: "manual_off" as const,
+      title: "Manual / off",
+      description: "Turn off engine suggestions and automatic actions.",
+    },
+  ];
+
+  const handleBudgetEngineModeChange = useCallback(
+    async (mode: (typeof budgetEngineOptions)[number]["value"]) => {
+      if (budgetEngineLoading || budgetEngineMode === mode) return;
+      setBudgetEngineLoading(true);
+      try {
+        await budget.updateBudgetEngineMode(mode);
+      } catch (e) {
+        log.error("Budget engine mode update failed:", e);
+        showError("Error", "Could not update budget engine mode");
+      } finally {
+        setBudgetEngineLoading(false);
+      }
+    },
+    [budget, budgetEngineLoading, budgetEngineMode, showError],
   );
 
   return (
@@ -341,6 +387,70 @@ export default function ProfileScreen() {
               </View>
             </View>
           </Card>
+          
+          {/* Subscription Status Card */}
+          <PressableFeedback animation={false} onPress={onItemPress(() => router.push(effectiveTier === "free" ? "/upgrade" : "/subscription"))}>
+            <PressableFeedback.Scale />
+            <PressableFeedback.Ripple />
+            <Card className="border-emerald-500/30 overflow-hidden">
+               {/* Premium Glow effect for trial/pro users */}
+               {(isOnTrial || effectiveTier !== "free") && (
+                 <View className="absolute top-0 right-0 h-32 w-32 bg-emerald-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
+               )}
+               
+               <View className="flex-row items-center justify-between">
+                 <View className="flex-row items-center gap-3">
+                   <View className={`w-12 h-12 rounded-2xl items-center justify-center ${effectiveTier === "free" ? "bg-slate-800" : "bg-emerald-500/20"}`}>
+                      {effectiveTier === "sme" ? (
+                        <Crown color="#10B981" size={24} />
+                      ) : effectiveTier === "budget" ? (
+                        <Zap color="#10B981" size={24} />
+                      ) : (
+                        <CreditCard color="#94A3B8" size={24} />
+                      )}
+                   </View>
+                   <View>
+                     <Text className="text-white text-lg font-bold">
+                       {effectiveTier === "sme" ? "SME Ledger" : effectiveTier === "budget" ? "Smart Budget" : "Free Plan"}
+                     </Text>
+                      <View className="flex-row items-center gap-1.5">
+                       {isOnTrial ? (
+                         <>
+                           <Clock color="#F59E0B" size={12} />
+                           <Text className="text-amber-500 text-xs font-semibold">
+                             Trial: {trialDaysLeft} days left
+                           </Text>
+                         </>
+                      ) : effectiveTier !== "free" ? (
+                         <Text className="text-emerald-400 text-xs font-semibold">Premium Active</Text>
+                      ) : (
+                         <Text className="text-slate-500 text-xs font-medium">Limited features</Text>
+                      )}
+                      </View>
+                      {pendingTier && pendingTierStartDate && (
+                        <View className="flex-row items-center gap-1.5 mt-1">
+                          <Calendar color="#F59E0B" size={12} />
+                          <Text className="text-amber-400 text-xs font-medium">
+                            {pendingTier === "free"
+                              ? "Plan ends on"
+                              : pendingTier === "sme"
+                                ? "SME Ledger starts on"
+                                : "Smart Budget starts on"}
+                            {" "}{new Date(pendingTierStartDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                          </Text>
+                        </View>
+                      )}
+                   </View>
+                 </View>
+                 
+                 <View className="bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-2xl">
+                   <Text className="text-emerald-400 text-xs font-bold uppercase tracking-wider">
+                     {effectiveTier === "free" ? "Upgrade" : "Manage"}
+                   </Text>
+                 </View>
+               </View>
+            </Card>
+          </PressableFeedback>
 
           {/* Notifications */}
           <View>
@@ -482,26 +592,52 @@ export default function ProfileScreen() {
           <View>
             <Text className={SECTION_LABEL_CLASS}>Budget preferences</Text>
             <ListGroup variant="tertiary" className={LIST_GROUP_CONTAINER_CLASS}>
-              <ListGroup.Item disabled>
-                <ListGroup.ItemPrefix>
-                  <IconPrefix icon={RotateCcw} color="#F59E0B" />
-                </ListGroup.ItemPrefix>
-                <ListGroup.ItemContent>
-                  <ListGroup.ItemTitle>Auto-reallocation suggestions</ListGroup.ItemTitle>
-                  <ListGroup.ItemDescription>
-                    Show reallocation banner based on spending
-                  </ListGroup.ItemDescription>
-                </ListGroup.ItemContent>
-                <ListGroup.ItemSuffix>
-                  <Switch
-                    value={enableAutoReallocation}
-                    onValueChange={handleAutoReallocationChange}
-                    disabled={autoReallocationLoading}
-                    trackColor={{ false: "#334155", true: "#22C55E" }}
-                    thumbColor="#fff"
-                  />
-                </ListGroup.ItemSuffix>
-              </ListGroup.Item>
+              {budgetEngineOptions.map((option, index) => {
+                const selected = budgetEngineMode === option.value;
+                const isLast = index === budgetEngineOptions.length - 1;
+                return (
+                  <View key={option.value}>
+                    <PressableFeedback
+                      animation={false}
+                      onPress={onItemPress(() => handleBudgetEngineModeChange(option.value))}
+                    >
+                      <PressableFeedback.Scale />
+                      <PressableFeedback.Ripple />
+                      <ListGroup.Item disabled>
+                        <ListGroup.ItemPrefix>
+                          <View
+                            className={`w-10 h-10 rounded-xl justify-center items-center border ${
+                              selected
+                                ? "bg-emerald-500/20 border-emerald-400/60"
+                                : "bg-slate-500/15 border-slate-400/20"
+                            }`}
+                          >
+                            <Text
+                              className={`text-base font-bold ${
+                                selected ? "text-emerald-300" : "text-slate-400"
+                              }`}
+                            >
+                              {selected ? "•" : "○"}
+                            </Text>
+                          </View>
+                        </ListGroup.ItemPrefix>
+                        <ListGroup.ItemContent>
+                          <ListGroup.ItemTitle>{option.title}</ListGroup.ItemTitle>
+                          <ListGroup.ItemDescription>
+                            {option.description}
+                          </ListGroup.ItemDescription>
+                        </ListGroup.ItemContent>
+                        <ListGroup.ItemSuffix>
+                          {budgetEngineLoading && selected ? (
+                            <Text className="text-slate-400 text-sm">Updating…</Text>
+                          ) : null}
+                        </ListGroup.ItemSuffix>
+                      </ListGroup.Item>
+                    </PressableFeedback>
+                    {!isLast ? <Separator className="mx-4" /> : null}
+                  </View>
+                );
+              })}
             </ListGroup>
           </View>
 
@@ -522,6 +658,25 @@ export default function ProfileScreen() {
                       </ListGroup.ItemTitle>
                       <ListGroup.ItemDescription className="text-slate-400">
                         Remove cached budget data. Reload from server on next Budget visit.
+                      </ListGroup.ItemDescription>
+                    </ListGroup.ItemContent>
+                    <ListGroup.ItemSuffix />
+                  </ListGroup.Item>
+                </PressableFeedback>
+                <Separator className="mx-4" />
+                <PressableFeedback animation={false} onPress={onItemPress(handleClearAllLocalStorage)}>
+                  <PressableFeedback.Scale />
+                  <PressableFeedback.Ripple />
+                  <ListGroup.Item disabled>
+                    <ListGroup.ItemPrefix>
+                      <IconPrefix icon={RotateCcw} color="#F97316" />
+                    </ListGroup.ItemPrefix>
+                    <ListGroup.ItemContent>
+                      <ListGroup.ItemTitle className="text-orange-300">
+                        Clear all local storage
+                      </ListGroup.ItemTitle>
+                      <ListGroup.ItemDescription className="text-slate-400">
+                        Wipe all device cache and local testing state. Dev only.
                       </ListGroup.ItemDescription>
                     </ListGroup.ItemContent>
                     <ListGroup.ItemSuffix />
@@ -569,7 +724,7 @@ export default function ProfileScreen() {
                   <ListGroup.ItemContent>
                     <ListGroup.ItemTitle>Replay home tour</ListGroup.ItemTitle>
                     <ListGroup.ItemDescription>
-                      Walk through the home screen and Learn tab.
+                      Replay the guided walkthrough for the current Home state.
                     </ListGroup.ItemDescription>
                   </ListGroup.ItemContent>
                   <ListGroup.ItemSuffix />
@@ -591,7 +746,7 @@ export default function ProfileScreen() {
                   <ListGroup.ItemContent>
                     <ListGroup.ItemTitle>Replay budget tour</ListGroup.ItemTitle>
                     <ListGroup.ItemDescription>
-                      Walk through the budget setup flow.
+                      Replay the guided walkthrough for the current Budget state.
                     </ListGroup.ItemDescription>
                   </ListGroup.ItemContent>
                   <ListGroup.ItemSuffix />

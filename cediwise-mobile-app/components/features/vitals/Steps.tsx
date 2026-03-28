@@ -438,7 +438,7 @@ export const StepSetupBudget = memo(function StepSetupBudget({
   }, [expand, paydayOpen]);
 
   const dropdownAnimStyle = useAnimatedStyle(() => ({
-    maxHeight: 220 * expand.value,
+    maxHeight: 320 * expand.value,
     opacity: expand.value,
     marginTop: 8 * expand.value,
     transform: [{ translateY: (1 - expand.value) * -8 }],

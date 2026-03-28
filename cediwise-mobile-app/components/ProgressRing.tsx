@@ -48,6 +48,7 @@ function describeArc(cx: number, cy: number, radius: number, startAngle: number,
 
 type TaxBreakdown = {
   ssnit: number;
+  nhis?: number;
   paye: number;
   netTakeHome: number;
   gross: number;
@@ -186,6 +187,30 @@ export function ProgressRing({ salary, breakdown }: ProgressRingProps) {
           </View>
           <Badge tone="danger">{ssnitPct.toFixed(1)}%</Badge>
         </View>
+
+        {breakdown.nhis != null && breakdown.nhis > 0 && (
+          <View className="flex-row">
+            <View className="w-5 items-center pt-1">
+              <View className="w-px flex-1 bg-slate-600/40" />
+            </View>
+            <View className="flex-1 flex-row justify-between items-center">
+              <View className="flex-1">
+                <Text className="text-slate-500 text-[11px] mb-0.5">
+                  NHIS (2.5%) — employer-funded
+                </Text>
+                <Text className="text-slate-400 text-sm font-semibold">
+                  ₵{formatCurrency(breakdown.nhis)}
+                </Text>
+              </View>
+              <Badge tone="neutral">
+                {salaryCurrency > 0
+                  ? ((breakdown.nhis / salaryCurrency) * 100).toFixed(1)
+                  : "0.0"}
+                %
+              </Badge>
+            </View>
+          </View>
+        )}
 
         <View className="flex-row justify-between items-center">
           <View className="flex-1">

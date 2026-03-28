@@ -1,15 +1,23 @@
 import { CediTourCard } from "@/components/tour/CediTourCard";
 import {
-  BUDGET_TOUR,
-  HOME_TOUR,
-  LEARN_TOUR,
+  ONBOARDING_END_STEP_KEYS,
+  ONBOARDING_STEP_GROUPS,
   STEPS_ORDER,
 } from "@/constants/tourSteps";
 import {
-  TOUR_CARD_OFFSET_X,
   TOUR_START_DELAY_MS,
   tourTokens,
 } from "@/constants/tourTokens";
+import {
+  AccountOnboardingRecord,
+  clearOnboardingLocalCache,
+  getAccountOnboardingRecord,
+  getOnboardingStatus,
+  type OnboardingStateKey,
+  type OnboardingStatus,
+  setOnboardingStatus,
+  upsertAccountOnboardingRecord,
+} from "@/utils/onboardingState";
 import { router } from "expo-router";
 import {
   ReactNode,
@@ -17,41 +25,47 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
-import { Alert, View } from "react-native";
+import { View } from "react-native";
 import {
   TourProvider as LumenTourProvider,
   useTour,
   type CardProps,
 } from "react-native-lumen";
-import { useAuth } from "../hooks/useAuth";
-import { analytics } from "../utils/analytics";
-import { isValueFirstOnboardingEnabled } from "../utils/featureFlags";
-import {
-  clearTourSeen,
-  readTourSeen,
-  writeTourSeen,
-} from "../utils/tourStorage";
 
-type TourId = "home" | "budget" | "learn";
+import { useAuth } from "../hooks/useAuth";
+import { usePersonalizationStatus } from "../hooks/usePersonalizationStatus";
+import { analytics } from "../utils/analytics";
+import { clearTourSeen } from "../utils/tourStorage";
+
 type TourEndReason = "completed" | "skipped";
+type OnboardingSegment = "home" | "budget";
+type State1BudgetStepKey =
+  | "state1-budget-personalization"
+  | "state1-budget-payday";
+
+type ActiveRun = {
+  state: OnboardingStateKey;
+  segment: OnboardingSegment;
+  firstStep: string;
+  isReplay: boolean;
+};
 
 type TourContextType = {
   startHomeTour: () => void;
-  startBudgetTour: () => void;
-  startLearnTour: () => void;
-  /** Mark budget tour as seen without starting. Use when zones are not ready after timeout. */
-  skipBudgetTour: () => Promise<void>;
-  /** Mark learn tour as seen without starting. Use when zones are not ready after timeout. */
-  skipLearnTour: () => Promise<void>;
-  /** null = not yet loaded from storage; false = never seen; true = has seen */
-  hasSeenHomeTour: boolean | null;
-  hasSeenBudgetTour: boolean | null;
-  hasSeenLearnTour: boolean | null;
-  valueFirstOnboardingEnabled: boolean;
-  /** Clear tour seen flags. For __DEV__ testing only. */
+  startBudgetTour: (stepKey?: State1BudgetStepKey) => void;
+  startActiveOnboardingIfEligible: (
+    segment: OnboardingSegment,
+    options?: { state1BudgetStepKey?: State1BudgetStepKey }
+  ) => Promise<void>;
+  activeOnboardingState: OnboardingStateKey | null;
+  onboardingLoaded: boolean;
+  state1Status: OnboardingStatus | null;
+  state2Status: OnboardingStatus | null;
+  currentReplayState: OnboardingStateKey | null;
   resetTourSeen: () => Promise<void>;
 };
 
@@ -59,25 +73,24 @@ const TourContext = createContext<TourContextType | null>(null);
 
 export const useTourContext = () => {
   const context = useContext(TourContext);
-  if (!context)
+  if (!context) {
     throw new Error("useTourContext must be used within TourProvider");
+  }
   return context;
 };
 
 const NO_OP_TOUR_CONTEXT: TourContextType = {
-  startHomeTour: () => { },
-  startBudgetTour: () => { },
-  startLearnTour: () => { },
-  skipBudgetTour: async () => { },
-  skipLearnTour: async () => { },
-  hasSeenHomeTour: null,
-  hasSeenBudgetTour: null,
-  hasSeenLearnTour: null,
-  valueFirstOnboardingEnabled: false,
-  resetTourSeen: async () => { },
+  startHomeTour: () => {},
+  startBudgetTour: () => {},
+  startActiveOnboardingIfEligible: async () => {},
+  activeOnboardingState: null,
+  onboardingLoaded: false,
+  state1Status: null,
+  state2Status: null,
+  currentReplayState: null,
+  resetTourSeen: async () => {},
 };
 
-/** Fallback when TourProvider throws. Provides no-op tour context so app continues. */
 export function TourProviderFallback({ children }: { children: ReactNode }) {
   return (
     <TourContext.Provider value={NO_OP_TOUR_CONTEXT}>
@@ -87,71 +100,39 @@ export function TourProviderFallback({ children }: { children: ReactNode }) {
 }
 
 export function TourProvider({ children }: { children: ReactNode }) {
-  const activeTourRef = useRef<TourId>("home");
+  const activeRunRef = useRef<ActiveRun | null>(null);
+  const onTourEndRef = useRef<(reason: TourEndReason) => void>(() => {});
 
-  // Ref for tour end handler - set by TourContextInnerWithRef when it mounts
-  // Use a ref so the renderCard can call the latest handler.
-  const onTourEndRef = useRef<(tour: TourId, reason: TourEndReason) => void>(
-    () => { },
-  );
+  const renderCardWithHandler = useCallback((props: CardProps) => {
+    const handleStop = () => {
+      onTourEndRef.current("skipped");
+      props.stop();
+    };
 
-  const renderCardWithHandler = useCallback(
-    (props: CardProps) => {
-      const wrappedNext = () => {
-        if (props.step.key === "home-learn-tab") {
-          router.replace("/(tabs)/literacy");
+    const handleNext = () => {
+      const isLastStep = props.isLast || ONBOARDING_END_STEP_KEYS.has(props.step.key);
+      if (isLastStep) {
+        onTourEndRef.current("completed");
+        if (props.step.key === "state1-home-budget-tab") {
+          router.push("/(tabs)/budget");
+          props.stop();
+          return;
         }
-        props.next();
-      };
-
-      const wrappedStop = () => {
-        onTourEndRef.current(activeTourRef.current, "skipped");
-        props.stop();
-      };
-
-      const wrappedNextForLast = () => {
-        onTourEndRef.current(activeTourRef.current, "completed");
-        props.next();
-      };
-
-      const endsTour =
-        HOME_TOUR.endsAt.includes(props.step.key) ||
-        BUDGET_TOUR.endsAt.includes(props.step.key) ||
-        LEARN_TOUR.endsAt.includes(props.step.key);
-      const isLastForCurrentTour = props.isLast || endsTour;
-
-      const handleNext =
-        props.step.key === "home-nav"
-          ? () => {
-            onTourEndRef.current("home", "completed");
-            props.stop();
-          }
-          : isLastForCurrentTour
-            ? wrappedNextForLast
-            : wrappedNext;
-
-      const card = (
-        <CediTourCard
-          {...props}
-          isLast={isLastForCurrentTour}
-          next={handleNext}
-          prev={props.prev}
-          stop={wrappedStop}
-        />
-      );
-
-      if (props.step.key === "home-profile" || props.step.key === "home-learn-tab") {
-        return (
-          <View style={{ transform: [{ translateX: TOUR_CARD_OFFSET_X }] }}>
-            {card}
-          </View>
-        );
       }
+      props.next();
+    };
 
-      return card;
-    },
-    [],
-  );
+    return (
+      <CediTourCard
+        {...props}
+        isLast={props.isLast || ONBOARDING_END_STEP_KEYS.has(props.step.key)}
+        nextLabel={props.step.key === "state1-home-budget-tab" ? "Go" : undefined}
+        next={handleNext}
+        prev={props.prev}
+        stop={handleStop}
+      />
+    );
+  }, []);
 
   return (
     <LumenTourProvider
@@ -166,7 +147,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
           overshootClamping: true,
         },
         renderCard: renderCardWithHandler,
-        preventInteraction: false,
+        preventInteraction: true,
         tooltipStyles: {
           backgroundColor: "transparent",
         },
@@ -175,212 +156,332 @@ export function TourProvider({ children }: { children: ReactNode }) {
           borderColor: tourTokens.zone.borderColor,
         },
       }}>
-      <TourContextInnerWithRef onTourEndRef={onTourEndRef} activeTourRef={activeTourRef}>
+      <TourContextInner
+        activeRunRef={activeRunRef}
+        onTourEndRef={onTourEndRef}>
         {children}
-      </TourContextInnerWithRef>
+      </TourContextInner>
     </LumenTourProvider>
   );
 }
 
-function TourContextInnerWithRef({
+function TourContextInner({
   children,
+  activeRunRef,
   onTourEndRef,
-  activeTourRef,
 }: {
   children: ReactNode;
-  onTourEndRef: React.MutableRefObject<(tour: TourId, reason: TourEndReason) => void>;
-  activeTourRef: React.MutableRefObject<TourId>;
+  activeRunRef: React.MutableRefObject<ActiveRun | null>;
+  onTourEndRef: React.MutableRefObject<(reason: TourEndReason) => void>;
 }) {
   const { user, isLoading: authLoading } = useAuth();
-  const userId = user?.id;
+  const userId = user?.id ?? null;
+  const personalization = usePersonalizationStatus(userId);
   const { start } = useTour();
 
-  const [hasSeenHomeTour, setHasSeenHomeTour] = useState<boolean | null>(null);
-  const [hasSeenBudgetTour, setHasSeenBudgetTour] = useState<boolean | null>(
-    null,
-  );
-  const [hasSeenLearnTour, setHasSeenLearnTour] = useState<boolean | null>(null);
-  const [valueFirstOnboardingEnabled, setValueFirstOnboardingEnabled] =
-    useState(false);
+  const [record, setRecord] = useState<AccountOnboardingRecord | null>(null);
+  const [onboardingLoaded, setOnboardingLoaded] = useState(false);
+  const [activeOnboardingState, setActiveOnboardingState] =
+    useState<OnboardingStateKey | null>(null);
+  const [currentReplayState, setCurrentReplayState] =
+    useState<OnboardingStateKey | null>(null);
+  const [lastPersonalizationComplete, setLastPersonalizationComplete] =
+    useState<boolean | null>(null);
+
+  const state1Status = record?.state1Status ?? null;
+  const state2Status = record?.state2Status ?? null;
+
+  const loadRecord = useCallback(async () => {
+    if (!userId) {
+      setRecord(null);
+      setOnboardingLoaded(true);
+      return;
+    }
+    const nextRecord = await getAccountOnboardingRecord(userId);
+    setRecord(nextRecord);
+    setOnboardingLoaded(true);
+  }, [userId]);
 
   useEffect(() => {
-    let mounted = true;
+    if (authLoading) return;
+    void loadRecord();
+  }, [authLoading, loadRecord]);
 
-    async function loadState() {
-      if (authLoading) return;
-      if (!userId) {
-        if (!mounted) return;
-        setHasSeenHomeTour(null);
-        setHasSeenBudgetTour(null);
-        setHasSeenLearnTour(null);
-        setValueFirstOnboardingEnabled(false);
+  const persistRecord = useCallback(
+    async (nextRecord: AccountOnboardingRecord) => {
+      setRecord(nextRecord);
+      if (!userId) return;
+      await upsertAccountOnboardingRecord(nextRecord);
+    },
+    [userId]
+  );
+
+  const startRun = useCallback(
+    async (run: ActiveRun) => {
+      if (!userId || !record) return;
+
+      activeRunRef.current = run;
+      setActiveOnboardingState(run.state);
+      if (run.isReplay) {
+        setCurrentReplayState(run.state);
+      }
+
+      const currentStatus = getOnboardingStatus(record, run.state);
+      const nextRecord =
+        currentStatus === "never_seen"
+          ? setOnboardingStatus(record, run.state, "in_progress")
+          : record;
+
+      if (nextRecord !== record) {
+        await persistRecord(nextRecord);
+      }
+
+      setTimeout(() => start(run.firstStep), TOUR_START_DELAY_MS);
+    },
+    [activeRunRef, persistRecord, record, start, userId]
+  );
+
+  const getActiveState = useCallback(
+    (setupCompleted: boolean): OnboardingStateKey =>
+      setupCompleted ? "state_2_personalized" : "state_1_unpersonalized",
+    []
+  );
+
+  const startHomeTour = useCallback(() => {
+    if (!record) return;
+    const replayState = personalization.setupCompleted
+      ? "state_2_personalized"
+      : "state_1_unpersonalized";
+    const group =
+      replayState === "state_2_personalized"
+        ? ONBOARDING_STEP_GROUPS.state2Home
+        : ONBOARDING_STEP_GROUPS.state1Home;
+    void startRun({
+      state: group.state,
+      segment: group.segment,
+      firstStep: group.firstStep,
+      isReplay: true,
+    });
+  }, [personalization.setupCompleted, record, startRun]);
+
+  const startBudgetTour = useCallback(
+    (stepKey?: State1BudgetStepKey) => {
+      if (!record) return;
+      const replayState = personalization.setupCompleted
+        ? "state_2_personalized"
+        : "state_1_unpersonalized";
+
+      if (replayState === "state_2_personalized") {
+        const group = ONBOARDING_STEP_GROUPS.state2Budget;
+        void startRun({
+          state: group.state,
+          segment: group.segment,
+          firstStep: group.firstStep,
+          isReplay: true,
+        });
         return;
       }
 
-      const [homeSeen, budgetSeen, learnSeen, valueFirstEnabled] = await Promise.all([
-        readTourSeen(userId, "home"),
-        readTourSeen(userId, "budget"),
-        readTourSeen(userId, "learn"),
-        isValueFirstOnboardingEnabled(userId),
-      ]);
+      const group =
+        stepKey === "state1-budget-payday"
+          ? ONBOARDING_STEP_GROUPS.state1BudgetPayday
+          : personalization.hasProfile
+            ? ONBOARDING_STEP_GROUPS.state1BudgetPayday
+            : ONBOARDING_STEP_GROUPS.state1BudgetPersonalization;
+      void startRun({
+        state: group.state,
+        segment: group.segment,
+        firstStep: group.firstStep,
+        isReplay: true,
+      });
+    },
+    [personalization.hasProfile, personalization.setupCompleted, record, startRun]
+  );
 
-      if (!mounted) return;
-      setHasSeenHomeTour(homeSeen);
-      setHasSeenBudgetTour(budgetSeen);
-      setHasSeenLearnTour(learnSeen);
-      setValueFirstOnboardingEnabled(valueFirstEnabled);
+  const startActiveOnboardingIfEligible = useCallback(
+    async (
+      segment: OnboardingSegment,
+      options?: { state1BudgetStepKey?: State1BudgetStepKey }
+    ) => {
+      if (!record || !userId) return;
+
+      const activeState = personalization.setupCompleted
+        ? "state_2_personalized"
+        : "state_1_unpersonalized";
+
+      const status = getOnboardingStatus(record, activeState);
+      if (status === "dismissed" || status === "completed" || status === "invalidated") {
+        return;
+      }
+      if (activeRunRef.current?.state === activeState) {
+        return;
+      }
+
+      const group =
+        activeState === "state_2_personalized"
+          ? segment === "home"
+            ? ONBOARDING_STEP_GROUPS.state2Home
+            : ONBOARDING_STEP_GROUPS.state2Budget
+          : segment === "home"
+            ? ONBOARDING_STEP_GROUPS.state1Home
+            : options?.state1BudgetStepKey === "state1-budget-payday"
+              ? ONBOARDING_STEP_GROUPS.state1BudgetPayday
+              : ONBOARDING_STEP_GROUPS.state1BudgetPersonalization;
+
+      await startRun({
+        state: group.state,
+        segment: group.segment,
+        firstStep: group.firstStep,
+        isReplay: false,
+      });
+    },
+    [activeRunRef, personalization.setupCompleted, record, startRun, userId]
+  );
+
+  const invalidateState1AndPromoteToState2 = useCallback(async () => {
+    if (!record || !userId) return;
+
+    const now = new Date().toISOString();
+    let nextRecord = setOnboardingStatus(record, "state_1_unpersonalized", "invalidated", now);
+    nextRecord = {
+      ...nextRecord,
+      state1CompletedAt: null,
+      state1DismissedAt: null,
+    };
+    setActiveOnboardingState("state_2_personalized");
+    activeRunRef.current = null;
+    await persistRecord(nextRecord);
+    router.replace("/(tabs)");
+    const group = ONBOARDING_STEP_GROUPS.state2Home;
+    await startRun({
+      state: group.state,
+      segment: group.segment,
+      firstStep: group.firstStep,
+      isReplay: false,
+    });
+  }, [activeRunRef, persistRecord, record, startRun, userId]);
+
+  useEffect(() => {
+    if (!userId || !onboardingLoaded || personalization.isLoading) return;
+    const setupCompleted = personalization.setupCompleted;
+    const resolvedState = getActiveState(setupCompleted);
+    setActiveOnboardingState((current) =>
+      current === resolvedState ? current : resolvedState
+    );
+
+    if (lastPersonalizationComplete === null) {
+      setLastPersonalizationComplete(setupCompleted);
+      return;
     }
 
-    void loadState();
-    return () => {
-      mounted = false;
-    };
-  }, [authLoading, userId]);
+    if (!lastPersonalizationComplete && setupCompleted) {
+      setLastPersonalizationComplete(true);
+      void invalidateState1AndPromoteToState2();
+      return;
+    }
 
-  const promptBudgetHandoff = useCallback(() => {
-    if (!userId) return;
-    analytics.tourHandoffHomeToBudget({ userId });
-    Alert.alert(
-      "Continue onboarding?",
-      "Next up: a quick Budget tour. You can skip anytime.",
-      [
-        {
-          text: "Skip",
-          style: "cancel",
-          onPress: () => {
-            analytics.tourHandoffSkip({ userId, from: "home", to: "budget" });
-          },
-        },
-        {
-          text: "Continue",
-          onPress: () => {
-            analytics.tourHandoffAccept({ userId, from: "home", to: "budget" });
-            router.replace("/(tabs)/budget?tour=budget");
-          },
-        },
-      ],
-      { cancelable: true },
-    );
-  }, [userId]);
-
-  const promptLearnHandoff = useCallback(() => {
-    if (!userId) return;
-    analytics.tourHandoffBudgetToLearn({ userId });
-    Alert.alert(
-      "One last quick tour",
-      "Want a short Learn tour to see lessons and glossary?",
-      [
-        {
-          text: "Skip",
-          style: "cancel",
-          onPress: () => {
-            analytics.tourHandoffSkip({ userId, from: "budget", to: "learn" });
-          },
-        },
-        {
-          text: "Continue",
-          onPress: () => {
-            analytics.tourHandoffAccept({ userId, from: "budget", to: "learn" });
-            router.replace("/(tabs)/literacy?tour=learn");
-          },
-        },
-      ],
-      { cancelable: true },
-    );
-  }, [userId]);
+    if (lastPersonalizationComplete !== setupCompleted) {
+      setLastPersonalizationComplete(setupCompleted);
+    }
+  }, [
+    getActiveState,
+    invalidateState1AndPromoteToState2,
+    lastPersonalizationComplete,
+    onboardingLoaded,
+    personalization.isLoading,
+    personalization.setupCompleted,
+    userId,
+  ]);
 
   const handleTourEnd = useCallback(
-    (tour: TourId, reason: TourEndReason) => {
-      if (!userId) return;
+    async (reason: TourEndReason) => {
+      const run = activeRunRef.current;
+      if (!run || !record || !userId) return;
 
-      void writeTourSeen(userId, tour);
+      activeRunRef.current = null;
+      setCurrentReplayState(null);
 
-      if (tour === "home") setHasSeenHomeTour(true);
-      if (tour === "budget") {
-        setHasSeenBudgetTour(true);
-        if (reason === "completed") analytics.tourCompletedCoreBudget({ userId });
-        if (reason === "skipped") analytics.tourSkippedCoreBudget({ userId });
-      }
-      if (tour === "learn") setHasSeenLearnTour(true);
-
-      if (!valueFirstOnboardingEnabled || reason !== "completed") return;
-
-      if (tour === "home" && hasSeenBudgetTour === false) {
-        promptBudgetHandoff();
+      if (reason === "skipped") {
+        const dismissedRecord = setOnboardingStatus(record, run.state, "dismissed");
+        setActiveOnboardingState(run.state);
+        await persistRecord(dismissedRecord);
+        if (run.state === "state_2_personalized") {
+          analytics.tourSkippedCoreBudget({ userId });
+        }
+        return;
       }
 
-      if (tour === "budget" && hasSeenLearnTour === false) {
-        promptLearnHandoff();
+      if (run.segment === "home") {
+        setActiveOnboardingState(run.state);
+        router.push("/(tabs)/budget");
+        return;
+      }
+
+      const completedRecord = setOnboardingStatus(record, run.state, "completed");
+      setActiveOnboardingState(run.state);
+      await persistRecord(completedRecord);
+      if (run.state === "state_2_personalized") {
+        analytics.tourCompletedCoreBudget({ userId });
       }
     },
-    [
-      hasSeenBudgetTour,
-      hasSeenLearnTour,
-      promptBudgetHandoff,
-      promptLearnHandoff,
-      userId,
-      valueFirstOnboardingEnabled,
-    ],
+    [activeRunRef, persistRecord, record, userId]
   );
 
   useEffect(() => {
-    onTourEndRef.current = handleTourEnd;
+    onTourEndRef.current = (reason: TourEndReason) => {
+      void handleTourEnd(reason);
+    };
   }, [handleTourEnd, onTourEndRef]);
-
-  const startHomeTour = useCallback(() => {
-    if (valueFirstOnboardingEnabled && userId) {
-      analytics.onboardingValueFirstStart({ userId });
-    }
-    activeTourRef.current = "home";
-    setTimeout(() => start(HOME_TOUR.firstStep), TOUR_START_DELAY_MS);
-  }, [activeTourRef, start, userId, valueFirstOnboardingEnabled]);
-
-  const startBudgetTour = useCallback(() => {
-    activeTourRef.current = "budget";
-    analytics.tourStartedCoreBudget({ userId });
-    setTimeout(() => start(BUDGET_TOUR.firstStep), TOUR_START_DELAY_MS);
-  }, [activeTourRef, start, userId]);
-
-  const startLearnTour = useCallback(() => {
-    activeTourRef.current = "learn";
-    setTimeout(() => start(LEARN_TOUR.firstStep), TOUR_START_DELAY_MS);
-  }, [activeTourRef, start]);
 
   const resetTourSeen = useCallback(async () => {
     if (!userId) return;
     await clearTourSeen(userId);
-    setHasSeenHomeTour(false);
-    setHasSeenBudgetTour(false);
-    setHasSeenLearnTour(false);
-  }, [userId]);
+    await clearOnboardingLocalCache(userId);
+    const baseRecord = record ?? (await getAccountOnboardingRecord(userId));
+    const nextRecord: AccountOnboardingRecord = {
+      ...baseRecord,
+      state1Status: "never_seen" as OnboardingStatus,
+      state1SeenAt: null,
+      state1CompletedAt: null,
+      state1DismissedAt: null,
+      state1InvalidatedAt: null,
+      state2Status: "never_seen" as OnboardingStatus,
+      state2SeenAt: null,
+      state2CompletedAt: null,
+      state2DismissedAt: null,
+    };
+    await persistRecord(nextRecord);
+    setActiveOnboardingState(null);
+    setCurrentReplayState(null);
+  }, [persistRecord, record, userId]);
 
-  const skipBudgetTour = useCallback(async () => {
-    if (!userId) return;
-    analytics.tourSkippedCoreBudget({ userId });
-    await writeTourSeen(userId, "budget");
-    setHasSeenBudgetTour(true);
-  }, [userId]);
-
-  const skipLearnTour = useCallback(async () => {
-    if (!userId) return;
-    await writeTourSeen(userId, "learn");
-    setHasSeenLearnTour(true);
-  }, [userId]);
+  const value = useMemo<TourContextType>(
+    () => ({
+      startHomeTour,
+      startBudgetTour,
+      startActiveOnboardingIfEligible,
+      activeOnboardingState,
+      onboardingLoaded,
+      state1Status,
+      state2Status,
+      currentReplayState,
+      resetTourSeen,
+    }),
+    [
+      activeOnboardingState,
+      currentReplayState,
+      onboardingLoaded,
+      resetTourSeen,
+      startActiveOnboardingIfEligible,
+      startBudgetTour,
+      startHomeTour,
+      state1Status,
+      state2Status,
+    ]
+  );
 
   return (
-    <TourContext.Provider
-      value={{
-        startHomeTour,
-        startBudgetTour,
-        startLearnTour,
-        skipBudgetTour,
-        skipLearnTour,
-        hasSeenHomeTour,
-        hasSeenBudgetTour,
-        hasSeenLearnTour,
-        valueFirstOnboardingEnabled,
-        resetTourSeen,
-      }}>
+    <TourContext.Provider value={value}>
       {children}
     </TourContext.Provider>
   );

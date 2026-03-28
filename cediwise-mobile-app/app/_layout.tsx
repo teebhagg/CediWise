@@ -1,10 +1,10 @@
+import Constants from "expo-constants";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 // import { StatusBar } from 'expo-status-bar';
 import { TriggerProvider } from "@/contexts/TriggerContext";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
-import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import * as WebBrowser from "expo-web-browser";
 import { HeroUINativeProvider } from "heroui-native";
 import { useEffect, useState } from "react";
@@ -19,6 +19,7 @@ import { Uniwind } from "uniwind";
 import { RootErrorBoundary } from "../components/RootErrorBoundary";
 import { TourErrorBoundary } from "../components/tour/TourErrorBoundary";
 import { AuthProvider } from "../contexts/AuthContext";
+import { TierProvider } from "../contexts/TierContext";
 import { useAuth } from "../hooks/useAuth";
 import {
   TourProvider,
@@ -26,7 +27,12 @@ import {
 } from "../contexts/TourContext";
 import { useAuthRefresh } from "../hooks/useAuthRefresh";
 import { useBudget } from "../hooks/useBudget";
+import { usePersonalizationStore } from "../stores/personalizationStore";
+import { useProfileVitalsStore } from "../stores/profileVitalsStore";
+import { useSMELedgerStore } from "../stores/smeLedgerStore";
 import { initNotificationSystem } from "../services/notifications";
+import { syncTaxConfig } from "../utils/taxSync";
+import { PaystackProvider } from "react-native-paystack-webview";
 import {
   hasHydratedThisSession,
   setHydratedThisSession,
@@ -55,11 +61,24 @@ function AppShell() {
     return () => sub.remove();
   }, [user?.id]);
 
-  // Single app-level hydrate once per session (avoids duplicate when Home + Budget mount).
+  // Central Bootstrap: Initialize all critical data stores as soon as user is ready.
   useEffect(() => {
-    if (!user?.id || hasHydratedThisSession()) return;
-    setHydratedThisSession();
-    void hydrateFromRemote();
+    if (!user?.id) return;
+    
+    // 1. Personalization & Profile Vitals & SME Data (Parallel)
+    void usePersonalizationStore.getState().initForUser(user.id);
+    void useProfileVitalsStore.getState().initForUser(user.id);
+    void useSMELedgerStore.getState().initForUser(user.id);
+
+    // 2. Budget Hydration (Once per session)
+    if (!hasHydratedThisSession()) {
+      setHydratedThisSession();
+      void (async () => {
+        await hydrateFromRemote();
+        await useSMELedgerStore.getState().initForUser(user.id); // Ensure SME is ready
+        await import("../utils/smeSync").then((m) => m.flushSMEQueue(user.id!));
+      })();
+    }
   }, [user?.id, hydrateFromRemote]);
 
   return (
@@ -108,6 +127,9 @@ function AppShell() {
           />
           <Stack.Screen name="terms" options={{ headerShown: false }} />
           <Stack.Screen name="privacy" options={{ headerShown: false }} />
+          <Stack.Screen name="(sme)" options={{ headerShown: false }} />
+          <Stack.Screen name="upgrade" options={{ headerShown: false }} />
+          <Stack.Screen name="subscription" options={{ headerShown: false }} />
         </Stack>
       </SafeAreaListener>
     </View>
@@ -134,9 +156,17 @@ export default function RootLayout() {
     }
 
     WebBrowser.maybeCompleteAuthSession();
+    void syncTaxConfig(); // Sync tax rates for offline usage and global calculations
 
-    if (Platform.OS === "ios" || Platform.OS === "android") {
+
+    // Only configure native Google Sign-In when not in Expo Go (dynamic require avoids loading native module in Expo Go).
+    const isExpoGo = (Constants.appOwnership ?? "") === "expo";
+    if (
+      (Platform.OS === "ios" || Platform.OS === "android") &&
+      !isExpoGo
+    ) {
       try {
+        const { GoogleSignin } = require("@react-native-google-signin/google-signin");
         GoogleSignin.configure({
           // Web client ID from google-services.json (client_type: 3)
           webClientId:
@@ -168,22 +198,26 @@ export default function RootLayout() {
               },
             }}>
             <SafeAreaProvider>
-              <AuthProvider>
-                <TourErrorBoundary
-                  fallback={
-                    <TourProviderFallback>
-                      <TriggerProvider>
-                        <AppShell />
-                      </TriggerProvider>
-                    </TourProviderFallback>
-                  }>
-                  <TourProvider>
-                    <TriggerProvider>
-                      <AppShell />
-                    </TriggerProvider>
-                  </TourProvider>
-                </TourErrorBoundary>
-              </AuthProvider>
+              <PaystackProvider publicKey={process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY || ""}>
+                <AuthProvider>
+                  <TierProvider>
+                    <TourErrorBoundary
+                      fallback={
+                        <TourProviderFallback>
+                          <TriggerProvider>
+                            <AppShell />
+                          </TriggerProvider>
+                        </TourProviderFallback>
+                      }>
+                      <TourProvider>
+                        <TriggerProvider>
+                          <AppShell />
+                        </TriggerProvider>
+                      </TourProvider>
+                    </TourErrorBoundary>
+                  </TierProvider>
+                </AuthProvider>
+              </PaystackProvider>
             </SafeAreaProvider>
           </HeroUINativeProvider>
         </BottomSheetModalProvider>

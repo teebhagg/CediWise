@@ -22,11 +22,18 @@ import { Receipt } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
+import { useTierContext } from '@/contexts/TierContext';
 
 export default function BudgetInsightsScreen() {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const { canAccessBudget } = useTierContext();
   const { derived, budget, modals, ui, router } = useBudgetScreenState();
+
+  if (!canAccessBudget) {
+    router.replace("/(tabs)/budget");
+    return null;
+  }
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((event) => {
     scrollY.value = event.contentOffset.y;

@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { StandardHeader } from "@/components/CediWiseHeader";
 import { computeGhanaTax2026Monthly } from "@/utils/ghanaTax";
+import { getActiveTaxConfig, type TaxConfig } from "@/utils/taxSync";
 
 const stripFormatting = (text: string) => text.replace(/[,₵\s]/g, "");
 const toNumber = (s: string) => {
@@ -34,6 +35,12 @@ export default function SalaryCalculatorScreen() {
   const [estimateTaxEnabled, setEstimateTaxEnabled] = useState(true);
   const insets = useSafeAreaInsets();
 
+  const [taxConfig, setTaxConfig] = useState<TaxConfig | null>(null);
+
+  useEffect(() => {
+    getActiveTaxConfig().then(setTaxConfig);
+  }, []);
+
   useEffect(() => {
     if (vitals?.setup_completed && (vitals.stable_salary ?? 0) > 0) {
       setSalary(String(vitals.stable_salary));
@@ -44,8 +51,8 @@ export default function SalaryCalculatorScreen() {
   const gross = toNumber(salary);
   const breakdown =
     gross > 0
-      ? computeGhanaTax2026Monthly(gross)
-      : { ssnit: 0, paye: 0, netTakeHome: 0 };
+      ? computeGhanaTax2026Monthly(gross, taxConfig ?? undefined)
+      : { ssnit: 0, nhis: 0, paye: 0, netTakeHome: 0 };
   const net = estimateTaxEnabled ? breakdown.netTakeHome : gross;
 
   const handleToggleTax = async () => {
@@ -125,6 +132,7 @@ export default function SalaryCalculatorScreen() {
                 salary={gross}
                 breakdown={{
                   ssnit: estimateTaxEnabled ? breakdown.ssnit : 0,
+                  nhis: estimateTaxEnabled ? breakdown.nhis : 0,
                   paye: estimateTaxEnabled ? breakdown.paye : 0,
                   netTakeHome: net,
                   gross,

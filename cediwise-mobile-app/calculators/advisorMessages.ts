@@ -16,6 +16,13 @@ export const MESSAGES = {
         over
       )}. Consider reducing spending in other wants categories next cycle.`,
   },
+  emergencySpend: {
+    title: () => "Emergency spend recorded",
+    message: (amount: number) =>
+      `You spent ₵${formatAmount(
+        amount
+      )} on emergency needs. This is uncapped and counted under Needs.`,
+  },
   nearLimit: {
     title: (categoryName: string) => `Approaching ${categoryName} limit`,
     messageShort: (remaining: number, daysRemaining: number) =>
@@ -32,7 +39,7 @@ export const MESSAGES = {
     message: (saved: number) =>
       `You spent ₵${formatAmount(
         saved
-      )} less than budgeted. Consider moving this to your Emergency Fund or a savings goal.`,
+      )} less than budgeted. Consider moving this to Savings or another goal.`,
   },
   trendUp: {
     title: (categoryName: string) => `${categoryName} trending up`,

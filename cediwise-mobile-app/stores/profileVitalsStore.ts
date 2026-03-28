@@ -25,6 +25,11 @@ export const useProfileVitalsStore = create<ProfileVitalsStore>((set, get) => ({
   isLoading: true,
 
   initForUser: async (userId: string | null) => {
+    const { userId: currentUserId, isLoading: currentLoading } = get();
+    if (userId === currentUserId && (currentLoading || currentUserId !== null)) {
+      return;
+    }
+
     set({ userId, isLoading: true });
     if (!userId) {
       set({ vitals: null, isLoading: false });
@@ -45,7 +50,7 @@ export const useProfileVitalsStore = create<ProfileVitalsStore>((set, get) => ({
 
     const cached = await readProfileVitalsCache(startUserId);
     if (cached?.vitals && get().userId === startUserId) {
-      set({ vitals: cached.vitals });
+      set({ vitals: cached.vitals, isLoading: false });
     }
 
     try {

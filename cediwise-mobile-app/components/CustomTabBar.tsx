@@ -41,7 +41,14 @@ export function CustomTabBar(props: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
-  const tabCount = state.routes.length;
+  const visibleRoutes = useMemo(() => {
+    return state.routes.filter((route) => {
+      const { options } = descriptors[route.key];
+      return (options as any).href !== null;
+    });
+  }, [state.routes, descriptors]);
+
+  const tabCount = visibleRoutes.length;
   const usableWidth = Math.max(0, width - H_MARGIN * 2 - PADDING * 2);
   const step = tabCount > 0 ? usableWidth / tabCount : 0;
 
@@ -53,13 +60,17 @@ export function CustomTabBar(props: BottomTabBarProps) {
   const x = useSharedValue(0);
 
   useEffect(() => {
+    const activeRouteKey = state.routes[state.index]?.key;
+    const visibleIndex = visibleRoutes.findIndex(r => r.key === activeRouteKey);
+    if (visibleIndex === -1) return;
+
     const target =
       H_MARGIN +
       PADDING +
-      step * state.index +
+      step * visibleIndex +
       Math.max(0, (step - indicatorWidth) / 2);
     x.value = withSpring(target, SPRING);
-  }, [indicatorWidth, state.index, step, x]);
+  }, [indicatorWidth, state.index, state.routes, visibleRoutes, step, x]);
 
   const indicatorStyle = useAnimatedStyle(() => {
     return {
@@ -101,8 +112,8 @@ export function CustomTabBar(props: BottomTabBarProps) {
             />
 
             <View style={styles.row}>
-              {state.routes.map((route, index) => {
-                const focused = state.index === index;
+              {visibleRoutes.map((route) => {
+                const focused = state.routes[state.index]?.key === route.key;
                 const { options } = descriptors[route.key];
 
                 const label =
@@ -140,18 +151,9 @@ export function CustomTabBar(props: BottomTabBarProps) {
                 const iconWithTour =
                   route.name === "budget" ? (
                     <TourZone
-                      stepKey="budget-tab"
-                      name="Create your first budget"
-                      description="Let's build your budget now. Use the tools above to set up your first cycle."
-                      shape="circle"
-                      zoneStyle={{ padding: 16 }}>
-                      <View collapsable={false}>{icon}</View>
-                    </TourZone>
-                  ) : route.name === "literacy" ? (
-                    <TourZone
-                      stepKey="home-learn-tab"
-                      name="Learn"
-                      description="Explore lessons and glossary here—no profile needed."
+                      stepKey="state1-home-budget-tab"
+                      name="Budget lives here"
+                      description="This tab is where CediWise turns your payday into a working budget and helps you manage it over time."
                       shape="circle"
                       zoneStyle={{ padding: 16 }}>
                       <View collapsable={false}>{icon}</View>

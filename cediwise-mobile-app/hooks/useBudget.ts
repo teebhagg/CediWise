@@ -1,5 +1,6 @@
 import * as Haptics from "expo-haptics";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
 import { useBudgetStore } from "../stores/budgetStore";
 import { usePersonalizationStore } from "../stores/personalizationStore";
 import { useProfileVitalsStore } from "../stores/profileVitalsStore";
@@ -11,6 +12,7 @@ import {
 import type {
   BudgetBucket,
   BudgetCategory,
+  BudgetEngineMode,
   BudgetCycle,
   BudgetMutation,
   BudgetQueue,
@@ -26,6 +28,10 @@ import {
 } from "../utils/allocationBlending";
 import { hydrateBudgetStateFromRemote } from "../utils/budgetHydrate";
 import { recalculateBudgetFromAllocations } from "../utils/budgetRecalc";
+import {
+  isAutoApplySafeRules,
+  normalizeBudgetEngineMode,
+} from "../utils/budgetEngine";
 import {
   clearBudgetLocal,
   createEmptyBudgetState,
@@ -44,7 +50,7 @@ import {
   trySyncMutation,
 } from "../utils/budgetSync";
 import { getMonthlyNetIncome } from "../utils/incomeCalculations";
-import { calculateRollover } from "../utils/reallocationEngine";
+import { getActiveTaxConfig, type TaxConfig } from "../utils/taxSync";
 import { uuidv4 } from "../utils/uuid";
 
 function makeQueueId() {
@@ -190,12 +196,13 @@ function seedCategories(interests?: string[]) {
       "Transport",
       "Groceries",
       "Tithes/Church",
+      "Emergency",
       "ECG",
       "Ghana Water",
       "Trash",
     ],
     wants: wantsFromInterests(interests),
-    savings: ["Emergency Fund", "Susu/Project Savings", "T-Bills"],
+    savings: ["Savings"],
   } satisfies Record<BudgetBucket, string[]>;
 }
 
@@ -217,6 +224,8 @@ export type UseBudgetReturn = {
     needsLimit: number;
     wantsLimit: number;
     savingsLimit: number;
+    spentTotal: number;
+    unspentThisMonth: number;
     spentByBucket: Record<BudgetBucket, number>;
   } | null;
   setupBudget: (params: {
@@ -314,7 +323,8 @@ export type UseBudgetReturn = {
     cycleId: string,
     allocation: { needsPct: number; wantsPct: number; savingsPct: number },
     options?: { reallocationReason?: string }
-  ) => Promise<void>;
+  ) => Promise<BudgetState | void>;
+  updateBudgetEngineMode: (mode: BudgetEngineMode) => Promise<void>;
   applyTemplate: (
     cycleId: string,
     allocation: { needsPct: number; wantsPct: number; savingsPct: number }
@@ -379,6 +389,12 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
 
   const pendingCount = queue?.items.length ?? 0;
 
+  const [taxConfig, setTaxConfig] = useState<TaxConfig | null>(null);
+
+  useEffect(() => {
+    getActiveTaxConfig().then(setTaxConfig);
+  }, []);
+
   const activeCycle: BudgetCycle | null = useMemo(() => {
     if (!state) return null;
     // Prefer most recent cycle (by start_date)
@@ -401,7 +417,10 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
   const totals = useMemo(() => {
     if (!state || !activeCycle) return null;
 
-    const monthlyNetIncome = getMonthlyNetIncome(state.incomeSources);
+    const monthlyNetIncome = getMonthlyNetIncome(
+      state.incomeSources,
+      taxConfig ?? undefined
+    );
 
     const needsLimit = monthlyNetIncome * activeCycle.needsPct;
     const wantsLimit = monthlyNetIncome * activeCycle.wantsPct;
@@ -419,14 +438,25 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       spentByBucket[bucket] += t.amount;
     }
 
+    const spentTotal =
+      spentByBucket.needs + spentByBucket.wants + spentByBucket.savings;
+    const unspentThisMonth = Math.max(0, monthlyNetIncome - spentTotal);
+
     return {
       monthlyNetIncome,
       needsLimit,
       wantsLimit,
       savingsLimit,
+      spentTotal,
+      unspentThisMonth,
       spentByBucket,
     };
   }, [state, activeCycle]);
+
+  const budgetEngineMode = useMemo(
+    () => normalizeBudgetEngineMode(state?.prefs?.budgetEngineMode ?? null),
+    [state?.prefs?.budgetEngineMode]
+  );
 
   const persistState = useCallback(async (next: BudgetState) => {
     await useBudgetStore.getState().persistState(next);
@@ -519,7 +549,10 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         ];
       }
 
-      const monthlyNetIncome = getMonthlyNetIncome(current.incomeSources);
+      const monthlyNetIncome = getMonthlyNetIncome(
+        current.incomeSources,
+        taxConfig ?? undefined
+      );
       const bucketTotals: Record<BudgetBucket, number> = {
         needs: monthlyNetIncome * needsPct,
         wants: monthlyNetIncome * wantsPct,
@@ -541,7 +574,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           name,
           bucket,
           fixedAmount: fixedAmountsByCategory?.[name],
-          manualOverride: false,
+          manualOverride:
+            bucket === "needs" && name.trim().toLowerCase() === "emergency",
         }));
         const limits = computeWeightedCategoryLimits(
           bucketTotals[bucket],
@@ -590,6 +624,9 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           paydayDay,
           ...(Array.isArray(interests) ? { interests } : {}),
           ...(lifeStage != null ? { lifeStage } : {}),
+          budgetEngineMode: normalizeBudgetEngineMode(
+            current.prefs?.budgetEngineMode ?? null
+          ),
         },
         cycles: [cycle, ...current.cycles.filter((c) => c.id !== cycleId)],
         categories: [
@@ -608,6 +645,12 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         payload: {
           id: userId,
           payday_day: paydayDay,
+          budget_engine_mode: normalizeBudgetEngineMode(
+            current.prefs?.budgetEngineMode ?? null
+          ),
+          enable_auto_reallocation: isAutoApplySafeRules(
+            current.prefs?.budgetEngineMode ?? null
+          ),
           ...(Array.isArray(interests) ? { interests } : {}),
         },
       });
@@ -663,12 +706,12 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     const prevCycle = activeCycle ?? current.cycles[0];
     if (!prevCycle) return null;
 
-    const monthlyNetIncome = getMonthlyNetIncome(current.incomeSources);
+    const monthlyNetIncome = getMonthlyNetIncome(
+      current.incomeSources,
+      taxConfig ?? undefined
+    );
     if (monthlyNetIncome <= 0) return null;
 
-    // If total expenses for the cycle are greater than or equal to income,
-    // there is no true leftover to roll over. In that case we skip the
-    // rollover modal entirely and create the next cycle immediately.
     const totalSpent = current.transactions
       .filter((t) => t.cycleId === prevCycle.id)
       .reduce((sum, t) => sum + t.amount, 0);
@@ -676,12 +719,12 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       return null;
     }
 
-    const rollover = calculateRollover(
-      prevCycle,
-      current.transactions,
-      monthlyNetIncome
-    );
-    const totalRollover = rollover.needs + rollover.wants + rollover.savings;
+    const rollover = {
+      needs: 0,
+      wants: 0,
+      savings: Math.max(0, monthlyNetIncome - totalSpent),
+    };
+    const totalRollover = rollover.savings;
 
     const prevCategories = current.categories.filter(
       (c) => c.cycleId === prevCycle.id
@@ -751,7 +794,10 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       const prevCycle = activeCycle ?? current.cycles[0];
       if (!prevCycle) return null;
 
-      const monthlyNetIncome = getMonthlyNetIncome(current.incomeSources);
+      const monthlyNetIncome = getMonthlyNetIncome(
+        current.incomeSources,
+        taxConfig ?? undefined
+      );
       if (monthlyNetIncome <= 0) return null;
 
       const { rollover } = preview;
@@ -876,10 +922,16 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     const baseTime = Date.now();
     const cycleId = uuidv4();
     const cycleCreatedAt = new Date(baseTime - 1).toISOString();
-    const monthlyNetIncome = getMonthlyNetIncome(current.incomeSources);
+    const monthlyNetIncome = getMonthlyNetIncome(
+      current.incomeSources,
+      taxConfig ?? undefined
+    );
+    const totalSpent = current.transactions
+      .filter((t) => t.cycleId === prevCycle.id)
+      .reduce((sum, t) => sum + t.amount, 0);
     const rollover =
-      monthlyNetIncome > 0
-        ? calculateRollover(prevCycle, current.transactions, monthlyNetIncome)
+      monthlyNetIncome > 0 && totalSpent < monthlyNetIncome
+        ? { needs: 0, wants: 0, savings: monthlyNetIncome - totalSpent }
         : { needs: 0, wants: 0, savings: 0 };
 
     const paydayDay = prevCycle.paydayDay;
@@ -1406,14 +1458,17 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           : 0;
 
       const now = new Date().toISOString();
-      const limit = Math.max(0, limitAmount);
-      const userSetLimit = limit > 0;
+      const normalizedName = name.trim() || "Custom";
+      const isEmergencyCategory =
+        bucket === "needs" && normalizedName.toLowerCase() === "emergency";
+      const limit = isEmergencyCategory ? 0 : Math.max(0, limitAmount);
+      const userSetLimit = !isEmergencyCategory && limit > 0;
       const newCat: BudgetCategory = {
         id: uuidv4(),
         userId,
         cycleId: activeCycleId,
         bucket,
-        name: name.trim() || "Custom",
+        name: normalizedName,
         icon: icon ?? null,
         limitAmount: limit,
         isCustom: true,
@@ -1519,7 +1574,11 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       if (!userId) return;
       const current = state ?? createEmptyBudgetState(userId);
       const now = new Date().toISOString();
-      const limit = Math.max(0, nextLimitAmount);
+      const category = current.categories.find((c) => c.id === categoryId);
+      const isEmergencyCategory =
+        category?.bucket === "needs" &&
+        category?.name.trim().toLowerCase() === "emergency";
+      const limit = isEmergencyCategory ? 0 : Math.max(0, nextLimitAmount);
       const nextCategories = current.categories.map((c) =>
         c.id === categoryId
           ? {
@@ -1595,7 +1654,19 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         userId,
         createdAt: now,
         kind: "upsert_profile",
-        payload: { id: userId, payday_day: day },
+        payload: {
+          id: userId,
+          payday_day: day,
+          budget_engine_mode: normalizeBudgetEngineMode(
+            current.prefs?.budgetEngineMode ?? null
+          ),
+          enable_auto_reallocation: isAutoApplySafeRules(
+            current.prefs?.budgetEngineMode ?? null
+          ),
+          ...(Array.isArray(current.prefs.interests)
+            ? { interests: current.prefs.interests }
+            : {}),
+        },
       });
 
       await enqueueAndTry({
@@ -1623,7 +1694,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       cycleId: string,
       allocation: { needsPct: number; wantsPct: number; savingsPct: number },
       options?: { reallocationReason?: string }
-    ) => {
+    ): Promise<BudgetState | void> => {
       if (!userId) return;
       const current = state ?? createEmptyBudgetState(userId);
       const cycle = current.cycles.find((c) => c.id === cycleId);
@@ -1672,6 +1743,40 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
               wants_pct: updatedCycle.wantsPct,
               savings_pct: updatedCycle.savingsPct,
             },
+      });
+      return next;
+    },
+    [enqueueAndTry, persistState, state, userId]
+  );
+
+  const updateBudgetEngineMode = useCallback(
+    async (mode: BudgetEngineMode) => {
+      if (!userId) return;
+      const current = state ?? createEmptyBudgetState(userId);
+      const normalized = normalizeBudgetEngineMode(mode);
+      const now = new Date().toISOString();
+      const next: BudgetState = {
+        ...current,
+        prefs: {
+          ...current.prefs,
+          budgetEngineMode: normalized,
+        },
+      };
+      await persistState(next);
+      await enqueueAndTry({
+        id: makeQueueId(),
+        userId,
+        createdAt: now,
+        kind: "upsert_profile",
+        payload: {
+          id: userId,
+          budget_engine_mode: normalized,
+          enable_auto_reallocation: isAutoApplySafeRules(normalized),
+          ...(current.prefs.paydayDay ? { payday_day: current.prefs.paydayDay } : {}),
+          ...(Array.isArray(current.prefs.interests)
+            ? { interests: current.prefs.interests }
+            : {}),
+        },
       });
     },
     [enqueueAndTry, persistState, state, userId]
@@ -1939,6 +2044,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     updateCategoryLimit,
     updateCycleDay,
     updateCycleAllocation,
+    updateBudgetEngineMode,
     applyTemplate,
     insertDebt,
     resetBudget,

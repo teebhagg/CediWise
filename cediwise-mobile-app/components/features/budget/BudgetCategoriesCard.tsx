@@ -121,7 +121,7 @@ export function BudgetCategoriesCard({
                   <View className="flex-1">
                     <Text className="text-slate-200 font-medium text-sm">{title}</Text>
                     <Text className="text-slate-500 text-xs mt-0.5">
-                      ₵{formatCurrency(spent)} / ₵{formatCurrency(limit)} • {items.length} categories
+                      ₵{formatCurrency(spent)} / {limit <= 0 ? "Uncapped" : `₵${formatCurrency(limit)}`} • {items.length} categories
                     </Text>
                   </View>
                   <View className="flex-row items-center gap-2.5">
@@ -173,7 +173,7 @@ export function BudgetCategoriesCard({
                               </Pressable>
                             </View>
                             <Text className="text-slate-400 font-medium">
-                              ₵{formatCurrency(spentCat)} / ₵{formatCurrency(cat.limitAmount)}
+                              ₵{formatCurrency(spentCat)} / {cat.limitAmount <= 0 ? "Uncapped" : `₵${formatCurrency(cat.limitAmount)}`}
                             </Text>
                           </View>
                           <View className="mt-2">

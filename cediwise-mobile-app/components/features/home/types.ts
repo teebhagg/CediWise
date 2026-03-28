@@ -6,6 +6,7 @@ export type IncomeTaxSummary = {
   net: number;
   deductions: number;
   totalSsnit: number;
+  totalNhis: number;
   totalPaye: number;
   breakdowns: Array<{
     src: {
@@ -16,7 +17,7 @@ export type IncomeTaxSummary = {
       applyDeductions: boolean;
     };
     taxable: boolean;
-    tax: { ssnit: number; paye: number; netTakeHome: number };
+    tax: { ssnit: number; nhis: number; paye: number; netTakeHome: number };
   }>;
 };
 
@@ -25,5 +26,7 @@ export type BudgetTotals = {
   needsLimit: number;
   wantsLimit: number;
   savingsLimit: number;
+  spentTotal: number;
+  unspentThisMonth: number;
   spentByBucket: Record<BudgetBucket, number>;
 };

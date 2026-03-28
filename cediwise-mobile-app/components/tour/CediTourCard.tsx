@@ -3,6 +3,10 @@ import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { CardProps } from "react-native-lumen";
 
+type CediTourCardProps = CardProps & {
+  nextLabel?: string;
+};
+
 export function CediTourCard({
   step,
   next,
@@ -12,8 +16,10 @@ export function CediTourCard({
   isLast,
   required,
   completed = true,
-}: CardProps) {
+  nextLabel,
+}: CediTourCardProps) {
   const isNextDisabled = completed === false;
+  const resolvedNextLabel = nextLabel ?? (isLast ? "Finish" : "Next");
 
   return (
     <View
@@ -57,14 +63,14 @@ export function CediTourCard({
           ]}
           accessibilityRole="button"
           accessibilityState={{ disabled: isNextDisabled }}
-          accessibilityLabel={isLast ? "Finish" : "Next"}
-          accessibilityHint={isLast ? "Finish the tour" : "Go to next step"}>
+          accessibilityLabel={resolvedNextLabel}
+          accessibilityHint={resolvedNextLabel === "Go" ? "Go to the next screen" : isLast ? "Finish the tour" : "Go to next step"}>
           <Text
             style={[
               styles.nextButtonText,
               isNextDisabled && styles.nextButtonTextDisabled,
             ]}>
-            {isLast ? "Finish" : "Next"}
+            {resolvedNextLabel}
           </Text>
         </Pressable>
       </View>

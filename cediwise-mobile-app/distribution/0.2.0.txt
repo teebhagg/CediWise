@@ -1,0 +1,11 @@
+CediWise v0.2.0 is here! ✨
+
+This major update introduces the SME Ledger, a premium suite of tools for business owners to track revenue, expenses, and automated VAT under Act 1151.
+
+What’s New
+- SME Ledger: Professional business tracking & VAT management.
+- Tiered Plans: New Free, Budget, and SME subscription tiers.
+- Reliable Sync: Hardened data hydration for seamless offline/online use.
+- Polished UI: Brand-aligned Emerald loaders and refined UX.
+
+Upgrade to SME today! 🚀

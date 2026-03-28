@@ -114,6 +114,7 @@ jobs:
           EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY: ${{ secrets.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY }}
           EXPO_PUBLIC_POSTHOG_API_KEY: ${{ secrets.EXPO_PUBLIC_POSTHOG_API_KEY }}
           EXPO_PUBLIC_POSTHOG_HOST: ${{ secrets.EXPO_PUBLIC_POSTHOG_HOST }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           
         run: |
           node -e "
@@ -127,6 +128,7 @@ jobs:
             EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY: process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY,
             EXPO_PUBLIC_POSTHOG_API_KEY: process.env.EXPO_PUBLIC_POSTHOG_API_KEY,
             EXPO_PUBLIC_POSTHOG_HOST: process.env.EXPO_PUBLIC_POSTHOG_HOST,
+            SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
           };
           eas.submit = eas.submit || {};
           eas.submit.production = eas.submit.production || {};

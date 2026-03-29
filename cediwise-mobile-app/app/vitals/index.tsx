@@ -95,6 +95,7 @@ export default function VitalsWizard() {
   const transition = useSharedValue(1);
   const direction = useSharedValue<1 | -1>(1);
   const containerHeight = useSharedValue(360);
+  const backBtnVisible = useSharedValue(editMode ? 1 : 0);
   const outgoingStepRef = useRef<number | null>(null);
   const scrollViewRef = useRef<any>(null);
   const [showValidationHint, setShowValidationHint] = useState(false);
@@ -258,6 +259,22 @@ export default function VitalsWizard() {
     setDraft((prev) => ({ ...prev, ...patch }));
   }, []);
 
+  // Animate back button visibility when step changes
+  useEffect(() => {
+    const showBack = editMode || draft.step > 0;
+    backBtnVisible.value = withTiming(showBack ? 1 : 0, {
+      duration: 250,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [draft.step, editMode, backBtnVisible]);
+
+  const backBtnStyle = useAnimatedStyle(() => ({
+    opacity: backBtnVisible.value,
+    transform: [
+      { translateX: interpolate(backBtnVisible.value, [0, 1], [-8, 0]) },
+    ],
+  }));
+
   const toggleInterest = useCallback((interest: string) => {
     setDraft((prev) => {
       const selected = prev.interests.includes(interest);
@@ -270,10 +287,13 @@ export default function VitalsWizard() {
     });
   }, []);
 
-  const exitWizard = useCallback(() => {
+  const exitWizard = useCallback(async () => {
     setDraft(makeDefaultDraft());
+    if (user?.id) {
+      await writePersonalizationStatusCache(user.id, false, { skippedVitals: true });
+    }
     router.replace("/(tabs)");
-  }, []);
+  }, [user?.id]);
 
   const goNext = useCallback(async () => {
     Keyboard.dismiss();
@@ -299,13 +319,17 @@ export default function VitalsWizard() {
     setError(null);
     setShowValidationHint(false);
     if (draft.step === 0) {
-      exitWizard();
+      if (editMode) {
+        router.back();
+      } else {
+        exitWizard();
+      }
       return;
     }
     const nextStep = Math.max(0, draft.step - 1);
     updateDraft({ step: nextStep });
     animateStepChange(nextStep, "back");
-  }, [animateStepChange, draft.step, exitWizard, updateDraft]);
+  }, [animateStepChange, draft.step, editMode, exitWizard, updateDraft]);
 
   const handleFinish = useCallback(async () => {
     Keyboard.dismiss();
@@ -640,14 +664,14 @@ export default function VitalsWizard() {
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: "#000000" }}>
       <View
-        style={{
-          height: 44,
-          paddingHorizontal: 12,
-          justifyContent: "center",
-          alignItems: "flex-start",
-        }}>
-        <BackButton onPress={goBack} />
-      </View>
+          style={{
+            height: 44,
+            paddingHorizontal: 12,
+            justifyContent: "center",
+            alignItems: "flex-start",
+          }}>
+          {editMode && <BackButton onPress={goBack} />}
+        </View>
       <View style={{ height: 3, backgroundColor: "rgba(16,185,129,0.18)" }}>
         <AnimatedView
           style={[
@@ -768,9 +792,11 @@ export default function VitalsWizard() {
             borderTopColor: "rgba(255,255,255,0.06)",
           }}>
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <SecondaryButton onPress={goBack} style={{ flex: 1 }}>
-              Back
-            </SecondaryButton>
+            <AnimatedView style={[{ flex: 1 }, backBtnStyle]}>
+              <SecondaryButton onPress={goBack}>
+                Back
+              </SecondaryButton>
+            </AnimatedView>
 
             {draft.step < totalSteps - 1 ? (
               <PrimaryButton
@@ -793,6 +819,7 @@ export default function VitalsWizard() {
             )}
           </View>
 
+          {!editMode && (
           <Pressable
             onPress={exitWizard}
             style={{
@@ -807,9 +834,10 @@ export default function VitalsWizard() {
                 fontSize: 12,
                 textDecorationLine: "underline",
               }}>
-              Exit setup
+              I'll do this later
             </Text>
           </Pressable>
+          )}
         </View>
       </View>
     </SafeAreaView>

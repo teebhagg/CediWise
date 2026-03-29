@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion'
 // Removed: JoinBetaButton import (beta CTA deprecated)
-import { cn } from '~/lib/utils'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { SmartPhone01Icon } from '@hugeicons/core-free-icons'
 import { GlassCard } from '@/components/ui/glass-card'
+import { cn } from '~/lib/utils'
 
 export function Hero() {
   return (
@@ -23,15 +23,16 @@ export function Hero() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75"></span>
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-primary"></span>
               </span>
-              Modern Money for Ghana
+              Personal Finance Companion for Ghana
             </div>
             <h1 className="text-5xl font-bold tracking-tight text-white sm:text-7xl">
-              Smart money for <br />
-              <span className="text-primary">CediWise</span>
+              Smart money <br />
+              <span className="text-primary">for Ghana</span>
             </h1>
             <p className="mt-8 text-lg leading-relaxed text-zinc-400">
-              Salary calculator, budgeting, small and medium enterprise (SME) ledger, and financial
-              literacy — all in one premium platform. Built for the modern Ghanaian worker.
+              CediWise is your personal finance companion for Ghana. Salary calculator, budgeting,
+              small and medium enterprise (SME) ledger, debt tracking, and financial literacy — all in
+              one platform built for the modern Ghanaian worker.
             </p>
             <div className="mt-12 flex flex-col gap-4 sm:flex-row">
               {/* <a

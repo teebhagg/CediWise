@@ -51,7 +51,7 @@ export function BudgetPersonalizationCard({
             onPress={() => {
               analytics.personalizationBannerClick({ userId, placement: 'budget' });
               analytics.vitalsStartFromBanner({ userId, placement: 'budget' });
-              router.push('/vitals');
+              router.push('/vitals?mode=edit');
             }}
             className="h-11 px-4">
             <Text className="text-slate-900 font-medium">Start</Text>

@@ -1,8 +1,8 @@
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 
+import appCss from '../styles.css?url'
 import { Header } from '@/components/layout/Header'
 import { OG_IMAGE, SITE_URL } from '@/lib/seo'
-import appCss from '../styles.css?url'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -15,29 +15,29 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1',
       },
       {
-        title: 'CediWise — Smart Money for Ghana',
+        title: 'CediWise — Personal Finance Companion for Ghana',
       },
       {
         name: 'description',
         content:
-          'Empowering Ghanaians with smart financial tools. Manage your salary, track your small and medium enterprise (SME) expenses, and build wealth with confidence.',
+          'CediWise is a personal finance companion for Ghana. Manage salary, PAYE, SSNIT, budgeting, debt, SME expenses, and financial literacy in one app.',
       },
       {
         name: 'keywords',
         content:
-          'CediWise, Ghana, finance, salary calculator, budgeting, small and medium enterprise (SME) ledger, financial literacy, wealth management, money tracker, smart budget, smart saving, expense tracking, financial empowerment',
+          'CediWise, personal finance companion, Ghana, salary calculator, budgeting, debt tracking, SME ledger, PAYE, SSNIT, financial literacy, smart money for Ghana',
       },
       { property: 'og:url', content: SITE_URL },
       { property: 'og:site_name', content: 'CediWise' },
       { property: 'og:locale', content: 'en_GH' },
       {
         property: 'og:title',
-        content: 'CediWise — Smart Money for Ghana',
+        content: 'CediWise — Personal Finance Companion for Ghana',
       },
       {
         property: 'og:description',
         content:
-          'Empowering Ghanaians with smart financial tools. Manage your salary, track your small and medium enterprise (SME) expenses, and build wealth with confidence.',
+          'CediWise is a personal finance companion for Ghana. Manage salary, PAYE, SSNIT, budgeting, debt, SME expenses, and financial literacy in one app.',
       },
       { property: 'og:image', content: OG_IMAGE },
       {
@@ -50,12 +50,12 @@ export const Route = createRootRoute({
       },
       {
         name: 'twitter:title',
-        content: 'CediWise — Smart Money for Ghana',
+        content: 'CediWise — Personal Finance Companion for Ghana',
       },
       {
         name: 'twitter:description',
         content:
-          'Empowering Ghanaians with smart financial tools. Manage your salary, track your small and medium enterprise (SME) expenses, and build wealth with confidence.',
+          'CediWise is a personal finance companion for Ghana. Manage salary, PAYE, SSNIT, budgeting, debt, SME expenses, and financial literacy in one app.',
       },
       { name: 'twitter:image', content: OG_IMAGE },
       {
@@ -99,7 +99,7 @@ const ORGANIZATION_JSON_LD = {
   name: 'CediWise',
   url: SITE_URL,
   description:
-    'Smart finance for Ghana. Salary calculator, budgeting, small and medium enterprise (SME) ledger, and financial literacy tools.',
+    'CediWise is a personal finance companion for Ghana. Salary calculator, budgeting, small and medium enterprise (SME) ledger, debt tracking, and financial literacy tools.',
   areaServed: { '@type': 'Country', name: 'Ghana' },
 }
 

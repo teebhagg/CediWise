@@ -7,9 +7,9 @@ export const Route = createFileRoute('/')({
   head: () =>
     createPageHead({
       path: '/',
-      title: 'CediWise — Salary Calculator & Budget App for Ghana',
+      title: 'CediWise - Salary, Tax & Finance App for Ghana',
       description:
-        'Calculate SSNIT (Social Security) & PAYE (Income Tax) for Ghana 2026, plan budgets, track Small and Medium Enterprise (SME) expenses, monitor debts, and build financial literacy in one app.',
+        'CediWise helps Ghanaians manage salary, PAYE, SSNIT, budgeting, debt tracking, SME expenses, and financial literacy in one personal finance companion.',
       schemas: [getAppSchema()],
     }),
 })

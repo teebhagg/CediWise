@@ -143,21 +143,26 @@ export default function UpgradeScreen() {
     const targetTier = isSme ? "sme" : "budget";
 
     try {
-      const updatePayload: any = { updated_at: new Date().toISOString() };
-      
+      if (!supabase) return;
+      const now = new Date().toISOString();
+
       if (isOnTrial) {
-        // STACK: Set as pending
-        updatePayload.pending_tier = targetTier;
-        updatePayload.pending_tier_start_date = trialEndsAt;
+        // STACK: Set as pending — starts after trial ends
+        await supabase.from("subscriptions").update({
+          pending_tier: targetTier,
+          pending_tier_start_date: trialEndsAt,
+          updated_at: now,
+        }).eq("user_id", user?.id);
       } else {
         // UPGRADE: Immediate
-        updatePayload.tier = targetTier;
-        updatePayload.pending_tier = null;
-        updatePayload.pending_tier_start_date = null;
+        await supabase.from("subscriptions").update({
+          plan: targetTier,
+          status: "active",
+          pending_tier: null,
+          pending_tier_start_date: null,
+          updated_at: now,
+        }).eq("user_id", user?.id);
       }
-
-      if (!supabase) return;
-      await supabase.from("profiles").update(updatePayload).eq("id", user?.id);
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       showSuccess("Success!", isOnTrial ? "Your sub is stacked! Paid plan starts after trial." : "Plan upgraded!");
@@ -228,19 +233,12 @@ export default function UpgradeScreen() {
           sub?.current_period_end ||
           new Date(Date.now() + 30 * 86400000).toISOString();
 
-        // Set pending tier + cancel flag
-        await supabase
-          .from("profiles")
-          .update({
-            pending_tier: targetTier,
-            pending_tier_start_date: periodEnd,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", user.id);
-
+        // Set pending tier + cancel flag (on subscriptions, not profiles)
         await supabase
           .from("subscriptions")
           .update({
+            pending_tier: targetTier,
+            pending_tier_start_date: periodEnd,
             cancel_at_period_end: true,
             updated_at: new Date().toISOString(),
           })

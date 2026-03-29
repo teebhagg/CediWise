@@ -1,22 +1,22 @@
 'use client'
 
-import { Footer } from '@/components/layout/Footer'
-import { buttonVariants } from '@/components/ui/button'
-import { createPageHead } from '@/lib/seo'
-import { cn } from '@/lib/utils'
 import { ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
+import { Footer } from '@/components/layout/Footer'
+import { buttonVariants } from '@/components/ui/button'
+import { createPageHead } from '@/lib/seo'
+import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/about')({
   component: AboutPage,
   head: () =>
     createPageHead({
       path: '/about',
-      title: 'About Us',
+      title: 'About the Personal Finance Companion for Ghana',
       description:
-        'CediWise is a project by Joshua Ansah to address financial illiteracy in Ghana and help Ghanaians save, plan, and invest for a rainy day.',
+        'CediWise is a personal finance companion for Ghana, created by Joshua Ansah to help Ghanaians manage salary, budgeting, debt, SME expenses, and financial literacy.',
     }),
 })
 
@@ -59,8 +59,8 @@ function AboutPage() {
                 About CediWise
               </h1>
               <p className="mt-6 text-xl text-zinc-400 leading-relaxed max-w-2xl">
-                A passion project by a sole software engineer wanting to address the lack of financial
-                literacy in Ghana.
+                CediWise is a personal finance companion for Ghana, built as a passion project to help
+                people make clearer money decisions and build better financial habits.
               </p>
             </motion.header>
 

@@ -168,7 +168,14 @@ For the mobile app, Firebase is used for phone auth and analytics; configure `go
 
 ## License
 
-This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
+This project uses a dual-license, source-available model:
+
+- Community and personal use: see [LICENSE](LICENSE)
+- Commercial use, hosted use, resale, redistribution, or white-label use: see [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md)
+- Contributions: see [CLA.md](CLA.md) and [CONTRIBUTING.md](CONTRIBUTING.md)
+- Brand usage: see [TRADEMARK.md](TRADEMARK.md)
+
+This is **not** open source in the OSI sense. It is intended to allow personal use and community contributions while reserving commercial rights and trademark control for CediWise.
 
 ---
 

@@ -130,6 +130,11 @@ export default function UpgradeScreen() {
     return billingCycle === "monthly" ? "/month" : "/quarter";
   };
 
+  const trialDaysLeft = isOnTrial && trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0;
+  const showTrialButtons = !isOnTrial || trialDaysLeft <= 10;
+
   const onPaymentSuccess = useCallback(async (res: any, planKey: PlanKey) => {
     setIsProcessing(true);
     
@@ -390,19 +395,27 @@ export default function UpgradeScreen() {
                   ))}
                 </View>
 
-                <PrimaryButton
-                  onPress={() => handleSelectPlan(plan)}
-                  loading={isProcessing && !isFree}
-                  disabled={(currentTier === "budget" && (plan.key === "budget_monthly" || plan.key === "budget_quarterly" || plan.name === "Smart Budget")) || (currentTier === "sme" && (plan.key === "sme_monthly" || plan.key === "sme_quarterly" || plan.name === "SME Ledger")) || (currentTier === "free" && isFree)}
-                  style={{ marginTop: 8 }}
-                >
-                  {isFree 
-                    ? (currentTier === "free" ? "Current Plan" : "Default Plan") 
-                    : (currentTier === "budget" && (plan.key === "budget_monthly" || plan.key === "budget_quarterly" || plan.name === "Smart Budget")) || (currentTier === "sme" && (plan.key === "sme_monthly" || plan.key === "sme_quarterly" || plan.name === "SME Ledger"))
-                      ? (pendingTier === (plan.key.includes('sme') ? 'sme' : 'budget') ? "Active at Period End" : "Current Plan")
-                      : isOnTrial ? "Subscribe Now" : "Upgrade"
-                  }
-                </PrimaryButton>
+                {showTrialButtons ? (
+                  <PrimaryButton
+                    onPress={() => handleSelectPlan(plan)}
+                    loading={isProcessing && !isFree}
+                    disabled={(currentTier === "budget" && (plan.key === "budget_monthly" || plan.key === "budget_quarterly" || plan.name === "Smart Budget")) || (currentTier === "sme" && (plan.key === "sme_monthly" || plan.key === "sme_quarterly" || plan.name === "SME Ledger")) || (currentTier === "free" && isFree)}
+                    style={{ marginTop: 8 }}
+                  >
+                    {isFree 
+                      ? (currentTier === "free" ? "Current Plan" : "Default Plan") 
+                      : (currentTier === "budget" && (plan.key === "budget_monthly" || plan.key === "budget_quarterly" || plan.name === "Smart Budget")) || (currentTier === "sme" && (plan.key === "sme_monthly" || plan.key === "sme_quarterly" || plan.name === "SME Ledger"))
+                        ? (pendingTier === (plan.key.includes('sme') ? 'sme' : 'budget') ? "Active at Period End" : "Current Plan")
+                        : isOnTrial ? "Subscribe Now" : "Upgrade"
+                    }
+                  </PrimaryButton>
+                ) : !isFree ? (
+                  <View style={styles.chooseLaterRow}>
+                    <Text style={styles.chooseLaterText}>
+                      Available to subscribe when your trial has 10 days or fewer left.
+                    </Text>
+                  </View>
+                ) : null}
               </Card>
             );
           })}
@@ -416,7 +429,7 @@ export default function UpgradeScreen() {
         </View>
 
         {/* Downgrade Options */}
-        {currentTier === "sme" && !pendingTier && (
+        {currentTier === "sme" && !pendingTier && !isOnTrial && (
           <View style={styles.downgradeSection}>
             <Text style={styles.downgradeLabel}>Looking to downgrade?</Text>
             <Pressable
@@ -435,7 +448,7 @@ export default function UpgradeScreen() {
             </Pressable>
           </View>
         )}
-        {currentTier === "budget" && !pendingTier && (
+        {currentTier === "budget" && !pendingTier && !isOnTrial && (
           <View style={styles.downgradeSection}>
             <Text style={styles.downgradeLabel}>Looking to downgrade?</Text>
             <Pressable
@@ -667,5 +680,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     textDecorationLine: "underline",
+  },
+
+  // Trial > 10 days: choose later message
+  chooseLaterRow: {
+    marginTop: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+    alignItems: "center",
+  },
+  chooseLaterText: {
+    color: "#6B7280",
+    fontSize: 12,
+    textAlign: "center",
+    lineHeight: 16,
   },
 });

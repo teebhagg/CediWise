@@ -338,11 +338,16 @@ export default function SubscriptionScreen() {
                     {cancelAtPeriodEnd ? "Review Plan" : "Change Plan"}
                   </Text>
                 </Pressable>
+              ) : isOnTrial ? (
+                (
+                  <PrimaryButton onPress={handleUpgradePress}>
+                    <Text style={styles.primaryButtonText}>{trialDaysLeft <= 10 ? "Choose a Plan" : "Check out our plans"}</Text>
+                    <ArrowRight color="#020617" size={18} />
+                  </PrimaryButton>
+                )
               ) : (
                 <PrimaryButton onPress={handleUpgradePress}>
-                  <Text style={styles.primaryButtonText}>
-                    {isOnTrial ? "Choose a Plan" : "Upgrade Now"}
-                  </Text>
+                  <Text style={styles.primaryButtonText}>Upgrade Now</Text>
                   <ArrowRight color="#020617" size={18} />
                 </PrimaryButton>
               )}
@@ -641,5 +646,24 @@ const styles = StyleSheet.create({
     color: "#D97706",
     fontSize: 13,
     marginTop: 2,
+  },
+
+  // Choose Later (trial > 10 days)
+  chooseLaterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.06)",
+  },
+  chooseLaterText: {
+    color: "#6B7280",
+    fontSize: 13,
+    flex: 1,
+    lineHeight: 18,
   },
 });

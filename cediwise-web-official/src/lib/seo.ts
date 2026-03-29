@@ -15,12 +15,62 @@ export function absoluteUrl(path: string) {
   return `${SITE_URL}${clean}`
 }
 
+export interface SchemaGenerator {
+  generate: () => Record<string, any>
+}
+
+export const getAppSchema = (): SchemaGenerator => ({
+  generate: () => ({
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'CediWise',
+    operatingSystem: 'Android, iOS',
+    applicationCategory: 'FinanceApplication',
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: '4.8',
+      ratingCount: '120',
+    },
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'GHS',
+    },
+    downloadUrl: 'https://play.google.com/store/apps/details?id=com.cediwise.app',
+    featureList: [
+      'Ghana Salary Calculator (2026 PAYE/SSNIT)',
+      'Budget Management',
+      'SME Ledger',
+      'Debt Tracking',
+      'Financial Literacy',
+    ],
+  }),
+})
+
+export const getFAQSchema = (
+  faqs: { question: string; answer: string }[],
+): SchemaGenerator => ({
+  generate: () => ({
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faqs.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  }),
+})
+
 export function createPageHead(options: {
   path: string
   title: string
   description: string
+  schemas?: SchemaGenerator[]
 }) {
-  const { path, title, description } = options
+  const { path, title, description, schemas = [] } = options
   const url = absoluteUrl(path)
   return {
     meta: [
@@ -35,5 +85,9 @@ export function createPageHead(options: {
       { name: 'twitter:image', content: OG_IMAGE },
     ],
     links: [{ rel: 'canonical', href: url }],
+    scripts: schemas.map((schema) => ({
+      type: 'application/ld+json',
+      children: JSON.stringify(schema.generate()),
+    })),
   }
 }

@@ -1,9 +1,9 @@
 import { FeatureInsightLayout } from '@/components/features/FeatureInsightLayout'
-import { absoluteUrl, createPageHead } from '@/lib/seo'
+import { createPageHead, getAppSchema, getFAQSchema } from '@/lib/seo'
 import { CreditCardIcon } from '@hugeicons/core-free-icons'
 import { createFileRoute } from '@tanstack/react-router'
 
-export const Route = createFileRoute('/salary-calculator')({
+export const Route = createFileRoute('/salary-calculator/')({
   component: SalaryCalculatorPage,
   head: () =>
     createPageHead({
@@ -11,65 +11,33 @@ export const Route = createFileRoute('/salary-calculator')({
       title: 'Salary Calculator',
       description:
         'Calculate SSNIT (Social Security), PAYE (Income Tax), and net take-home for Ghana. Know exactly what stays in your pocket after all deductions.',
+      schemas: [
+        getAppSchema(),
+        getFAQSchema([
+          {
+            question: 'How does CediWise calculate PAYE tax in Ghana?',
+            answer:
+              'CediWise applies the official Ghana Revenue Authority (GRA) tax bands for the selected year to your gross monthly salary, then computes PAYE step-by-step according to each band.',
+          },
+          {
+            question: 'Does the salary calculator include SSNIT contributions?',
+            answer:
+              'Yes. The calculator includes SSNIT tier 1 and tier 2 pension contributions, so your net take-home reflects both tax and statutory pension deductions.',
+          },
+          {
+            question: 'Can I use the CediWise salary calculator for Ghana 2026 tax rates?',
+            answer:
+              'Yes. The CediWise salary calculator is built for Ghana 2026 tax brackets and thresholds, using the latest available GRA tables for that year.',
+          },
+          {
+            question: 'Can I export or share my salary breakdown from CediWise?',
+            answer:
+              'CediWise is designed so that your salary breakdown can be saved or shared, making it useful for personal records, budgeting, and supporting loan or rental applications.',
+          },
+        ]),
+      ],
     }),
 })
-
-const FAQ_JSON_LD = {
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: [
-    {
-      '@type': 'Question',
-      name: 'How does CediWise calculate PAYE tax in Ghana?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'CediWise applies the official Ghana Revenue Authority (GRA) tax bands for the selected year to your gross monthly salary, then computes PAYE step-by-step according to each band.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Does the salary calculator include SSNIT contributions?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes. The calculator includes SSNIT tier 1 and tier 2 pension contributions, so your net take-home reflects both tax and statutory pension deductions.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Can I use the CediWise salary calculator for Ghana 2026 tax rates?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'Yes. The CediWise salary calculator is built for Ghana 2026 tax brackets and thresholds, using the latest available GRA tables for that year.',
-      },
-    },
-    {
-      '@type': 'Question',
-      name: 'Can I export or share my salary breakdown from CediWise?',
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: 'CediWise is designed so that your salary breakdown can be saved or shared, making it useful for personal records, budgeting, and supporting loan or rental applications.',
-      },
-    },
-  ],
-} as const
-
-const APP_JSON_LD = {
-  '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  name: 'CediWise Salary Calculator',
-  applicationCategory: 'FinanceApplication',
-  operatingSystem: 'Android, iOS',
-  url: absoluteUrl('/salary-calculator'),
-  offers: {
-    '@type': 'Offer',
-    price: '0.00',
-    priceCurrency: 'GHS',
-  },
-  areaServed: {
-    '@type': 'Country',
-    name: 'Ghana',
-  },
-} as const
 
 const highlights = [
   {
@@ -149,17 +117,6 @@ function SalaryCalculatorPage() {
           </li>
         </ul>
       </FeatureInsightLayout>
-
-      <script
-        type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(FAQ_JSON_LD) }}
-      />
-      <script
-        type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(APP_JSON_LD) }}
-      />
     </>
   )
 }

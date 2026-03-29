@@ -111,7 +111,7 @@ export default function SMESetupScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={"padding"}
     >
       <StandardHeader
         title="Business Setup"

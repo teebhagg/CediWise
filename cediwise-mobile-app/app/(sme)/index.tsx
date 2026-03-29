@@ -19,7 +19,7 @@ import {
   ChevronRight,
   WifiOff,
 } from "lucide-react-native";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Pressable,
   RefreshControl,
@@ -51,12 +51,14 @@ export default function SMEDashboardScreen() {
   const { isConnected } = useConnectivity();
 
   const [refreshing, setRefreshing] = useState(false);
+  const initialHydrationAttempted = useRef(false);
 
   // Self-Correction: If we have no profile but aren't loading, try to pull once.
   // This handles logout/login race conditions and interrupted bootstrap.
   useEffect(() => {
-    if (!sme.profile && !sme.isLoading && isConnected) {
+    if (!sme.profile && !sme.isLoading && isConnected && !initialHydrationAttempted.current) {
       log.info("[SME] Missing profile on dashboard. Triggering background pull...");
+      initialHydrationAttempted.current = true;
       void sme.hydrate();
     }
   }, [sme.profile, sme.isLoading, isConnected]);

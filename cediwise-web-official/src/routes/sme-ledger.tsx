@@ -1,7 +1,9 @@
 import { FeatureInsightLayout } from '@/components/features/FeatureInsightLayout'
-import { absoluteUrl, createPageHead } from '@/lib/seo'
-import { Invoice02Icon } from '@hugeicons/core-free-icons'
+import { createPageHead, getAppSchema, getFAQSchema } from '@/lib/seo'
+import { Invoice02Icon, Target02Icon, PercentIcon } from '@hugeicons/core-free-icons'
 import { createFileRoute } from '@tanstack/react-router'
+import { GlassCard } from '@/components/ui/glass-card'
+import { HugeiconsIcon as HugeIcon } from '@hugeicons/react'
 
 export const Route = createFileRoute('/sme-ledger')({
   component: SMELedgerPage,
@@ -11,26 +13,23 @@ export const Route = createFileRoute('/sme-ledger')({
       title: 'Small & Medium Enterprise (SME) Ledger',
       description:
         'Sales and expenses with automatic 20% VAT calculations. Get alerted as you approach the GHS 750K VAT threshold.',
+      schemas: [
+        getAppSchema(),
+        getFAQSchema([
+          {
+            question: 'What is the VAT threshold for small businesses in Ghana?',
+            answer:
+              'Under Act 1151, the mandatory VAT registration threshold for businesses dealing in goods is GHS 750,000 in annual turnover. Service providers are generally required to register regardless of turnover.',
+          },
+          {
+            question: 'How does CediWise help with VAT calculations?',
+            answer:
+              'CediWise automatically calculates the 20% VAT (including NHIL, GETFund, and COVID-19 levies) for both inclusive and exclusive amounts, ensuring your SME records are compliant.',
+          },
+        ]),
+      ],
     }),
 })
-
-const APP_JSON_LD = {
-  '@context': 'https://schema.org',
-  '@type': 'SoftwareApplication',
-  name: 'CediWise Small & Medium Enterprise (SME) Ledger',
-  applicationCategory: 'FinanceApplication',
-  operatingSystem: 'Android, iOS',
-  url: absoluteUrl('/sme-ledger'),
-  offers: {
-    '@type': 'Offer',
-    price: '25.00',
-    priceCurrency: 'GHS',
-  },
-  areaServed: {
-    '@type': 'Country',
-    name: 'Ghana',
-  },
-} as const
 
 const highlights = [
   {
@@ -46,7 +45,7 @@ const highlights = [
   {
     title: 'VAT threshold alert',
     description:
-      'Get notified as you approach the GHS 750,000 annual turnover threshold for VAT registration (goods only). Service providers are always required to register.',
+      'Get notified as you approach the GHS 750,000 annual turnover threshold for VAT registration.',
   },
   {
     title: 'Monthly P&L summary',
@@ -67,16 +66,33 @@ const highlights = [
 
 function SMELedgerPage() {
   return (
-    <>
-      <FeatureInsightLayout
-        title="Small & Medium Enterprise (SME) Ledger"
-        tagline="Business Finance"
-        description="Sales and expenses for small and medium enterprises (SMEs), with automatic 20% VAT calculations. Get alerted as you approach the GHS 750K VAT threshold."
-        icon={Invoice02Icon}
-        iconBgColor="bg-blue-500/30"
-        image="/assets/android/img-6.webp"
-        highlights={highlights}
-      >
+    <FeatureInsightLayout
+      title="Small & Medium Enterprise (SME) Ledger"
+      tagline="Business Finance"
+      description="Sales and expenses for small and medium enterprises (SMEs), with automatic 20% VAT calculations. Get alerted as you approach the GHS 750K VAT threshold."
+      icon={Invoice02Icon}
+      iconBgColor="bg-blue-500/30"
+      image="/assets/android/img-6.webp"
+      highlights={highlights}
+    >
+      <div className="grid gap-6 md:grid-cols-2 mt-8">
+        <GlassCard
+          label="VAT Rate (Act 1151)"
+          value="20.0% Automatic"
+          icon={<HugeIcon icon={PercentIcon} size={20} />}
+          iconBgColor="bg-blue-500/20"
+          iconColor="text-blue-400"
+        />
+        <GlassCard
+          label="Registration Threshold"
+          value="GHS 750K Turnover"
+          icon={<HugeIcon icon={Target02Icon} size={20} />}
+          iconBgColor="bg-orange-500/20"
+          iconColor="text-orange-400"
+        />
+      </div>
+
+      <div className="mt-12 space-y-6">
         <h2>How it works</h2>
         <p>
           Add your sales and expenses with date, amount, and category. CediWise automatically applies
@@ -88,17 +104,13 @@ function SMELedgerPage() {
         <h2>Built for Ghanaian small &amp; medium enterprises (SMEs)</h2>
         <p>
           Many small business owners in Ghana manage money in notebooks or scattered spreadsheets. The
-          SME Ledger gives you a clean, digital record. When it&apos;s time to file taxes or talk to an
-          accountant, you&apos;re ready.
+          SME Ledger gives you a digital record that is professional and accountant-ready.
         </p>
-
-
 
         <h2>Why it matters</h2>
         <p>
           Good record-keeping is the foundation of business growth. You can&apos;t improve what you
-          don&apos;t measure. The SME Ledger helps you see where money comes from, where it goes, and
-          how much stays as profit.
+          don&apos;t measure. The SME Ledger helps you see where money comes from and exactly how much stays as profit.
         </p>
 
         <h2>Works best with</h2>
@@ -112,12 +124,7 @@ function SMELedgerPage() {
             personal plan.
           </li>
         </ul>
-      </FeatureInsightLayout>
-
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(APP_JSON_LD) }}
-      />
-    </>
+      </div>
+    </FeatureInsightLayout>
   )
 }

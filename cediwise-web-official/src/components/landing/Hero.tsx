@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import { cn } from '~/lib/utils'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { SmartPhone01Icon } from '@hugeicons/core-free-icons'
+import { GlassCard } from '@/components/ui/glass-card'
 
 export function Hero() {
   return (
@@ -113,152 +114,85 @@ export function Hero() {
           {/* Glassmorphic Cards Overlay */}
           <div className="absolute inset-0 z-20 hidden lg:block pointer-events-none">
             {/* Income Card - Top Left */}
-            <motion.div
+            <GlassCard
+              delay={0.5}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.8 }}
-              className="absolute left-[8%] top-[20%] rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-500">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    className="size-5"
-                  >
-                    <path d="M12 5v14m-7-7l7 7 7-7" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
-                    Total Income
-                  </p>
-                  <p className="text-sm font-bold text-white">GHS 8,540.00</p>
-                </div>
-              </div>
-            </motion.div>
+              className="absolute left-[8%] top-[20%]"
+              label="Total Income"
+              value="GHS 8,540.00"
+              iconBgColor="bg-emerald-500/20"
+              iconColor="text-emerald-500"
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-5">
+                  <path d="M12 5v14m-7-7l7 7 7-7" />
+                </svg>
+              }
+            />
 
             {/* Savings Card - Bottom Right */}
-            <motion.div
+            <GlassCard
+              delay={0.7}
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.7, duration: 0.8 }}
-              className="absolute bottom-[8%] right-[15%] rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/20 text-primary">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    className="size-5"
-                  >
-                    <path d="M12 2v20m10-10H2" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
-                    Monthly Savings
-                  </p>
-                  <p className="text-sm font-bold text-white">+GHS 2,450.00</p>
-                </div>
-              </div>
-            </motion.div>
+              className="absolute bottom-[8%] right-[15%]"
+              label="Monthly Savings"
+              value="+GHS 2,450.00"
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-5">
+                  <path d="M12 2v20m10-10H2" />
+                </svg>
+              }
+            />
 
             {/* Deductions Card - Top Right */}
-            <motion.div
+            <GlassCard
+              delay={0.9}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.9, duration: 0.8 }}
-              className="absolute right-[8%] top-[25%] rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-rose-500/20 text-rose-500">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    className="size-5"
-                  >
-                    <path d="M5 12h14" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
-                    Tax & Social Security (SSNIT)
-                  </p>
-                  <p className="text-sm font-bold text-white">-GHS 1,240.00</p>
-                </div>
-              </div>
-            </motion.div>
+              className="absolute right-[8%] top-[25%]"
+              label="Tax & Social Security (SSNIT)"
+              value="-GHS 1,240.00"
+              iconBgColor="bg-rose-500/20"
+              iconColor="text-rose-500"
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-5">
+                  <path d="M5 12h14" />
+                </svg>
+              }
+            />
 
             {/* Expenses Card - Bottom Left */}
-            <motion.div
+            <GlassCard
+              delay={1.1}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 1.1, duration: 0.8 }}
-              className="absolute bottom-[20%] left-[10%] rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-500/20 text-orange-500">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    className="size-5"
-                  >
-                    <path d="M20 12V8H4v4m16 0v4H4v-4m16 0h2M4 12H2" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
-                    Small Business (SME) Expenses
-                  </p>
-                  <p className="text-sm font-bold text-white">GHS 3,120.00</p>
-                </div>
-              </div>
-            </motion.div>
+              className="absolute bottom-[20%] left-[10%]"
+              label="Small Business (SME) Expenses"
+              value="GHS 3,120.00"
+              iconBgColor="bg-orange-500/20"
+              iconColor="text-orange-500"
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-5">
+                  <path d="M20 12V8H4v4m16 0v4H4v-4m16 0h2M4 12H2" />
+                </svg>
+              }
+            />
 
-            {/* Budget Planning - Center Right bit higher */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5, duration: 0.8 }}
-              // animate={{
-              //   y: [0, -10, 0],
-              // }}
-              // transition={{
-              //   duration: 4,
-              //   repeat: Infinity,
-              //   ease: 'easeInOut',
-              // }}
-              className="absolute right-[4%] top-[55%] rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md shadow-2xl"
-            >
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500/20 text-sky-500">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    className="size-5"
-                  >
-                    <path d="M21.21 15.89A10 10 0 118 2.83M22 12A10 10 0 0012 2v10z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
-                    Budget Goal
-                  </p>
-                  <p className="text-sm font-bold text-white">92.4% Met</p>
-                </div>
-              </div>
-            </motion.div>
+            {/* Budget Planning - Center Right */}
+            <GlassCard
+              delay={0.5}
+              className="absolute right-[4%] top-[55%] shadow-2xl"
+              label="Budget Goal"
+              value="92.4% Met"
+              iconBgColor="bg-sky-500/20"
+              iconColor="text-sky-500"
+              icon={
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="size-5">
+                  <path d="M21.21 15.89A10 10 0 118 2.83M22 12A10 10 0 0012 2v10z" />
+                </svg>
+              }
+            />
           </div>
         </div>
       </div>

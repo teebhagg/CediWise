@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { EmailComposerDialog } from "@/components/emails/email-composer-dialog";
 import {
   Card,
@@ -40,6 +41,12 @@ export default async function UserDetailPage({
     .from("profiles")
     .select("*")
     .eq("id", id)
+    .maybeSingle();
+
+  const { data: sub } = await admin
+    .from("subscriptions")
+    .select("*")
+    .eq("user_id", id)
     .maybeSingle();
 
   const user = authUser.user as {
@@ -144,6 +151,81 @@ export default async function UserDetailPage({
                     dateStyle: "medium",
                     timeStyle: "short",
                   })}
+                </span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Subscription Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Subscription</CardTitle>
+          <CardDescription>Current plan and billing status.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <span className="text-muted-foreground">Tier: </span>
+              <Badge
+                variant={
+                  (sub?.plan as string) === "sme"
+                    ? "default"
+                    : (sub?.plan as string) === "budget"
+                      ? "secondary"
+                      : "outline"
+                }
+              >
+                {String(sub?.plan ?? "free").toUpperCase()}
+              </Badge>
+            </div>
+            <div>
+              <span className="text-muted-foreground">Status: </span>
+              <Badge
+                variant={
+                  (sub?.status as string) === "active"
+                    ? "default"
+                    : (sub?.status as string) === "trial"
+                      ? "secondary"
+                      : "destructive"
+                }
+              >
+                {String(sub?.status ?? "active")}
+              </Badge>
+            </div>
+            {sub?.trial_ends_at && (
+              <div>
+                <span className="text-muted-foreground">Trial ends: </span>
+                <span>
+                  {new Date(sub.trial_ends_at as string).toLocaleDateString(undefined, {
+                    dateStyle: "medium",
+                  })}
+                </span>
+              </div>
+            )}
+            {sub?.pending_tier && (
+              <div>
+                <span className="text-muted-foreground">Pending: </span>
+                <span>
+                  {String(sub.pending_tier)}
+                  {sub?.pending_tier_start_date
+                    ? ` (effective ${new Date(sub.pending_tier_start_date as string).toLocaleDateString()})`
+                    : ""}
+                </span>
+              </div>
+            )}
+            {sub?.cancel_at_period_end && (
+              <div>
+                <span className="text-muted-foreground">Cancel at period end: </span>
+                <Badge variant="destructive">Yes</Badge>
+              </div>
+            )}
+            {sub?.paystack_subscription_code && (
+              <div>
+                <span className="text-muted-foreground">Paystack code: </span>
+                <span className="font-mono text-xs">
+                  {String(sub.paystack_subscription_code)}
                 </span>
               </div>
             )}

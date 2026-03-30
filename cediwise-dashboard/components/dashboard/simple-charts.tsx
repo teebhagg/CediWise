@@ -5,6 +5,7 @@ import type {
   CompletionsByModule,
   ProfileBreakdown,
   RegistrationsByDay,
+  SubscriptionActivityByDay,
 } from "@/lib/types/dashboard";
 import {
   Area,
@@ -205,6 +206,77 @@ export function ProfileBreakdownChart({ data }: ProfileBreakdownChartProps) {
           )}
         />
       </PieChart>
+    </ResponsiveContainer>
+  );
+}
+
+// ─── Subscription Activity Chart ─────────────────────────────────────
+
+interface SubscriptionActivityChartProps {
+  data: SubscriptionActivityByDay;
+}
+
+export function SubscriptionActivityChart({ data }: SubscriptionActivityChartProps) {
+  const chartData = data.map((d) => ({
+    ...d,
+    label: new Date(d.date).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+    }),
+  }));
+
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <AreaChart
+        data={chartData}
+        margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+      >
+        <defs>
+          <linearGradient
+            id="fillSubActivity"
+            x1="0"
+            y1="0"
+            x2="0"
+            y2="1"
+          >
+            <stop offset="5%" stopColor="var(--chart-3)" stopOpacity={0.4} />
+            <stop offset="95%" stopColor="var(--chart-3)" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid
+          strokeDasharray="3 3"
+          className="stroke-muted"
+          vertical={false}
+        />
+        <XAxis
+          dataKey="label"
+          tick={{ fontSize: 12 }}
+          tickLine={false}
+          axisLine={false}
+        />
+        <YAxis
+          tick={{ fontSize: 12 }}
+          tickLine={false}
+          axisLine={false}
+          allowDecimals={false}
+        />
+        <Tooltip
+          contentStyle={{
+            backgroundColor: "var(--popover)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius)",
+          }}
+          formatter={(value: number | undefined) => [value ?? 0, "Changes"]}
+        />
+        <Area
+          type="monotone"
+          dataKey="count"
+          stroke="var(--chart-3)"
+          fill="url(#fillSubActivity)"
+          strokeWidth={2}
+          name="Activity"
+        />
+      </AreaChart>
     </ResponsiveContainer>
   );
 }

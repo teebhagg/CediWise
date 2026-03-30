@@ -183,12 +183,33 @@ async function attemptMutationRemote(
         return { ok: false, error: "Invalid user id for reset." };
       }
 
-      // Delete in safe order (children first)
+      // Delete in safe order (children / FK references first)
       const delTx = await supabase
         .from("budget_transactions")
         .delete()
         .eq("user_id", userId);
       if (delTx.error) return { ok: false, error: delTx.error.message };
+
+      // Tables referencing budget_cycles must be deleted BEFORE cycles
+      const delDebts = await supabase
+        .from("debts")
+        .delete()
+        .eq("user_id", userId);
+      if (delDebts.error) return { ok: false, error: delDebts.error.message };
+
+      const delPatterns = await supabase
+        .from("spending_patterns")
+        .delete()
+        .eq("user_id", userId);
+      if (delPatterns.error)
+        return { ok: false, error: delPatterns.error.message };
+
+      const delAdjustments = await supabase
+        .from("budget_adjustments_log")
+        .delete()
+        .eq("user_id", userId);
+      if (delAdjustments.error)
+        return { ok: false, error: delAdjustments.error.message };
 
       const delCats = await supabase
         .from("budget_categories")
@@ -196,6 +217,7 @@ async function attemptMutationRemote(
         .eq("user_id", userId);
       if (delCats.error) return { ok: false, error: delCats.error.message };
 
+      // Safe to delete cycles now
       const delCycles = await supabase
         .from("budget_cycles")
         .delete()
@@ -228,26 +250,6 @@ async function attemptMutationRemote(
         .eq("user_id", userId);
       if (delRecurring.error)
         return { ok: false, error: delRecurring.error.message };
-
-      const delDebts = await supabase
-        .from("debts")
-        .delete()
-        .eq("user_id", userId);
-      if (delDebts.error) return { ok: false, error: delDebts.error.message };
-
-      const delPatterns = await supabase
-        .from("spending_patterns")
-        .delete()
-        .eq("user_id", userId);
-      if (delPatterns.error)
-        return { ok: false, error: delPatterns.error.message };
-
-      const delAdjustments = await supabase
-        .from("budget_adjustments_log")
-        .delete()
-        .eq("user_id", userId);
-      if (delAdjustments.error)
-        return { ok: false, error: delAdjustments.error.message };
 
       if (removeProfile) {
         const delProfile = await supabase
@@ -577,12 +579,34 @@ export async function deleteAllBudgetDataFromServer(
       .eq("user_id", userId);
     if (delTx.error) return { ok: false, error: delTx.error.message };
 
+    // Tables referencing budget_cycles must be deleted BEFORE cycles
+    const delDebts = await supabase
+      .from("debts")
+      .delete()
+      .eq("user_id", userId);
+    if (delDebts.error) return { ok: false, error: delDebts.error.message };
+
+    const delPatterns = await supabase
+      .from("spending_patterns")
+      .delete()
+      .eq("user_id", userId);
+    if (delPatterns.error)
+      return { ok: false, error: delPatterns.error.message };
+
+    const delAdjustments = await supabase
+      .from("budget_adjustments_log")
+      .delete()
+      .eq("user_id", userId);
+    if (delAdjustments.error)
+      return { ok: false, error: delAdjustments.error.message };
+
     const delCats = await supabase
       .from("budget_categories")
       .delete()
       .eq("user_id", userId);
     if (delCats.error) return { ok: false, error: delCats.error.message };
 
+    // Safe to delete cycles now
     const delCycles = await supabase
       .from("budget_cycles")
       .delete()
@@ -613,26 +637,6 @@ export async function deleteAllBudgetDataFromServer(
       .eq("user_id", userId);
     if (delRecurring.error)
       return { ok: false, error: delRecurring.error.message };
-
-    const delDebts = await supabase
-      .from("debts")
-      .delete()
-      .eq("user_id", userId);
-    if (delDebts.error) return { ok: false, error: delDebts.error.message };
-
-    const delPatterns = await supabase
-      .from("spending_patterns")
-      .delete()
-      .eq("user_id", userId);
-    if (delPatterns.error)
-      return { ok: false, error: delPatterns.error.message };
-
-    const delAdjustments = await supabase
-      .from("budget_adjustments_log")
-      .delete()
-      .eq("user_id", userId);
-    if (delAdjustments.error)
-      return { ok: false, error: delAdjustments.error.message };
 
     if (options.removeProfile) {
       const delProfile = await supabase

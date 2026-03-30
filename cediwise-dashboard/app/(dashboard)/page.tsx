@@ -4,6 +4,7 @@ import {
   CompletionsChart,
   ProfileBreakdownChart,
   RegistrationsChart,
+  SubscriptionActivityChart,
 } from "@/components/dashboard/simple-charts";
 import { StatCard } from "@/components/dashboard/stat-card";
 import {
@@ -22,6 +23,11 @@ import {
   fetchRegistrationsByDay,
   fetchUserMetrics,
 } from "@/lib/actions/dashboard";
+import {
+  fetchSubscriptionMetrics,
+  fetchTierDistribution,
+  fetchSubscriptionActivityByDay,
+} from "@/lib/actions/subscriptions";
 import { Suspense } from "react";
 
 const RANGE_DAYS = { week: 7, month: 30, year: 365 } as const;
@@ -52,6 +58,28 @@ export default function DashboardPage({
           <PrimaryKpisCards />
         </Suspense>
       </section>
+
+      {/* Section 1.5: Subscription overview */}
+      <section>
+        <h2 className="mb-4 text-base font-semibold tracking-tight text-foreground">
+          Subscription overview
+        </h2>
+        <Suspense fallback={<SubscriptionKpisSkeleton />}>
+          <SubscriptionKpisCards />
+        </Suspense>
+      </section>
+
+      {/* Section 1.6: Revenue */}
+      <section>
+        <h2 className="mb-4 text-base font-semibold tracking-tight text-foreground">
+          Revenue
+        </h2>
+        <Suspense fallback={<RevenueSkeleton />}>
+          <RevenueCards />
+        </Suspense>
+      </section>
+
+      <Separator />
 
       {/* Section 2: User health & learning */}
       <section>
@@ -110,6 +138,39 @@ export default function DashboardPage({
             <CardContent>
               <Suspense fallback={<ChartSkeleton />}>
                 <CompletionsChartWrapper searchParams={searchParams} />
+              </Suspense>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      <Separator />
+
+      {/* Section 3.5: Subscription charts */}
+      <section>
+        <h2 className="mb-4 text-base font-semibold tracking-tight text-foreground">
+          Subscription insights
+        </h2>
+        <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-2">
+          <Card className="overflow-hidden transition-shadow hover:shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Tier distribution</CardTitle>
+              <CardDescription>Users by subscription tier</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Suspense fallback={<ChartSkeleton height={220} />}>
+                <TierDistributionChartWrapper />
+              </Suspense>
+            </CardContent>
+          </Card>
+          <Card className="overflow-hidden transition-shadow hover:shadow-md">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Subscription activity</CardTitle>
+              <CardDescription>Changes per day (last 30 days)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Suspense fallback={<ChartSkeleton />}>
+                <SubscriptionActivityChartWrapper />
               </Suspense>
             </CardContent>
           </Card>
@@ -270,6 +331,81 @@ async function RecentUsersTableWrapper() {
   return <RecentUsersTable users={users} />;
 }
 
+// ─── Subscription Components ────────────────────────────────────────────
+
+async function SubscriptionKpisCards() {
+  const metrics = await fetchSubscriptionMetrics();
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+      <StatCard
+        title="Free tier"
+        value={metrics.freeCount}
+        description="Free users"
+        href="/users"
+      />
+      <StatCard
+        title="Budget tier"
+        value={metrics.budgetCount}
+        description="Budget subscribers"
+        href="/subscriptions"
+      />
+      <StatCard
+        title="SME tier"
+        value={metrics.smeCount}
+        description="SME subscribers"
+        href="/subscriptions"
+        variant="primary"
+      />
+      <StatCard
+        title="On trial"
+        value={metrics.trialCount}
+        description="Trial users"
+      />
+      <StatCard
+        title="Early bird slots"
+        value={`${metrics.earlyBirdUsed} / ${metrics.earlyBirdTotal}`}
+        description={
+          metrics.earlyBirdUsed >= metrics.earlyBirdTotal
+            ? "All claimed"
+            : "Available"
+        }
+      />
+    </div>
+  );
+}
+
+async function RevenueCards() {
+  const metrics = await fetchSubscriptionMetrics();
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <StatCard
+        title="MRR"
+        value={`GHS ${metrics.mrr.toLocaleString("en-GH", { minimumFractionDigits: 2 })}`}
+        description="Monthly Recurring Revenue"
+        variant="primary"
+      />
+      <StatCard
+        title="Projected ARR"
+        value={`GHS ${metrics.projectedArr.toLocaleString("en-GH", { minimumFractionDigits: 2 })}`}
+        description="Annual projection (MRR × 12)"
+        variant="primary"
+      />
+    </div>
+  );
+}
+
+async function TierDistributionChartWrapper() {
+  const data = await fetchTierDistribution();
+  return <ProfileBreakdownChart data={data} />;
+}
+
+async function SubscriptionActivityChartWrapper() {
+  const data = await fetchSubscriptionActivityByDay(30);
+  return <SubscriptionActivityChart data={data} />;
+}
+
+// ─── Skeletons ──────────────────────────────────────────────────────────
+
 function PrimaryKpisSkeleton() {
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -336,6 +472,42 @@ function TableSkeleton() {
       <div className="flex justify-end">
         <div className="h-9 w-28 animate-pulse rounded bg-muted" />
       </div>
+    </div>
+  );
+}
+
+function SubscriptionKpisSkeleton() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Card key={i}>
+          <CardHeader className="pb-2">
+            <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+          </CardHeader>
+          <CardContent>
+            <div className="h-8 w-12 animate-pulse rounded bg-muted" />
+            <div className="mt-1 h-3 w-28 animate-pulse rounded bg-muted" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function RevenueSkeleton() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      {[1, 2].map((i) => (
+        <Card key={i} className="border-primary/20 bg-primary/5">
+          <CardHeader className="pb-2">
+            <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+          </CardHeader>
+          <CardContent>
+            <div className="h-9 w-28 animate-pulse rounded bg-muted" />
+            <div className="mt-2 h-3 w-32 animate-pulse rounded bg-muted" />
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }

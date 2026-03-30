@@ -23,6 +23,13 @@ export type UserWithProfile = {
     spendingStyle: string | null;
     financialPriority: string | null;
   } | null;
+  subscription: {
+    tier: string;
+    status: string;
+    trialEndsAt: string | null;
+    pendingTier: string | null;
+    monthlyPrice: number;
+  } | null;
 };
 
 export type ListUsersResult = {
@@ -69,6 +76,25 @@ export async function listUsersWithProfiles(
     )
     .in("id", userIds);
 
+  // Fetch subscriptions for these users
+  const { data: subs } = await admin
+    .from("subscriptions")
+    .select("user_id, plan, status, trial_ends_at, pending_tier")
+    .in("user_id", userIds);
+
+  const subscriptionMap = new Map(
+    (subs ?? []).map((s) => [
+      (s as Record<string, unknown>).user_id as string,
+      {
+        tier: ((s as Record<string, unknown>).plan as string) ?? "free",
+        status: ((s as Record<string, unknown>).status as string) ?? "active",
+        trialEndsAt: (s as Record<string, unknown>).trial_ends_at as string | null,
+        pendingTier: (s as Record<string, unknown>).pending_tier as string | null,
+        monthlyPrice: 0,
+      },
+    ])
+  );
+
   const profileMap = new Map(
     (profiles ?? []).map((p) => [
       p.id,
@@ -112,6 +138,7 @@ export async function listUsersWithProfiles(
       createdAt: u.created_at,
       lastSignInAt: lastSignIn ?? null,
       profile: profileMap.get(u.id) ?? null,
+      subscription: subscriptionMap.get(u.id) ?? null,
     };
   });
 

@@ -46,6 +46,7 @@ import { useState } from "react";
 const navItems = [
   { href: "/", label: "Dashboard", icon: DashboardSquare01Icon },
   { href: "/users", label: "Users", icon: UserGroupIcon },
+  { href: "/subscriptions", label: "Subscriptions", icon: Invoice01Icon },
   { href: "/learning-data", label: "Learning Data", icon: BookOpen01Icon },
   { href: "/feedback", label: "App Feedback", icon: MessageQuestionIcon },
   { href: "/emails", label: "Emails", icon: Mail01Icon },

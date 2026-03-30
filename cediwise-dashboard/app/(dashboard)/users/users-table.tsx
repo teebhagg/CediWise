@@ -163,6 +163,9 @@ export function UsersTable({
                 <th className="h-10 px-4 text-left font-medium">Name</th>
                 <th className="h-10 px-4 text-left font-medium">Email / Phone</th>
                 <th className="h-10 px-4 text-left font-medium">Profile</th>
+                <th className="h-10 px-4 text-left font-medium">Tier</th>
+                <th className="h-10 px-4 text-left font-medium">Status</th>
+                <th className="h-10 px-4 text-left font-medium">Trial ends</th>
                 <th className="h-10 px-4 text-left font-medium">Created</th>
                 <th className="h-10 px-4 w-48" />
               </tr>
@@ -171,7 +174,7 @@ export function UsersTable({
               {users.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={9}
                     className="h-24 px-4 text-center text-muted-foreground"
                   >
                     {searchQuery ? "No matches for your search." : "No users found."}
@@ -221,6 +224,47 @@ export function UsersTable({
                         ) : (
                           <span className="text-muted-foreground">No profile</span>
                         )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {u.subscription ? (
+                          <Badge
+                            variant={
+                              u.subscription.tier === "sme"
+                                ? "default"
+                                : u.subscription.tier === "budget"
+                                  ? "secondary"
+                                  : "outline"
+                            }
+                          >
+                            {u.subscription.tier.toUpperCase()}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">FREE</Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3">
+                        {u.subscription ? (
+                          <Badge
+                            variant={
+                              u.subscription.status === "active"
+                                ? "default"
+                                : u.subscription.status === "trial"
+                                  ? "secondary"
+                                  : u.subscription.status === "expired"
+                                    ? "destructive"
+                                    : "outline"
+                            }
+                          >
+                            {u.subscription.status}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {u.subscription?.trialEndsAt
+                          ? new Date(u.subscription.trialEndsAt).toLocaleDateString()
+                          : "—"}
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
                         {new Date(u.createdAt).toLocaleDateString()}

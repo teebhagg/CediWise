@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const SEGMENT_LABELS: Record<string, string> = {
   users: "Users",
+  subscriptions: "Subscriptions",
   "learning-data": "Learning Data",
   lessons: "Lessons",
   new: "New",

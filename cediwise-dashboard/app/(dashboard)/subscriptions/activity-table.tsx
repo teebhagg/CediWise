@@ -56,10 +56,10 @@ export function ActivityTable({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  function updateParams(updates: Record<string, string | undefined>) {
+  function updateParams(updates: Record<string, string | null | undefined>) {
     const params = new URLSearchParams(searchParams.toString());
     Object.entries(updates).forEach(([key, value]) => {
-      if (value === undefined || value === "" || value === "all") {
+      if (value === undefined || value === null || value === "" || value === "all") {
         params.delete(key);
       } else {
         params.set(key, value);

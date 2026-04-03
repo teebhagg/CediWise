@@ -1,0 +1,4 @@
+• PAYE verification on the salary calculator: compare employer PAYE & SSNIT to GRA-based figures with clear results.
+• Share a summary card (image) without exposing salary or cedi amounts; casual captions stay privacy-safe.
+
+Thanks for using CediWise!

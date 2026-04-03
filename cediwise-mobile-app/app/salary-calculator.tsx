@@ -18,6 +18,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { StandardHeader } from "@/components/CediWiseHeader";
+import { PayeVerificationSection } from "@/components/features/salary/PayeVerificationSection";
 import { computeGhanaTax2026Monthly } from "@/utils/ghanaTax";
 import { getActiveTaxConfig, type TaxConfig } from "@/utils/taxSync";
 
@@ -140,6 +141,16 @@ export default function SalaryCalculatorScreen() {
               />
             </View>
           )}
+
+          <PayeVerificationSection
+            grossMonthly={gross}
+            mandatedPaye={gross > 0 ? breakdown.paye : 0}
+            mandatedSsnit={gross > 0 ? breakdown.ssnit : 0}
+            taxConfig={taxConfig}
+            isSignedIn={!!user}
+            onSavePress={handleSaveToVitals}
+            onSaveRequiresAuth={() => router.push("/auth")}
+          />
 
           <Card className="mt-6">
             <Text className="text-slate-400 text-xs">

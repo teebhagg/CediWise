@@ -234,6 +234,23 @@ function mergeById<T extends { id: string }>(remote: T[], local: T[]): T[] {
   return Array.from(map.values());
 }
 
+/** Keep budget engine mode from local storage; never sourced from Supabase. */
+function withLocalBudgetEnginePrefs(
+  remote: BudgetState,
+  local: BudgetState | null
+): BudgetState {
+  if (!local) return remote;
+  return {
+    ...remote,
+    prefs: {
+      ...remote.prefs,
+      budgetEngineMode: normalizeBudgetEngineMode(
+        local.prefs?.budgetEngineMode ?? null
+      ),
+    },
+  };
+}
+
 export function mergeBudgetState(
   remote: BudgetState,
   local: BudgetState
@@ -269,6 +286,9 @@ export async function hydrateBudgetStateFromRemote(
     if (mode === "merge" && options?.getLocalState) {
       const local = await options.getLocalState();
       await persist(mergeBudgetState(remote, local));
+    } else if (options?.getLocalState) {
+      const local = await options.getLocalState();
+      await persist(withLocalBudgetEnginePrefs(remote, local));
     } else {
       await persist(remote);
     }

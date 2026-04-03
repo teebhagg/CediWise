@@ -27,9 +27,12 @@ async function attemptMutationRemote(
     if (!supabase) return { ok: false, error: "Supabase not configured" };
 
     if (kind === "upsert_profile") {
+      // budget_engine_mode is device-local only; strip if present in older queued payloads.
+      const profilePayload = { ...(payload as Record<string, unknown>) };
+      delete profilePayload.budget_engine_mode;
       const { error } = await supabase
         .from("profiles")
-        .upsert(payload, { onConflict: "id" });
+        .upsert(profilePayload, { onConflict: "id" });
       if (error) return { ok: false, error: error.message };
       return { ok: true };
     }

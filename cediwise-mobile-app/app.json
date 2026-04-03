@@ -2,7 +2,7 @@
   "expo": {
     "name": "CediWise",
     "slug": "cediwise-mobile-app",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "orientation": "portrait",
     "icon": "./assets/images/logo/cediwise-smooth-light-logo.png",
     "scheme": "cediwisemobileapp",
@@ -69,6 +69,7 @@
         }
       ],
       "@react-native-firebase/app",
+      "@react-native-firebase/auth",
       "@react-native-community/datetimepicker",
       "expo-localization",
       [

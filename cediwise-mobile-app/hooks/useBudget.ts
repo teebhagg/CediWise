@@ -645,9 +645,6 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         payload: {
           id: userId,
           payday_day: paydayDay,
-          budget_engine_mode: normalizeBudgetEngineMode(
-            current.prefs?.budgetEngineMode ?? null
-          ),
           enable_auto_reallocation: isAutoApplySafeRules(
             current.prefs?.budgetEngineMode ?? null
           ),
@@ -1657,9 +1654,6 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         payload: {
           id: userId,
           payday_day: day,
-          budget_engine_mode: normalizeBudgetEngineMode(
-            current.prefs?.budgetEngineMode ?? null
-          ),
           enable_auto_reallocation: isAutoApplySafeRules(
             current.prefs?.budgetEngineMode ?? null
           ),
@@ -1770,7 +1764,6 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         kind: "upsert_profile",
         payload: {
           id: userId,
-          budget_engine_mode: normalized,
           enable_auto_reallocation: isAutoApplySafeRules(normalized),
           ...(current.prefs.paydayDay ? { payday_day: current.prefs.paydayDay } : {}),
           ...(Array.isArray(current.prefs.interests)

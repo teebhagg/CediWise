@@ -1,11 +1,17 @@
-import AnimatedPhoneNumberInput from '@/components/AnimatedPhoneNumberInput';
 import { Card } from '@/components/Card';
 import PhonenNumberInput from '@/components/common/PhonenNumberInput';
+import { Apple } from '@/components/icons/AppleIcon';
 import { Google } from '@/components/icons/GoogleIcon';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useAppToast } from '@/hooks/useAppToast';
 import { useAuth } from '@/hooks/useAuth';
-import { getStoredAuthData, requestOtp, signInWithGoogle } from '@/utils/auth';
+import {
+    getStoredAuthData,
+    isAppleSignInEnvironmentSupported,
+    requestOtp,
+    signInWithApple,
+    signInWithGoogle,
+} from '@/utils/auth';
 import { onLoginSuccess } from '@/utils/authRouting';
 import { log } from '@/utils/logger';
 import { router } from 'expo-router';
@@ -19,10 +25,12 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 export default function AuthLandingScreen() {
+    const appleSignInSupported = isAppleSignInEnvironmentSupported();
     const [phone, setPhone] = useState('');
     const [error, setError] = useState<string | undefined>();
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
+    const [appleLoading, setAppleLoading] = useState(false);
     const { showError } = useAppToast();
     const { refreshAuth } = useAuth();
 
@@ -95,6 +103,26 @@ export default function AuthLandingScreen() {
         await onLoginSuccess(stored.user.id);
     };
 
+    const onApple = async () => {
+        setError(undefined);
+        setAppleLoading(true);
+        log.debug('Signing in with Apple');
+        const result = await signInWithApple();
+        log.debug('Apple result: ', result);
+        setAppleLoading(false);
+        if (!result.success) {
+            showError('Error', result.error);
+            return;
+        }
+        const stored = await getStoredAuthData();
+        if (!stored?.user?.id) {
+            showError('Error', "We couldn't save your sign-in on this device. Tap to try again.");
+            return;
+        }
+        await refreshAuth();
+        await onLoginSuccess(stored.user.id);
+    };
+
     return (
         <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: 'black' }}>
             <StatusBar backgroundColor="black" barStyle="light-content" translucent={true} animated={true} />
@@ -122,7 +150,11 @@ export default function AuthLandingScreen() {
                                         </Text>
                                     </View>
                                     <Text className="text-muted-foreground text-sm mb-3 text-center">
-                                        Sign in with your phone number or continue with Google.
+                                        {Platform.OS === 'ios'
+                                            ? appleSignInSupported
+                                                ? 'Sign in with your phone number or continue with Google or Apple.'
+                                                : 'Sign in with your phone number or continue with Google (Apple needs a real device).'
+                                            : 'Sign in with your phone number or continue with Google.'}
                                     </Text>
                                 </Animated.View>
 
@@ -155,12 +187,45 @@ export default function AuthLandingScreen() {
                                         onPress={onGoogle}
                                         style={{ backgroundColor: '#FFFFFF' }}
                                         className="mt-2"
+                                        accessibilityLabel="Continue with Google"
                                     >
                                         <View className="flex-row items-center justify-center gap-3">
                                             <Google.Color size={22} />
                                             <Text className="text-slate-900 font-semibold text-base">Continue with Google</Text>
                                         </View>
                                     </PrimaryButton>
+
+                                    {Platform.OS === 'ios' && (
+                                        <View className="mt-2">
+                                            <PrimaryButton
+                                                loading={appleLoading}
+                                                onPress={onApple}
+                                                disabled={!appleSignInSupported}
+                                                style={{ backgroundColor: '#000000' }}
+                                                className="border border-white/30"
+                                                activityIndicatorColor="#FFFFFF"
+                                                accessibilityLabel="Continue with Apple"
+                                            >
+                                                <View className="flex-row items-center justify-center gap-3">
+                                                    <Apple.Logo
+                                                        size={22}
+                                                        color={appleSignInSupported ? '#FFFFFF' : '#94a3b8'}
+                                                    />
+                                                    <Text
+                                                        className={`font-semibold text-base ${appleSignInSupported ? 'text-white' : 'text-slate-400'}`}
+                                                    >
+                                                        Continue with Apple
+                                                    </Text>
+                                                </View>
+                                            </PrimaryButton>
+                                            {!appleSignInSupported && (
+                                                <Text className="text-xs text-slate-500 text-center mt-2 px-1">
+                                                    Apple sign-in doesn’t work in the Simulator. Run on an iPhone or iPad to
+                                                    use it.
+                                                </Text>
+                                            )}
+                                        </View>
+                                    )}
                                 </Animated.View>
                             </Card>
                         </Animated.View>

@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
+import * as Device from "expo-device";
 import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
 import * as WebBrowser from "expo-web-browser";
@@ -548,6 +549,25 @@ export async function clearAuthData(): Promise<void> {
 /**
  * Extract user data from Supabase session
  */
+/**
+ * Sign in with Apple only works on a physical iPhone/iPad. The iOS Simulator
+ * typically fails with “authorization attempt failed for an unknown reason.”
+ */
+export function isAppleSignInEnvironmentSupported(): boolean {
+  return Platform.OS === "ios" && Device.isDevice;
+}
+
+function formatAppleAuthorizationError(message: string): string {
+  const lower = message.toLowerCase();
+  if (
+    lower.includes("unknown reason") ||
+    lower.includes("authorization attempt failed")
+  ) {
+    return "Sign in with Apple doesn’t work in the Simulator. Use a real iPhone or iPad, or sign in with Google or phone.";
+  }
+  return message;
+}
+
 export function extractUserData(user: any): StoredUserData {
   return {
     id: user.id,
@@ -559,113 +579,118 @@ export function extractUserData(user: any): StoredUserData {
   };
 }
 
+/**
+ * Supabase OAuth + in-app browser (Google on web / Expo Go only).
+ */
+async function signInWithOAuthBrowser(): Promise<AuthResult> {
+  if (!supabase) return { success: false, error: "App not configured" };
+  const label = "Google";
+  try {
+    const redirectUrl = Linking.createURL("auth/callback");
+
+    log.debug(`Redirect URL (${label}):`, redirectUrl);
+
+    const { data, error: urlError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: redirectUrl,
+      },
+    });
+
+    if (urlError || !data?.url) {
+      return {
+        success: false,
+        error: urlError?.message ?? `Failed to initiate ${label} sign-in`,
+      };
+    }
+
+    log.debug(`OAuth URL (${label}):`, data.url);
+
+    const result: any = await WebBrowser.openAuthSessionAsync(
+      data.url,
+      redirectUrl
+    );
+
+    log.debug(`OAuth browser result type (${label}):`, result.type);
+
+    if (result.type === "success") {
+      const params: any = getQueryParams(result.url);
+      const accessToken = params.access_token;
+      const refreshToken = params.refresh_token;
+      const expiresAtSeconds = toNumber(params.expires_at);
+      const expiresInSeconds = toNumber(params.expires_in);
+
+      const user = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+
+      if (user.error) {
+        log.error(`Session set error (${label}):`, user.error);
+        return { success: false, error: user.error.message };
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const { data: sessionData, error } = await supabase.auth.getSession();
+
+      if (error) {
+        log.error(`Session retrieval error (${label}):`, error);
+        return { success: false, error: error.message };
+      }
+
+      if (sessionData.session && sessionData.session.user) {
+        const userData = extractUserData(sessionData.session.user);
+        const expiresIn =
+          sessionData.session.expires_in ||
+          (expiresInSeconds ? Math.floor(expiresInSeconds) : undefined) ||
+          3600;
+        const expiresAt =
+          typeof (sessionData.session as any).expires_at === "number"
+            ? (sessionData.session as any).expires_at * 1000
+            : expiresAtSeconds
+            ? Math.floor(expiresAtSeconds) * 1000
+            : Date.now() + expiresIn * 1000;
+
+        const authData: StoredAuthData = {
+          accessToken: sessionData.session.access_token,
+          refreshToken: sessionData.session.refresh_token || "",
+          expiresIn,
+          expiresAt,
+          user: userData,
+        };
+
+        await storeAuthData(authData);
+        log.debug(`✓ User data stored locally (OAuth ${label})`);
+        return { success: true };
+      }
+
+      log.error(`✗ No session found after OAuth success (${label})`);
+      return {
+        success: false,
+        error: "Authentication succeeded but session not established",
+      };
+    } else if (result.type === "dismiss") {
+      log.debug(`User dismissed OAuth browser (${label})`);
+      return { success: false, error: "Sign-in cancelled" };
+    } else {
+      log.error(`OAuth result type (${label}):`, result.type);
+      return { success: false, error: "Sign-in failed" };
+    }
+  } catch (e) {
+    const message =
+      e instanceof Error ? e.message : `Unable to sign in with ${label}`;
+    log.error(`${label} OAuth sign-in error:`, message);
+    return { success: false, error: message };
+  }
+}
+
 export async function signInWithGoogle(): Promise<AuthResult> {
   if (!supabase) return { success: false, error: "App not configured" };
 
   // Web or Expo Go: Supabase OAuth + browser flow (native Google Sign-In SDK not available in Expo Go).
   if (useWebGoogleSignIn) {
-    try {
-      const redirectUrl = Linking.createURL("auth/callback");
-
-      log.debug("Redirect URL:", redirectUrl);
-
-      const { data, error: urlError } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: redirectUrl,
-        },
-      });
-
-      if (urlError || !data?.url) {
-        return {
-          success: false,
-          error: urlError?.message ?? "Failed to initiate Google sign-in",
-        };
-      }
-
-      log.debug("OAuth URL:", data.url);
-      log.debug("Opening OAuth URL for Google Sign-In");
-
-      const result: any = await WebBrowser.openAuthSessionAsync(
-        data.url,
-        redirectUrl
-      );
-
-      log.debug("OAuth browser result type (web):", result.type);
-
-      if (result.type === "success") {
-        const params: any = getQueryParams(result.url);
-        log.debug("Query params:", params);
-        const accessToken = params.access_token;
-        const refreshToken = params.refresh_token;
-        const expiresAtSeconds = toNumber(params.expires_at);
-        const expiresInSeconds = toNumber(params.expires_in);
-        log.debug("Access token:", !!accessToken);
-        log.debug("Refresh token:", !!refreshToken);
-
-        const user = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-
-        if (user.error) {
-          log.error("Session set error:", user.error);
-          return { success: false, error: user.error.message };
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        const { data: sessionData, error } = await supabase.auth.getSession();
-
-        if (error) {
-          log.error("Session retrieval error:", error);
-          return { success: false, error: error.message };
-        }
-
-        if (sessionData.session && sessionData.session.user) {
-          const userData = extractUserData(sessionData.session.user);
-          const expiresIn =
-            sessionData.session.expires_in ||
-            (expiresInSeconds ? Math.floor(expiresInSeconds) : undefined) ||
-            3600;
-          const expiresAt =
-            typeof (sessionData.session as any).expires_at === "number"
-              ? (sessionData.session as any).expires_at * 1000
-              : expiresAtSeconds
-              ? Math.floor(expiresAtSeconds) * 1000
-              : Date.now() + expiresIn * 1000;
-
-          const authData: StoredAuthData = {
-            accessToken: sessionData.session.access_token,
-            refreshToken: sessionData.session.refresh_token || "",
-            expiresIn,
-            expiresAt,
-            user: userData,
-          };
-
-          await storeAuthData(authData);
-          log.debug("✓ User data stored locally (web)");
-          return { success: true };
-        }
-
-        log.error("✗ No session found after OAuth success (web)");
-        return {
-          success: false,
-          error: "Authentication succeeded but session not established",
-        };
-      } else if (result.type === "dismiss") {
-        log.debug("User dismissed OAuth browser (web)");
-        return { success: false, error: "Sign-in cancelled" };
-      } else {
-        log.error("OAuth result type (web):", result.type);
-        return { success: false, error: "Sign-in failed" };
-      }
-    } catch (e) {
-      const message =
-        e instanceof Error ? e.message : "Unable to sign in with Google";
-      log.error("Google sign-in error (web):", message);
-      return { success: false, error: message };
-    }
+    return signInWithOAuthBrowser();
   }
 
   // Native dev/production build (not Expo Go): use Google Sign-In SDK + Supabase signInWithIdToken.
@@ -752,6 +777,147 @@ export async function signInWithGoogle(): Promise<AuthResult> {
     const message =
       e instanceof Error ? e.message : "Unable to sign in with Google";
     log.error("Google native sign-in error:", message);
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Sign in with Apple — native iOS sheet only (`expo-apple-authentication` + Supabase `signInWithIdToken`).
+ * No browser / OAuth redirect flow (Apple on Android uses web; we do not offer it in-app).
+ */
+export async function signInWithApple(): Promise<AuthResult> {
+  if (!supabase) return { success: false, error: "App not configured" };
+
+  if (Platform.OS !== "ios") {
+    return {
+      success: false,
+      error: "Sign in with Apple is only available on the iOS app.",
+    };
+  }
+
+  if (!Device.isDevice) {
+    return {
+      success: false,
+      error:
+        "Sign in with Apple doesn’t run in the iOS Simulator. Use a physical iPhone or iPad, or continue with Google or phone.",
+    };
+  }
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const AppleAuthentication = require("expo-apple-authentication");
+    const available = await AppleAuthentication.isAvailableAsync();
+    if (!available) {
+      return {
+        success: false,
+        error:
+          "Sign in with Apple isn’t available on this device. Check Settings → Apple ID, or try again on a physical iPhone or iPad.",
+      };
+    }
+
+    const credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+      clientId: "com.cediwise.app",
+    });
+
+    const idToken = credential.identityToken;
+    if (!idToken) {
+      log.error("Apple Sign-In returned no identityToken");
+      return {
+        success: false,
+        error: "Unable to get Apple credentials. Please try again.",
+      };
+    }
+
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider: "apple",
+      token: idToken,
+    });
+
+    if (error || !data?.session || !data.session.user) {
+      log.error("Supabase signInWithIdToken (Apple) error:", error);
+      return {
+        success: false,
+        error: error?.message ?? "Could not complete Apple sign-in",
+      };
+    }
+
+    const session = data.session;
+    const userData = extractUserData(session.user);
+    const expiresIn = session.expires_in || 3600;
+    const expiresAt =
+      typeof (session as any).expires_at === "number"
+        ? (session as any).expires_at * 1000
+        : Date.now() + expiresIn * 1000;
+
+    const authData: StoredAuthData = {
+      accessToken: session.access_token,
+      refreshToken: session.refresh_token || "",
+      expiresIn,
+      expiresAt,
+      user: userData,
+    };
+
+    await storeAuthData(authData);
+    log.debug("✓ User data stored locally (native Apple)");
+    return { success: true };
+  } catch (e: unknown) {
+    const code =
+      e && typeof e === "object" && "code" in e
+        ? String((e as { code?: string }).code)
+        : "";
+    if (code === "ERR_REQUEST_CANCELED" || code === "ERR_CANCELED") {
+      log.debug("Apple Sign-In cancelled by user");
+      return { success: false, error: "Sign-in cancelled" };
+    }
+    const raw =
+      e instanceof Error ? e.message : "Unable to sign in with Apple";
+    log.error("Apple native sign-in error:", raw);
+    return { success: false, error: formatAppleAuthorizationError(raw) };
+  }
+}
+
+/**
+ * Permanently delete the signed-in user via Edge Function (service role).
+ * Requires `delete-account` function deployed; cascades DB rows tied to `auth.users`.
+ */
+export async function deleteAccountRemote(): Promise<AuthResult> {
+  if (!supabase) return { success: false, error: "App not configured" };
+  const authData = await getStoredAuthData({ allowExpired: true });
+  const token = authData?.accessToken;
+  if (!token) {
+    return { success: false, error: "Not signed in" };
+  }
+  try {
+    const { data, error } = await supabase.functions.invoke("delete-account", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (error) {
+      let msg = error.message ?? "Could not delete account";
+      const ctx = (error as { context?: { body?: string } }).context;
+      if (ctx?.body) {
+        try {
+          const parsed = JSON.parse(ctx.body) as { error?: string };
+          if (parsed?.error) msg = parsed.error;
+        } catch {
+          // keep msg
+        }
+      }
+      return { success: false, error: msg };
+    }
+    const body = data as { ok?: boolean; error?: string } | null;
+    if (body && typeof body === "object" && "error" in body && body.error) {
+      return { success: false, error: String(body.error) };
+    }
+    if (!body?.ok) {
+      return { success: false, error: "Could not delete account" };
+    }
+    return { success: true };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Could not delete account";
     return { success: false, error: message };
   }
 }

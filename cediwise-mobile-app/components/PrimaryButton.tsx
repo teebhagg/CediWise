@@ -10,7 +10,10 @@ type Props = {
   onPress?: () => void;
   className?: string;
   style?: object;
+  /** Spinner color when `loading` is true (default matches emerald primary). */
+  activityIndicatorColor?: string;
   accessibilityLabel?: string;
+  accessibilityHint?: string;
   accessibilityRole?: 'button' | 'link' | 'none';
 };
 
@@ -25,7 +28,9 @@ export function PrimaryButton({
   onPress,
   className,
   style,
+  activityIndicatorColor = '#020617',
   accessibilityLabel,
+  accessibilityHint,
   accessibilityRole = 'button',
 }: Props) {
   const handlePress = async () => {
@@ -43,6 +48,7 @@ export function PrimaryButton({
       isDisabled={disabled || loading}
       onPress={handlePress}
       accessibilityLabel={accessibilityLabel}
+      accessibilityHint={accessibilityHint}
       accessibilityRole={accessibilityRole}
       className={
         disabled || loading
@@ -52,7 +58,7 @@ export function PrimaryButton({
       style={style}
     >
       {loading ? (
-        <ActivityIndicator color="#020617" />
+        <ActivityIndicator color={activityIndicatorColor} />
       ) : typeof children === 'string' ? (
         <Button.Label className="text-slate-900 font-semibold text-base">
           {children}

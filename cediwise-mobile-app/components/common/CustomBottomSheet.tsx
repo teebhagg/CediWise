@@ -1,8 +1,8 @@
-import { BottomSheet, Separator, ScrollShadow } from "heroui-native";
-import { ScrollView } from 'react-native-gesture-handler'
-import { Dimensions, Keyboard, Platform, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { BottomSheet, ScrollShadow, Separator } from "heroui-native";
 import { useEffect, useState } from "react";
+import { Dimensions, Keyboard, Platform, StyleSheet, Text, View } from "react-native";
+import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type CustomBottomSheetProps = {
@@ -23,17 +23,24 @@ export function CustomBottomSheet({
   children,
 }: CustomBottomSheetProps) {
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
-      () => setKeyboardVisible(true)
+      (event) => {
+        setKeyboardVisible(true);
+        setKeyboardHeight(keyboard => Math.max(keyboard, event.endCoordinates.height));
+      }
     );
     const hideSub = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
-      () => setKeyboardVisible(false)
+      () => {
+        setKeyboardVisible(false);
+        setKeyboardHeight(0);
+      }
     );
     return () => {
       showSub.remove();
@@ -63,8 +70,11 @@ export function CustomBottomSheet({
           backgroundClassName="rounded-t-[50px] bg-[rgba(18,22,33,0.98)]"
           //   containerClassName="max-h-[80%]"
           // handleClassName="max-h-[80%]"
-          contentContainerClassName={`flex-1 ${isKeyboardVisible ? 'max-h-[450px]' : 'max-h-[700px]'}`}
-          style={isKeyboardVisible && { paddingBottom: Platform.OS === 'ios' ? 20 : 0 }}
+          contentContainerClassName={`flex-1 ${isKeyboardVisible ? 'h-full mb-[300px]' : 'max-h-[700px]'}`}
+          style={[
+            isKeyboardVisible && { paddingBottom: Platform.OS === 'ios' ? 20 : 0 },
+            // keyboardHeight > 0 && { transform: [{ translateY: keyboardHeight }], bottom: keyboardHeight }
+          ]}
           bottomInset={-20}
         >
           <View style={styles.header}>

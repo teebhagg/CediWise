@@ -32,6 +32,7 @@ import { useBudget } from "../hooks/useBudget";
 import { usePersonalizationStore } from "../stores/personalizationStore";
 import { useProfileVitalsStore } from "../stores/profileVitalsStore";
 import { useSMELedgerStore } from "../stores/smeLedgerStore";
+import { useCashFlowStore } from "../stores/cashFlowStore";
 import { initNotificationSystem } from "../services/notifications";
 import { syncTaxConfig } from "../utils/taxSync";
 import { PaystackProvider } from "react-native-paystack-webview";
@@ -91,6 +92,7 @@ function AppShell() {
     void usePersonalizationStore.getState().initForUser(user.id);
     void useProfileVitalsStore.getState().initForUser(user.id);
     void useSMELedgerStore.getState().initForUser(user.id);
+    void useCashFlowStore.getState().initForUser(user.id);
 
     // 2. Budget Hydration (Once per session)
     if (!hasHydratedThisSession()) {

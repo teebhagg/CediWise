@@ -1,5 +1,6 @@
 import { Card } from "@/components/Card";
 import { SalaryInput } from "@/components/SalaryInput";
+import { formatCurrency } from "@/utils/formatCurrency";
 import {
   buildCasualShareMessage,
   buildPayeVerificationSnapshot,
@@ -11,7 +12,6 @@ import {
   salaryRangeBucket,
   shouldShowHighSalaryWarning,
 } from "@/utils/payeVerification";
-import { formatCurrency } from "@/utils/formatCurrency";
 import type { TaxConfig } from "@/utils/taxSync";
 import { GHANA_TAX_FALLBACK_2026 } from "@/utils/taxSync";
 import * as Haptics from "expo-haptics";
@@ -166,9 +166,9 @@ export function PayeVerificationSection({
             Platform.OS === "ios"
               ? { url: uri }
               : {
-                  message: casualMessage,
-                  url: uri,
-                },
+                message: casualMessage,
+                url: uri,
+              },
           );
 
         let channel: "image" | "image_rn_share" | "text_fallback";
@@ -379,11 +379,10 @@ function VerificationLine({
   if (line.verdict === "overpaid") {
     const payeBody =
       label === "PAYE"
-        ? `Your employer deducted GHS ${formatCurrency(Math.abs(line.diff))} more PAYE than GRA requires.${
-            annualOverflow != null
-              ? ` That's GHS ${formatCurrency(annualOverflow)}/year.`
-              : ""
-          }`
+        ? `Your employer deducted GHS ${formatCurrency(Math.abs(line.diff))} more PAYE than GRA requires.${annualOverflow != null
+          ? ` That's GHS ${formatCurrency(annualOverflow)}/year.`
+          : ""
+        }`
         : `Your employer deducted GHS ${formatCurrency(Math.abs(line.diff))} more SSNIT than GRA requires for this salary.`;
     return (
       <Card>

@@ -4,7 +4,9 @@
  * All date-sensitive tests use jest.useFakeTimers() to pin "today" to a known
  * value so assertions are deterministic regardless of when the suite runs.
  *
- * Pinned "today": 2026-04-15T06:00:00.000Z (Wednesday, 15 April 2026)
+ * Pinned "today": local noon on 15 April 2026 so the local calendar day is
+ * always April 15 (matches cashFlow.ts: cycleStart uses local midnight from
+ * "YYYY-MM-DDT00:00:00", and helpers use getDate() / toDateString()).
  */
 
 import {
@@ -18,8 +20,13 @@ import {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// Midnight UTC so that (today - cycleStart) is always an exact whole number of days.
-const TODAY = new Date("2026-04-15T00:00:00.000Z");
+// Local noon so getDate()/toDateString() are April 15 in every timezone.
+const TODAY = new Date(2026, 3, 15, 12, 0, 0, 0);
+
+/** ISO timestamp for a wall-clock moment on a given local calendar day (runner TZ). */
+function localMomentISO(y: number, monthIndex: number, day: number, h = 0, m = 0, s = 0) {
+  return new Date(y, monthIndex, day, h, m, s).toISOString();
+}
 
 function pinToday() {
   jest.useFakeTimers();
@@ -109,33 +116,34 @@ describe("computeCashFlowProjection — data sufficiency", () => {
     expect(result.sufficiency).toBe("insufficient");
   });
 
-  it("returns 'insufficient' exactly at 2 elapsed days (dataDays=2 < 3)", () => {
-    // Apr13 00:00 → Apr15 00:00 = exactly 2 days; ceil(2)=2 < 3 → insufficient
+  it("returns 'warmup' when ceil day-span is 3 (dataDays=3)", () => {
+    // Apr13 local midnight → Apr15 local noon ≈ 2.5d → ceil = 3 → warmup
     const result = computeCashFlowProjection(1000, makeTxs(100), noExpenses, "2026-04-13");
-    expect(result.sufficiency).toBe("insufficient");
+    expect(result.sufficiency).toBe("warmup");
+    expect(result.dataDays).toBe(3);
   });
 
-  it("returns 'warmup' at exactly 3 elapsed days (dataDays=3)", () => {
-    // Apr12 00:00 → Apr15 00:00 = exactly 3 days → warmup
+  it("returns 'warmup' when ceil day-span is 4 (dataDays=4)", () => {
     const result = computeCashFlowProjection(1000, makeTxs(100), noExpenses, "2026-04-12");
     expect(result.sufficiency).toBe("warmup");
+    expect(result.dataDays).toBe(4);
   });
 
-  it("returns 'warmup' at 6 elapsed days (dataDays=6, last warmup day)", () => {
-    // Apr09 00:00 → Apr15 00:00 = exactly 6 days → warmup
-    const result = computeCashFlowProjection(1000, makeTxs(100), noExpenses, "2026-04-09");
+  it("returns 'warmup' at 6 elapsed ceil days (dataDays=6, last warmup day)", () => {
+    // Apr10 local midnight → Apr15 local noon ≈ 5.5d → ceil = 6 → warmup
+    const result = computeCashFlowProjection(1000, makeTxs(100), noExpenses, "2026-04-10");
     expect(result.sufficiency).toBe("warmup");
   });
 
-  it("returns 'full' at exactly 7 elapsed days (dataDays=7)", () => {
-    // Apr08 00:00 → Apr15 00:00 = exactly 7 days → full
-    const result = computeCashFlowProjection(1000, makeTxs(100), noExpenses, "2026-04-08");
+  it("returns 'full' when ceil day-span reaches 7 (dataDays=7)", () => {
+    // Apr09 local midnight → Apr15 local noon ≈ 6.5d → ceil = 7 → full
+    const result = computeCashFlowProjection(1000, makeTxs(100), noExpenses, "2026-04-09");
     expect(result.sufficiency).toBe("full");
   });
 
   it("returns 'full' with dataDays=14 (2 weeks of data)", () => {
-    // Apr01 00:00 → Apr15 00:00 = exactly 14 days → full
-    const result = computeCashFlowProjection(1000, makeTxs(100), noExpenses, "2026-04-01");
+    // Apr02 local midnight → Apr15 local noon ≈ 13.5d → ceil = 14 → full
+    const result = computeCashFlowProjection(1000, makeTxs(100), noExpenses, "2026-04-02");
     expect(result.sufficiency).toBe("full");
     expect(result.dataDays).toBe(14);
   });
@@ -182,10 +190,10 @@ describe("computeCashFlowProjection — burn rate calculation", () => {
   afterEach(restoreDate);
 
   /**
-   * Pin to 14 days of data (Apr01 00:00 → Apr15 00:00 = exactly 14 days).
+   * Pin to 14 ceil data days (Apr02 local midnight → Apr15 local noon ≈ 13.5d → ceil 14).
    * Formula: (fixedMonthly + totalVariable × 30/14) / 30
    */
-  const CYCLE_START_14D = "2026-04-01";
+  const CYCLE_START_14D = "2026-04-02";
 
   it("computes burn rate from variable spending only (no fixed expenses)", () => {
     // dataDays=14, totalVariable=700
@@ -260,7 +268,7 @@ describe("computeCashFlowProjection — run-out date", () => {
   afterEach(restoreDate);
 
   // dataDays=14 for all tests below
-  const CYCLE_START = "2026-04-01";
+  const CYCLE_START = "2026-04-02";
 
   it("calculates daysUntilRunOut from balance / dailyBurnRate", () => {
     // dataDays=14, burnRate = 700/14 = 50/day, balance = 1000
@@ -326,12 +334,12 @@ describe("computeCashFlowProjection — safe-to-spend", () => {
   afterEach(restoreDate);
 
   /**
-   * Today = April 15 00:00 UTC.
-   * endOfMonth = last day of April = April 30 00:00 local (UTC+0).
-   * remainingDaysInMonth = ceil((Apr30 00:00 - Apr15 00:00) / day_ms) = ceil(15) = 15.
+   * Today = April 15 local noon.
+   * endOfMonth = April 30 00:00 local.
+   * remainingDaysInMonth = ceil((Apr30 00:00 - Apr15 12:00) / day_ms) = ceil(14.5) = 15.
    */
   const REMAINING_DAYS = 15;
-  const CYCLE_START = "2026-04-01"; // dataDays=14
+  const CYCLE_START = "2026-04-02"; // dataDays=14
 
   it("safe-to-spend = balance - (burnRate × remainingDays)", () => {
     // burnRate = 700/14 = 50/day
@@ -380,8 +388,8 @@ describe("computeCashFlowProjection — boundary & edge values", () => {
   beforeEach(pinToday);
   afterEach(restoreDate);
 
-  const FULL_PROJECTION_START = "2026-04-01"; // Apr01→Apr15 = 14 days → 'full'
-  const WARMUP_START = "2026-04-09";          // Apr09→Apr15 = 6 days  → 'warmup'
+  const FULL_PROJECTION_START = "2026-04-02"; // → Apr15 noon ≈ 13.5d → ceil 14 → 'full'
+  const WARMUP_START = "2026-04-10";          // → Apr15 noon ≈ 5.5d → ceil 6 → 'warmup'
 
   it("handles very small balance (near zero)", () => {
     const result = computeCashFlowProjection(0.01, makeTxs(700), noExpenses, FULL_PROJECTION_START);
@@ -411,13 +419,11 @@ describe("computeCashFlowProjection — boundary & edge values", () => {
   });
 
   it("returns correct dataDays in result", () => {
-    // Apr01→Apr15 = 14 days exactly (both midnight UTC)
     const result = computeCashFlowProjection(1000, makeTxs(100), noExpenses, FULL_PROJECTION_START);
     expect(result.dataDays).toBe(14);
   });
 
   it("warmup dataDays is between 3 and 6 inclusive", () => {
-    // Apr09→Apr15 = 6 days exactly
     const result = computeCashFlowProjection(1000, makeTxs(100), noExpenses, WARMUP_START);
     expect(result.dataDays).toBeGreaterThanOrEqual(3);
     expect(result.dataDays).toBeLessThanOrEqual(6);
@@ -466,26 +472,26 @@ describe("formatRunOutDate", () => {
   afterEach(restoreDate);
 
   it('returns "Today" for a date matching today', () => {
-    expect(formatRunOutDate(new Date("2026-04-15T06:00:00.000Z"))).toBe("Today");
+    expect(formatRunOutDate(new Date(2026, 3, 15, 12, 0, 0, 0))).toBe("Today");
   });
 
   it('returns "Tomorrow" for tomorrow\'s date', () => {
-    expect(formatRunOutDate(new Date("2026-04-16T06:00:00.000Z"))).toBe("Tomorrow");
+    expect(formatRunOutDate(new Date(2026, 3, 16, 12, 0, 0, 0))).toBe("Tomorrow");
   });
 
   it("returns a formatted date string for dates further away", () => {
-    const label = formatRunOutDate(new Date("2026-04-30T06:00:00.000Z"));
+    const label = formatRunOutDate(new Date(2026, 3, 30, 12, 0, 0, 0));
     expect(label).toMatch(/30/); // day number included
     expect(label).toMatch(/Apr/i); // month name
   });
 
   it("does not include year for same-year dates", () => {
-    const label = formatRunOutDate(new Date("2026-06-15T06:00:00.000Z"));
+    const label = formatRunOutDate(new Date(2026, 5, 15, 12, 0, 0, 0));
     expect(label).not.toMatch(/2026/);
   });
 
   it("includes year for dates in a different year", () => {
-    const label = formatRunOutDate(new Date("2027-01-20T06:00:00.000Z"));
+    const label = formatRunOutDate(new Date(2027, 0, 20, 12, 0, 0, 0));
     expect(label).toMatch(/2027/);
   });
 });
@@ -545,11 +551,11 @@ describe("needsSalaryReset", () => {
   });
 
   it("returns true when today is payday and lastReset was yesterday", () => {
-    expect(needsSalaryReset(15, "2026-04-14T10:00:00.000Z")).toBe(true);
+    expect(needsSalaryReset(15, localMomentISO(2026, 3, 14, 10, 0, 0))).toBe(true);
   });
 
   it("returns false when today is payday but lastReset is today (already done)", () => {
-    expect(needsSalaryReset(15, "2026-04-15T01:00:00.000Z")).toBe(false);
+    expect(needsSalaryReset(15, localMomentISO(2026, 3, 15, 1, 0, 0))).toBe(false);
   });
 
   it("returns false when today is NOT payday (day 20, today is 15)", () => {
@@ -558,7 +564,7 @@ describe("needsSalaryReset", () => {
 
   it("returns false when paydayDay is null regardless of lastReset", () => {
     expect(needsSalaryReset(null, null)).toBe(false);
-    expect(needsSalaryReset(null, "2026-04-14T10:00:00.000Z")).toBe(false);
+    expect(needsSalaryReset(null, localMomentISO(2026, 3, 14, 10, 0, 0))).toBe(false);
   });
 
   it("returns false when today is not payday even if lastReset is old", () => {
@@ -577,33 +583,33 @@ describe("isDataStale", () => {
   });
 
   it("returns false when lastReset was today", () => {
-    expect(isDataStale("2026-04-15T06:00:00.000Z")).toBe(false);
+    expect(isDataStale(localMomentISO(2026, 3, 15, 6, 0, 0))).toBe(false);
   });
 
   it("returns false when lastReset was 1 month ago", () => {
-    expect(isDataStale("2026-03-15T06:00:00.000Z")).toBe(false);
+    expect(isDataStale(localMomentISO(2026, 2, 15, 6, 0, 0))).toBe(false);
   });
 
   it("returns false when lastReset was exactly 1 month ago", () => {
-    expect(isDataStale("2026-03-15T00:00:00.000Z")).toBe(false);
+    expect(isDataStale(localMomentISO(2026, 2, 15, 0, 0, 0))).toBe(false);
   });
 
   it("returns true when lastReset was exactly 2 months ago", () => {
-    // Feb 15 → April 15 = 2 months
-    expect(isDataStale("2026-02-15T00:00:00.000Z")).toBe(true);
+    // Feb 15 → April 15 = 2 months (local calendar months)
+    expect(isDataStale(localMomentISO(2026, 1, 15, 0, 0, 0))).toBe(true);
   });
 
   it("returns true when lastReset was 3 months ago", () => {
-    expect(isDataStale("2026-01-15T00:00:00.000Z")).toBe(true);
+    expect(isDataStale(localMomentISO(2026, 0, 15, 0, 0, 0))).toBe(true);
   });
 
   it("returns true when lastReset was from last year", () => {
-    expect(isDataStale("2025-01-01T00:00:00.000Z")).toBe(true);
+    expect(isDataStale(localMomentISO(2025, 0, 1, 0, 0, 0))).toBe(true);
   });
 
   it("returns false for data 1 month and 29 days old (< 2 months)", () => {
     // March 16 → April 15 = ~30 days = ~1 month
-    expect(isDataStale("2026-03-16T00:00:00.000Z")).toBe(false);
+    expect(isDataStale(localMomentISO(2026, 2, 16, 0, 0, 0))).toBe(false);
   });
 });
 
@@ -632,10 +638,10 @@ describe("computeCashFlowProjection — real-world scenarios", () => {
       balance,
       transactions,
       recurringExpenses,
-      "2026-04-01"
+      "2026-04-02"
     );
 
-    // Apr01→Apr15 = 14 days; fixedMonthly=900; variableTotal=420
+    // Apr02→Apr15 noon ≈ 14 ceil days; fixedMonthly=900; variableTotal=420
     // burnRate = (900 + 420 × 30/14) / 30 = (900 + 900) / 30 = 60/day
     expect(result.dailyBurnRate).toBeCloseTo(60, 1);
     expect(result.sufficiency).toBe("full");
@@ -643,7 +649,7 @@ describe("computeCashFlowProjection — real-world scenarios", () => {
     // daysUntilRunOut = floor(2500 / 60) = 41
     expect(result.daysUntilRunOut).toBe(41);
 
-    // remainingDaysInMonth = 15 (Apr15 00:00 → Apr30 00:00)
+    // remainingDaysInMonth = 15 (Apr15 noon → Apr30 00:00)
     // safeToSpend = 2500 - (60 × 15) = 1600
     expect(result.safeToSpendToday).toBeCloseTo(1600, 0);
     expect(result.isNegative).toBe(false);
@@ -656,7 +662,7 @@ describe("computeCashFlowProjection — real-world scenarios", () => {
   it("critical run-out scenario: user runs out within 7 days", () => {
     // dataDays=14, variable=700 → burnRate=50/day
     // balance=200 → daysUntilRunOut=floor(200/50)=4
-    const result = computeCashFlowProjection(200, makeTxs(700), noExpenses, "2026-04-01");
+    const result = computeCashFlowProjection(200, makeTxs(700), noExpenses, "2026-04-02");
     expect(result.daysUntilRunOut).toBe(4);
     expect(result.daysUntilRunOut).toBeLessThanOrEqual(7);
     expect(result.isNegative).toBe(true); // 200 - 50*15 < 0
@@ -666,12 +672,12 @@ describe("computeCashFlowProjection — real-world scenarios", () => {
    * Scenario: New user just set up, only 3 days of data (warmup).
    * Should show warmup qualifier.
    */
-  it("new user with only 3 days of data (warmup)", () => {
-    // Apr12 00:00 → Apr15 00:00 = exactly 3 days → warmup
+  it("new user in warmup with short cycle (ceil dataDays = 4)", () => {
+    // Apr12 local midnight → Apr15 local noon ≈ 3.5d → ceil 4 → warmup
     const result = computeCashFlowProjection(3000, makeTxs(150), noExpenses, "2026-04-12");
     expect(result.sufficiency).toBe("warmup");
-    // burnRate = (0 + 150 × 30/3) / 30 = 50/day
-    expect(result.dailyBurnRate).toBeCloseTo(50, 2);
+    // burnRate = (0 + 150 × 30/4) / 30 = 37.5/day
+    expect(result.dailyBurnRate).toBeCloseTo(37.5, 2);
   });
 
   /**
@@ -684,8 +690,8 @@ describe("computeCashFlowProjection — real-world scenarios", () => {
       { amount: 150, occurredAt: "2026-04-10T10:00:00.000Z" },
       { amount: 200, occurredAt: "2026-04-12T10:00:00.000Z" },
     ];
-    // Total = 700 over 14 days (Apr01→Apr15) → burnRate = 700/14 = 50/day
-    const result = computeCashFlowProjection(2000, transactions, noExpenses, "2026-04-01");
+    // Total = 700 over 14 ceil days (Apr02→Apr15 noon) → burnRate = 700/14 = 50/day
+    const result = computeCashFlowProjection(2000, transactions, noExpenses, "2026-04-02");
     expect(result.dailyBurnRate).toBeCloseTo(50, 2);
     expect(result.sufficiency).toBe("full");
   });

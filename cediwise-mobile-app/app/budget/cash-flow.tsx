@@ -28,7 +28,7 @@ import {
   TrendingDown,
   Wallet,
 } from "lucide-react-native";
-import { Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { useAnimatedScrollHandler, useSharedValue } from "react-native-reanimated";
 
@@ -67,7 +67,7 @@ export default function BudgetCashFlowScreen() {
   const showPaydayReset = needsSalaryReset(paydayDay, lastReset);
 
   const projection = useMemo(() => {
-    if (!isSetup || balance == null || !cycleStartDate) return null;
+    if (isLoading || !isSetup || balance == null || !cycleStartDate) return null;
     return computeCashFlowProjection(
       balance,
       cycleTransactions.map((t) => ({
@@ -81,7 +81,14 @@ export default function BudgetCashFlowScreen() {
       })),
       cycleStartDate
     );
-  }, [balance, cycleTransactions, recurringExpenses, cycleStartDate, isSetup]);
+  }, [
+    balance,
+    cycleTransactions,
+    recurringExpenses,
+    cycleStartDate,
+    isSetup,
+    isLoading,
+  ]);
 
   const fixedMonthlyTotal = useMemo(
     () =>
@@ -92,19 +99,19 @@ export default function BudgetCashFlowScreen() {
   );
 
   useEffect(() => {
-    if (!canAccessBudget && router.canGoBack()) {
+    if (!canAccessBudget) {
       router.replace("/(tabs)/budget");
     }
   }, [canAccessBudget, router]);
 
   useEffect(() => {
-    if (!projection || analyticsLoggedRef.current) return;
+    if (isLoading || !projection || analyticsLoggedRef.current) return;
     analyticsLoggedRef.current = true;
     posthog?.capture("cash_flow_detail_viewed", {
       days_to_runout: projection.daysUntilRunOut ?? -1,
       sufficiency: projection.sufficiency,
     });
-  }, [posthog, projection]);
+  }, [posthog, projection, isLoading]);
 
   if (!canAccessBudget) {
     return null;
@@ -143,6 +150,13 @@ export default function BudgetCashFlowScreen() {
           <Text className="text-slate-400 text-center mt-8">
             Sign in to view cash flow.
           </Text>
+        ) : isLoading ? (
+          <View className="items-center justify-center mt-16 py-12">
+            <ActivityIndicator size="large" color="#10B981" />
+            <Text className="text-slate-400 text-sm mt-4 text-center">
+              Loading cash flow…
+            </Text>
+          </View>
         ) : dataStale && isSetup ? (
           <Card className="border border-amber-500/30">
             <View className="flex-row items-center gap-3">
@@ -166,7 +180,7 @@ export default function BudgetCashFlowScreen() {
               </Text>
             </Pressable>
           </Card>
-        ) : !isSetup && !isLoading ? (
+        ) : !isSetup ? (
           <Card className="border border-emerald-500/20">
             <View className="flex-row items-center gap-3 mb-3">
               <View className="w-10 h-10 rounded-xl bg-emerald-500/15 items-center justify-center">

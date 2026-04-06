@@ -37,7 +37,7 @@ export type CashFlowStoreActions = {
     paydayDay?: number;
   }) => Promise<void>;
   updateBalance: (balance: number) => Promise<void>;
-  resetForLogout: () => void;
+  resetForLogout: () => Promise<void>;
 };
 
 export type CashFlowStore = CashFlowStoreState & CashFlowStoreActions;
@@ -107,8 +107,12 @@ export const useCashFlowStore = create<CashFlowStore>((set, get) => ({
         .eq("id", startUserId)
         .maybeSingle();
 
-      if (error || !data) return;
-      if (get().userId !== startUserId) return;
+        if (error || !data) {
+          if (get().userId === startUserId) {
+            set({ isLoading: false });
+          }
+          return;
+        }
 
       const balance =
         data.cash_flow_balance != null

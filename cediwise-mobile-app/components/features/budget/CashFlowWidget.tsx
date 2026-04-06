@@ -2,7 +2,7 @@ import * as Haptics from "expo-haptics";
 import { usePostHog } from "posthog-react-native";
 import { useRouter } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import {
   ChevronRight,
   Lock,
@@ -70,7 +70,7 @@ export function CashFlowWidget({
   const dataStale = isDataStale(lastReset);
 
   const projection = useMemo(() => {
-    if (!isSetup || balance == null || !cycleStartDate) return null;
+    if (isLoading || !isSetup || balance == null || !cycleStartDate) return null;
     return computeCashFlowProjection(
       balance,
       cycleTransactions.map((t) => ({
@@ -84,17 +84,24 @@ export function CashFlowWidget({
       })),
       cycleStartDate
     );
-  }, [balance, cycleTransactions, recurringExpenses, cycleStartDate, isSetup]);
+  }, [
+    balance,
+    cycleTransactions,
+    recurringExpenses,
+    cycleStartDate,
+    isSetup,
+    isLoading,
+  ]);
 
   // PostHog: fire cash_flow_viewed once when projection is available
   useEffect(() => {
-    if (!projection || analyticsLoggedRef.current) return;
+    if (visible || !projection || analyticsLoggedRef.current) return;
     analyticsLoggedRef.current = true;
     posthog?.capture("cash_flow_viewed", {
       days_to_runout: projection.daysUntilRunOut ?? -1,
       has_safe_to_spend: !projection.isNegative,
     });
-  }, [projection, posthog]);
+  }, [projection, posthog, visible]);
 
   if (!visible) return null;
 
@@ -127,6 +134,18 @@ export function CashFlowWidget({
             </Text>
           </Pressable>
         )}
+      </Card>
+    );
+  }
+
+  // ── Hydrating cash flow store (avoid treating null projection as empty state) ─
+  if (isLoading) {
+    return (
+      <Card className="border border-slate-700/50">
+        <View className="py-10 items-center justify-center gap-2">
+          <ActivityIndicator size="small" color={EMERALD} />
+          <Text className="text-slate-500 text-xs">Loading cash flow…</Text>
+        </View>
       </Card>
     );
   }
@@ -167,7 +186,7 @@ export function CashFlowWidget({
   }
 
   // ── Not set up yet ──────────────────────────────────────────────────────────
-  if (!isSetup && !isLoading) {
+  if (!isSetup) {
     return (
       <>
         <Card className="border border-emerald-500/20">

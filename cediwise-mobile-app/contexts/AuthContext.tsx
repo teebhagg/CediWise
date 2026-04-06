@@ -77,12 +77,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       await clearAuthData();
+      setUser(null);
       try {
         await resetStoresOnLogout();
       } catch (storeErr) {
         log.warn("resetStoresOnLogout failed (continuing logout):", storeErr);
       }
-      setUser(null);
     } catch (e) {
       log.error("Error during logout:", e);
       throw e;

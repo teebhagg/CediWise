@@ -102,8 +102,9 @@ export function computeCashFlowProjection(
   }
 
   const daysUntilRunOutRaw = currentBalance / dailyBurnRate;
+  const daysUntilRunOut = Math.max(0, Math.floor(daysUntilRunOutRaw));
   const runOutDate = new Date(
-    today.getTime() + daysUntilRunOutRaw * 24 * 60 * 60 * 1000
+    today.getTime() + daysUntilRunOut * 24 * 60 * 60 * 1000
   );
 
   const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -122,13 +123,16 @@ export function computeCashFlowProjection(
     dataDays,
     dailyBurnRate,
     runOutDate,
-    daysUntilRunOut: Math.max(0, Math.floor(daysUntilRunOutRaw)),
+    daysUntilRunOut,
     safeToSpendToday: Math.max(0, safeToSpend),
     isNegative,
   };
 }
 
-export function formatRunOutDate(date: Date): string {
+export function formatRunOutDate(
+  date: Date,
+  locale: string = "en-GH"
+): string {
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
@@ -136,7 +140,7 @@ export function formatRunOutDate(date: Date): string {
   if (date.toDateString() === today.toDateString()) return "Today";
   if (date.toDateString() === tomorrow.toDateString()) return "Tomorrow";
 
-  return date.toLocaleDateString("en-GB", {
+  return date.toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
     year:
@@ -144,14 +148,23 @@ export function formatRunOutDate(date: Date): string {
   });
 }
 
-export function isTodayPayday(paydayDay: number | null): boolean {
-  if (!paydayDay) return false;
+export function isTodayPayday(
+  paydayDay: number | null | undefined
+): boolean {
+  if (paydayDay == null) return false;
+  if (
+    !Number.isInteger(paydayDay) ||
+    paydayDay < 1 ||
+    paydayDay > 31
+  ) {
+    return false;
+  }
   const today = new Date();
   return today.getDate() === paydayDay;
 }
 
 export function needsSalaryReset(
-  paydayDay: number | null,
+  paydayDay: number | null | undefined,
   lastReset: string | null
 ): boolean {
   if (!isTodayPayday(paydayDay)) return false;

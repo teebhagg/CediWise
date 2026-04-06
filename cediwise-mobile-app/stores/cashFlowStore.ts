@@ -225,7 +225,15 @@ export const useCashFlowStore = create<CashFlowStore>((set, get) => ({
     await flushBudgetQueue(userId);
   },
 
-  resetForLogout: () => {
+  resetForLogout: async () => {
+    const { userId } = get();
+    if (userId) {
+      try {
+        await AsyncStorage.removeItem(cacheKey(userId));
+      } catch (err) {
+        if (__DEV__) console.debug("AsyncStorage.removeItem failed:", err);
+      }
+    }
     set({ ...initialState });
   },
 }));

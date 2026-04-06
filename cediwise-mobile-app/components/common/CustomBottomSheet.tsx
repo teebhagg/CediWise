@@ -70,10 +70,9 @@ export function CustomBottomSheet({
           backgroundClassName="rounded-t-[50px] bg-[rgba(18,22,33,0.98)]"
           //   containerClassName="max-h-[80%]"
           // handleClassName="max-h-[80%]"
-          contentContainerClassName={`flex-1 ${isKeyboardVisible ? 'h-full mb-[300px]' : 'max-h-[700px]'}`}
+          contentContainerClassName={`flex-1 ${isKeyboardVisible ? 'h-full' : 'max-h-[700px]'}`}
           style={[
             isKeyboardVisible && { paddingBottom: Platform.OS === 'ios' ? 20 : 0 },
-            // keyboardHeight > 0 && { transform: [{ translateY: keyboardHeight }], bottom: keyboardHeight }
           ]}
           bottomInset={-20}
         >

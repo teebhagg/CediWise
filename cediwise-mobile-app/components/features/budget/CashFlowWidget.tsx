@@ -53,7 +53,10 @@ export function CashFlowWidget({
   const posthog = usePostHog();
 
   const openCashFlowDetail = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch((e) => {
+      // Haptics may fail on simulators or unsupported devices
+      if (__DEV__) console.debug("Haptics failed:", e);
+    });
     router.push("/budget/cash-flow");
   };
   const { balance, monthlyIncome, lastReset, isSetup, isLoading } =
@@ -452,12 +455,12 @@ export function CashFlowWidget({
         currentMonthlyIncome={monthlyIncome}
       />
 
-      <CashFlowSetupModal
+      {/* <CashFlowSetupModal
         visible={showSetupModal}
         onClose={() => setShowSetupModal(false)}
         prefillSalary={prefillSalary}
         prefillPaydayDay={paydayDay}
-      />
+      /> */}
     </>
   );
 }

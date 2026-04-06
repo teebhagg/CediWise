@@ -4,7 +4,7 @@ import { useCashFlowStore } from "@/stores/cashFlowStore";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { Button } from "heroui-native";
 import { usePostHog } from "posthog-react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 
 type Props = {
@@ -32,6 +32,15 @@ export function CashFlowSetupModal({
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      setBalance("");
+      setMonthlyIncome(prefillSalary ? String(Math.round(prefillSalary)) : "");
+      setPaydayDay(prefillPaydayDay ? String(prefillPaydayDay) : "");
+      setError(null);
+    }
+  }, [visible, prefillSalary, prefillPaydayDay]);
 
   const parsedBalance = parseFloat(balance.replace(/,/g, ""));
   const parsedIncome = parseFloat(monthlyIncome.replace(/,/g, ""));

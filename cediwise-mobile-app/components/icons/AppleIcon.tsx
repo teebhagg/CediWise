@@ -8,7 +8,7 @@ interface AppleIconProps {
 }
 
 /**
- * Apple mark from Font Awesome Free 6.5.1 (fa-apple-whole).
+ * Apple mark from Font Awesome Free 6.5.1 (fa-apple).
  * License: https://fontawesome.com/license/free
  */
 export const Apple = {

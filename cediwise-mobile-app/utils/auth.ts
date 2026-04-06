@@ -886,7 +886,8 @@ export async function signInWithApple(): Promise<AuthResult> {
  */
 export async function deleteAccountRemote(): Promise<AuthResult> {
   if (!supabase) return { success: false, error: "App not configured" };
-  const authData = await getStoredAuthData({ allowExpired: true });
+  // const authData = await getStoredAuthData({ allowExpired: true });
+  const authData = await refreshStoredSession();
   const token = authData?.accessToken;
   if (!token) {
     return { success: false, error: "Not signed in" };

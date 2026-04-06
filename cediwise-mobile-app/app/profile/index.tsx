@@ -43,6 +43,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePersonalizationStatus } from "@/hooks/usePersonalizationStatus";
 import { useTierContext } from "@/contexts/TierContext";
 import {
+  deactivateCurrentDeviceToken,
   disablePushNotifications,
   enablePushNotifications,
   getNotificationsEnabled,

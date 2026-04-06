@@ -92,7 +92,7 @@ export default function BudgetCashFlowScreen() {
   );
 
   useEffect(() => {
-    if (!canAccessBudget) {
+    if (!canAccessBudget && router.canGoBack()) {
       router.replace("/(tabs)/budget");
     }
   }, [canAccessBudget, router]);
@@ -244,10 +244,41 @@ export default function BudgetCashFlowScreen() {
                     Not enough data yet
                   </Text>
                 </View>
-                <Text className="text-slate-400 text-sm leading-5">
-                  Log expenses for at least three days in this cycle so we can
-                  estimate daily burn and your run-out date.
-                </Text>
+                {(() => {
+                  const rawDays = projection?.dataDays;
+                  const dataDaysAvailable =
+                    typeof rawDays === "number" &&
+                    Number.isFinite(rawDays) &&
+                    rawDays >= 0;
+                  const remainingDays = dataDaysAvailable
+                    ? Math.max(0, 3 - rawDays)
+                    : null;
+                  const fallbackBody =
+                    "Log expenses for at least three days in this cycle so we can estimate daily burn and your run-out date.";
+                  if (!dataDaysAvailable || remainingDays === null) {
+                    return (
+                      <Text className="text-slate-400 text-sm leading-5">
+                        {fallbackBody}
+                      </Text>
+                    );
+                  }
+                  if (remainingDays > 0) {
+                    const dayLabel =
+                      remainingDays === 1 ? "day" : "days";
+                    return (
+                      <Text className="text-slate-400 text-sm leading-5">
+                        Come back in {remainingDays} {dayLabel}. We unlock your
+                        run-out estimate after three days in this billing cycle
+                        — keep logging expenses as you go.
+                      </Text>
+                    );
+                  }
+                  return (
+                    <Text className="text-slate-400 text-sm leading-5">
+                      {fallbackBody}
+                    </Text>
+                  );
+                })()}
               </Card>
             ) : !projection || projection.dailyBurnRate === 0 ? (
               <Card className="border border-slate-700/50 mb-4">

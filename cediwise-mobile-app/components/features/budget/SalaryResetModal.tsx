@@ -37,6 +37,13 @@ export function SalaryResetModal({
 
   useEffect(() => {
     if (!visible) return;
+    setBalance(prefillAmount);
+    setError(null);
+    setIsSubmitting(false);
+  }, [visible, currentMonthlyIncome, prefillAmount]);
+
+  useEffect(() => {
+    if (!visible) return;
     const id = setTimeout(() => balanceInputRef.current?.focus(), 400);
     return () => clearTimeout(id);
   }, [visible]);
@@ -106,18 +113,16 @@ export function SalaryResetModal({
         <Pressable
           onPress={handleReset}
           disabled={!isValid || isSubmitting}
-          className={`py-4 rounded-xl items-center justify-center flex-row gap-2 ${
-            isValid && !isSubmitting
+          className={`py-4 rounded-xl items-center justify-center flex-row gap-2 ${isValid && !isSubmitting
               ? "bg-emerald-500 active:bg-emerald-600"
               : "bg-slate-700"
-          }`}>
+            }`}>
           {isSubmitting ? (
             <ActivityIndicator size="small" color="#020617" />
           ) : null}
           <Text
-            className={`font-bold text-base ${
-              isValid && !isSubmitting ? "text-slate-900" : "text-slate-500"
-            }`}>
+            className={`font-bold text-base ${isValid && !isSubmitting ? "text-slate-900" : "text-slate-500"
+              }`}>
             {isSubmitting ? "Resetting…" : "Reset my month"}
           </Text>
         </Pressable>

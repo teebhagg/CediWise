@@ -512,6 +512,19 @@ describe("isTodayPayday", () => {
     expect(isTodayPayday(null)).toBe(false);
   });
 
+  it("returns false when paydayDay is undefined", () => {
+    expect(isTodayPayday(undefined)).toBe(false);
+  });
+
+  it("returns false for payday day 0 (invalid, not conflated with unset)", () => {
+    expect(isTodayPayday(0)).toBe(false);
+  });
+
+  it("returns false when payday day is out of range", () => {
+    expect(isTodayPayday(32)).toBe(false);
+    expect(isTodayPayday(-1)).toBe(false);
+  });
+
   it("returns false for day 1 when today is April 15", () => {
     expect(isTodayPayday(1)).toBe(false);
   });

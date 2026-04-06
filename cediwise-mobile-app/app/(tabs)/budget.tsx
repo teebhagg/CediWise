@@ -3,6 +3,7 @@ import {
   InlineSyncPill,
 } from "@/components/BudgetLoading";
 import { AddDebtModal } from "@/components/AddDebtModal";
+import { CashFlowWidget } from "@/components/features/budget/CashFlowWidget";
 import { Card } from "@/components/Card";
 import { DeficitResolutionModal } from "@/components/DeficitResolutionModal";
 import { RolloverAllocationModal } from "@/components/RolloverAllocationModal";
@@ -53,6 +54,7 @@ export default function BudgetScreen() {
   const {
     user,
     personalization,
+    profileVitals,
     budget,
     refreshing,
     onRefresh,
@@ -296,6 +298,25 @@ export default function BudgetScreen() {
                   vitalsSummary={null}
                 />
               </View>
+            )}
+
+            {/* Cash Flow Widget — F-02 */}
+            {!!user && !budget.isLoading && (
+              <CashFlowWidget
+                visible
+                canAccessBudget={canAccessBudget}
+                paydayDay={budget.state?.prefs?.paydayDay ?? null}
+                prefillSalary={profileVitals.vitals?.stable_salary ?? null}
+                cycleTransactions={
+                  derived.activeCycleId
+                    ? (budget.state?.transactions ?? []).filter(
+                        (t) => t.cycleId === derived.activeCycleId
+                      )
+                    : []
+                }
+                cycleStartDate={derived.activeCycle?.startDate ?? null}
+                onUpgradePress={() => router.push("/upgrade")}
+              />
             )}
 
             {/* Alert zone */}

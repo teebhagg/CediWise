@@ -8,6 +8,7 @@ import {
 import { AppState, AppStateStatus } from "react-native";
 import { deactivateCurrentDeviceToken } from "../services/notifications";
 import { clearAuthData, getStoredAuthData } from "../utils/auth";
+import { resetStoresOnLogout } from "../utils/resetStoresOnLogout";
 import { log } from "../utils/logger";
 import { supabase } from "../utils/supabase";
 
@@ -76,6 +77,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       await clearAuthData();
+      try {
+        await resetStoresOnLogout();
+      } catch (storeErr) {
+        log.warn("resetStoresOnLogout failed (continuing logout):", storeErr);
+      }
       setUser(null);
     } catch (e) {
       log.error("Error during logout:", e);

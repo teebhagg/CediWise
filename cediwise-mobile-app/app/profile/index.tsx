@@ -11,6 +11,7 @@ import {
   Phone,
   RotateCcw,
   Sparkles,
+  Trash2,
   User as UserIcon,
   Crown,
   Zap,
@@ -33,6 +34,7 @@ import {
   DEFAULT_STANDARD_HEIGHT,
   ExpandedHeader,
 } from "@/components/CediWiseHeader";
+import { AppDialog } from "@/components/AppDialog";
 import { LogoutModal } from "@/components/LogoutModal";
 import { useBudgetScreenState } from "@/components/features/budget/useBudgetScreenState";
 import { useTourContext } from "@/contexts/TourContext";
@@ -41,6 +43,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePersonalizationStatus } from "@/hooks/usePersonalizationStatus";
 import { useTierContext } from "@/contexts/TierContext";
 import {
+  deactivateCurrentDeviceToken,
   disablePushNotifications,
   enablePushNotifications,
   getNotificationsEnabled,
@@ -49,7 +52,7 @@ import {
   scheduleDailyExpenseReminder,
   setReminderFrequency,
 } from "@/services/notifications";
-import { getDisplayContact } from "@/utils/auth";
+import { deleteAccountRemote, getDisplayContact } from "@/utils/auth";
 import { clearBudgetLocal } from "@/utils/budgetStorage";
 import { log } from "@/utils/logger";
 import { clearOnboardingLocalCache } from "@/utils/onboardingState";
@@ -95,6 +98,8 @@ export default function ProfileScreen() {
   const personalization = usePersonalizationStatus(user?.id);
   const { derived, budget } = useBudgetScreenState();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [budgetEngineLoading, setBudgetEngineLoading] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
@@ -264,6 +269,38 @@ export default function ProfileScreen() {
       );
     }
   };
+
+  const executeDeleteAccount = useCallback(async () => {
+    if (!user?.id) return;
+    setDeleteLoading(true);
+    try {
+      await deactivateCurrentDeviceToken(user.id);
+      const result = await deleteAccountRemote();
+      if (!result.success) {
+        setDeleteLoading(false);
+        showError("Could not delete account", result.error ?? "Try again.");
+        return;
+      }
+      setDeleteStep(0);
+      setDeleteLoading(false);
+      try {
+        await logout();
+      } catch {
+        // Session may already be invalid after auth user deletion
+      }
+      router.replace("/auth");
+      showSuccess(
+        "Account deleted",
+        "Your account and associated data have been removed.",
+      );
+    } catch (e) {
+      setDeleteLoading(false);
+      showError(
+        "Error",
+        e instanceof Error ? e.message : "Could not delete account",
+      );
+    }
+  }, [user?.id, logout, router, showError, showSuccess]);
 
   const contact = getDisplayContact(user);
   
@@ -776,6 +813,21 @@ export default function ProfileScreen() {
             </PressableFeedback>
           </View>
 
+          {/* Danger zone */}
+          <View>
+            <Text className={SECTION_LABEL_CLASS}>Danger zone</Text>
+            <Pressable
+              onPress={onItemPress(() => setDeleteStep(1))}
+              className="bg-red-600 rounded-xl py-3.5 px-4 items-center active:opacity-90"
+            >
+              <Text className="text-white font-semibold text-base">Delete my account</Text>
+            </Pressable>
+            <Text className="text-xs text-slate-500 mt-2 px-1 text-center leading-5">
+              Permanently deletes your account, budget, SME data, subscriptions, and preferences from our
+              servers.
+            </Text>
+          </View>
+
           {/* App Info */}
           <View className="items-center pt-2 pb-4">
             <Text className="text-xs text-slate-500">
@@ -787,6 +839,42 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Animated.ScrollView>
+
+      <AppDialog
+        visible={deleteStep === 1}
+        onOpenChange={(open) => {
+          if (!open) setDeleteStep(0);
+        }}
+        icon={<Trash2 size={22} color="#F87171" />}
+        title="Delete your account?"
+        description="This permanently deletes your CediWise account, budget data, SME ledger data, subscriptions, and preferences from our servers. This cannot be undone."
+        primaryLabel="Continue"
+        onPrimary={() => setDeleteStep(2)}
+        secondaryLabel="Cancel"
+        onSecondary={() => setDeleteStep(0)}
+        primaryButtonClassName="bg-amber-600"
+        primaryLabelClassName="text-white"
+      />
+      <AppDialog
+        visible={deleteStep === 2}
+        onOpenChange={(open) => {
+          if (!open) setDeleteStep(0);
+        }}
+        loading={deleteLoading}
+        icon={<Trash2 size={22} color="#EF4444" />}
+        title="Delete permanently?"
+        description="Your account and all associated data will be removed. You will need a new account to use CediWise again."
+        primaryLabel="Delete my account"
+        onPrimary={() => {
+          void executeDeleteAccount();
+        }}
+        secondaryLabel="Go back"
+        onSecondary={() => {
+          if (!deleteLoading) setDeleteStep(1);
+        }}
+        primaryButtonClassName="bg-red-600"
+        primaryLabelClassName="text-white"
+      />
 
       <LogoutModal
         visible={showLogoutModal}

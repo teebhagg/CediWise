@@ -29,6 +29,10 @@ export type AppDialogProps = {
   loading?: boolean;
   /** Optional extra content between description and buttons */
   children?: React.ReactNode;
+  /** Override primary button container (e.g. destructive red). */
+  primaryButtonClassName?: string;
+  /** Override primary label text class (e.g. text-white on red). */
+  primaryLabelClassName?: string;
 };
 
 export function AppDialog({
@@ -44,6 +48,8 @@ export function AppDialog({
   onClose,
   loading = false,
   children,
+  primaryButtonClassName = 'bg-emerald-500',
+  primaryLabelClassName = 'text-slate-950',
 }: AppDialogProps) {
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
@@ -156,9 +162,9 @@ export function AppDialog({
                         variant="primary"
                         size="md"
                         onPress={handlePrimary}
-                        className="w-full h-12 rounded-xl bg-emerald-500"
+                        className={`w-full h-12 rounded-xl ${primaryButtonClassName}`}
                       >
-                        <Button.Label className="text-slate-950 font-semibold">
+                        <Button.Label className={`font-semibold ${primaryLabelClassName}`}>
                           {primaryLabel}
                         </Button.Label>
                       </Button>

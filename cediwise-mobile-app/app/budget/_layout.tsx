@@ -12,6 +12,7 @@ export default function BudgetLayout() {
       <Stack.Screen name="categories" />
       <Stack.Screen name="income" />
       <Stack.Screen name="insights" />
+      <Stack.Screen name="cash-flow" />
       <Stack.Screen name="settings" />
     </Stack>
   );

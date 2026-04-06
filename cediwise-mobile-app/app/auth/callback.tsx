@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 const MAX_RETRIES = 2;
 
 /**
- * OAuth callback handler for Google sign-in.
+ * OAuth callback handler for Google and Apple sign-in (browser / OAuth flows).
  * On Android, the deep link often opens the app before WebBrowser returns, so we parse tokens here.
  */
 export default function AuthCallback() {

@@ -409,6 +409,7 @@ export default function VitalsWizard() {
         income_frequency: draft.incomeFrequency,
         spending_style: draft.spendingStyle ?? null,
         financial_priority: draft.financialPriority ?? null,
+        profile_version: 1,
       };
 
       const queued = await enqueueMutation(user.id, {
@@ -448,6 +449,12 @@ export default function VitalsWizard() {
         needs_pct: computed.needsPct,
         wants_pct: computed.wantsPct,
         savings_pct: computed.savingsPct,
+        life_stage: draft.lifeStage ?? null,
+        spending_style: draft.spendingStyle ?? null,
+        financial_priority: draft.financialPriority ?? null,
+        income_frequency: draft.incomeFrequency,
+        dependents_count: 0,
+        profile_version: 1,
       });
 
       // Refresh Zustand stores so budget/home screens show updated vitals

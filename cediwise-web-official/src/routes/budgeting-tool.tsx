@@ -8,9 +8,9 @@ export const Route = createFileRoute('/budgeting-tool')({
   head: () =>
     createPageHead({
       path: '/budgeting-tool',
-      title: 'Budgeting Tool',
+      title: 'Budgeting Tool — Never Run Out of Money Before Month End',
       description:
-        'Category-based budgets with spent vs. remaining progress. Stay on track without the headache of spreadsheets.',
+        'See the exact date your money runs out if current spending continues, and your safe-to-spend figure updated daily. Ghana budgeting app built for real life.',
     }),
 })
 
@@ -69,9 +69,9 @@ function BudgetingToolPage() {
   return (
     <>
       <FeatureInsightLayout
-        title="Budgeting Tool"
+        title="Never Run Out of Money Before Month End"
         tagline="Smart Budgeting"
-        description="Category-based budgets with spent vs. remaining progress. Stay on track without the headache of spreadsheets."
+        description="See the exact date your money runs out if current spending continues. Your safe-to-spend figure, updated daily — so you always know where you stand."
         icon={ChartLineDataIcon}
         iconBgColor="bg-primary/30"
         image="/assets/android/img-2.webp"
@@ -92,9 +92,9 @@ function BudgetingToolPage() {
 
         <h2>Why it matters</h2>
         <p>
-          Most Ghanaians don&apos;t know where their money goes. A budget creates awareness. Once you
-          see the numbers, you can make intentional choices — cut back here, save more there. Small
-          shifts compound over time.
+          Most people don&apos;t run out of money because they spend too much on one big thing —
+          they run out because small daily spending adds up invisibly. Knowing the exact date your
+          money runs out, days in advance, changes the decision you make today. Not after the fact.
         </p>
 
         <h2>Works best with</h2>

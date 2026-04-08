@@ -1,4 +1,5 @@
 import { useUpdateCheck } from "@/hooks/useUpdateCheck";
+import { MandatoryUpdateModal } from "@/components/MandatoryUpdateModal";
 import React, { ReactNode, createContext, useContext } from "react";
 
 type UpdateCheckContextValue = {
@@ -11,10 +12,16 @@ const UpdateCheckContext = createContext<UpdateCheckContextValue | undefined>(
 );
 
 export function UpdateCheckProvider({ children }: { children: ReactNode }) {
-  const { check } = useUpdateCheck();
+  const { check, mandatoryVisible, releaseNotes, openStoreForUpdate } =
+    useUpdateCheck();
   return (
     <UpdateCheckContext.Provider value={{ check }}>
       {children}
+      <MandatoryUpdateModal
+        visible={mandatoryVisible}
+        releaseNotes={releaseNotes}
+        onUpdatePress={openStoreForUpdate}
+      />
     </UpdateCheckContext.Provider>
   );
 }

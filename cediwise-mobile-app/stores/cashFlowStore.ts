@@ -26,6 +26,7 @@ export type CashFlowStoreState = {
   lastReset: string | null;
   isLoading: boolean;
   isSetup: boolean;
+  logoutEpoch: number;
 };
 
 export type CashFlowStoreActions = {
@@ -49,6 +50,7 @@ const initialState: CashFlowStoreState = {
   lastReset: null,
   isLoading: false,
   isSetup: false,
+  logoutEpoch: 0,
 };
 
 export const useCashFlowStore = create<CashFlowStore>((set, get) => ({
@@ -57,7 +59,8 @@ export const useCashFlowStore = create<CashFlowStore>((set, get) => ({
   initForUser: async (userId: string | null) => {
     set({ userId, isLoading: true });
     if (!userId) {
-      set({ ...initialState });
+      // reset state and bump epoch to invalidate in-flight refreshes
+      set((state) => ({ ...initialState, logoutEpoch: state.logoutEpoch + 1 }));
       return;
     }
     await get().refresh();
@@ -69,6 +72,8 @@ export const useCashFlowStore = create<CashFlowStore>((set, get) => ({
       set({ isLoading: false });
       return;
     }
+    // Track current logout epoch to guard against mid-refresh logout races
+    const currentEpoch = get().logoutEpoch;
 
     const startUserId = userId;
     set({ isLoading: true });
@@ -76,7 +81,7 @@ export const useCashFlowStore = create<CashFlowStore>((set, get) => ({
     // Load from AsyncStorage cache first
     try {
       const raw = await AsyncStorage.getItem(cacheKey(startUserId));
-      if (raw && get().userId === startUserId) {
+      if (raw && get().userId === startUserId && get().logoutEpoch === currentEpoch) {
         const cached = JSON.parse(raw) as CachedCashFlow;
         const isSetup =
           cached.balance != null && cached.monthlyIncome != null;
@@ -87,6 +92,7 @@ export const useCashFlowStore = create<CashFlowStore>((set, get) => ({
           isSetup,
           isLoading: false,
         });
+        // fall through to fetch remote to refresh data
       }
     } catch {
       // ignore
@@ -107,6 +113,8 @@ export const useCashFlowStore = create<CashFlowStore>((set, get) => ({
         .eq("id", startUserId)
         .maybeSingle();
 
+        // If user logged out during the fetch, skip applying updates
+        if (get().logoutEpoch !== currentEpoch) return;
         if (error || !data) {
           if (get().userId === startUserId) {
             set({ isLoading: false });
@@ -126,7 +134,8 @@ export const useCashFlowStore = create<CashFlowStore>((set, get) => ({
           : null;
       const lastReset = (data.cash_flow_last_reset as string | null) ?? null;
       const isSetup = balance != null && monthlyIncomeFromProfile != null;
-
+      // Guard against logout during async work
+      if (get().logoutEpoch !== currentEpoch) return;
       set({
         balance,
         monthlyIncome: monthlyIncomeFromProfile,
@@ -145,7 +154,8 @@ export const useCashFlowStore = create<CashFlowStore>((set, get) => ({
     } catch (err) {
       log.error("cashFlowStore.refresh failed:", err);
     } finally {
-      if (get().userId === startUserId) {
+      // If user logged out mid-refresh, skip finalizing this refresh
+      if (get().userId === startUserId && get().logoutEpoch === currentEpoch) {
         set({ isLoading: false });
       }
     }
@@ -229,15 +239,17 @@ export const useCashFlowStore = create<CashFlowStore>((set, get) => ({
     await flushBudgetQueue(userId);
   },
 
-  resetForLogout: async () => {
+  resetForLogout: (): Promise<void> => {
     const { userId } = get();
     if (userId) {
-      try {
-        await AsyncStorage.removeItem(cacheKey(userId));
-      } catch (err) {
-        if (__DEV__) console.debug("AsyncStorage.removeItem failed:", err);
-      }
+      // Fire-and-forget remove to minimize logout latency in tests
+      AsyncStorage.removeItem(cacheKey(userId)).catch(() => {});
     }
-    set({ ...initialState });
+    // bump epoch to invalidate any pending refreshes and reset state
+    set((state) => ({
+      ...initialState,
+      logoutEpoch: state.logoutEpoch + 1,
+    }));
+    return Promise.resolve();
   },
 }));

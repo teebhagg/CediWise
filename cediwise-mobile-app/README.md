@@ -60,6 +60,18 @@ To learn more about developing your project with Expo, look at the following res
 - [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
 - [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
+## File Naming Convention
+
+All SQL migration files and Markdown spec/plan/PRD documents use a timestamp-based naming convention matching Prisma migration format:
+
+```
+YYYYMMDDHHmmss_descriptive-name.ext
+```
+
+Example: `20260407143052_profiles_version.sql`, `20260407120000_preferences-pipeline-fix-design.md`
+
+See [docs/CONVENTIONS.md](docs/CONVENTIONS.md) for full details.
+
 ## Join the community
 
 Join our community of developers creating universal apps.

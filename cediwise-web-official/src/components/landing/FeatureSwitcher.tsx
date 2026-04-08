@@ -21,7 +21,7 @@ const features = [
     icon: CreditCardIcon,
     title: 'Salary & Tax',
     description:
-      'Calculate Social Security (SSNIT) and Income Tax or Pay As You Earn (PAYE) for Ghana 2026. Know exactly what stays in your pocket after all deductions.',
+      'Is your employer calculating your PAYE and SSNIT correctly? Verify your deductions against GRA rates in seconds — and see if you\'re owed money back.',
     image: '/assets/android/img-11.webp',
     color: 'bg-emerald-500',
     to: '/salary-calculator',
@@ -31,7 +31,7 @@ const features = [
     icon: ChartLineDataIcon,
     title: 'Smart Budgeting',
     description:
-      'Category-based budgets with spent vs. remaining progress. Stay on track without the headache of spreadsheets.',
+      'Never run out of money before month end. See the exact date your money runs out and your safe-to-spend figure — updated daily.',
     image: '/assets/android/img-2.webp',
     color: 'bg-primary',
     to: '/budgeting-tool',
@@ -41,7 +41,7 @@ const features = [
     icon: Invoice02Icon,
     title: 'Small & Medium Enterprise (SME) Ledger',
     description:
-      'Sales and expenses with automatic 20% VAT calculations. Get alerted as you approach the GHS 750K VAT threshold.',
+      'One GRA audit costs more than 3 years of CediWise. Stay VAT-compliant, audit-ready, and ahead of your threshold — without hiring an accountant.',
     image: '/assets/android/img-6.webp',
     color: 'bg-blue-500',
     to: '/sme-ledger',
@@ -51,7 +51,7 @@ const features = [
     icon: Book04Icon,
     title: 'Financial Literacy',
     description:
-      'Level up your money game with curated tips and insights. Built to help every Ghanaian worker build wealth.',
+      'Know your rights before your next salary negotiation or GRA filing. 34 lessons built for the Ghanaian financial context.',
     image: '/assets/android/img-8.webp',
     color: 'bg-orange-500',
     to: '/financial-literacy',
@@ -71,7 +71,7 @@ const features = [
     icon: SmartPhone01Icon,
     title: 'Debt Dashboard',
     description:
-      'Track your loans and debts in one place. See total debt, monthly payments, payoff timelines, and debt-to-income ratio.',
+      'How much is your debt actually costing you in total? See the real interest you\'ll pay over the loan term — and the exact savings from one extra payment.',
     image: '/assets/android/img-1.webp',
     color: 'bg-rose-500',
     to: '/debt-dashboard',
@@ -84,11 +84,10 @@ export function FeatureSwitcher() {
     <section className="relative mx-auto max-w-7xl px-6 py-24 lg:py-32">
       <div className="mb-20 text-center">
         <h2 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
-          Everything you need
+          Stop losing money you don&apos;t know you&apos;re losing.
         </h2>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-zinc-400">
-          One app for salary, budgets, business, and learning. Designed for the
-          modern Ghanaian experience.
+          CediWise finds the gaps — from incorrect PAYE deductions to invisible MoMo fees — and puts the money back where it belongs.
         </p>
       </div>
 

@@ -53,6 +53,7 @@ import {
   setReminderFrequency,
 } from "@/services/notifications";
 import { deleteAccountRemote, getDisplayContact } from "@/utils/auth";
+import { resetNavigationToAuth } from "@/utils/authRouting";
 import { clearBudgetLocal } from "@/utils/budgetStorage";
 import { log } from "@/utils/logger";
 import { clearOnboardingLocalCache } from "@/utils/onboardingState";
@@ -260,7 +261,7 @@ export default function ProfileScreen() {
     try {
       await logout();
       setShowLogoutModal(false);
-      router.replace("/auth");
+      resetNavigationToAuth();
     } catch (e) {
       log.error("Logout error:", e);
       showError(
@@ -288,7 +289,7 @@ export default function ProfileScreen() {
       } catch {
         // Session may already be invalid after auth user deletion
       }
-      router.replace("/auth");
+      resetNavigationToAuth();
       showSuccess(
         "Account deleted",
         "Your account and associated data have been removed.",
@@ -300,7 +301,7 @@ export default function ProfileScreen() {
         e instanceof Error ? e.message : "Could not delete account",
       );
     }
-  }, [user?.id, logout, router, showError, showSuccess]);
+  }, [user?.id, logout, showError, showSuccess]);
 
   const contact = getDisplayContact(user);
   

@@ -8,9 +8,9 @@ export const Route = createFileRoute('/salary-calculator/')({
   head: () =>
     createPageHead({
       path: '/salary-calculator',
-      title: 'Salary Calculator',
+      title: 'Salary Calculator — Is Your Employer Deducting the Right Amount?',
       description:
-        'Calculate SSNIT (Social Security), PAYE (Income Tax), and net take-home for Ghana. Know exactly what stays in your pocket after all deductions.',
+        'Is your employer calculating your PAYE and SSNIT correctly? Verify your deductions against current GRA rates in seconds. Know exactly what your take-home pay is. Free Ghana salary calculator.',
       schemas: [
         getAppSchema(),
         getFAQSchema([
@@ -76,14 +76,32 @@ function SalaryCalculatorPage() {
   return (
     <>
       <FeatureInsightLayout
-        title="Salary Calculator"
+        title="Is Your Employer Deducting the Right Amount?"
         tagline="Salary & Tax"
-        description="Calculate SSNIT (Social Security), PAYE (Income Tax), and net take-home for Ghana 2026. Know exactly what stays in your pocket after all deductions."
+        description="Verify your PAYE and SSNIT against official GRA rates in seconds. If your employer is over-deducting, you're losing money every single month."
         icon={CreditCardIcon}
         iconBgColor="bg-emerald-500/20"
         image="/assets/android/img-11.webp"
         highlights={highlights}
       >
+        <div className="mb-10 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5 max-w-2xl">
+          <p className="text-sm font-medium text-emerald-300 mb-2">
+            Verify employer deductions (PAYE & SSNIT)
+          </p>
+          <p className="text-sm text-zinc-300 leading-relaxed mb-4">
+            Enter what your employer says they deduct and compare to GRA-mandated amounts — with
+            shareable results — in the free CediWise mobile app.
+          </p>
+          <a
+            href="https://play.google.com/store/apps/details?id=com.cediwise.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500 transition-colors"
+          >
+            Get CediWise on Android
+          </a>
+        </div>
+
         <h2>How it works</h2>
         <p>
           Enter your gross monthly salary and the CediWise salary calculator applies the correct SSNIT
@@ -100,9 +118,10 @@ function SalaryCalculatorPage() {
 
         <h2>Why it matters</h2>
         <p>
-          Understanding your take-home pay is the first step to budgeting and saving. Many Ghanaians
-          are surprised by the gap between gross and net salary. With CediWise, there are no surprises —
-          just clarity and control.
+          Employer PAYE errors are more common than most workers realise. A miscalculated tax band,
+          an incorrect SSNIT cap, or a misapplied allowance can cost you hundreds of cedis per month
+          — silently, month after month. CediWise applies the exact GRA formula so you can see in
+          seconds whether the numbers match.
         </p>
 
         <h2>Works best with</h2>

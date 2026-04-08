@@ -1,6 +1,12 @@
-import { useCallback, useEffect } from "react";
-import { AppState, InteractionManager, Platform } from "react-native";
+import Constants from "expo-constants";
+import { useCallback, useEffect, useState } from "react";
+import { AppState, InteractionManager, Linking, Platform } from "react-native";
+
+import { getActiveAppVersionPolicy, isCurrentBuildOutdated } from "@/services/versionUpdatePolicy";
+import { log } from "@/utils/logger";
+
 import { checkAndPromptUpdate } from "../services/inAppUpdates";
+import { iosAppStoreUrl } from "@/constants/update";
 
 /**
  * Hook that checks for Android in‑app updates using the native Play Store UI.
@@ -8,10 +14,51 @@ import { checkAndPromptUpdate } from "../services/inAppUpdates";
  * The update flow is IMMEDIATE (blocking) as requested.
  */
 export function useUpdateCheck() {
+  const [mandatoryVisible, setMandatoryVisible] = useState(false);
+  const [releaseNotes, setReleaseNotes] = useState<string | null>(null);
+
   const check = useCallback(() => {
-    if (Platform.OS !== "android") return;
-    // Immediate update flow
-    void checkAndPromptUpdate({ immediate: true });
+    if (Platform.OS === "android") {
+      // Immediate update flow via Play native UI.
+      void checkAndPromptUpdate({ immediate: true });
+      return;
+    }
+
+    if (Platform.OS !== "ios") return;
+
+    log.info("Checking for iOS update policy");
+
+    // iOS: use app_versions policy (fail-open on network/check errors).
+    void (async () => {
+      try {
+        const policy = await getActiveAppVersionPolicy();
+        log.info("iOS update policy", policy);
+        if (!policy) return;
+
+        const outdated = isCurrentBuildOutdated(policy.version);
+        if (outdated && policy.requiresUpdate) {
+          setReleaseNotes(policy.releaseNotes);
+          setMandatoryVisible(true);
+        } else {
+          setMandatoryVisible(false);
+          setReleaseNotes(null);
+        }
+      } catch (e) {
+        log.warn("iOS update policy check failed", e);
+      }
+    })();
+  }, []);
+
+  const openStoreForUpdate = useCallback(async () => {
+    // Allow env override. Fallback bundle-id URL works for most listings.
+    const appStoreUrl =
+      process.env.EXPO_PUBLIC_IOS_APP_STORE_URL ||
+      iosAppStoreUrl;
+    try {
+      await Linking.openURL(appStoreUrl);
+    } catch (e) {
+      log.error("Could not open App Store URL", e);
+    }
   }, []);
 
   // Initial check after interactions to avoid blocking first paint
@@ -23,7 +70,6 @@ export function useUpdateCheck() {
 
   // Re‑check when app becomes active again
   useEffect(() => {
-    if (Platform.OS !== "android") return;
     const handler = (nextState: any) => {
       if (nextState === "active") {
         check();
@@ -33,5 +79,18 @@ export function useUpdateCheck() {
     return () => sub.remove();
   }, [check]);
 
-  return { check };
+  // In Expo Go / dev flow, avoid blocking iOS developers.
+  useEffect(() => {
+    // const isExpoGo = (Constants.appOwnership ?? "") === "expo";
+    // if (__DEV__ || isExpoGo) {
+    //   setMandatoryVisible(false);
+    // }
+  }, []);
+
+  return {
+    check,
+    mandatoryVisible,
+    releaseNotes,
+    openStoreForUpdate,
+  };
 }

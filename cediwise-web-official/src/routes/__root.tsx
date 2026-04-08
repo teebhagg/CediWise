@@ -20,12 +20,12 @@ export const Route = createRootRoute({
       {
         name: 'description',
         content:
-          'CediWise is a personal finance companion for Ghana. Manage salary, PAYE, SSNIT, budgeting, debt, SME expenses, and financial literacy in one app.',
+          'Stop losing hundreds of cedis each month to untracked expenses and incorrect PAYE deductions. CediWise verifies your salary deductions, tracks your spending, and protects your business from GRA penalties.',
       },
       {
         name: 'keywords',
         content:
-          'CediWise, personal finance companion, Ghana, salary calculator, budgeting, debt tracking, SME ledger, PAYE, SSNIT, financial literacy, smart money for Ghana',
+          'CediWise, Ghana personal finance companion app, Ghana salary calculator, PAYE, SSNIT, SME ledger, budgeting, debt, SME expenses, financial literacy, PAYE verification Ghana, salary deduction checker, employer PAYE check, never run out of money Ghana, GRA audit protection, Ghana budgeting app, SME ledger Ghana, VAT threshold Ghana, PAYE calculator 2026, SSNIT calculator Ghana',
       },
       { property: 'og:url', content: SITE_URL },
       { property: 'og:site_name', content: 'CediWise' },
@@ -37,7 +37,7 @@ export const Route = createRootRoute({
       {
         property: 'og:description',
         content:
-          'CediWise is a personal finance companion for Ghana. Manage salary, PAYE, SSNIT, budgeting, debt, SME expenses, and financial literacy in one app.',
+          'Stop losing hundreds of cedis each month to untracked expenses and incorrect PAYE deductions. CediWise verifies your salary deductions, tracks your spending, and protects your business from GRA penalties.',
       },
       { property: 'og:image', content: OG_IMAGE },
       {

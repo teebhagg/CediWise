@@ -1,18 +1,18 @@
-import { FeatureInsightLayout } from '@/components/features/FeatureInsightLayout'
-import { createPageHead, getAppSchema, getFAQSchema } from '@/lib/seo'
 import { Invoice02Icon, Target02Icon, PercentIcon } from '@hugeicons/core-free-icons'
+import { HugeiconsIcon as HugeIcon } from '@hugeicons/react'
 import { createFileRoute } from '@tanstack/react-router'
 import { GlassCard } from '@/components/ui/glass-card'
-import { HugeiconsIcon as HugeIcon } from '@hugeicons/react'
+import { FeatureInsightLayout } from '@/components/features/FeatureInsightLayout'
+import { createPageHead, getAppSchema, getFAQSchema } from '@/lib/seo'
 
 export const Route = createFileRoute('/sme-ledger')({
   component: SMELedgerPage,
   head: () =>
     createPageHead({
       path: '/sme-ledger',
-      title: 'Small & Medium Enterprise (SME) Ledger',
+      title: 'SME Ledger — One GRA Audit Costs More Than 3 Years of CediWise',
       description:
-        'Sales and expenses with automatic 20% VAT calculations. Get alerted as you approach the GHS 750K VAT threshold.',
+        'Stay VAT-compliant and audit-ready without hiring an accountant. Automatic 20% VAT, GHS 750K threshold tracking, and GRA-ready records for Ghana SMEs.',
       schemas: [
         getAppSchema(),
         getFAQSchema([
@@ -67,9 +67,9 @@ const highlights = [
 function SMELedgerPage() {
   return (
     <FeatureInsightLayout
-      title="Small & Medium Enterprise (SME) Ledger"
+      title="One GRA Audit Costs More Than 3 Years of CediWise."
       tagline="Business Finance"
-      description="Sales and expenses for small and medium enterprises (SMEs), with automatic 20% VAT calculations. Get alerted as you approach the GHS 750K VAT threshold."
+      description="Stay VAT-compliant, audit-ready, and ahead of your GHS 750K threshold — without hiring an accountant. Automatic 20% VAT calculations under Act 1151."
       icon={Invoice02Icon}
       iconBgColor="bg-blue-500/30"
       image="/assets/android/img-6.webp"
@@ -109,8 +109,10 @@ function SMELedgerPage() {
 
         <h2>Why it matters</h2>
         <p>
-          Good record-keeping is the foundation of business growth. You can&apos;t improve what you
-          don&apos;t measure. The SME Ledger helps you see where money comes from and exactly how much stays as profit.
+          A GRA audit without proper records can cost far more than any subscription — in penalties,
+          back taxes, and accountant fees. Under Act 915, late filing alone carries a GHS 500
+          initial penalty plus GHS 10 per day. The SME Ledger keeps you compliant from day one,
+          so an audit is never a crisis.
         </p>
 
         <h2>Works best with</h2>

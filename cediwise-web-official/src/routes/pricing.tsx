@@ -127,6 +127,20 @@ function PricingPage() {
             </div>
           </motion.div>
 
+          {/* ROI Banner */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.15 }}
+            className="max-w-2xl mx-auto mb-12 text-center"
+          >
+            <div className="inline-flex flex-wrap items-center justify-center gap-x-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-6 py-4 text-sm text-zinc-300 leading-relaxed">
+              <span className="text-emerald-400 font-semibold">ROI check:</span>
+              Smart Budget costs GHS 180/year. Estimated PAYE recovery from common employer errors: GHS 1,800+/year.
+              That&apos;s a potential <span className="text-emerald-400 font-bold">10× return.</span>
+            </div>
+          </motion.div>
+
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {/* FREE TIER */}
             <motion.div 
@@ -168,6 +182,7 @@ function PricingPage() {
               <div className="flex-1">
                 <h3 className="text-2xl font-semibold text-white">Smart Budget</h3>
                 <p className="text-zinc-400 mt-2 text-sm">Budgeting • Debt • Recurring • Insights</p>
+                <p className="text-emerald-400/80 mt-1 text-xs italic">If you find one salary error, this pays for itself 10× over.</p>
                 
                 <div className="mt-8 flex items-baseline gap-1">
                   <span className="text-5xl font-bold text-white">
@@ -209,6 +224,7 @@ function PricingPage() {
               <div className="flex-1">
                 <h3 className="text-2xl font-semibold text-white">SME Ledger</h3>
                 <p className="text-zinc-400 mt-2 text-sm">Full business tools + everything above</p>
+                <p className="text-emerald-400/80 mt-1 text-xs italic">One GRA penalty costs more than 3 years of this tier.</p>
                 
                 <div className="mt-8 flex items-baseline gap-1">
                   <span className="text-5xl font-bold text-white">

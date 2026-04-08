@@ -1,5 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { supabase } from "./supabase";
+import type {
+  LifeStage,
+  IncomeFrequency,
+  SpendingStyle,
+  FinancialPriority,
+} from "@/types/budget";
 
 export type PersonalizationStrategy = "survival" | "balanced" | "aggressive";
 export type UtilitiesMode = "general" | "precise";
@@ -28,6 +34,13 @@ export type ProfileVitals = {
   needs_pct: number | null;
   wants_pct: number | null;
   savings_pct: number | null;
+
+  life_stage: LifeStage | null;
+  spending_style: SpendingStyle | null;
+  financial_priority: FinancialPriority | null;
+  income_frequency: IncomeFrequency;
+  dependents_count: number;
+  profile_version: number;
 };
 
 const STATUS_KEY_PREFIX = "@cediwise_personalization_status:";
@@ -210,6 +223,12 @@ export async function fetchProfileVitalsRemote(
         "needs_pct",
         "wants_pct",
         "savings_pct",
+        "life_stage",
+        "spending_style",
+        "financial_priority",
+        "income_frequency",
+        "dependents_count",
+        "profile_version",
       ].join(",")
     )
     .eq("id", userId)
@@ -268,5 +287,40 @@ export async function fetchProfileVitalsRemote(
       typeof (data as any).savings_pct === "number"
         ? (data as any).savings_pct
         : null,
+
+    life_stage:
+      (data as any).life_stage === "student" ||
+      (data as any).life_stage === "young_professional" ||
+      (data as any).life_stage === "family" ||
+      (data as any).life_stage === "retiree"
+        ? ((data as any).life_stage as LifeStage)
+        : null,
+    spending_style:
+      (data as any).spending_style === "conservative" ||
+      (data as any).spending_style === "moderate" ||
+      (data as any).spending_style === "liberal"
+        ? ((data as any).spending_style as SpendingStyle)
+        : null,
+    financial_priority:
+      (data as any).financial_priority === "debt_payoff" ||
+      (data as any).financial_priority === "savings_growth" ||
+      (data as any).financial_priority === "lifestyle" ||
+      (data as any).financial_priority === "balanced"
+        ? ((data as any).financial_priority as FinancialPriority)
+        : null,
+    income_frequency:
+      (data as any).income_frequency === "weekly" ||
+      (data as any).income_frequency === "bi_weekly" ||
+      (data as any).income_frequency === "monthly"
+        ? ((data as any).income_frequency as IncomeFrequency)
+        : "monthly",
+    dependents_count:
+      typeof (data as any).dependents_count === "number"
+        ? (data as any).dependents_count
+        : 0,
+    profile_version:
+      typeof (data as any).profile_version === "number"
+        ? (data as any).profile_version
+        : 0,
   };
 }

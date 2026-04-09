@@ -1,9 +1,13 @@
+import {
+  KEYBOARD_BEHAVIOR,
+  KEYBOARD_BLUR_BEHAVIOR,
+  KEYBOARD_INPUT_MODE
+} from "@gorhom/bottom-sheet";
 import { LinearGradient } from "expo-linear-gradient";
 import { BottomSheet, ScrollShadow, Separator } from "heroui-native";
 import { useEffect, useState } from "react";
-import { Dimensions, Keyboard, Platform, StyleSheet, Text, View } from "react-native";
-import { ScrollView } from 'react-native-gesture-handler';
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Keyboard, Platform, StyleSheet, Text, View } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
 
 type CustomBottomSheetProps = {
   title: string;
@@ -23,24 +27,15 @@ export function CustomBottomSheet({
   children,
 }: CustomBottomSheetProps) {
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-
-  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
-      (event) => {
-        setKeyboardVisible(true);
-        setKeyboardHeight(keyboard => Math.max(keyboard, event.endCoordinates.height));
-      }
+      () => setKeyboardVisible(true),
     );
     const hideSub = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
-      () => {
-        setKeyboardVisible(false);
-        setKeyboardHeight(0);
-      }
+      () => setKeyboardVisible(false),
     );
     return () => {
       showSub.remove();
@@ -49,10 +44,6 @@ export function CustomBottomSheet({
   }, []);
 
   const isControlled = controlledIsOpen !== undefined;
-
-  // Max height of the bottom sheet should be 80% of the screen height
-  const screenHeight = Dimensions.get("window").height;
-  const maxHeight = screenHeight * 0.8;
 
   return (
     <BottomSheet
@@ -68,12 +59,10 @@ export function CustomBottomSheet({
         <BottomSheet.Content
           detached={false}
           backgroundClassName="rounded-t-[50px] bg-[rgba(18,22,33,0.98)]"
-          //   containerClassName="max-h-[80%]"
-          // handleClassName="max-h-[80%]"
           contentContainerClassName={`flex-1 ${isKeyboardVisible ? 'h-full' : 'max-h-[700px]'}`}
-          style={[
-            isKeyboardVisible && { paddingBottom: Platform.OS === 'ios' ? 20 : 0 },
-          ]}
+          // keyboardBehavior={KEYBOARD_BEHAVIOR.interactive}
+          // keyboardBlurBehavior={KEYBOARD_BLUR_BEHAVIOR.restore}
+          // android_keyboardInputMode={KEYBOARD_INPUT_MODE.adjustResize}
           bottomInset={-20}
         >
           <View style={styles.header}>
@@ -92,6 +81,7 @@ export function CustomBottomSheet({
           <Separator />
           <ScrollShadow color="#121621" LinearGradientComponent={LinearGradient} className="flex-1">
             <ScrollView
+              keyboardShouldPersistTaps="handled"
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
             >

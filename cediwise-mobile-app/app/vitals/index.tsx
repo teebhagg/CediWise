@@ -1,16 +1,17 @@
 import {
   StepIncome,
-  StepPreferences,
-  StepSetupBudget,
+  StepPreview,
+  StepStyle,
 } from "@/components/features/vitals/Steps";
-import type { Draft, StepErrors } from "@/components/features/vitals/types";
+import type { BudgetPreview, Draft, StepErrors } from "@/components/features/vitals/types";
 import {
   computeIntelligentStrategy,
   getNetPreview,
-  strategyToPercents,
   toMoney,
   toMonthlySalary,
+  vitalsToInitialDraft,
 } from "@/components/features/vitals/utils";
+import { BUDGET_TEMPLATES } from "@/components/features/vitals/budgetTemplates";
 import { KeyboardAwareScrollView } from "@/components/KeyboardAwareScrollView";
 import { BackButton } from "@/components/BackButton";
 import { PrimaryButton } from "@/components/PrimaryButton";
@@ -61,6 +62,15 @@ import { Separator } from "heroui-native";
 const AnimatedView = Animated.createAnimatedComponent(View);
 const SETUP_LOGO = require("../../assets/images/logo/cediwise-transparent-emerald-logo.png");
 
+/** Default budget preview used when income is not yet entered. */
+const DEFAULT_PREVIEW: BudgetPreview = {
+  needsPct: 0.5,
+  wantsPct: 0.3,
+  savingsPct: 0.2,
+  netIncome: 0,
+  strategy: "balanced",
+};
+
 function makeDefaultDraft(): Draft {
   return {
     step: 0,
@@ -72,7 +82,11 @@ function makeDefaultDraft(): Draft {
     spendingStyle: null,
     financialPriority: null,
     interests: [],
-    strategyChoice: "balanced",
+    selectedTemplate: "smart",
+    recurringExpenses: [],
+    goalType: null,
+    goalAmount: "",
+    goalTimeline: "",
   };
 }
 
@@ -88,7 +102,15 @@ export default function VitalsWizard() {
   const noUser = !authLoading && !user?.id;
 
   const totalSteps = 3;
-  const [draft, setDraft] = useState<Draft>(makeDefaultDraft());
+  const vitals = useProfileVitalsStore((s) => s.vitals);
+
+  const [draft, setDraft] = useState<Draft>(() => {
+    if (editMode) {
+      const storedVitals = useProfileVitalsStore.getState().vitals;
+      if (storedVitals) return vitalsToInitialDraft(storedVitals);
+    }
+    return makeDefaultDraft();
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -101,7 +123,8 @@ export default function VitalsWizard() {
   const [showValidationHint, setShowValidationHint] = useState(false);
   const insets = useSafeAreaInsets();
 
-  const bottomBarHeight = 16 + 48 + 10 + Math.max(16, insets.bottom);
+  // Skip link is now in the top nav bar, so the bottom bar only holds the button row.
+  const bottomBarHeight = 16 + 52 + Math.max(16, insets.bottom);
 
   const progress = useSharedValue(0);
   const setupProgress = useSharedValue(0.1);
@@ -117,6 +140,14 @@ export default function VitalsWizard() {
     });
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }, [setupProgress]);
+
+  // Cold-start fallback: if the store wasn't populated when the component
+  // mounted (rare), hydrate the draft once vitals arrive.
+  useEffect(() => {
+    if (!editMode || !vitals || toMoney(draft.stableSalary) > 0) return;
+    setDraft(vitalsToInitialDraft(vitals));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editMode, vitals]);
 
   useEffect(() => {
     progress.value = withTiming((draft.step + 1) / totalSteps, {
@@ -150,24 +181,23 @@ export default function VitalsWizard() {
   const title = useMemo(() => {
     switch (draft.step) {
       case 0:
-        return "Income";
+        return "Your Money";
       case 1:
-        return "Setup Budget";
+        return "Your Style";
       case 2:
-        return "Preferences";
+        return "Your Budget";
       default:
         return editMode ? "Update your profile" : "Vitals";
     }
   }, [draft.step, editMode]);
 
+  // Per-step errors: only Screen 0 has required fields
   const stepErrors: StepErrors = useMemo(() => {
     const e: Record<string, string> = {};
     if (draft.step === 0) {
       if (toMoney(draft.stableSalary) <= 0) {
         e.stableSalary = "Enter your salary";
       }
-    }
-    if (draft.step === 1) {
       if (!Number.isFinite(draft.paydayDay) || draft.paydayDay < 1 || draft.paydayDay > 31) {
         e.paydayDay = "Select a payday between 1 and 31";
       }
@@ -175,6 +205,7 @@ export default function VitalsWizard() {
     return e;
   }, [draft]);
 
+  // Global finish errors (income + payday always required)
   const allStepsErrors: StepErrors = useMemo(() => {
     const e: Record<string, string> = {};
     if (toMoney(draft.stableSalary) <= 0) {
@@ -187,12 +218,68 @@ export default function VitalsWizard() {
   }, [draft]);
 
   const canContinue = Object.keys(stepErrors).length === 0;
-  const canFinish = draft.step === totalSteps - 1 && Object.keys(allStepsErrors).length === 0;
+  // On Screen 2 the Complete button is always available (income was validated on Screen 0)
+  const canFinish = draft.step === totalSteps - 1;
 
   const netPreview = useMemo(
     () => getNetPreview(draft.stableSalary, draft.incomeFrequency),
     [draft.stableSalary, draft.incomeFrequency],
   );
+
+  /** Computed budget preview — recomputes live as inputs or template selection change. */
+  const budgetPreview = useMemo((): BudgetPreview => {
+    const rawSalary = toMoney(draft.stableSalary);
+    if (rawSalary <= 0) return DEFAULT_PREVIEW;
+    const stableSalary = toMonthlySalary(rawSalary, draft.incomeFrequency);
+    // Only "needs"-bucket expenses count as fixed costs in the strategy engine
+    const needsTotal = draft.recurringExpenses
+      .filter((e) => e.bucket === "needs")
+      .reduce((sum, e) => sum + toMoney(e.amount), 0);
+    const result = computeIntelligentStrategy({
+      stableSalary,
+      autoTax: draft.autoTax,
+      sideIncome: 0,
+      rent: 0,
+      titheRemittance: 0,
+      debtObligations: 0,
+      utilitiesTotal: needsTotal,
+      lifeStage: draft.lifeStage,
+      dependentsCount: 0,
+      incomeFrequency: draft.incomeFrequency,
+      spendingStyle: draft.spendingStyle,
+      financialPriority: draft.financialPriority,
+    });
+
+    // If the user picked a named template, override the computed percentages
+    // but keep the real net income so GHS amounts remain accurate.
+    const tmpl = BUDGET_TEMPLATES[draft.selectedTemplate];
+    if (tmpl.needsPct !== null) {
+      return {
+        needsPct: tmpl.needsPct,
+        wantsPct: tmpl.wantsPct!,
+        savingsPct: tmpl.savingsPct!,
+        netIncome: result.netIncome,
+        strategy: tmpl.strategyKey,
+      };
+    }
+
+    return {
+      needsPct: result.needsPct,
+      wantsPct: result.wantsPct,
+      savingsPct: result.savingsPct,
+      netIncome: result.netIncome,
+      strategy: result.strategy,
+    };
+  }, [
+    draft.stableSalary,
+    draft.incomeFrequency,
+    draft.autoTax,
+    draft.lifeStage,
+    draft.spendingStyle,
+    draft.financialPriority,
+    draft.recurringExpenses,
+    draft.selectedTemplate,
+  ]);
 
   const animateStepChange = useCallback(
     (nextStep: number, dir: "forward" | "back") => {
@@ -259,7 +346,6 @@ export default function VitalsWizard() {
     setDraft((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  // Animate back button visibility when step changes
   useEffect(() => {
     const showBack = editMode || draft.step > 0;
     backBtnVisible.value = withTiming(showBack ? 1 : 0, {
@@ -331,204 +417,214 @@ export default function VitalsWizard() {
     animateStepChange(nextStep, "back");
   }, [animateStepChange, draft.step, editMode, exitWizard, updateDraft]);
 
-  const handleFinish = useCallback(async () => {
-    Keyboard.dismiss();
-    if (!user?.id) return;
-    if (Object.keys(allStepsErrors).length > 0) {
-      setShowValidationHint(true);
-      scrollViewRef.current?.scrollTo({ y: 120, animated: true });
-      try {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-      } catch {
-        // ignore
-      }
-      return;
-    }
-
-    setError(null);
-    setLoading(true);
-
-    try {
-      const rawSalary = toMoney(draft.stableSalary);
-      const stableSalary = toMonthlySalary(rawSalary, draft.incomeFrequency);
-      const computedIntelligent = computeIntelligentStrategy({
-        stableSalary,
-        autoTax: draft.autoTax,
-        sideIncome: 0,
-        rent: 0,
-        titheRemittance: 0,
-        debtObligations: 0,
-        utilitiesTotal: 0,
-        lifeStage: draft.lifeStage,
-        dependentsCount: 0,
-        incomeFrequency: draft.incomeFrequency,
-        spendingStyle: draft.spendingStyle,
-        financialPriority: draft.financialPriority,
-      });
-
-      const userOverride =
-        draft.strategyChoice === "survival" || draft.strategyChoice === "aggressive";
-      const computed = userOverride
-        ? {
-            ...computedIntelligent,
-            strategy: draft.strategyChoice,
-            ...strategyToPercents(draft.strategyChoice),
-          }
-        : {
-            ...computedIntelligent,
-            strategy: computedIntelligent.strategy,
-            needsPct: computedIntelligent.needsPct,
-            wantsPct: computedIntelligent.wantsPct,
-            savingsPct: computedIntelligent.savingsPct,
-          };
-
-      const createdAt = new Date().toISOString();
-
-      const payload = {
-        id: user.id,
-        setup_completed: true,
-        payday_day: draft.paydayDay,
-        interests: draft.interests,
-        stable_salary: stableSalary,
-        auto_tax: draft.autoTax,
-        side_income: 0,
-        rent: 0,
-        tithe_remittance: 0,
-        debt_obligations: 0,
-        utilities_mode: "general",
-        utilities_total: 0,
-        utilities_ecg: 0,
-        utilities_water: 0,
-        primary_goal: null,
-        strategy: computed.strategy,
-        needs_pct: computed.needsPct,
-        wants_pct: computed.wantsPct,
-        savings_pct: computed.savingsPct,
-        life_stage: draft.lifeStage ?? null,
-        dependents_count: 0,
-        income_frequency: draft.incomeFrequency,
-        spending_style: draft.spendingStyle ?? null,
-        financial_priority: draft.financialPriority ?? null,
-        profile_version: 1,
-      };
-
-      const queued = await enqueueMutation(user.id, {
-        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-        userId: user.id,
-        createdAt,
-        kind: "upsert_profile",
-        payload,
-      });
-
-      const online = await isOnline();
-      if (online) {
-        void trySyncProfileWithRetries(user.id, queued).then((syncResult) => {
-          if (!syncResult.ok) {
-            log.error("[Vitals] Background profile sync failed", { syncResult });
-          }
-        });
+  /** Shared finish logic. When `includeExtras` is false, recurring expenses and goal are not persisted. */
+  const doFinish = useCallback(
+    async (includeExtras: boolean) => {
+      Keyboard.dismiss();
+      if (!user?.id) return;
+      if (Object.keys(allStepsErrors).length > 0) {
+        setShowValidationHint(true);
+        scrollViewRef.current?.scrollTo({ y: 120, animated: true });
+        try {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        } catch {
+          // ignore
+        }
+        return;
       }
 
-      await writePersonalizationStatusCache(user.id, true);
-      await writeProfileVitalsCache(user.id, {
-        setup_completed: true,
-        payday_day: draft.paydayDay,
-        interests: draft.interests,
-        stable_salary: stableSalary,
-        auto_tax: draft.autoTax,
-        side_income: 0,
-        rent: 0,
-        tithe_remittance: 0,
-        debt_obligations: 0,
-        utilities_mode: "general",
-        utilities_total: 0,
-        utilities_ecg: 0,
-        utilities_water: 0,
-        primary_goal: null,
-        strategy: computed.strategy,
-        needs_pct: computed.needsPct,
-        wants_pct: computed.wantsPct,
-        savings_pct: computed.savingsPct,
-        life_stage: draft.lifeStage ?? null,
-        spending_style: draft.spendingStyle ?? null,
-        financial_priority: draft.financialPriority ?? null,
-        income_frequency: draft.incomeFrequency,
-        dependents_count: 0,
-        profile_version: 1,
-      });
-
-      // Refresh Zustand stores so budget/home screens show updated vitals
-      void usePersonalizationStore.getState().refresh();
-      void useProfileVitalsStore.getState().refresh();
-
-      const existingPrimaryIncome = budget.state?.incomeSources?.find(
-        (source) => source.type === "primary",
-      );
-      if (existingPrimaryIncome) {
-        await budget.updateIncomeSource(existingPrimaryIncome.id, {
-          name: existingPrimaryIncome.name || "Primary income",
-          type: "primary",
-          amount: stableSalary,
-          applyDeductions: draft.autoTax,
-        });
-      } else {
-        await budget.addIncomeSource({
-          name: "Primary income",
-          type: "primary",
-          amount: stableSalary,
-          applyDeductions: draft.autoTax,
-        });
-      }
-
-      // Create the first cycle from vitals inputs, but keep categories explicit/manual.
-      await budget.setupBudget({
-        paydayDay: draft.paydayDay,
-        needsPct: computed.needsPct,
-        wantsPct: computed.wantsPct,
-        savingsPct: computed.savingsPct,
-        interests: draft.interests,
-        seedCategories: false,
-        lifeStage: draft.lifeStage ?? null,
-      });
+      setError(null);
+      setLoading(true);
 
       try {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      } catch {
-        // ignore
-      }
+        const rawSalary = toMoney(draft.stableSalary);
+        const stableSalary = toMonthlySalary(rawSalary, draft.incomeFrequency);
 
-      analytics.onboardingEssentialCompleted({ userId: user.id });
-      const [seenHomeTour, seenBudgetTour, seenLearnTour] = await Promise.all([
-        readTourSeen(user.id, "home"),
-        readTourSeen(user.id, "budget"),
-        readTourSeen(user.id, "learn"),
-      ]);
-      analytics.vitalsCompleteAfterTour({
-        userId: user.id,
-        seenHomeTour,
-        seenBudgetTour,
-        seenLearnTour,
-      });
+        // "needs" bucket → fixed costs that influence the strategy engine
+        const rent = 0;
+        const utilitiesTotal = includeExtras
+          ? draft.recurringExpenses
+              .filter((e) => e.bucket === "needs")
+              .reduce((sum, e) => sum + toMoney(e.amount), 0)
+          : 0;
+        const primaryGoal = includeExtras ? (draft.goalType ?? null) : null;
 
-      await completeSetupProgress();
-      router.replace("/(tabs)/budget");
-    } catch (e) {
-      const offline = !(await isOnline());
-      const message = offline
-        ? "You are offline. Your profile changes are queued and will sync later."
-        : e instanceof Error
-          ? e.message
-          : "Something went wrong";
-      setError(message);
-      try {
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      } catch {
-        // ignore
+        const computed = computeIntelligentStrategy({
+          stableSalary,
+          autoTax: draft.autoTax,
+          sideIncome: 0,
+          rent,
+          titheRemittance: 0,
+          debtObligations: 0,
+          utilitiesTotal,
+          lifeStage: draft.lifeStage,
+          dependentsCount: 0,
+          incomeFrequency: draft.incomeFrequency,
+          spendingStyle: draft.spendingStyle,
+          financialPriority: draft.financialPriority,
+        });
+
+        // Resolve final percentages — named template overrides the engine output
+        const tmpl = BUDGET_TEMPLATES[draft.selectedTemplate];
+        const finalNeedsPct  = tmpl.needsPct  ?? computed.needsPct;
+        const finalWantsPct  = tmpl.wantsPct  ?? computed.wantsPct;
+        const finalSavingsPct = tmpl.savingsPct ?? computed.savingsPct;
+        const finalStrategy  = tmpl.strategyForDb ?? computed.strategy;
+
+        const createdAt = new Date().toISOString();
+
+        const payload = {
+          id: user.id,
+          setup_completed: true,
+          payday_day: draft.paydayDay,
+          interests: draft.interests,
+          stable_salary: stableSalary,
+          auto_tax: draft.autoTax,
+          side_income: 0,
+          rent,
+          tithe_remittance: 0,
+          debt_obligations: 0,
+          utilities_mode: "general",
+          utilities_total: utilitiesTotal,
+          utilities_ecg: 0,
+          utilities_water: 0,
+          primary_goal: primaryGoal,
+          strategy: finalStrategy,
+          needs_pct: finalNeedsPct,
+          wants_pct: finalWantsPct,
+          savings_pct: finalSavingsPct,
+          life_stage: draft.lifeStage ?? null,
+          dependents_count: 0,
+          income_frequency: draft.incomeFrequency,
+          spending_style: draft.spendingStyle ?? null,
+          financial_priority: draft.financialPriority ?? null,
+          profile_version: 1,
+        };
+
+        const queued = await enqueueMutation(user.id, {
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          userId: user.id,
+          createdAt,
+          kind: "upsert_profile",
+          payload,
+        });
+
+        const online = await isOnline();
+        if (online) {
+          void trySyncProfileWithRetries(user.id, queued).then((syncResult) => {
+            if (!syncResult.ok) {
+              log.error("[Vitals] Background profile sync failed", { syncResult });
+            }
+          });
+        }
+
+        await writePersonalizationStatusCache(user.id, true);
+        await writeProfileVitalsCache(user.id, {
+          setup_completed: true,
+          payday_day: draft.paydayDay,
+          interests: draft.interests,
+          stable_salary: stableSalary,
+          auto_tax: draft.autoTax,
+          side_income: 0,
+          rent,
+          tithe_remittance: 0,
+          debt_obligations: 0,
+          utilities_mode: "general",
+          utilities_total: utilitiesTotal,
+          utilities_ecg: 0,
+          utilities_water: 0,
+          primary_goal: primaryGoal,
+          strategy: finalStrategy,
+          needs_pct: finalNeedsPct,
+          wants_pct: finalWantsPct,
+          savings_pct: finalSavingsPct,
+          life_stage: draft.lifeStage ?? null,
+          spending_style: draft.spendingStyle ?? null,
+          financial_priority: draft.financialPriority ?? null,
+          income_frequency: draft.incomeFrequency,
+          dependents_count: 0,
+          profile_version: 1,
+        });
+
+        void usePersonalizationStore.getState().refresh();
+        void useProfileVitalsStore.getState().refresh();
+
+        const existingPrimaryIncome = budget.state?.incomeSources?.find(
+          (source) => source.type === "primary",
+        );
+        if (existingPrimaryIncome) {
+          await budget.updateIncomeSource(existingPrimaryIncome.id, {
+            name: existingPrimaryIncome.name || "Primary income",
+            type: "primary",
+            amount: stableSalary,
+            applyDeductions: draft.autoTax,
+          });
+        } else {
+          await budget.addIncomeSource({
+            name: "Primary income",
+            type: "primary",
+            amount: stableSalary,
+            applyDeductions: draft.autoTax,
+          });
+        }
+
+        await budget.setupBudget({
+          paydayDay: draft.paydayDay,
+          needsPct: finalNeedsPct,
+          wantsPct: finalWantsPct,
+          savingsPct: finalSavingsPct,
+          interests: draft.interests,
+          seedCategories: false,
+          lifeStage: draft.lifeStage ?? null,
+        });
+
+        try {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } catch {
+          // ignore
+        }
+
+        analytics.onboardingEssentialCompleted({ userId: user.id });
+        const [seenHomeTour, seenBudgetTour, seenLearnTour] = await Promise.all([
+          readTourSeen(user.id, "home"),
+          readTourSeen(user.id, "budget"),
+          readTourSeen(user.id, "learn"),
+        ]);
+        analytics.vitalsCompleteAfterTour({
+          userId: user.id,
+          seenHomeTour,
+          seenBudgetTour,
+          seenLearnTour,
+        });
+
+        await completeSetupProgress();
+        if (editMode) {
+          router.back();
+        } else {
+          router.replace("/(tabs)/budget");
+        }
+      } catch (e) {
+        const offline = !(await isOnline());
+        const message = offline
+          ? "You are offline. Your profile changes are queued and will sync later."
+          : e instanceof Error
+            ? e.message
+            : "Something went wrong";
+        setError(message);
+        try {
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        } catch {
+          // ignore
+        }
+      } finally {
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
-    }
-  }, [allStepsErrors, budget, completeSetupProgress, draft, user?.id]);
+    },
+    [allStepsErrors, budget, completeSetupProgress, draft, user?.id],
+  );
+
+  const handleFinish = useCallback(() => doFinish(true), [doFinish]);
+  const handleSkipFinish = useCallback(() => doFinish(false), [doFinish]);
 
   const currentStepNode = () => {
     if (draft.step === 0) {
@@ -544,18 +640,18 @@ export default function VitalsWizard() {
     }
     if (draft.step === 1) {
       return (
-        <StepSetupBudget
+        <StepStyle
           draft={draft}
-          errors={stepErrors}
+          toggleInterest={toggleInterest}
           updateDraft={updateDraft}
         />
       );
     }
     return (
-      <StepPreferences
+      <StepPreview
         draft={draft}
-        toggleInterest={toggleInterest}
         updateDraft={updateDraft}
+        preview={budgetPreview}
       />
     );
   };
@@ -576,22 +672,42 @@ export default function VitalsWizard() {
     }
     if (s === 1) {
       return (
-        <StepSetupBudget
+        <StepStyle
           draft={draft}
-          errors={stepErrors}
+          toggleInterest={toggleInterest}
           updateDraft={updateDraft}
         />
       );
     }
     return (
-      <StepPreferences
+      <StepPreview
         draft={draft}
-        toggleInterest={toggleInterest}
         updateDraft={updateDraft}
+        preview={budgetPreview}
       />
     );
   };
 
+  // ─── Skip link text / action per step ──────────────────────────────────────
+  const skipLabel = useMemo(() => {
+    if (draft.step === 0) return "I'll set this up later";
+    if (draft.step === 1) return "Skip for now";
+    return "Skip for now";
+  }, [draft.step]);
+
+  const handleSkip = useCallback(() => {
+    if (draft.step === 0) {
+      exitWizard();
+    } else if (draft.step === 1) {
+      // Advance to preview screen without personalization
+      goNext();
+    } else {
+      // Screen 3: complete without recurring expenses / goal
+      handleSkipFinish();
+    }
+  }, [draft.step, exitWizard, goNext, handleSkipFinish]);
+
+  // ─── No user ────────────────────────────────────────────────────────────────
   if (noUser) {
     return (
       <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: "#000000" }}>
@@ -620,6 +736,7 @@ export default function VitalsWizard() {
     );
   }
 
+  // ─── Loading overlay ────────────────────────────────────────────────────────
   if (loading) {
     return (
       <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: "#000000" }}>
@@ -668,17 +785,38 @@ export default function VitalsWizard() {
     );
   }
 
+  // ─── Main wizard ─────────────────────────────────────────────────────────────
   return (
     <SafeAreaView edges={["top"]} style={{ flex: 1, backgroundColor: "#000000" }}>
       <View
-          style={{
-            height: 44,
-            paddingHorizontal: 12,
-            justifyContent: "center",
-            alignItems: "flex-start",
-          }}>
+        style={{
+          height: 44,
+          paddingHorizontal: 12,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}>
+        <View style={{ width: 64 }}>
           {editMode && <BackButton onPress={goBack} />}
         </View>
+
+        <Pressable
+          onPress={handleSkip}
+          hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
+          style={({ pressed }) => ({ opacity: pressed ? 0.6 : 1 })}>
+          <Text
+            style={{
+              color: "#64748B",
+              fontFamily: "Figtree-Regular",
+              fontSize: 13,
+              textDecorationLine: "underline",
+            }}>
+            {skipLabel}
+          </Text>
+        </Pressable>
+      </View>
+
+      {/* Progress bar */}
       <View style={{ height: 3, backgroundColor: "rgba(16,185,129,0.18)" }}>
         <AnimatedView
           style={[
@@ -693,6 +831,7 @@ export default function VitalsWizard() {
       </View>
 
       <View style={{ flex: 1 }}>
+        {/* Step header */}
         <View
           style={{
             flexDirection: "row",
@@ -724,22 +863,17 @@ export default function VitalsWizard() {
               {title}
             </Text>
           </View>
-          {/* Skip intentionally disabled for now. */}
-          {/*
-          <Button variant="outline" size="sm">
-            <Text>Skip</Text>
-          </Button>
-          */}
         </View>
 
         <Separator className="mt-4 mx-4" />
 
+        {/* Scrollable step content */}
         <KeyboardAwareScrollView
           ref={scrollViewRef}
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: bottomBarHeight }}
           className="px-5 py-4">
-          {showValidationHint && (draft.step === totalSteps - 1 ? !canFinish : !canContinue) ? (
+          {showValidationHint && !canContinue ? (
             <Text
               style={{
                 color: "#FCA5A5",
@@ -787,13 +921,13 @@ export default function VitalsWizard() {
           </Animated.View>
         </KeyboardAwareScrollView>
 
+        {/* Bottom action bar */}
         <View
           style={{
             flexShrink: 0,
             paddingHorizontal: 16,
             paddingTop: 16,
             paddingBottom: Math.max(16, insets.bottom),
-            gap: 10,
             backgroundColor: "#000000",
             borderTopWidth: 1,
             borderTopColor: "rgba(255,255,255,0.06)",
@@ -813,38 +947,19 @@ export default function VitalsWizard() {
                   flex: 1,
                   opacity: canContinue ? 1 : 0.5,
                 }}>
-                Next
+                Continue
               </PrimaryButton>
             ) : (
               <PrimaryButton
                 onPress={handleFinish}
                 loading={loading}
-                disabled={loading || !canFinish}
-                style={{ flex: 1, opacity: canFinish ? 1 : 0.5 }}>
-                {loading ? "Saving…" : editMode ? "Save changes" : "Finish"}
+                disabled={loading}
+                style={{ flex: 1 }}>
+                {loading ? "Saving…" : editMode ? "Save changes" : "Complete"}
               </PrimaryButton>
             )}
           </View>
 
-          {!editMode && (
-          <Pressable
-            onPress={exitWizard}
-            style={{
-              alignSelf: "center",
-              paddingVertical: 10,
-              paddingHorizontal: 16,
-            }}>
-            <Text
-              style={{
-                color: "#64748B",
-                fontFamily: "Figtree-Regular",
-                fontSize: 12,
-                textDecorationLine: "underline",
-              }}>
-              I'll do this later
-            </Text>
-          </Pressable>
-          )}
         </View>
       </View>
     </SafeAreaView>

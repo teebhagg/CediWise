@@ -52,3 +52,5 @@ builds/
 *.sql
 
 .docs
+.env.local
+cediwise_service_account.json

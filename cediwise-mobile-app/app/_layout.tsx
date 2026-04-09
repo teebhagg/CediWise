@@ -29,6 +29,7 @@ import {
 } from "../contexts/TourContext";
 import { useAuthRefresh } from "../hooks/useAuthRefresh";
 import { useBudget } from "../hooks/useBudget";
+import { useBudgetPreferenceBootstrap } from "../hooks/useBudgetPreferenceBootstrap";
 import { usePersonalizationStore } from "../stores/personalizationStore";
 import { useProfileVitalsStore } from "../stores/profileVitalsStore";
 import { useSMELedgerStore } from "../stores/smeLedgerStore";
@@ -70,6 +71,7 @@ SplashScreen.preventAutoHideAsync();
 function AppShell() {
   const { user } = useAuth();
   const { hydrateFromRemote } = useBudget(user?.id);
+  useBudgetPreferenceBootstrap(user?.id);
 
   useEffect(() => {
     void initNotificationSystem(user?.id ?? null);

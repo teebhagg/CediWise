@@ -40,6 +40,12 @@ import {
   getSpendingInsights,
   type SpendingInsight,
 } from "../../../utils/spendingPatterns";
+import {
+  isBudgetPreferenceMigrationSkipped,
+  setBudgetPreferenceMigrationSkipped,
+} from "../../../utils/budgetPreferenceMigrationStorage";
+import { resolveBudgetPreferenceMigrationPrompt } from "../../../utils/budgetPreferenceMigrationPromptCore";
+import type { BudgetPreferenceMigrationPromptPayload } from "../../../utils/budgetPreferenceTypes";
 import { DEFAULT_MIN_LIVING_BUFFER } from "../vitals/utils";
 
 export function useBudgetScreenState() {
@@ -202,6 +208,9 @@ export function useBudgetScreenState() {
     deficitAmount: number;
   } | null>(null);
 
+  const [budgetPreferenceMigration, setBudgetPreferenceMigration] =
+    useState<BudgetPreferenceMigrationPromptPayload | null>(null);
+
   useEffect(() => {
     if (!user?.id) return;
     if (didVitalsRefreshRef.current) return;
@@ -300,6 +309,40 @@ export function useBudgetScreenState() {
   // ─── Active Cycle: Check if the cycle has ended: "endDate + "T23:59:59" means 11:59:59 PM of the end date" ─────────────────────────────────────
   const cycleHasEnded =
     !!activeCycle && new Date() > new Date(activeCycle.endDate + "T23:59:59");
+
+  /** Preference vs cycle mismatch → migration prompt (auto first-cycle setup runs in useBudgetPreferenceBootstrap). */
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      const payload = await resolveBudgetPreferenceMigrationPrompt({
+        userId: user?.id,
+        budgetLoading: isLoading,
+        profileLoading: profileVitals.isLoading,
+        vitals: profileVitals.vitals,
+        pendingCount,
+        cycles: state?.cycles ?? [],
+        modalAlreadyOpen: !!budgetPreferenceMigration,
+        isCancelled: () => cancelled,
+        isMigrationSkipped: isBudgetPreferenceMigrationSkipped,
+      });
+      if (!cancelled && payload) {
+        setBudgetPreferenceMigration(payload);
+      }
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    user?.id,
+    isLoading,
+    profileVitals.isLoading,
+    profileVitals.vitals,
+    pendingCount,
+    state?.cycles,
+    budgetPreferenceMigration,
+  ]);
 
   const vitalsSummary = useMemo(() => {
     const v = profileVitals.vitals;
@@ -886,6 +929,37 @@ export function useBudgetScreenState() {
     setPendingAddDebtFromDeficit(null);
   }, []);
 
+  const handleConfirmBudgetPreferenceMigration = useCallback(async () => {
+    if (!user?.id || !budgetPreferenceMigration) return;
+    const { cycleId, suggested } = budgetPreferenceMigration;
+    try {
+      const nextState = await updateCycleAllocation(cycleId, suggested);
+      await recalculateBudget(nextState ?? undefined);
+      await syncNow();
+      await reload();
+      setBudgetPreferenceMigration(null);
+    } catch (e) {
+      console.error("[Budget] Preference migration update failed", e);
+    }
+  }, [
+    user?.id,
+    budgetPreferenceMigration,
+    updateCycleAllocation,
+    recalculateBudget,
+    syncNow,
+    reload,
+  ]);
+
+  const handleDismissBudgetPreferenceMigration = useCallback(async () => {
+    if (user?.id && budgetPreferenceMigration?.cycleId) {
+      await setBudgetPreferenceMigrationSkipped(
+        user.id,
+        budgetPreferenceMigration.cycleId,
+      );
+    }
+    setBudgetPreferenceMigration(null);
+  }, [user?.id, budgetPreferenceMigration?.cycleId]);
+
   return {
     router,
     user,
@@ -1015,6 +1089,9 @@ export function useBudgetScreenState() {
       showAddDebtFromDeficitModal: !!pendingAddDebtFromDeficit,
       handleAddDebtFromDeficitSubmit,
       handleCloseAddDebtFromDeficit,
+      budgetPreferenceMigration,
+      handleConfirmBudgetPreferenceMigration,
+      handleDismissBudgetPreferenceMigration,
     },
   };
 }

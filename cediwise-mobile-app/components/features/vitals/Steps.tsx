@@ -914,6 +914,10 @@ function TemplateCard({
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ selected: isSelected }}
+      accessibilityLabel={`${template.name} budget template`}
+      accessibilityHint={isRecommended ? "Recommended for your profile" : undefined}
       style={({ pressed }) => ({
         width: 150,
         borderRadius: 16,

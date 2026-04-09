@@ -16,6 +16,7 @@ import { BudgetQuickActions } from "@/components/features/budget/BudgetQuickActi
 import { BudgetReallocationBanner } from "@/components/features/budget/BudgetReallocationBanner";
 import { BudgetSetupCycleCard } from "@/components/features/budget/BudgetSetupCycleCard";
 import { BudgetToolsCard } from "@/components/features/budget/BudgetToolsCard";
+import { MigrationPrompt } from "@/components/features/budget/MigrationPrompt";
 import { StartNewCycleCard } from "@/components/features/budget/StartNewCycleCard";
 import { useBudgetScreenState } from "@/components/features/budget/useBudgetScreenState";
 import { useTierContext } from "@/contexts/TierContext";
@@ -647,6 +648,20 @@ export default function BudgetScreen() {
         onClose={() => ui.setPendingRollover(null)}
         onConfirm={modals.handleRolloverConfirm}
       />
+
+      {modals.budgetPreferenceMigration ? (
+        <MigrationPrompt
+          visible
+          lifeStagePhrase={modals.budgetPreferenceMigration.lifeStagePhrase}
+          financialPriorityPhrase={
+            modals.budgetPreferenceMigration.financialPriorityPhrase
+          }
+          currentAllocations={modals.budgetPreferenceMigration.current}
+          suggestedAllocations={modals.budgetPreferenceMigration.suggested}
+          onConfirm={modals.handleConfirmBudgetPreferenceMigration}
+          onCancel={modals.handleDismissBudgetPreferenceMigration}
+        />
+      ) : null}
     </View>
   );
 }

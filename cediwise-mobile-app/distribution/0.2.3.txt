@@ -1,0 +1,3 @@
+• Life stage, spending style, priority, pay frequency & dependents now save and load from your profile; profile_version included.
+• Three steps—income & payday, your style, live budget preview—confirm your split before you finish.
+• First cycle can spin up from saved preferences when you have none; prompt to refresh Needs/Wants/Savings if profile and cycle diverge (keep or apply).

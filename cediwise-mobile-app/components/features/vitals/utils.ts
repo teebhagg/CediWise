@@ -3,9 +3,10 @@ import {
   computeGhanaTax2026Monthly,
   type GhanaTaxBreakdown,
 } from "@/utils/ghanaTax";
-import type { PersonalizationStrategy } from "@/utils/profileVitals";
+import type { PersonalizationStrategy, ProfileVitals } from "@/utils/profileVitals";
 
-import type { IncomeFrequency } from "./types";
+import { BUDGET_TEMPLATE_LIST } from "./budgetTemplates";
+import type { BudgetTemplateKey, Draft, IncomeFrequency } from "./types";
 
 export const DEFAULT_MIN_LIVING_BUFFER = 600;
 
@@ -200,4 +201,56 @@ export function getNetPreview(
   if (amount <= 0) return null;
   const monthly = toMonthlySalary(amount, incomeFrequency);
   return computeGhanaTax2026Monthly(monthly);
+}
+
+/**
+ * Infer the closest named budget template from stored percentage values.
+ * Returns "smart" if no named template matches within a 0.1% tolerance.
+ */
+export function inferTemplateFromPercentages(
+  needsPct: number | null,
+  wantsPct: number | null,
+  savingsPct: number | null,
+): BudgetTemplateKey {
+  if (needsPct == null || wantsPct == null || savingsPct == null) return "smart";
+  for (const tmpl of BUDGET_TEMPLATE_LIST) {
+    if (tmpl.needsPct == null) continue; // skip "smart"
+    if (
+      Math.abs(tmpl.needsPct - needsPct) < 0.001 &&
+      Math.abs(tmpl.wantsPct! - wantsPct) < 0.001 &&
+      Math.abs(tmpl.savingsPct! - savingsPct) < 0.001
+    ) {
+      return tmpl.key;
+    }
+  }
+  return "smart";
+}
+
+/**
+ * Map a stored ProfileVitals record back to an editable Draft for the wizard.
+ * stable_salary is used directly (it is stored as a monthly figure).
+ * recurringExpenses and goal financials cannot be recovered from the profile
+ * and are initialised empty.
+ */
+export function vitalsToInitialDraft(vitals: ProfileVitals): Draft {
+  return {
+    step: 0,
+    stableSalary: vitals.stable_salary > 0 ? String(vitals.stable_salary) : "",
+    autoTax: vitals.auto_tax,
+    paydayDay: vitals.payday_day ?? 1,
+    incomeFrequency: vitals.income_frequency,
+    lifeStage: vitals.life_stage ?? null,
+    spendingStyle: vitals.spending_style ?? null,
+    financialPriority: vitals.financial_priority ?? null,
+    interests: vitals.interests ?? [],
+    selectedTemplate: inferTemplateFromPercentages(
+      vitals.needs_pct,
+      vitals.wants_pct,
+      vitals.savings_pct,
+    ),
+    recurringExpenses: [],
+    goalType: vitals.primary_goal ?? null,
+    goalAmount: "",
+    goalTimeline: "",
+  };
 }

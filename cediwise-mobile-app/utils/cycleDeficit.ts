@@ -30,19 +30,24 @@ export function computeCycleDeficit(params: {
   cycleId: string;
   transactions: BudgetTransaction[];
   monthlyNetIncome: number;
+  /** When set, overspend is measured against this (e.g. disposable after recurring). */
+  budgetBaseline?: number;
 }): CycleDeficitResult | null {
-  const { cycleId, transactions, monthlyNetIncome } = params;
+  const { cycleId, transactions, monthlyNetIncome, budgetBaseline } = params;
   if (monthlyNetIncome <= 0) return null;
+
+  const baseline = budgetBaseline ?? monthlyNetIncome;
+  if (baseline <= 0) return null;
 
   const totalSpent = transactions
     .filter((t) => t.cycleId === cycleId)
     .reduce((sum, t) => sum + t.amount, 0);
 
-  if (totalSpent <= monthlyNetIncome) return null;
+  if (totalSpent <= baseline) return null;
 
   return {
     cycleId,
-    deficitAmount: totalSpent - monthlyNetIncome,
+    deficitAmount: totalSpent - baseline,
     totalSpent,
     monthlyNetIncome,
   };
@@ -53,7 +58,7 @@ function deficitResolutionsKey(userId: string): string {
 }
 
 export async function getDeficitResolutions(
-  userId: string
+  userId: string,
 ): Promise<CycleDeficitResolution[]> {
   try {
     const raw = await AsyncStorage.getItem(deficitResolutionsKey(userId));
@@ -67,7 +72,7 @@ export async function getDeficitResolutions(
 
 export async function getResolutionForCycle(
   userId: string,
-  cycleId: string
+  cycleId: string,
 ): Promise<CycleDeficitResolution | null> {
   const all = await getDeficitResolutions(userId);
   return all.find((r) => r.cycleId === cycleId) ?? null;
@@ -75,7 +80,7 @@ export async function getResolutionForCycle(
 
 export async function saveDeficitResolution(
   userId: string,
-  resolution: Omit<CycleDeficitResolution, "resolvedAt">
+  resolution: Omit<CycleDeficitResolution, "resolvedAt">,
 ): Promise<void> {
   const full: CycleDeficitResolution = {
     ...resolution,
@@ -85,6 +90,6 @@ export async function saveDeficitResolution(
   const filtered = all.filter((r) => r.cycleId !== resolution.cycleId);
   await AsyncStorage.setItem(
     deficitResolutionsKey(userId),
-    JSON.stringify([...filtered, full])
+    JSON.stringify([...filtered, full]),
   );
 }

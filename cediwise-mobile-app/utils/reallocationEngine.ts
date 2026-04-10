@@ -32,11 +32,17 @@ export type ReallocationSuggestion = {
 export function analyzeAndSuggestReallocation(
   cycle: BudgetCycle,
   transactions: BudgetTransaction[],
-  monthlyNetIncome: number
+  monthlyNetIncome: number,
+  bucketLimitBase?: number,
 ): ReallocationSuggestion {
   if (monthlyNetIncome <= 0) {
     return { shouldReallocate: false };
   }
+
+  const limitBase =
+    bucketLimitBase != null && bucketLimitBase >= 0
+      ? bucketLimitBase
+      : monthlyNetIncome;
 
   // Calculate actual spending by bucket
   const spentByBucket: Record<BudgetBucket, number> = {
@@ -49,11 +55,11 @@ export function analyzeAndSuggestReallocation(
     spentByBucket[tx.bucket] += tx.amount;
   }
 
-  // Calculate limits by bucket
+  // Calculate limits by bucket (percent of disposable-style base when provided)
   const limitsByBucket: Record<BudgetBucket, number> = {
-    needs: monthlyNetIncome * cycle.needsPct,
-    wants: monthlyNetIncome * cycle.wantsPct,
-    savings: monthlyNetIncome * cycle.savingsPct,
+    needs: limitBase * cycle.needsPct,
+    wants: limitBase * cycle.wantsPct,
+    savings: limitBase * cycle.savingsPct,
   };
 
   // Calculate over/underspending
@@ -109,7 +115,7 @@ export function analyzeAndSuggestReallocation(
   const needsUnderspent = underspentBuckets.find((b) => b.bucket === "needs");
   const wantsUnderspent = underspentBuckets.find((b) => b.bucket === "wants");
   const savingsUnderspent = underspentBuckets.find(
-    (b) => b.bucket === "savings"
+    (b) => b.bucket === "savings",
   );
 
   let reason = "";
@@ -140,7 +146,7 @@ export function analyzeAndSuggestReallocation(
     // Needs underspent - can reduce and shift elsewhere
     const shiftAmount = Math.min(
       0.05,
-      Math.abs(needsUnderspent.percentage) / 2
+      Math.abs(needsUnderspent.percentage) / 2,
     );
 
     needsPct = needsPct - shiftAmount;
@@ -201,11 +207,17 @@ export function analyzeAndSuggestReallocation(
 export function calculateRollover(
   cycle: BudgetCycle,
   transactions: BudgetTransaction[],
-  monthlyNetIncome: number
+  monthlyNetIncome: number,
+  bucketLimitBase?: number,
 ): { needs: number; wants: number; savings: number } {
   if (monthlyNetIncome <= 0) {
     return { needs: 0, wants: 0, savings: 0 };
   }
+
+  const limitBase =
+    bucketLimitBase != null && bucketLimitBase >= 0
+      ? bucketLimitBase
+      : monthlyNetIncome;
 
   // Calculate actual spending by bucket
   const spentByBucket: Record<BudgetBucket, number> = {
@@ -218,11 +230,10 @@ export function calculateRollover(
     spentByBucket[tx.bucket] += tx.amount;
   }
 
-  // Calculate limits by bucket
   const limitsByBucket: Record<BudgetBucket, number> = {
-    needs: monthlyNetIncome * cycle.needsPct,
-    wants: monthlyNetIncome * cycle.wantsPct,
-    savings: monthlyNetIncome * cycle.savingsPct,
+    needs: limitBase * cycle.needsPct,
+    wants: limitBase * cycle.wantsPct,
+    savings: limitBase * cycle.savingsPct,
   };
 
   // Calculate unspent amounts (only positive rollovers, no negative)
@@ -239,7 +250,7 @@ export function calculateRollover(
  * Format reallocation details for display
  */
 export function formatReallocationDetails(
-  suggestion: ReallocationSuggestion
+  suggestion: ReallocationSuggestion,
 ): string {
   if (!suggestion.shouldReallocate || !suggestion.details) {
     return "";
@@ -273,7 +284,7 @@ export function formatReallocationDetails(
 export function formatAllocation(
   needsPct: number,
   wantsPct: number,
-  savingsPct: number
+  savingsPct: number,
 ): string {
   const needs = Math.round(needsPct * 100);
   const wants = Math.round(wantsPct * 100);

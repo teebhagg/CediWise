@@ -44,6 +44,7 @@ describe("recurringExpensesStore logout race", () => {
       recurringExpenses: [],
       isLoading: true,
       error: null,
+      budgetQueueFlushError: null,
     });
   });
 

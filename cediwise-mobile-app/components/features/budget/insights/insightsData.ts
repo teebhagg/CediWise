@@ -335,3 +335,75 @@ export const buildInsightsRangeData = ({
     categoryBreakdown: breakdown,
   };
 };
+
+export type RecurringCommitmentInsight = {
+  id: string;
+  title: string;
+  body: string;
+  variant: 'info' | 'warning';
+};
+
+export function buildRecurringCommitmentInsights(params: {
+  monthlyNetIncome: number;
+  totalRecurringMonthly: number;
+  disposableIncome: number;
+  totalSpentInRange?: number;
+}): RecurringCommitmentInsight[] {
+  const {
+    monthlyNetIncome,
+    totalRecurringMonthly,
+    disposableIncome,
+    totalSpentInRange,
+  } = params;
+  const items: RecurringCommitmentInsight[] = [];
+
+  if (monthlyNetIncome <= 0) {
+    if (totalRecurringMonthly > 0) {
+      items.push({
+        id: 'rec-no-income',
+        title: 'Recurring bills without income',
+        variant: 'warning',
+        body: `You have about ₵${totalRecurringMonthly.toFixed(0)}/mo in recurring commitments but no net income on file. Add income so your budget can reflect what's left to spend.`,
+      });
+    }
+    return items;
+  }
+
+  if (totalRecurringMonthly > 0) {
+    const pctOfIncome = (totalRecurringMonthly / monthlyNetIncome) * 100;
+    items.push({
+      id: 'rec-flex',
+      title: 'After recurring bills',
+      variant: 'info',
+      body: `Fixed recurring totals about ₵${totalRecurringMonthly.toFixed(0)}/mo (${pctOfIncome.toFixed(0)}% of net income). Roughly ₵${disposableIncome.toFixed(0)}/mo is left for flexible categories.`,
+    });
+
+    if (pctOfIncome >= 60) {
+      items.push({
+        id: 'rec-heavy',
+        title: 'High fixed-cost load',
+        variant: 'warning',
+        body: 'Over 60% of your net income goes to recurring commitments. Consider trimming subscriptions or renegotiating bills to free flexible budget.',
+      });
+    }
+  }
+
+  if (
+    typeof totalSpentInRange === 'number' &&
+    totalSpentInRange > 0 &&
+    totalRecurringMonthly > 0
+  ) {
+    const denom = totalSpentInRange + totalRecurringMonthly;
+    const share = (totalRecurringMonthly / denom) * 100;
+    if (Number.isFinite(share) && share > 5) {
+      items.push({
+        id: 'rec-vs-spend',
+        title: 'Fixed vs logged spending',
+        variant: 'info',
+        body: `About ${share.toFixed(0)}% of (logged spend + recurring) is recurring bills — useful when comparing to your category breakdown.`,
+      });
+    }
+  }
+
+  return items;
+}

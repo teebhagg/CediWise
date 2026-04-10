@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useBudgetStore } from "../stores/budgetStore";
 import { usePersonalizationStore } from "../stores/personalizationStore";
 import { useProfileVitalsStore } from "../stores/profileVitalsStore";
+import { useRecurringExpensesStore } from "../stores/recurringExpensesStore";
 
 import {
   computeWeightedCategoryLimits,
@@ -12,8 +13,8 @@ import {
 import type {
   BudgetBucket,
   BudgetCategory,
-  BudgetEngineMode,
   BudgetCycle,
+  BudgetEngineMode,
   BudgetMutation,
   BudgetQueue,
   BudgetState,
@@ -26,30 +27,37 @@ import {
   blendAllocation,
   getHistoricalAvgByCategory,
 } from "../utils/allocationBlending";
-import { hydrateBudgetStateFromRemote } from "../utils/budgetHydrate";
-import { recalculateBudgetFromAllocations } from "../utils/budgetRecalc";
 import {
   isAutoApplySafeRules,
   normalizeBudgetEngineMode,
 } from "../utils/budgetEngine";
+import { hydrateBudgetStateFromRemote } from "../utils/budgetHydrate";
+import { recalculateBudgetFromAllocations } from "../utils/budgetRecalc";
 import {
   clearBudgetLocal,
   createEmptyBudgetState,
   enqueueMutation,
   loadBudgetQueue,
   loadBudgetState,
-  saveBudgetState,
 } from "../utils/budgetStorage";
-import {
-  clearProfileVitalsCache,
-  writePersonalizationStatusCache,
-} from "../utils/profileVitals";
 import {
   flushBudgetQueue,
   syncCycleDirect,
   trySyncMutation,
 } from "../utils/budgetSync";
-import { getMonthlyNetIncome } from "../utils/incomeCalculations";
+import {
+  getMonthlyDisposableIncome,
+  getMonthlyNetIncome,
+} from "../utils/incomeCalculations";
+import {
+  filterEffectiveRecurringExpenses,
+  recurringTotalsByBucket,
+  toMonthlyEquivalentAmount,
+} from "../utils/recurringHelpers";
+import {
+  clearProfileVitalsCache,
+  writePersonalizationStatusCache,
+} from "../utils/profileVitals";
 import { getActiveTaxConfig, type TaxConfig } from "../utils/taxSync";
 import { uuidv4 } from "../utils/uuid";
 
@@ -82,11 +90,11 @@ export function computePaydayCycle(today: Date, paydayDay: number) {
       ? thisMonthPayday
       : paydayDateForMonth(
           new Date(today.getFullYear(), today.getMonth() - 1, 15),
-          paydayDay
+          paydayDay,
         );
   const nextPayday = paydayDateForMonth(
     new Date(start.getFullYear(), start.getMonth() + 1, 15),
-    paydayDay
+    paydayDay,
   );
   const end = new Date(nextPayday);
   end.setDate(end.getDate() - 1);
@@ -110,7 +118,7 @@ function addMonths(date: Date, months: number): Date {
 function computeNextCycleFromPrevious(
   prevStartDate: string,
   prevEndDate: string,
-  useMonths: boolean
+  useMonths: boolean,
 ): { start: Date; end: Date } {
   const prevStart = new Date(prevStartDate);
   const prevEnd = new Date(prevEndDate);
@@ -221,6 +229,9 @@ export type UseBudgetReturn = {
   activeCycle: BudgetCycle | null;
   totals: {
     monthlyNetIncome: number;
+    disposableIncome: number;
+    totalRecurringMonthly: number;
+    recurringByBucket: Record<BudgetBucket, number>;
     needsLimit: number;
     wantsLimit: number;
     savingsLimit: number;
@@ -265,7 +276,7 @@ export type UseBudgetReturn = {
       durationDays?: number;
       durationMonths?: number;
       paydayDay?: number;
-    }
+    },
   ) => Promise<{ newCycleId: string } | null>;
   createNewCycleImmediate: () => Promise<{ newCycleId: string } | null>;
   addIncomeSource: (params: {
@@ -281,7 +292,7 @@ export type UseBudgetReturn = {
       type: IncomeSourceType;
       amount: number;
       applyDeductions: boolean;
-    }
+    },
   ) => Promise<{ syncError?: string } | void>;
   addTransaction: (params: {
     bucket: BudgetBucket;
@@ -300,10 +311,12 @@ export type UseBudgetReturn = {
       amount: number;
       note?: string;
       occurredAt?: string;
-    }
+    },
   ) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
-  deleteIncomeSource: (incomeSourceId: string) => Promise<{ syncError?: string } | void>;
+  deleteIncomeSource: (
+    incomeSourceId: string,
+  ) => Promise<{ syncError?: string } | void>;
   addCategory: (params: {
     name: string;
     bucket: BudgetBucket;
@@ -316,18 +329,18 @@ export type UseBudgetReturn = {
   updateCategoryLimit: (
     categoryId: string,
     nextLimitAmount: number,
-    icon?: import("../constants/categoryIcons").CategoryIconName
+    icon?: import("../constants/categoryIcons").CategoryIconName,
   ) => Promise<void>;
   updateCycleDay: (nextPaydayDay: number) => Promise<void>;
   updateCycleAllocation: (
     cycleId: string,
     allocation: { needsPct: number; wantsPct: number; savingsPct: number },
-    options?: { reallocationReason?: string }
+    options?: { reallocationReason?: string },
   ) => Promise<BudgetState | void>;
   updateBudgetEngineMode: (mode: BudgetEngineMode) => Promise<void>;
   applyTemplate: (
     cycleId: string,
-    allocation: { needsPct: number; wantsPct: number; savingsPct: number }
+    allocation: { needsPct: number; wantsPct: number; savingsPct: number },
   ) => Promise<void>;
   insertDebt: (params: {
     name: string;
@@ -348,14 +361,8 @@ export type UseBudgetReturn = {
 
 export function useBudget(userId?: string | null): UseBudgetReturn {
   const store = useBudgetStore();
-  const {
-    state,
-    queue,
-    isLoading,
-    isSyncing,
-    lastSyncRunEndedAt,
-    retryIn,
-  } = store;
+  const { state, queue, isLoading, isSyncing, lastSyncRunEndedAt, retryIn } =
+    store;
   const retryIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearSyncRunResult = useCallback(() => {
@@ -395,12 +402,22 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     getActiveTaxConfig().then(setTaxConfig);
   }, []);
 
+  const recurringSnapshot = useRecurringExpensesStore((s) => s.recurringExpenses);
+
+  const budgetRecalcOptions = useCallback(
+    (tc: TaxConfig | null | undefined) => ({
+      recurringExpenses: useRecurringExpensesStore.getState().recurringExpenses,
+      taxConfig: tc ?? undefined,
+    }),
+    [],
+  );
+
   const activeCycle: BudgetCycle | null = useMemo(() => {
     if (!state) return null;
     // Prefer most recent cycle (by start_date)
     const sorted = [...state.cycles].sort(
       (a, b) =>
-        new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+        new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
     );
     return sorted[0] ?? null;
   }, [state]);
@@ -409,7 +426,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     if (!state?.prefs?.paydayDay) return null;
     const { start, end } = computePaydayCycle(
       new Date(),
-      state.prefs.paydayDay
+      state.prefs.paydayDay,
     );
     return { startDate: toISODate(start), endDate: toISODate(end) };
   }, [state?.prefs?.paydayDay]);
@@ -419,12 +436,19 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
 
     const monthlyNetIncome = getMonthlyNetIncome(
       state.incomeSources,
-      taxConfig ?? undefined
+      taxConfig ?? undefined,
     );
+    const { disposableIncome, totalRecurringMonthly } =
+      getMonthlyDisposableIncome(
+        state.incomeSources,
+        recurringSnapshot,
+        taxConfig ?? undefined,
+      );
+    const recurringByBucket = recurringTotalsByBucket(recurringSnapshot, new Date());
 
-    const needsLimit = monthlyNetIncome * activeCycle.needsPct;
-    const wantsLimit = monthlyNetIncome * activeCycle.wantsPct;
-    const savingsLimit = monthlyNetIncome * activeCycle.savingsPct;
+    const needsLimit = disposableIncome * activeCycle.needsPct;
+    const wantsLimit = disposableIncome * activeCycle.wantsPct;
+    const savingsLimit = disposableIncome * activeCycle.savingsPct;
 
     const txs = state.transactions.filter((t) => t.cycleId === activeCycle.id);
     const spentByBucket: Record<BudgetBucket, number> = {
@@ -440,10 +464,13 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
 
     const spentTotal =
       spentByBucket.needs + spentByBucket.wants + spentByBucket.savings;
-    const unspentThisMonth = Math.max(0, monthlyNetIncome - spentTotal);
+    const unspentThisMonth = Math.max(0, disposableIncome - spentTotal);
 
     return {
       monthlyNetIncome,
+      disposableIncome,
+      totalRecurringMonthly,
+      recurringByBucket,
       needsLimit,
       wantsLimit,
       savingsLimit,
@@ -451,11 +478,11 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       unspentThisMonth,
       spentByBucket,
     };
-  }, [state, activeCycle]);
+  }, [state, activeCycle, taxConfig, recurringSnapshot]);
 
   const budgetEngineMode = useMemo(
     () => normalizeBudgetEngineMode(state?.prefs?.budgetEngineMode ?? null),
-    [state?.prefs?.budgetEngineMode]
+    [state?.prefs?.budgetEngineMode],
   );
 
   const persistState = useCallback(async (next: BudgetState) => {
@@ -477,7 +504,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       await refreshQueue();
       return result;
     },
-    [refreshQueue, userId]
+    [refreshQueue, userId],
   );
 
   const setupBudget = useCallback(
@@ -530,9 +557,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
 
       let allNames: { bucket: BudgetBucket; name: string }[] = [];
       let needsList: string[] = [];
-      let seeded:
-        | ReturnType<typeof seedCategories>
-        | null = null;
+      let seeded: ReturnType<typeof seedCategories> | null = null;
       if (shouldSeedCategories) {
         seeded = seedCategories(interests ?? current.prefs?.interests);
         needsList = [...seeded.needs];
@@ -545,19 +570,40 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         allNames = [
           ...needsList.map((name) => ({ bucket: "needs" as const, name })),
           ...seeded.wants.map((name) => ({ bucket: "wants" as const, name })),
-          ...seeded.savings.map((name) => ({ bucket: "savings" as const, name })),
+          ...seeded.savings.map((name) => ({
+            bucket: "savings" as const,
+            name,
+          })),
         ];
       }
 
-      const monthlyNetIncome = getMonthlyNetIncome(
+      const recurringSnap =
+        useRecurringExpensesStore.getState().recurringExpenses;
+      const { disposableIncome } = getMonthlyDisposableIncome(
         current.incomeSources,
-        taxConfig ?? undefined
+        recurringSnap,
+        taxConfig ?? undefined,
       );
       const bucketTotals: Record<BudgetBucket, number> = {
-        needs: monthlyNetIncome * needsPct,
-        wants: monthlyNetIncome * wantsPct,
-        savings: monthlyNetIncome * savingsPct,
+        needs: disposableIncome * needsPct,
+        wants: disposableIncome * wantsPct,
+        savings: disposableIncome * savingsPct,
       };
+
+      const mergedFixed: Record<string, number> = {
+        ...(fixedAmountsByCategory ?? {}),
+      };
+      for (const exp of filterEffectiveRecurringExpenses(
+        recurringSnap,
+        new Date(),
+      )) {
+        if (!exp.autoAllocate) continue;
+        const monthly = toMonthlyEquivalentAmount(exp.amount, exp.frequency);
+        if (monthly <= 0) continue;
+        const key = exp.name.trim();
+        if (!key) continue;
+        mergedFixed[key] = (mergedFixed[key] ?? 0) + monthly;
+      }
 
       const limitByKey = new Map<string, number>();
       const historical = getHistoricalAvgByCategory(current);
@@ -568,19 +614,19 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           bucket === "needs"
             ? needsList
             : bucket === "wants"
-            ? seeded.wants
-            : seeded.savings;
+              ? seeded.wants
+              : seeded.savings;
         const inputs: CategoryLimitInput[] = names.map((name) => ({
           name,
           bucket,
-          fixedAmount: fixedAmountsByCategory?.[name],
+          fixedAmount: mergedFixed[name],
           manualOverride:
             bucket === "needs" && name.trim().toLowerCase() === "emergency",
         }));
         const limits = computeWeightedCategoryLimits(
           bucketTotals[bucket],
           inputs,
-          lifeStage ?? null
+          lifeStage ?? null,
         );
         limits.forEach((templateLimit, name) => {
           const hist = historical.get(`${bucket}:${name}`);
@@ -588,7 +634,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
             templateLimit,
             hist?.avgSpent ?? null,
             hist?.variance ?? 0,
-            hist?.cycleCount ?? 0
+            hist?.cycleCount ?? 0,
           );
           limitByKey.set(`${bucket}:${name}`, blended);
         });
@@ -597,7 +643,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       const categories: BudgetCategory[] = allNames.map(
         ({ bucket, name }, index) => {
           const limitAmount = limitByKey.get(`${bucket}:${name}`) ?? 0;
-          const isFixed = (fixedAmountsByCategory?.[name] ?? 0) > 0;
+          const isFixed = (mergedFixed[name] ?? 0) > 0;
           return {
             id: uuidv4(),
             userId,
@@ -614,7 +660,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
             createdAt,
             updatedAt: createdAt,
           };
-        }
+        },
       );
 
       const next: BudgetState = {
@@ -625,7 +671,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           ...(Array.isArray(interests) ? { interests } : {}),
           ...(lifeStage != null ? { lifeStage } : {}),
           budgetEngineMode: normalizeBudgetEngineMode(
-            current.prefs?.budgetEngineMode ?? null
+            current.prefs?.budgetEngineMode ?? null,
           ),
         },
         cycles: [cycle, ...current.cycles.filter((c) => c.id !== cycleId)],
@@ -646,7 +692,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           id: userId,
           payday_day: paydayDay,
           enable_auto_reallocation: isAutoApplySafeRules(
-            current.prefs?.budgetEngineMode ?? null
+            current.prefs?.budgetEngineMode ?? null,
           ),
           ...(Array.isArray(interests) ? { interests } : {}),
         },
@@ -681,7 +727,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         }
       }
     },
-    [enqueueAndTry, persistState, state, userId]
+    [enqueueAndTry, persistState, state, taxConfig, userId],
   );
 
   /**
@@ -705,26 +751,34 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
 
     const monthlyNetIncome = getMonthlyNetIncome(
       current.incomeSources,
-      taxConfig ?? undefined
+      taxConfig ?? undefined,
     );
     if (monthlyNetIncome <= 0) return null;
+
+    const recurringSnap =
+      useRecurringExpensesStore.getState().recurringExpenses;
+    const { disposableIncome } = getMonthlyDisposableIncome(
+      current.incomeSources,
+      recurringSnap,
+      taxConfig ?? undefined,
+    );
 
     const totalSpent = current.transactions
       .filter((t) => t.cycleId === prevCycle.id)
       .reduce((sum, t) => sum + t.amount, 0);
-    if (totalSpent >= monthlyNetIncome) {
+    if (disposableIncome <= 0 || totalSpent >= disposableIncome) {
       return null;
     }
 
     const rollover = {
       needs: 0,
       wants: 0,
-      savings: Math.max(0, monthlyNetIncome - totalSpent),
+      savings: Math.max(0, disposableIncome - totalSpent),
     };
     const totalRollover = rollover.savings;
 
     const prevCategories = current.categories.filter(
-      (c) => c.cycleId === prevCycle.id
+      (c) => c.cycleId === prevCycle.id,
     );
     const savingsCats = prevCategories.filter((c) => c.bucket === "savings");
     const savingsCategories =
@@ -736,13 +790,13 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       Math.round(
         (new Date(prevCycle.endDate).getTime() -
           new Date(prevCycle.startDate).getTime()) /
-          86400000
+          86400000,
       ) + 1;
     const useMonths = durationDays > 14;
     const { start, end } = computeNextCycleFromPrevious(
       prevCycle.startDate,
       prevCycle.endDate,
-      useMonths
+      useMonths,
     );
     const actualDurationDays =
       Math.round((end.getTime() - start.getTime()) / 86400000) + 1;
@@ -760,7 +814,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       durationMonths: useMonths ? durationMonths : undefined,
       paydayDay: prevCycle.paydayDay,
     };
-  }, [activeCycle, state, userId]);
+  }, [activeCycle, state, taxConfig, userId]);
 
   /**
    * Create cycle + categories with rollover baked into savings limits.
@@ -784,7 +838,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         durationDays?: number;
         durationMonths?: number;
         paydayDay?: number;
-      }
+      },
     ): Promise<{ newCycleId: string } | null> => {
       if (!userId) return null;
       const current = state ?? createEmptyBudgetState(userId);
@@ -793,14 +847,14 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
 
       const monthlyNetIncome = getMonthlyNetIncome(
         current.incomeSources,
-        taxConfig ?? undefined
+        taxConfig ?? undefined,
       );
       if (monthlyNetIncome <= 0) return null;
 
       const { rollover } = preview;
       const savingsIdByName = new Map<string, string>();
       preview.savingsCategories.forEach((s) =>
-        savingsIdByName.set(s.name, s.id)
+        savingsIdByName.set(s.name, s.id),
       );
 
       const paydayDay = overrides?.paydayDay ?? preview.paydayDay;
@@ -841,15 +895,15 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       };
 
       const prevCategories = current.categories.filter(
-        (c) => c.cycleId === prevCycle.id
+        (c) => c.cycleId === prevCycle.id,
       );
       const catCreatedAt = new Date(baseTime).toISOString();
       const categories: BudgetCategory[] = prevCategories.map((cat, idx) => {
         const newId =
           cat.bucket === "savings"
-            ? savingsIdByName.get(cat.name) ?? uuidv4()
+            ? (savingsIdByName.get(cat.name) ?? uuidv4())
             : uuidv4();
-        const add = cat.bucket === "savings" ? allocations[newId] ?? 0 : 0;
+        const add = cat.bucket === "savings" ? (allocations[newId] ?? 0) : 0;
         return {
           ...cat,
           id: newId,
@@ -900,7 +954,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
 
       return { newCycleId: cycleId };
     },
-    [activeCycle, persistState, state, userId, refreshQueue]
+    [activeCycle, persistState, state, userId, refreshQueue],
   );
 
   /**
@@ -913,22 +967,25 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     if (!prevCycle) return null;
 
     const prevCategories = current.categories.filter(
-      (c) => c.cycleId === prevCycle.id
+      (c) => c.cycleId === prevCycle.id,
     );
 
     const baseTime = Date.now();
     const cycleId = uuidv4();
     const cycleCreatedAt = new Date(baseTime - 1).toISOString();
-    const monthlyNetIncome = getMonthlyNetIncome(
+    const recurringSnap =
+      useRecurringExpensesStore.getState().recurringExpenses;
+    const { disposableIncome } = getMonthlyDisposableIncome(
       current.incomeSources,
-      taxConfig ?? undefined
+      recurringSnap,
+      taxConfig ?? undefined,
     );
     const totalSpent = current.transactions
       .filter((t) => t.cycleId === prevCycle.id)
       .reduce((sum, t) => sum + t.amount, 0);
     const rollover =
-      monthlyNetIncome > 0 && totalSpent < monthlyNetIncome
-        ? { needs: 0, wants: 0, savings: monthlyNetIncome - totalSpent }
+      disposableIncome > 0 && totalSpent < disposableIncome
+        ? { needs: 0, wants: 0, savings: disposableIncome - totalSpent }
         : { needs: 0, wants: 0, savings: 0 };
 
     const paydayDay = prevCycle.paydayDay;
@@ -936,13 +993,13 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       Math.round(
         (new Date(prevCycle.endDate).getTime() -
           new Date(prevCycle.startDate).getTime()) /
-          86400000
+          86400000,
       ) + 1;
     const useMonths = durationDays > 14;
     const { start, end } = computeNextCycleFromPrevious(
       prevCycle.startDate,
       prevCycle.endDate,
-      useMonths
+      useMonths,
     );
 
     const cycle: BudgetCycle = {
@@ -1008,7 +1065,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     await refreshQueue();
 
     return { newCycleId: cycleId };
-  }, [activeCycle, persistState, state, userId, refreshQueue]);
+  }, [activeCycle, persistState, state, taxConfig, userId, refreshQueue]);
 
   const addIncomeSource = useCallback(
     async ({
@@ -1041,7 +1098,10 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         ...current,
         incomeSources: nextIncomeSources,
       };
-      const recalculated = recalculateBudgetFromAllocations(tempState);
+      const recalculated = recalculateBudgetFromAllocations(
+        tempState,
+        budgetRecalcOptions(taxConfig),
+      );
       const nextCategories = recalculated.categories;
       const activeCycleId = activeCycle?.id ?? current.cycles[0]?.id;
 
@@ -1070,7 +1130,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       // Persist recomputed category limits (if any); always enqueue so offline/failed sync still queues limits.
       if (activeCycleId && activeCycle) {
         const changed = nextCategories.filter(
-          (c) => c.cycleId === activeCycleId
+          (c) => c.cycleId === activeCycleId,
         );
         for (const cat of changed) {
           await enqueueAndTry({
@@ -1093,7 +1153,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         return { syncError: syncResult.error };
       }
     },
-    [activeCycle, enqueueAndTry, persistState, state, userId]
+    [activeCycle, budgetRecalcOptions, enqueueAndTry, persistState, state, taxConfig, userId],
   );
 
   const updateIncomeSource = useCallback(
@@ -1104,7 +1164,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         type: IncomeSourceType;
         amount: number;
         applyDeductions: boolean;
-      }
+      },
     ) => {
       if (!userId) return;
       const current = state ?? createEmptyBudgetState(userId);
@@ -1127,7 +1187,10 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         ...current,
         incomeSources: updatedIncome,
       };
-      const recalculated = recalculateBudgetFromAllocations(tempState);
+      const recalculated = recalculateBudgetFromAllocations(
+        tempState,
+        budgetRecalcOptions(taxConfig),
+      );
       const nextCategories = recalculated.categories;
       const activeCycleId = activeCycle?.id ?? current.cycles[0]?.id;
 
@@ -1162,7 +1225,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       // Persist recomputed category limits; always enqueue so offline/failed sync still queues limits.
       if (activeCycleId && activeCycle) {
         const changed = nextCategories.filter(
-          (c) => c.cycleId === activeCycleId
+          (c) => c.cycleId === activeCycleId,
         );
         for (const cat of changed) {
           await enqueueAndTry({
@@ -1183,7 +1246,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       }
       if (syncError) return { syncError };
     },
-    [activeCycle, enqueueAndTry, persistState, state, userId]
+    [activeCycle, budgetRecalcOptions, enqueueAndTry, persistState, state, taxConfig, userId],
   );
 
   const deleteIncomeSource = useCallback(
@@ -1193,14 +1256,17 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       const activeCycleId = activeCycle?.id ?? current.cycles[0]?.id;
 
       const nextIncome = current.incomeSources.filter(
-        (s) => s.id !== incomeSourceId
+        (s) => s.id !== incomeSourceId,
       );
 
       const tempState: BudgetState = {
         ...current,
         incomeSources: nextIncome,
       };
-      const recalculated = recalculateBudgetFromAllocations(tempState);
+      const recalculated = recalculateBudgetFromAllocations(
+        tempState,
+        budgetRecalcOptions(taxConfig),
+      );
       const nextCategories = recalculated.categories;
 
       const next: BudgetState = {
@@ -1222,7 +1288,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       // If we recomputed limits, queue upserts for affected categories; always enqueue so offline/failed sync still queues limits.
       if (activeCycleId && activeCycle) {
         const changed = nextCategories.filter(
-          (c) => c.cycleId === activeCycleId
+          (c) => c.cycleId === activeCycleId,
         );
         for (const cat of changed) {
           await enqueueAndTry({
@@ -1245,7 +1311,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         return { syncError: syncResult.error };
       }
     },
-    [activeCycle, enqueueAndTry, persistState, state, userId]
+    [activeCycle, budgetRecalcOptions, enqueueAndTry, persistState, state, taxConfig, userId],
   );
 
   const addTransaction = useCallback(
@@ -1311,7 +1377,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
             (t) =>
               t.cycleId === cycleId &&
               t.bucket === "needs" &&
-              t.categoryId === categoryId
+              t.categoryId === categoryId,
           )
           .reduce((s, t) => s + t.amount, 0);
         return spent + tx.amount > category.limitAmount;
@@ -1339,7 +1405,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       if (wouldExceedNeeds) {
         try {
           await Haptics.notificationAsync(
-            Haptics.NotificationFeedbackType.Warning
+            Haptics.NotificationFeedbackType.Warning,
           );
         } catch {
           // ignore
@@ -1348,7 +1414,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
 
       return { wouldExceedNeeds };
     },
-    [activeCycle?.id, enqueueAndTry, persistState, state, userId]
+    [activeCycle?.id, enqueueAndTry, persistState, state, userId],
   );
 
   const updateTransaction = useCallback(
@@ -1360,7 +1426,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         amount: number;
         note?: string;
         occurredAt?: string;
-      }
+      },
     ) => {
       if (!userId) return;
       const current = state ?? createEmptyBudgetState(userId);
@@ -1380,7 +1446,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       const next: BudgetState = {
         ...current,
         transactions: current.transactions.map((t) =>
-          t.id === id ? updated : t
+          t.id === id ? updated : t,
         ),
       };
       await persistState(next);
@@ -1401,7 +1467,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         },
       });
     },
-    [enqueueAndTry, persistState, state, userId]
+    [enqueueAndTry, persistState, state, userId],
   );
 
   const deleteTransaction = useCallback(
@@ -1426,7 +1492,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         payload: { id, user_id: userId },
       });
     },
-    [enqueueAndTry, persistState, state, userId]
+    [enqueueAndTry, persistState, state, userId],
   );
 
   const addCategory = useCallback(
@@ -1447,7 +1513,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       if (!activeCycleId) return;
 
       const cycleCats = current.categories.filter(
-        (c) => c.cycleId === activeCycleId && c.bucket === bucket
+        (c) => c.cycleId === activeCycleId && c.bucket === bucket,
       );
       const nextSortOrder =
         cycleCats.length > 0
@@ -1502,7 +1568,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         payload: categoryToPayload(newCat),
       });
     },
-    [activeCycle?.id, enqueueAndTry, persistState, state, userId]
+    [activeCycle?.id, enqueueAndTry, persistState, state, userId],
   );
 
   const deleteCategory = useCallback(
@@ -1515,7 +1581,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         ...current,
         categories: current.categories.filter((c) => c.id !== categoryId),
         transactions: current.transactions.map((t) =>
-          t.categoryId === categoryId ? { ...t, categoryId: null } : t
+          t.categoryId === categoryId ? { ...t, categoryId: null } : t,
         ),
       };
       await persistState(next);
@@ -1528,7 +1594,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         payload: { id: categoryId, user_id: userId },
       });
     },
-    [enqueueAndTry, persistState, state, userId]
+    [enqueueAndTry, persistState, state, userId],
   );
 
   const deleteCategories = useCallback(
@@ -1543,7 +1609,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         transactions: current.transactions.map((t) =>
           t.categoryId && idsSet.has(t.categoryId)
             ? { ...t, categoryId: null }
-            : t
+            : t,
         ),
       };
       await persistState(next);
@@ -1559,14 +1625,14 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         });
       }
     },
-    [enqueueAndTry, persistState, state, userId]
+    [enqueueAndTry, persistState, state, userId],
   );
 
   const updateCategoryLimit = useCallback(
     async (
       categoryId: string,
       nextLimitAmount: number,
-      icon?: import("../constants/categoryIcons").CategoryIconName
+      icon?: import("../constants/categoryIcons").CategoryIconName,
     ) => {
       if (!userId) return;
       const current = state ?? createEmptyBudgetState(userId);
@@ -1585,7 +1651,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
               ...(icon !== undefined && { icon }),
               updatedAt: now,
             }
-          : c
+          : c,
       );
       const updated = nextCategories.find((c) => c.id === categoryId);
       const next: BudgetState = { ...current, categories: nextCategories };
@@ -1612,7 +1678,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         payload: categoryToPayload(updated),
       });
     },
-    [enqueueAndTry, persistState, state, userId]
+    [enqueueAndTry, persistState, state, userId],
   );
 
   const updateCycleDay = useCallback(
@@ -1655,7 +1721,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           id: userId,
           payday_day: day,
           enable_auto_reallocation: isAutoApplySafeRules(
-            current.prefs?.budgetEngineMode ?? null
+            current.prefs?.budgetEngineMode ?? null,
           ),
           ...(Array.isArray(current.prefs.interests)
             ? { interests: current.prefs.interests }
@@ -1680,14 +1746,14 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         },
       });
     },
-    [activeCycle, enqueueAndTry, persistState, state, userId]
+    [activeCycle, enqueueAndTry, persistState, state, userId],
   );
 
   const updateCycleAllocation = useCallback(
     async (
       cycleId: string,
       allocation: { needsPct: number; wantsPct: number; savingsPct: number },
-      options?: { reallocationReason?: string }
+      options?: { reallocationReason?: string },
     ): Promise<BudgetState | void> => {
       if (!userId) return;
       const current = state ?? createEmptyBudgetState(userId);
@@ -1702,7 +1768,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         savingsPct: allocation.savingsPct,
         reallocationApplied: isReallocation ? true : cycle.reallocationApplied,
         reallocationReason: isReallocation
-          ? options.reallocationReason ?? null
+          ? (options.reallocationReason ?? null)
           : cycle.reallocationReason,
         updatedAt: now,
       };
@@ -1740,7 +1806,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       });
       return next;
     },
-    [enqueueAndTry, persistState, state, userId]
+    [enqueueAndTry, persistState, state, userId],
   );
 
   const updateBudgetEngineMode = useCallback(
@@ -1765,14 +1831,16 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         payload: {
           id: userId,
           enable_auto_reallocation: isAutoApplySafeRules(normalized),
-          ...(current.prefs.paydayDay ? { payday_day: current.prefs.paydayDay } : {}),
+          ...(current.prefs.paydayDay
+            ? { payday_day: current.prefs.paydayDay }
+            : {}),
           ...(Array.isArray(current.prefs.interests)
             ? { interests: current.prefs.interests }
             : {}),
         },
       });
     },
-    [enqueueAndTry, persistState, state, userId]
+    [enqueueAndTry, persistState, state, userId],
   );
 
   const insertDebt = useCallback(
@@ -1803,7 +1871,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         },
       });
     },
-    [enqueueAndTry, userId]
+    [enqueueAndTry, userId],
   );
 
   const resetBudget = useCallback(async () => {
@@ -1852,7 +1920,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         void useProfileVitalsStore.getState().refresh();
       }
     },
-    [enqueueAndTry, refreshQueue, userId]
+    [enqueueAndTry, refreshQueue, userId],
   );
 
   const syncNow = useCallback(async () => {
@@ -1909,14 +1977,16 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
   const recalculateBudget = useCallback(
     async (overrideState?: BudgetState) => {
       if (!userId) return;
-      const current =
-        overrideState ?? state ?? (await loadBudgetState(userId));
-      const next = recalculateBudgetFromAllocations(current);
+      const current = overrideState ?? state ?? (await loadBudgetState(userId));
+      const next = recalculateBudgetFromAllocations(
+        current,
+        budgetRecalcOptions(taxConfig),
+      );
       const activeCycleId = activeCycle?.id ?? current.cycles[0]?.id;
       await persistState(next);
       const now = new Date().toISOString();
       const cycleCats = next.categories.filter(
-        (c) => c.cycleId === activeCycleId
+        (c) => c.cycleId === activeCycleId,
       );
       for (const cat of cycleCats) {
         const prev = current.categories.find((x) => x.id === cat.id);
@@ -1930,13 +2000,13 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         });
       }
     },
-    [activeCycle?.id, enqueueAndTry, persistState, state, userId]
+    [activeCycle?.id, budgetRecalcOptions, enqueueAndTry, persistState, state, taxConfig, userId],
   );
 
   const applyTemplate = useCallback(
     async (
       cycleId: string,
-      allocation: { needsPct: number; wantsPct: number; savingsPct: number }
+      allocation: { needsPct: number; wantsPct: number; savingsPct: number },
     ) => {
       if (!userId) return;
       const current = state ?? createEmptyBudgetState(userId);
@@ -1972,7 +2042,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         },
       });
     },
-    [enqueueAndTry, persistState, recalculateBudget, state, userId]
+    [enqueueAndTry, persistState, recalculateBudget, state, userId],
   );
 
   const hydrateFromRemote = useCallback(
@@ -1991,7 +2061,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         await reload();
       }
     },
-    [persistState, reload, userId]
+    [persistState, reload, userId],
   );
 
   const retryMutation = useCallback(
@@ -2003,7 +2073,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       await trySyncMutation(userId, item);
       await refreshQueue();
     },
-    [refreshQueue, userId]
+    [refreshQueue, userId],
   );
 
   const clearLocal = useCallback(async () => {

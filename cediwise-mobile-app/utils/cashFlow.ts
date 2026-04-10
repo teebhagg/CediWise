@@ -1,3 +1,5 @@
+import { toMonthlyEquivalentAmount } from "@/utils/recurringHelpers";
+
 export type DataSufficiency = "insufficient" | "warmup" | "full";
 
 export type CashFlowProjection = {
@@ -22,34 +24,20 @@ type RecurringExpenseInput = {
 };
 
 export function toMonthlyEquivalent(expense: RecurringExpenseInput): number {
-  const { amount, frequency } = expense;
-  switch (frequency) {
-    case "weekly":
-      return (amount * 52) / 12;
-    case "bi_weekly":
-      return (amount * 26) / 12;
-    case "monthly":
-      return amount;
-    case "quarterly":
-      return amount / 3;
-    case "annually":
-      return amount / 12;
-  }
+  return toMonthlyEquivalentAmount(expense.amount, expense.frequency);
 }
 
 export function computeCashFlowProjection(
   currentBalance: number,
   transactions: TransactionInput[],
   recurringExpenses: RecurringExpenseInput[],
-  cycleStartDate: string
+  cycleStartDate: string,
 ): CashFlowProjection {
   const today = new Date();
   const cycleStart = new Date(cycleStartDate + "T00:00:00");
   const dataDays = Math.max(
     1,
-    Math.ceil(
-      (today.getTime() - cycleStart.getTime()) / (1000 * 60 * 60 * 24)
-    )
+    Math.ceil((today.getTime() - cycleStart.getTime()) / (1000 * 60 * 60 * 24)),
   );
 
   let sufficiency: DataSufficiency;
@@ -79,7 +67,7 @@ export function computeCashFlowProjection(
 
   const totalVariableSpending = transactions.reduce(
     (sum, t) => sum + t.amount,
-    0
+    0,
   );
 
   const daysInMonth = 30;
@@ -104,15 +92,13 @@ export function computeCashFlowProjection(
   const daysUntilRunOutRaw = currentBalance / dailyBurnRate;
   const daysUntilRunOut = Math.max(0, Math.floor(daysUntilRunOutRaw));
   const runOutDate = new Date(
-    today.getTime() + daysUntilRunOut * 24 * 60 * 60 * 1000
+    today.getTime() + daysUntilRunOut * 24 * 60 * 60 * 1000,
   );
 
   const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   const remainingDaysInMonth = Math.max(
     1,
-    Math.ceil(
-      (endOfMonth.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-    )
+    Math.ceil((endOfMonth.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)),
   );
 
   const safeToSpend = currentBalance - dailyBurnRate * remainingDaysInMonth;
@@ -129,10 +115,7 @@ export function computeCashFlowProjection(
   };
 }
 
-export function formatRunOutDate(
-  date: Date,
-  locale: string = "en-GH"
-): string {
+export function formatRunOutDate(date: Date, locale: string = "en-GH"): string {
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
@@ -143,20 +126,13 @@ export function formatRunOutDate(
   return date.toLocaleDateString(locale, {
     day: "numeric",
     month: "short",
-    year:
-      date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+    year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
   });
 }
 
-export function isTodayPayday(
-  paydayDay: number | null | undefined
-): boolean {
+export function isTodayPayday(paydayDay: number | null | undefined): boolean {
   if (paydayDay == null) return false;
-  if (
-    !Number.isInteger(paydayDay) ||
-    paydayDay < 1 ||
-    paydayDay > 31
-  ) {
+  if (!Number.isInteger(paydayDay) || paydayDay < 1 || paydayDay > 31) {
     return false;
   }
   const today = new Date();
@@ -165,7 +141,7 @@ export function isTodayPayday(
 
 export function needsSalaryReset(
   paydayDay: number | null | undefined,
-  lastReset: string | null
+  lastReset: string | null,
 ): boolean {
   if (!isTodayPayday(paydayDay)) return false;
   if (!lastReset) return true;

@@ -39,6 +39,20 @@ function recurringCacheKey(userId: string): string {
   return `${RECURRING_CACHE_PREFIX}${userId}`;
 }
 
+const FLUSH_USER_MESSAGE =
+  "Saved on this device. Cloud sync will retry; check the sync queue if this persists.";
+
+function afterRecurringFlush(
+  userId: string,
+  result: { okCount: number; failCount: number },
+  get: () => RecurringExpensesStore,
+  set: (partial: Partial<RecurringExpensesStore>) => void,
+) {
+  if (result.failCount === 0) return;
+  if (get().userId !== userId) return;
+  set({ budgetQueueFlushError: FLUSH_USER_MESSAGE });
+}
+
 function toRecurringRow(expense: RecurringExpense): Record<string, unknown> {
   return {
     id: expense.id,
@@ -69,7 +83,7 @@ function recurringFromRow(row: any): RecurringExpense {
     startDate: row.start_date,
     endDate: row.end_date,
     isActive: row.is_active,
-    autoAllocate: row.auto_allocate,
+    autoAllocate: row.auto_allocate !== false,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -80,6 +94,8 @@ export type RecurringExpensesStoreState = {
   recurringExpenses: RecurringExpense[];
   isLoading: boolean;
   error: string | null;
+  /** Set when a background `flushBudgetQueue` fails after recurring CRUD; clear after surfacing. */
+  budgetQueueFlushError: string | null;
 };
 
 export type RecurringExpensesStoreActions = {
@@ -88,13 +104,14 @@ export type RecurringExpensesStoreActions = {
   addRecurringExpense: (params: AddRecurringExpenseParams) => Promise<void>;
   updateRecurringExpense: (
     id: string,
-    params: UpdateRecurringExpenseParams
+    params: UpdateRecurringExpenseParams,
   ) => Promise<void>;
   deleteRecurringExpense: (id: string) => Promise<void>;
+  clearBudgetQueueFlushError: () => void;
 };
 
-export type RecurringExpensesStore =
-  RecurringExpensesStoreState & RecurringExpensesStoreActions;
+export type RecurringExpensesStore = RecurringExpensesStoreState &
+  RecurringExpensesStoreActions;
 
 export const useRecurringExpensesStore = create<RecurringExpensesStore>(
   (set, get) => ({
@@ -102,9 +119,12 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
     recurringExpenses: [],
     isLoading: true,
     error: null,
+    budgetQueueFlushError: null,
+
+    clearBudgetQueueFlushError: () => set({ budgetQueueFlushError: null }),
 
     initForUser: async (userId: string | null) => {
-      set({ userId, isLoading: true });
+      set({ userId, isLoading: true, budgetQueueFlushError: null });
       if (!userId) {
         set({ recurringExpenses: [], isLoading: false });
         return;
@@ -126,9 +146,7 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
       const startUserId = userId;
       set({ isLoading: true, error: null });
 
-      const cached = await AsyncStorage.getItem(
-        recurringCacheKey(startUserId)
-      );
+      const cached = await AsyncStorage.getItem(recurringCacheKey(startUserId));
       if (cached && get().userId === startUserId) {
         try {
           const rows = JSON.parse(cached) as any[];
@@ -152,15 +170,35 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
 
         if (get().userId !== startUserId) return;
 
-        const expenses: RecurringExpense[] = (data || []).map((row) =>
-          recurringFromRow(row)
+        let expenses: RecurringExpense[] = (data || []).map((row) =>
+          recurringFromRow(row),
         );
+
+        const today = new Date().toISOString().slice(0, 10);
+        const expiredActive = expenses.filter(
+          (e) => e.isActive && e.endDate && e.endDate < today,
+        );
+        if (expiredActive.length > 0) {
+          const nowIso = new Date().toISOString();
+          expenses = expenses.map((e) =>
+            expiredActive.some((x) => x.id === e.id)
+              ? { ...e, isActive: false, updatedAt: nowIso }
+              : e,
+          );
+          for (const e of expiredActive) {
+            await supabase
+              .from("recurring_expenses")
+              .update({ is_active: false, updated_at: nowIso })
+              .eq("id", e.id)
+              .eq("user_id", startUserId);
+          }
+        }
 
         set({ recurringExpenses: expenses });
 
         await AsyncStorage.setItem(
           recurringCacheKey(startUserId),
-          JSON.stringify(expenses.map(toRecurringRow))
+          JSON.stringify(expenses.map(toRecurringRow)),
         );
       } catch (err) {
         if (get().userId !== startUserId) return;
@@ -207,7 +245,7 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
         const next = [newExpense, ...s.recurringExpenses];
         AsyncStorage.setItem(
           recurringCacheKey(userId),
-          JSON.stringify(next.map(toRecurringRow))
+          JSON.stringify(next.map(toRecurringRow)),
         ).catch(() => {});
         return { recurringExpenses: next };
       });
@@ -232,7 +270,16 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
         },
       });
 
-      await flushBudgetQueue(userId);
+      void flushBudgetQueue(userId)
+        .then((r) => afterRecurringFlush(userId, r, get, set))
+        .catch((err) => {
+          log.error(
+            "[recurringExpenses] flushBudgetQueue failed (addRecurringExpense)",
+            err,
+          );
+          if (get().userId !== userId) return;
+          set({ budgetQueueFlushError: FLUSH_USER_MESSAGE });
+        });
     },
 
     updateRecurringExpense: async (id, params) => {
@@ -247,32 +294,48 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
                 ...params,
                 updatedAt: new Date().toISOString(),
               }
-            : expense
+            : expense,
         );
         AsyncStorage.setItem(
           recurringCacheKey(userId),
-          JSON.stringify(next.map(toRecurringRow))
+          JSON.stringify(next.map(toRecurringRow)),
         ).catch(() => {});
         return { recurringExpenses: next };
       });
 
       const now = new Date().toISOString();
+      const updatePayload: Record<string, unknown> = { id };
+      if (params.name !== undefined) updatePayload.name = params.name;
+      if (params.amount !== undefined) updatePayload.amount = params.amount;
+      if (params.frequency !== undefined)
+        updatePayload.frequency = params.frequency;
+      if (params.bucket !== undefined) updatePayload.bucket = params.bucket;
+      if (params.categoryId !== undefined)
+        updatePayload.category_id = params.categoryId;
+      if (params.endDate !== undefined) updatePayload.end_date = params.endDate;
+      if (params.isActive !== undefined)
+        updatePayload.is_active = params.isActive;
+      if (params.autoAllocate !== undefined)
+        updatePayload.auto_allocate = params.autoAllocate;
+
       await enqueueMutation(userId, {
         id: uuidv4(),
         userId,
         createdAt: now,
         kind: "update_recurring_expense",
-        payload: {
-          id,
-          ...params,
-          category_id: params.categoryId,
-          end_date: params.endDate,
-          is_active: params.isActive,
-          auto_allocate: params.autoAllocate,
-        },
+        payload: updatePayload,
       });
 
-      await flushBudgetQueue(userId);
+      void flushBudgetQueue(userId)
+        .then((r) => afterRecurringFlush(userId, r, get, set))
+        .catch((err) => {
+          log.error(
+            "[recurringExpenses] flushBudgetQueue failed (updateRecurringExpense)",
+            err,
+          );
+          if (get().userId !== userId) return;
+          set({ budgetQueueFlushError: FLUSH_USER_MESSAGE });
+        });
     },
 
     deleteRecurringExpense: async (id) => {
@@ -283,7 +346,7 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
         const next = s.recurringExpenses.filter((e) => e.id !== id);
         AsyncStorage.setItem(
           recurringCacheKey(userId),
-          JSON.stringify(next.map(toRecurringRow))
+          JSON.stringify(next.map(toRecurringRow)),
         ).catch(() => {});
         return { recurringExpenses: next };
       });
@@ -297,7 +360,16 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
         payload: { id },
       });
 
-      await flushBudgetQueue(userId);
+      void flushBudgetQueue(userId)
+        .then((r) => afterRecurringFlush(userId, r, get, set))
+        .catch((err) => {
+          log.error(
+            "[recurringExpenses] flushBudgetQueue failed (deleteRecurringExpense)",
+            err,
+          );
+          if (get().userId !== userId) return;
+          set({ budgetQueueFlushError: FLUSH_USER_MESSAGE });
+        });
     },
-  })
+  }),
 );

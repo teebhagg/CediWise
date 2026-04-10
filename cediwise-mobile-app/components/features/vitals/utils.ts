@@ -3,7 +3,11 @@ import {
   computeGhanaTax2026Monthly,
   type GhanaTaxBreakdown,
 } from "@/utils/ghanaTax";
-import type { PersonalizationStrategy, ProfileVitals } from "@/utils/profileVitals";
+import type { RecurringExpense as StoreRecurringExpense } from "@/types/budget";
+import type {
+  PersonalizationStrategy,
+  ProfileVitals,
+} from "@/utils/profileVitals";
 
 import { BUDGET_TEMPLATE_LIST } from "./budgetTemplates";
 import type { BudgetTemplateKey, Draft, IncomeFrequency } from "./types";
@@ -13,7 +17,7 @@ export const DEFAULT_MIN_LIVING_BUFFER = 600;
 /** Convert pay-period amount to monthly equivalent. */
 export function toMonthlySalary(
   amount: number,
-  frequency: IncomeFrequency
+  frequency: IncomeFrequency,
 ): number {
   if (amount <= 0) return 0;
   switch (frequency) {
@@ -73,7 +77,7 @@ export function computeStrategy(params: {
       params.titheRemittance +
       params.debtObligations +
       params.utilitiesTotal +
-      livingBuffer
+      livingBuffer,
   );
   const ratio = netIncome > 0 ? fixedCosts / netIncome : 1;
 
@@ -195,7 +199,7 @@ export function strategyToPercents(strategy: PersonalizationStrategy): {
 
 export function getNetPreview(
   stableSalary: string,
-  incomeFrequency: IncomeFrequency = "monthly"
+  incomeFrequency: IncomeFrequency = "monthly",
 ): GhanaTaxBreakdown | null {
   const amount = toMoney(stableSalary);
   if (amount <= 0) return null;
@@ -212,7 +216,8 @@ export function inferTemplateFromPercentages(
   wantsPct: number | null,
   savingsPct: number | null,
 ): BudgetTemplateKey {
-  if (needsPct == null || wantsPct == null || savingsPct == null) return "smart";
+  if (needsPct == null || wantsPct == null || savingsPct == null)
+    return "smart";
   for (const tmpl of BUDGET_TEMPLATE_LIST) {
     if (tmpl.needsPct == null) continue; // skip "smart"
     if (
@@ -226,13 +231,41 @@ export function inferTemplateFromPercentages(
   return "smart";
 }
 
+/** Map persisted recurring rows into vitals wizard lines (needs/wants only). */
+export function recurringStoreToWizardLines(
+  rows: StoreRecurringExpense[],
+): Draft["recurringExpenses"] {
+  const today = new Date().toISOString().slice(0, 10);
+  return rows
+    .filter(
+      (e) =>
+        e.isActive &&
+        (!e.endDate || e.endDate >= today) &&
+        (!e.startDate || e.startDate <= today),
+    )
+    .filter((e) => e.bucket === "needs" || e.bucket === "wants")
+    .map((e) => ({
+      id: e.id,
+      name: e.name,
+      bucket: e.bucket === "needs" ? "needs" : "wants",
+      amount: String(e.amount),
+    }));
+}
+
 /**
  * Map a stored ProfileVitals record back to an editable Draft for the wizard.
  * stable_salary is used directly (it is stored as a monthly figure).
- * recurringExpenses and goal financials cannot be recovered from the profile
- * and are initialised empty.
+ * Recurring lines hydrate from the recurring expenses store when provided.
  */
-export function vitalsToInitialDraft(vitals: ProfileVitals): Draft {
+export function vitalsToInitialDraft(
+  vitals: ProfileVitals,
+  options?: { recurringFromStore?: StoreRecurringExpense[] },
+): Draft {
+  const recurringExpenses =
+    options?.recurringFromStore && options.recurringFromStore.length > 0
+      ? recurringStoreToWizardLines(options.recurringFromStore)
+      : [];
+
   return {
     step: 0,
     stableSalary: vitals.stable_salary > 0 ? String(vitals.stable_salary) : "",
@@ -248,7 +281,7 @@ export function vitalsToInitialDraft(vitals: ProfileVitals): Draft {
       vitals.wants_pct,
       vitals.savings_pct,
     ),
-    recurringExpenses: [],
+    recurringExpenses,
     goalType: vitals.primary_goal ?? null,
     goalAmount: "",
     goalTimeline: "",

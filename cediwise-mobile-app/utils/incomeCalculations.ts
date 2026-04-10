@@ -1,5 +1,6 @@
-import type { IncomeSource } from "../types/budget";
+import type { IncomeSource, RecurringExpense } from "../types/budget";
 import { computeGhanaTax2026Monthly } from "./ghanaTax";
+import { sumRecurringMonthlyEquivalent } from "./recurringHelpers";
 import type { TaxConfig } from "./taxSync";
 
 /**
@@ -10,7 +11,7 @@ import type { TaxConfig } from "./taxSync";
  */
 export function getMonthlyNetIncome(
   incomeSources: IncomeSource[],
-  taxConfig?: TaxConfig
+  taxConfig?: TaxConfig,
 ): number {
   return incomeSources.reduce((sum, src) => {
     if (src.type === "primary" && src.applyDeductions) {
@@ -20,4 +21,29 @@ export function getMonthlyNetIncome(
     }
     return sum + src.amount;
   }, 0);
+}
+
+/**
+ * Net income minus effective recurring commitments (active, in date range).
+ * Bucket percentages should apply to `disposableIncome`.
+ */
+export function getMonthlyDisposableIncome(
+  incomeSources: IncomeSource[],
+  recurringExpenses: RecurringExpense[],
+  taxConfig?: TaxConfig,
+): {
+  netIncome: number;
+  totalRecurringMonthly: number;
+  disposableIncome: number;
+} {
+  const netIncome = getMonthlyNetIncome(incomeSources, taxConfig);
+  const totalRecurringMonthly = sumRecurringMonthlyEquivalent(
+    recurringExpenses,
+    new Date(),
+  );
+  return {
+    netIncome,
+    totalRecurringMonthly,
+    disposableIncome: Math.max(0, netIncome - totalRecurringMonthly),
+  };
 }

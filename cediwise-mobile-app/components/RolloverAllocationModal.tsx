@@ -3,11 +3,12 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import * as Haptics from "expo-haptics";
 import { Button, Dialog, ScrollShadow } from "heroui-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { CheckIcon, ChevronDown } from "lucide-react-native";
+import { CheckIcon, ChevronDown, Repeat } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Platform, Pressable, ScrollView, Text, useWindowDimensions, View } from "react-native";
 import Animated, {
   Easing,
+  FadeInDown,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -23,6 +24,11 @@ export type RolloverDestination = {
   name: string;
 };
 
+export type NextCycleRecurringSummary = {
+  totalMonthly: number;
+  items: { name: string; monthlyAmount: number }[];
+};
+
 type Props = {
   visible: boolean;
   totalAmount: number;
@@ -33,6 +39,8 @@ type Props = {
   durationUnit: "days" | "months";
   durationMonths?: number;
   paydayDay: number;
+  /** Active recurring bills that apply to the upcoming cycle (monthly equivalents). */
+  nextCycleRecurring?: NextCycleRecurringSummary | null;
   onClose: () => void;
   onConfirm: (
     allocations: Record<string, number>,
@@ -110,6 +118,8 @@ function formatCycleSummary(
   return `${range} · ${durationLabel} · Payday ${paydayOrdinal}`;
 }
 
+const MAX_RECURRING_ROWS = 6;
+
 export function RolloverAllocationModal({
   visible,
   totalAmount,
@@ -120,6 +130,7 @@ export function RolloverAllocationModal({
   durationUnit,
   durationMonths = 1,
   paydayDay,
+  nextCycleRecurring,
   onClose,
   onConfirm,
 }: Props) {
@@ -254,6 +265,14 @@ export function RolloverAllocationModal({
     transform: [{ rotate: `${interpolate(expandedValue.value, [0, 1], [0, 180])}deg` }],
   }));
 
+  const recurringRows = nextCycleRecurring?.items ?? [];
+  const recurringMore =
+    recurringRows.length > MAX_RECURRING_ROWS
+      ? recurringRows.length - MAX_RECURRING_ROWS
+      : 0;
+  const recurringShown = recurringRows.slice(0, MAX_RECURRING_ROWS);
+  const recurringTotal = nextCycleRecurring?.totalMonthly ?? 0;
+
   const expandContentAnimatedStyle = useAnimatedStyle(() => ({
     height: interpolate(expandedValue.value, [0, 1], [0, EXPANDED_CONTENT_HEIGHT]),
     opacity: interpolate(expandedValue.value, [0, 1], [0, 1]),
@@ -301,6 +320,61 @@ export function RolloverAllocationModal({
                   {formatCycleDates(nextCycleStart, nextCycleEnd)}
                 </Text>
               )}
+
+              {visible && recurringTotal > 0 && recurringRows.length > 0 ? (
+                <Animated.View
+                  entering={FadeInDown.duration(240).springify()}
+                  className="mb-4 rounded-2xl border border-cyan-500/25 bg-cyan-500/10 px-3.5 py-3"
+                  accessibilityRole="summary"
+                  accessibilityLabel={`Recurring expenses in next cycle: ${recurringRows.length} items, about ${recurringTotal.toFixed(0)} cedis per month total`}
+                >
+                  <View className="flex-row items-center gap-2 mb-2">
+                    <View className="p-1.5 rounded-full bg-cyan-500/20 border border-cyan-500/35">
+                      <Repeat size={16} color="#22D3EE" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-cyan-200/95 text-xs font-semibold uppercase tracking-wide">
+                        Carries into next cycle
+                      </Text>
+                      <Text className="text-white text-base font-bold mt-0.5">
+                        ₵{formatCurrency(recurringTotal)}
+                        <Text className="text-slate-400 text-sm font-medium">
+                          {" "}
+                          / month
+                        </Text>
+                      </Text>
+                    </View>
+                  </View>
+                  <Text className="text-slate-400 text-xs leading-5 mb-2">
+                    These fixed bills stay on your budget. Flexible limits use income after this
+                    total.
+                  </Text>
+                  <View className="gap-1.5 border-t border-white/10 pt-2 mt-1">
+                    {recurringShown.map((row, idx) => (
+                      <View
+                        key={`rec-row-${idx}-${row.name}`}
+                        className="flex-row items-center justify-between py-1"
+                      >
+                        <Text
+                          className="text-slate-300 text-sm flex-1 pr-2"
+                          numberOfLines={1}
+                        >
+                          {row.name}
+                        </Text>
+                        <Text className="text-cyan-300/90 text-sm font-semibold tabular-nums">
+                          ₵{formatCurrency(row.monthlyAmount)}
+                        </Text>
+                      </View>
+                    ))}
+                    {recurringMore > 0 ? (
+                      <Text className="text-slate-500 text-xs pt-1">
+                        +{recurringMore} more recurring expense
+                        {recurringMore === 1 ? "" : "s"}
+                      </Text>
+                    ) : null}
+                  </View>
+                </Animated.View>
+              ) : null}
 
               {totalAmount > 0 && destinations.length > 0 && (
                 <View className="flex-row gap-2 mb-4">

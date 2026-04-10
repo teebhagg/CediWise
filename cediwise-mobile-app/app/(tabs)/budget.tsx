@@ -23,10 +23,11 @@ import { useTierContext } from "@/contexts/TierContext";
 import { useTourContext } from "@/contexts/TourContext";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useConnectivity } from "@/hooks/useConnectivity";
+import { useRecurringExpenses } from "@/hooks/useRecurringExpenses";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Plus, Settings, WifiOff } from "lucide-react-native";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -49,6 +50,10 @@ import {
 } from "@/components/CediWiseHeader";
 import { BUDGET_TOUR_READY_TIMEOUT_MS } from "@/constants/tourTokens";
 import { analytics } from "@/utils/analytics";
+import {
+  filterEffectiveRecurringExpenses,
+  toMonthlyEquivalentAmount,
+} from "@/utils/recurringHelpers";
 
 export default function BudgetScreen() {
   const router = useRouter();
@@ -64,6 +69,22 @@ export default function BudgetScreen() {
     ui,
     modals,
   } = useBudgetScreenState();
+  const { recurringExpenses } = useRecurringExpenses();
+  const nextCycleRecurringSummary = useMemo(() => {
+    const effective = filterEffectiveRecurringExpenses(
+      recurringExpenses,
+      new Date(),
+    );
+    const items = effective
+      .map((e) => ({
+        name: e.name,
+        monthlyAmount: toMonthlyEquivalentAmount(e.amount, e.frequency),
+      }))
+      .filter((x) => x.monthlyAmount > 0)
+      .sort((a, b) => b.monthlyAmount - a.monthlyAmount);
+    const totalMonthly = items.reduce((s, x) => s + x.monthlyAmount, 0);
+    return { totalMonthly, items };
+  }, [recurringExpenses]);
   const { canAccessBudget } = useTierContext();
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
@@ -331,6 +352,8 @@ export default function BudgetScreen() {
               startDate={derived.activeCycle?.startDate ?? ""}
               endDate={derived.activeCycle?.endDate ?? ""}
               onStartNewCycle={modals.handleStartNewCycle}
+              recurringMonthlyTotal={nextCycleRecurringSummary.totalMonthly}
+              recurringCount={nextCycleRecurringSummary.items.length}
             />
 
             <BudgetPendingSyncCard
@@ -645,6 +668,12 @@ export default function BudgetScreen() {
         durationUnit={ui.pendingRollover?.durationUnit ?? "months"}
         durationMonths={ui.pendingRollover?.durationMonths ?? 1}
         paydayDay={ui.pendingRollover?.paydayDay ?? 1}
+        nextCycleRecurring={
+          nextCycleRecurringSummary.totalMonthly > 0 &&
+          nextCycleRecurringSummary.items.length > 0
+            ? nextCycleRecurringSummary
+            : null
+        }
         onClose={() => ui.setPendingRollover(null)}
         onConfirm={modals.handleRolloverConfirm}
       />

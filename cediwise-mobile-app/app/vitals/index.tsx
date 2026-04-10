@@ -9,6 +9,7 @@ import type { BudgetPreview, Draft, StepErrors } from "@/components/features/vit
 import {
   computeIntelligentStrategy,
   getNetPreview,
+  recurringStoreToWizardLines,
   toMoney,
   toMonthlySalary,
   vitalsToInitialDraft,
@@ -108,11 +109,10 @@ export default function VitalsWizard() {
   const [draft, setDraft] = useState<Draft>(() => {
     if (editMode) {
       const storedVitals = useProfileVitalsStore.getState().vitals;
-      if (storedVitals)
-        return vitalsToInitialDraft(storedVitals, {
-          recurringFromStore:
-            useRecurringExpensesStore.getState().recurringExpenses,
-        });
+      if (storedVitals) {
+        // Recurring lines hydrate after loadRecurringExpenses finishes (see effects below).
+        return vitalsToInitialDraft(storedVitals);
+      }
     }
     return makeDefaultDraft();
   });
@@ -124,6 +124,7 @@ export default function VitalsWizard() {
   const containerHeight = useSharedValue(360);
   const backBtnVisible = useSharedValue(editMode ? 1 : 0);
   const outgoingStepRef = useRef<number | null>(null);
+  const editRecurringHydratedRef = useRef(false);
   const scrollViewRef = useRef<any>(null);
   const [showValidationHint, setShowValidationHint] = useState(false);
   const insets = useSafeAreaInsets();
@@ -149,6 +150,10 @@ export default function VitalsWizard() {
   const recurringLoading = useRecurringExpensesStore((s) => s.isLoading);
 
   useEffect(() => {
+    editRecurringHydratedRef.current = false;
+  }, [user?.id]);
+
+  useEffect(() => {
     if (!editMode || !user?.id) return;
     void useRecurringExpensesStore.getState().loadRecurringExpenses();
   }, [editMode, user?.id]);
@@ -162,7 +167,19 @@ export default function VitalsWizard() {
         recurringFromStore: useRecurringExpensesStore.getState().recurringExpenses,
       }),
     );
+    editRecurringHydratedRef.current = true;
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editMode, vitals, recurringLoading]);
+
+  // After recurring store finishes loading, merge wizard recurring lines (edit mode only).
+  useEffect(() => {
+    if (!editMode || !vitals || recurringLoading) return;
+    if (editRecurringHydratedRef.current) return;
+    const lines = recurringStoreToWizardLines(
+      useRecurringExpensesStore.getState().recurringExpenses,
+    );
+    setDraft((prev) => ({ ...prev, recurringExpenses: lines }));
+    editRecurringHydratedRef.current = true;
   }, [editMode, vitals, recurringLoading]);
 
   useEffect(() => {
@@ -455,12 +472,11 @@ export default function VitalsWizard() {
         const rawSalary = toMoney(draft.stableSalary);
         const stableSalary = toMonthlySalary(rawSalary, draft.incomeFrequency);
 
-        // "needs" bucket → fixed costs that influence the strategy engine
+        // "needs" bucket → fixed costs that influence the strategy engine (match budgetPreview)
         const rent = 0;
-        const utilitiesTotal = draft.recurringExpenses.reduce(
-          (sum, e) => sum + toMoney(e.amount),
-          0,
-        );
+        const utilitiesTotal = draft.recurringExpenses
+          .filter((e) => e.bucket === "needs")
+          .reduce((sum, e) => sum + toMoney(e.amount), 0);
         const primaryGoal = draft.goalType ?? null;
 
         const computed = computeIntelligentStrategy({

@@ -1,5 +1,7 @@
 /** @jest-environment node */
 
+import { useLessonsStore } from "../lessonsStore";
+
 jest.mock("@/utils/supabase", () => ({ supabase: null }));
 jest.mock("@/constants/lessons", () => ({
   LESSON_MAP: {
@@ -29,8 +31,6 @@ jest.mock("@/constants/literacy", () => ({
     },
   ],
 }));
-
-import { useLessonsStore } from "../lessonsStore";
 
 describe("lessonsStore", () => {
   beforeEach(() => {

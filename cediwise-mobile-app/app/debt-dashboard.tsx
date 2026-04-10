@@ -10,8 +10,8 @@ import {
   Trash2,
   TrendingDown,
 } from "lucide-react-native";
-import React, { useCallback, useMemo, useState } from "react";
-import { Alert, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Alert, RefreshControl, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -21,7 +21,6 @@ import { AppTextField } from "@/components/AppTextField";
 import { BackButton } from "@/components/BackButton";
 import { Card } from "@/components/Card";
 import { StandardHeader } from "@/components/CediWiseHeader";
-import { PrimaryButton } from "@/components/PrimaryButton";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
 import { useBudget } from "@/hooks/useBudget";
@@ -36,17 +35,11 @@ export default function DebtDashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  if (!canAccessBudget) {
-    router.replace("/(tabs)/budget");
-    return null;
-  }
-
   const { showSuccess, showError, showInfo } = useAppToast();
   const budget = useBudget(user?.id);
   const monthlyIncome = budget.totals?.monthlyNetIncome || 0;
 
   const {
-    debts,
     isLoading,
     insights,
     addDebt,
@@ -56,6 +49,12 @@ export default function DebtDashboardScreen() {
     getActiveDebts,
     refresh,
   } = useDebts(monthlyIncome);
+
+  useEffect(() => {
+    if (!canAccessBudget) {
+      router.replace("/(tabs)/budget");
+    }
+  }, [canAccessBudget, router]);
 
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -136,7 +135,10 @@ export default function DebtDashboardScreen() {
   const activeDebts = getActiveDebts();
   const hasDebts = activeDebts.length > 0;
 
-  const cycles = budget.state?.cycles ?? [];
+  const cycles = useMemo(
+    () => budget.state?.cycles ?? [],
+    [budget.state?.cycles],
+  );
 
   const renderItem = useCallback(
     ({ item }: { item: Debt }) => (
@@ -247,6 +249,10 @@ export default function DebtDashboardScreen() {
     ),
     [hasDebts, isLoading, insights],
   );
+
+  if (!canAccessBudget) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>

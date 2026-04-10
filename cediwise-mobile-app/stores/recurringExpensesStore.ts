@@ -6,6 +6,7 @@ import type {
 import { enqueueMutation } from "@/utils/budgetStorage";
 import { flushBudgetQueue } from "@/utils/budgetSync";
 import { log } from "@/utils/logger";
+import { parseOptionalRecurringEndDateYmd } from "@/utils/recurringHelpers";
 import { supabase } from "@/utils/supabase";
 import { uuidv4 } from "@/utils/uuid";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -124,7 +125,12 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
     clearBudgetQueueFlushError: () => set({ budgetQueueFlushError: null }),
 
     initForUser: async (userId: string | null) => {
-      set({ userId, isLoading: true, budgetQueueFlushError: null });
+      set({
+        userId,
+        isLoading: true,
+        budgetQueueFlushError: null,
+        error: null,
+      });
       if (!userId) {
         set({ recurringExpenses: [], isLoading: false });
         return;
@@ -180,18 +186,27 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
         );
         if (expiredActive.length > 0) {
           const nowIso = new Date().toISOString();
-          expenses = expenses.map((e) =>
-            expiredActive.some((x) => x.id === e.id)
-              ? { ...e, isActive: false, updatedAt: nowIso }
-              : e,
-          );
+          const deactivatedIds = new Set<string>();
           for (const e of expiredActive) {
-            await supabase
+            const { error: upErr } = await supabase
               .from("recurring_expenses")
               .update({ is_active: false, updated_at: nowIso })
               .eq("id", e.id)
               .eq("user_id", startUserId);
+            if (upErr) {
+              log.error(
+                "[recurringExpenses] expired auto-deactivate failed",
+                { expenseId: e.id, userId: startUserId, error: upErr.message },
+              );
+            } else {
+              deactivatedIds.add(e.id);
+            }
           }
+          expenses = expenses.map((row) =>
+            deactivatedIds.has(row.id)
+              ? { ...row, isActive: false, updatedAt: nowIso }
+              : row,
+          );
         }
 
         set({ recurringExpenses: expenses });
@@ -220,6 +235,9 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
       const { userId } = get();
       if (!userId) throw new Error("User not authenticated");
 
+      const endParsed = parseOptionalRecurringEndDateYmd(params.endDate);
+      if (!endParsed.ok) throw new Error(endParsed.error);
+
       const id = uuidv4();
       const now = new Date().toISOString();
       const startDate =
@@ -234,7 +252,7 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
         bucket: params.bucket,
         categoryId: params.categoryId,
         startDate,
-        endDate: params.endDate || null,
+        endDate: endParsed.value,
         isActive: true,
         autoAllocate: params.autoAllocate ?? true,
         createdAt: now,
@@ -264,7 +282,7 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
           bucket: params.bucket,
           category_id: params.categoryId,
           start_date: startDate,
-          end_date: params.endDate,
+          end_date: endParsed.value,
           is_active: true,
           auto_allocate: params.autoAllocate ?? true,
         },
@@ -286,12 +304,19 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
       const { userId } = get();
       if (!userId) throw new Error("User not authenticated");
 
+      const mergeParams = { ...params };
+      if (params.endDate !== undefined) {
+        const endParsed = parseOptionalRecurringEndDateYmd(params.endDate);
+        if (!endParsed.ok) throw new Error(endParsed.error);
+        mergeParams.endDate = endParsed.value;
+      }
+
       set((s) => {
         const next = s.recurringExpenses.map((expense) =>
           expense.id === id
             ? {
                 ...expense,
-                ...params,
+                ...mergeParams,
                 updatedAt: new Date().toISOString(),
               }
             : expense,
@@ -312,7 +337,8 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
       if (params.bucket !== undefined) updatePayload.bucket = params.bucket;
       if (params.categoryId !== undefined)
         updatePayload.category_id = params.categoryId;
-      if (params.endDate !== undefined) updatePayload.end_date = params.endDate;
+      if (mergeParams.endDate !== undefined)
+        updatePayload.end_date = mergeParams.endDate;
       if (params.isActive !== undefined)
         updatePayload.is_active = params.isActive;
       if (params.autoAllocate !== undefined)

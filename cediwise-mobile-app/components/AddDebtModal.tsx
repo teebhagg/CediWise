@@ -6,8 +6,7 @@ import {
   StyleSheet,
   Text,
   View,
-} from "react-native";
-import { Keyboard } from "react-native";
+ Keyboard } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppDialog } from './AppDialog';
 import { AppTextField } from "./AppTextField";

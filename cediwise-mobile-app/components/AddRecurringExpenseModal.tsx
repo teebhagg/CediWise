@@ -9,7 +9,10 @@ import type {
   RecurringExpense,
   RecurringExpenseFrequency,
 } from "@/types/budget";
-import { toMonthlyEquivalentAmount } from "@/utils/recurringHelpers";
+import {
+  parseOptionalRecurringEndDateYmd,
+  toMonthlyEquivalentAmount,
+} from "@/utils/recurringHelpers";
 import { AppDialog } from "./AppDialog";
 import { AppTextField } from "./AppTextField";
 
@@ -40,7 +43,7 @@ export type RecurringExpenseModalPayload = {
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onSubmit: (payload: RecurringExpenseModalPayload) => void;
+  onSubmit: (payload: RecurringExpenseModalPayload) => void | Promise<void>;
   editing?: RecurringExpense | null;
   cycleCategories?: BudgetCategory[];
   peerRecurring?: RecurringExpense[];
@@ -65,6 +68,7 @@ export function AddRecurringExpenseModal({
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [endDate, setEndDate] = useState("");
   const [error, setError] = useState<string | undefined>();
+  const [submitting, setSubmitting] = useState(false);
 
   const bucketCategories = useMemo(
     () => cycleCategories.filter((c) => c.bucket === bucket),
@@ -126,7 +130,7 @@ export function AddRecurringExpenseModal({
     onClose();
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const trimmed = name.trim();
     if (trimmed.length < 2) {
       setError("Name must be at least 2 characters");
@@ -167,19 +171,37 @@ export function AddRecurringExpenseModal({
       }
     }
 
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
-      () => {},
-    );
-    onSubmit({
+    const endParsed = parseOptionalRecurringEndDateYmd(endDate);
+    if (!endParsed.ok) {
+      setError(endParsed.error);
+      return;
+    }
+
+    const payload: RecurringExpenseModalPayload = {
       name: trimmed,
       amount: parsed,
       frequency,
       bucket,
       autoAllocate,
       categoryId: autoAllocate ? categoryId : null,
-      endDate: endDate.trim() ? endDate.trim() : null,
-    });
-    onClose();
+      endDate: endParsed.value,
+    };
+
+    setSubmitting(true);
+    setError(undefined);
+    try {
+      await Promise.resolve(onSubmit(payload));
+      onClose();
+    } catch (err) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Could not save. Check your connection and try again.";
+      setError(msg);
+      throw err;
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const title = editing ? "Edit Recurring Expense" : "Add Recurring Expense";
@@ -194,6 +216,7 @@ export function AddRecurringExpenseModal({
       primaryLabel={editing ? "Save" : "Add"}
       onPrimary={handleSubmit}
       onClose={handleClose}
+      loading={submitting}
     >
       <ScrollView
         style={{ maxHeight: 420 }}

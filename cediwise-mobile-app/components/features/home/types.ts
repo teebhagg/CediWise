@@ -8,7 +8,7 @@ export type IncomeTaxSummary = {
   totalSsnit: number;
   totalNhis: number;
   totalPaye: number;
-  breakdowns: Array<{
+  breakdowns: {
     src: {
       id: string;
       name: string;
@@ -18,7 +18,7 @@ export type IncomeTaxSummary = {
     };
     taxable: boolean;
     tax: { ssnit: number; nhis: number; paye: number; netTakeHome: number };
-  }>;
+  }[];
 };
 
 export type BudgetTotals = {

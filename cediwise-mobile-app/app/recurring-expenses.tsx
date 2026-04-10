@@ -90,11 +90,6 @@ export default function RecurringExpensesScreen() {
   const insets = useSafeAreaInsets();
   const { canAccessBudget } = useTierContext();
 
-  if (!canAccessBudget) {
-    router.replace("/(tabs)/budget");
-    return null;
-  }
-
   const { user } = useAuth();
   const budget = useBudget(user?.id);
   const { showSuccess, showError } = useAppToast();
@@ -120,6 +115,12 @@ export default function RecurringExpensesScreen() {
     clearBudgetQueueFlushError,
     showError,
   ]);
+
+  useEffect(() => {
+    if (!canAccessBudget) {
+      router.replace("/(tabs)/budget");
+    }
+  }, [canAccessBudget, router]);
 
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -196,15 +197,15 @@ export default function RecurringExpensesScreen() {
   const handlePause = useCallback(
     async (expense: RecurringExpense) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      await updateRecurringExpense(expense.id, { isActive: false });
-      showSuccess("Paused", `${expense.name} is paused`);
       try {
+        await updateRecurringExpense(expense.id, { isActive: false });
         await budget.recalculateBudget();
+        showSuccess("Paused", `${expense.name} is paused`);
       } catch (err) {
-        log.error("[recurring-expenses] recalculateBudget failed (pause)", err);
+        log.error("[recurring-expenses] pause", err);
         showError(
-          "Budget totals may be stale",
-          "Recurring change is saved; open Budget to refresh if numbers look off.",
+          "Could not pause",
+          "Update or budget refresh failed. Check your connection and try again.",
         );
       }
     },
@@ -214,15 +215,15 @@ export default function RecurringExpensesScreen() {
   const handleResume = useCallback(
     async (expense: RecurringExpense) => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      await updateRecurringExpense(expense.id, { isActive: true });
-      showSuccess("Resumed", `${expense.name} is active again`);
       try {
+        await updateRecurringExpense(expense.id, { isActive: true });
         await budget.recalculateBudget();
+        showSuccess("Resumed", `${expense.name} is active again`);
       } catch (err) {
-        log.error("[recurring-expenses] recalculateBudget failed (resume)", err);
+        log.error("[recurring-expenses] resume", err);
         showError(
-          "Budget totals may be stale",
-          "Recurring change is saved; open Budget to refresh if numbers look off.",
+          "Could not resume",
+          "Update or budget refresh failed. Check your connection and try again.",
         );
       }
     },
@@ -283,6 +284,7 @@ export default function RecurringExpensesScreen() {
           "Could not update budget",
           "Check your connection and try again, or open Budget to refresh.",
         );
+        throw err;
       }
     },
     [
@@ -308,7 +310,7 @@ export default function RecurringExpensesScreen() {
     });
 
     return grouped;
-  }, [recurringExpenses, getActiveExpenses]);
+  }, [getActiveExpenses]);
 
   const totalMonthly = getMonthlyTotal();
 
@@ -412,6 +414,10 @@ export default function RecurringExpensesScreen() {
     ),
     [totalMonthly, recurringExpenses.length, isLoading, getActiveExpenses],
   );
+
+  if (!canAccessBudget) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>

@@ -13,16 +13,16 @@ export type ReallocationSuggestion = {
     savingsPct: number;
   };
   details?: {
-    overspentBuckets: Array<{
+    overspentBuckets: {
       bucket: BudgetBucket;
       amount: number;
       percentage: number;
-    }>;
-    underspentBuckets: Array<{
+    }[];
+    underspentBuckets: {
       bucket: BudgetBucket;
       amount: number;
       percentage: number;
-    }>;
+    }[];
   };
 };
 
@@ -63,16 +63,16 @@ export function analyzeAndSuggestReallocation(
   };
 
   // Calculate over/underspending
-  const overspentBuckets: Array<{
+  const overspentBuckets: {
     bucket: BudgetBucket;
     amount: number;
     percentage: number;
-  }> = [];
-  const underspentBuckets: Array<{
+  }[] = [];
+  const underspentBuckets: {
     bucket: BudgetBucket;
     amount: number;
     percentage: number;
-  }> = [];
+  }[] = [];
 
   for (const bucket of ["needs", "wants", "savings"] as BudgetBucket[]) {
     const spent = spentByBucket[bucket];

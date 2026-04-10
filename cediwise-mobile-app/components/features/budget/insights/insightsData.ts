@@ -30,6 +30,8 @@ export type CategoryBreakdown = {
 export type InsightsRangeData = {
   series: InsightsSeries;
   totalSpent: number;
+  /** Days in the window that `totalSpent` aggregates (matches chart buckets). */
+  spentWindowSpanDays: number;
   averageLabel: string;
   dateRangeLabel: string;
   categoryBreakdown: CategoryBreakdown[];
@@ -211,6 +213,68 @@ const getRangeTransactions = (
   });
 };
 
+/** Matches `buildInsightsRangeData` chart windows so `totalSpent` and span stay consistent. */
+function getInsightsSpentWindowSpanDays(
+  range: InsightsRangeKey,
+  cycles: BudgetCycle[],
+  now: Date,
+): number {
+  const hasCyclesForSixMonths = cycles.length >= 6;
+
+  if (range === '1W') {
+    return 7;
+  }
+
+  if (range === '1M') {
+    // buildWeeklySeries: four 7-day buckets ending on `now`, covering 28 calendar days.
+    return 28;
+  }
+
+  if (range === '6M' && hasCyclesForSixMonths) {
+    const sorted = [...cycles].sort(
+      (a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime(),
+    );
+    const slice = sorted.slice(-6);
+    if (slice.length) {
+      const start = startOfDay(new Date(slice[0].startDate));
+      const end = startOfDay(new Date(slice[slice.length - 1].endDate));
+      return Math.max(
+        1,
+        Math.round((end.getTime() - start.getTime()) / MS_PER_DAY) + 1,
+      );
+    }
+  }
+
+  if (range === '1Y') {
+    const endMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    let totalDays = 0;
+    for (let i = 11; i >= 0; i -= 1) {
+      const monthStart = new Date(endMonth.getFullYear(), endMonth.getMonth() - i, 1);
+      const monthEnd = new Date(
+        monthStart.getFullYear(),
+        monthStart.getMonth() + 1,
+        0,
+      );
+      totalDays += monthEnd.getDate();
+    }
+    return Math.max(1, totalDays);
+  }
+
+  const count = range === '6M' ? 6 : 12;
+  const end = new Date(now.getFullYear(), now.getMonth(), 1);
+  let totalDays = 0;
+  for (let i = count - 1; i >= 0; i -= 1) {
+    const monthStart = new Date(end.getFullYear(), end.getMonth() - i, 1);
+    const monthEnd = new Date(
+      monthStart.getFullYear(),
+      monthStart.getMonth() + 1,
+      0,
+    );
+    totalDays += monthEnd.getDate();
+  }
+  return Math.max(1, totalDays);
+}
+
 export const buildInsightsRangeData = ({
   range,
   cycles,
@@ -322,6 +386,8 @@ export const buildInsightsRangeData = ({
     averageLabel = 'avg. per month';
   }
 
+  const spentWindowSpanDays = getInsightsSpentWindowSpanDays(range, cycles, now);
+
   return {
     series: {
       labels: seriesLabels,
@@ -330,6 +396,7 @@ export const buildInsightsRangeData = ({
       avgValue,
     },
     totalSpent,
+    spentWindowSpanDays,
     averageLabel,
     dateRangeLabel,
     categoryBreakdown: breakdown,
@@ -348,12 +415,15 @@ export function buildRecurringCommitmentInsights(params: {
   totalRecurringMonthly: number;
   disposableIncome: number;
   totalSpentInRange?: number;
+  /** Days matching `totalSpentInRange`; recurring is scaled by spentWindowSpanDays/30. */
+  spentWindowSpanDays?: number;
 }): RecurringCommitmentInsight[] {
   const {
     monthlyNetIncome,
     totalRecurringMonthly,
     disposableIncome,
     totalSpentInRange,
+    spentWindowSpanDays,
   } = params;
   const items: RecurringCommitmentInsight[] = [];
 
@@ -388,20 +458,24 @@ export function buildRecurringCommitmentInsights(params: {
     }
   }
 
-  if (
-    typeof totalSpentInRange === 'number' &&
-    totalSpentInRange > 0 &&
-    totalRecurringMonthly > 0
-  ) {
-    const denom = totalSpentInRange + totalRecurringMonthly;
-    const share = (totalRecurringMonthly / denom) * 100;
-    if (Number.isFinite(share) && share > 5) {
-      items.push({
-        id: 'rec-vs-spend',
-        title: 'Fixed vs logged spending',
-        variant: 'info',
-        body: `About ${share.toFixed(0)}% of (logged spend + recurring) is recurring bills — useful when comparing to your category breakdown.`,
-      });
+  if (typeof totalSpentInRange === 'number' && totalSpentInRange > 0) {
+    const spanDays =
+      typeof spentWindowSpanDays === 'number' && spentWindowSpanDays > 0
+        ? spentWindowSpanDays
+        : 30;
+    const rangeFactor = spanDays / 30;
+    const normalizedRecurring = totalRecurringMonthly * rangeFactor;
+    if (normalizedRecurring > 0) {
+      const denom = totalSpentInRange + normalizedRecurring;
+      const share = (normalizedRecurring / denom) * 100;
+      if (Number.isFinite(share) && share > 5) {
+        items.push({
+          id: 'rec-vs-spend',
+          title: 'Fixed vs logged spending',
+          variant: 'info',
+          body: `About ${share.toFixed(0)}% of (logged spend + recurring in this period) is recurring bills — useful when comparing to your category breakdown.`,
+        });
+      }
     }
   }
 

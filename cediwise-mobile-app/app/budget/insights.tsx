@@ -18,7 +18,7 @@ import { SpendingInsightsChart } from '@/components/features/budget/insights/Spe
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { FlashList } from '@shopify/flash-list';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Receipt } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -63,13 +63,19 @@ export default function BudgetInsightsScreen() {
             totalRecurringMonthly: budget.totals.totalRecurringMonthly,
             disposableIncome: budget.totals.disposableIncome,
             totalSpentInRange: insightsData.totalSpent,
+            spentWindowSpanDays: insightsData.spentWindowSpanDays,
           })
         : [],
-    [budget.totals, insightsData.totalSpent],
+    [budget.totals, insightsData.totalSpent, insightsData.spentWindowSpanDays],
   );
 
+  useEffect(() => {
+    if (!canAccessBudget) {
+      router.replace("/(tabs)/budget");
+    }
+  }, [canAccessBudget, router]);
+
   if (!canAccessBudget) {
-    router.replace("/(tabs)/budget");
     return null;
   }
 

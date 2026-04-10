@@ -21,7 +21,7 @@ export type AppDialogProps = {
   description: string;
   /** Primary action (top button): emerald bg, dark text */
   primaryLabel: string;
-  onPrimary: () => void;
+  onPrimary: () => void | Promise<void>;
   /** Secondary action (bottom button): dark grey bg, white text */
   secondaryLabel?: string;
   onSecondary?: () => void;
@@ -91,11 +91,18 @@ export function AppDialog({
   const handlePrimary = async () => {
     if (loading) return;
     try {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const ret = onPrimary();
+      if (ret != null && typeof (ret as Promise<unknown>).then === "function") {
+        await ret;
+      }
+      try {
+        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } catch {
+        // ignore
+      }
     } catch {
-      // ignore
+      // Caller failed (e.g. async validation/submit); no success haptic
     }
-    onPrimary();
   };
 
   const insets = useSafeAreaInsets();

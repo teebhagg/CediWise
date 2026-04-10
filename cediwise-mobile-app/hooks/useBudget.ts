@@ -58,6 +58,7 @@ import {
   clearProfileVitalsCache,
   writePersonalizationStatusCache,
 } from "../utils/profileVitals";
+import { addMonths, computeNextCycleFromPrevious } from "../utils/nextCycle";
 import { getActiveTaxConfig, type TaxConfig } from "../utils/taxSync";
 import { uuidv4 } from "../utils/uuid";
 
@@ -99,47 +100,6 @@ export function computePaydayCycle(today: Date, paydayDay: number) {
   const end = new Date(nextPayday);
   end.setDate(end.getDate() - 1);
   return { start, end };
-}
-
-function addMonths(date: Date, months: number): Date {
-  const day = date.getDate();
-  const result = new Date(date);
-  result.setDate(1);
-  result.setMonth(result.getMonth() + months);
-  const lastDay = lastDayOfMonth(result.getFullYear(), result.getMonth());
-  result.setDate(Math.min(day, lastDay));
-  return result;
-}
-
-/**
- * Compute next cycle from previous: start = prevEnd + 1, same duration as prev.
- * Weekly/bi-weekly use days; monthly+ use calendar months.
- */
-function computeNextCycleFromPrevious(
-  prevStartDate: string,
-  prevEndDate: string,
-  useMonths: boolean,
-): { start: Date; end: Date } {
-  const prevStart = new Date(prevStartDate);
-  const prevEnd = new Date(prevEndDate);
-
-  const newStart = new Date(prevEnd);
-  newStart.setDate(newStart.getDate() + 1);
-
-  if (useMonths) {
-    const durationDays =
-      Math.round((prevEnd.getTime() - prevStart.getTime()) / 86400000) + 1;
-    const durationMonths = Math.max(1, Math.round(durationDays / 30.44));
-    const periodEnd = addMonths(newStart, durationMonths);
-    periodEnd.setDate(periodEnd.getDate() - 1);
-    return { start: newStart, end: periodEnd };
-  }
-
-  const durationDays =
-    Math.round((prevEnd.getTime() - prevStart.getTime()) / 86400000) + 1;
-  const newEnd = new Date(newStart);
-  newEnd.setDate(newEnd.getDate() + durationDays - 1);
-  return { start: newStart, end: newEnd };
 }
 
 function categoryToPayload(cat: BudgetCategory): Record<string, unknown> {
@@ -446,9 +406,12 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       );
     const recurringByBucket = recurringTotalsByBucket(recurringSnapshot, new Date());
 
-    const needsLimit = disposableIncome * activeCycle.needsPct;
-    const wantsLimit = disposableIncome * activeCycle.wantsPct;
-    const savingsLimit = disposableIncome * activeCycle.savingsPct;
+    // Bucket limits are shares of disposable income only when it is positive;
+    // non-positive disposable must not produce negative limits for consumers.
+    const limitsBase = disposableIncome > 0 ? disposableIncome : 0;
+    const needsLimit = limitsBase * activeCycle.needsPct;
+    const wantsLimit = limitsBase * activeCycle.wantsPct;
+    const savingsLimit = limitsBase * activeCycle.savingsPct;
 
     const txs = state.transactions.filter((t) => t.cycleId === activeCycle.id);
     const spentByBucket: Record<BudgetBucket, number> = {
@@ -1977,7 +1940,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
   const recalculateBudget = useCallback(
     async (overrideState?: BudgetState) => {
       if (!userId) return;
-      const current = overrideState ?? state ?? (await loadBudgetState(userId));
+      const current =
+        overrideState ?? (await loadBudgetState(userId)) ?? state;
       const next = recalculateBudgetFromAllocations(
         current,
         budgetRecalcOptions(taxConfig),

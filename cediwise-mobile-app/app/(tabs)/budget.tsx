@@ -50,6 +50,7 @@ import {
 } from "@/components/CediWiseHeader";
 import { BUDGET_TOUR_READY_TIMEOUT_MS } from "@/constants/tourTokens";
 import { analytics } from "@/utils/analytics";
+import { computeNextCycleFromPrevious } from "@/utils/nextCycle";
 import {
   filterEffectiveRecurringExpenses,
   toMonthlyEquivalentAmount,
@@ -70,10 +71,32 @@ export default function BudgetScreen() {
     modals,
   } = useBudgetScreenState();
   const { recurringExpenses } = useRecurringExpenses();
+
+  const nextCycleDate = useMemo(() => {
+    const previewStart = ui.pendingRollover?.nextCycleStart;
+    if (previewStart) {
+      const [y, m, d] = previewStart.split("-").map((n) => parseInt(n, 10));
+      return new Date(y, m - 1, d, 12, 0, 0, 0);
+    }
+    const ac = derived.activeCycle;
+    if (!ac) return new Date();
+    const durationDays =
+      Math.round(
+        (new Date(ac.endDate).getTime() - new Date(ac.startDate).getTime()) /
+          86400000,
+      ) + 1;
+    const useMonths = durationDays > 14;
+    return computeNextCycleFromPrevious(
+      ac.startDate,
+      ac.endDate,
+      useMonths,
+    ).start;
+  }, [ui.pendingRollover?.nextCycleStart, derived.activeCycle]);
+
   const nextCycleRecurringSummary = useMemo(() => {
     const effective = filterEffectiveRecurringExpenses(
       recurringExpenses,
-      new Date(),
+      nextCycleDate,
     );
     const items = effective
       .map((e) => ({
@@ -84,7 +107,7 @@ export default function BudgetScreen() {
       .sort((a, b) => b.monthlyAmount - a.monthlyAmount);
     const totalMonthly = items.reduce((s, x) => s + x.monthlyAmount, 0);
     return { totalMonthly, items };
-  }, [recurringExpenses]);
+  }, [recurringExpenses, nextCycleDate]);
   const { canAccessBudget } = useTierContext();
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);

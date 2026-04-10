@@ -2,6 +2,12 @@
 
 import { log } from "@/utils/logger";
 
+import {
+  compareVersions,
+  getActiveAppVersionPolicy,
+  isCurrentBuildOutdated,
+} from "@/services/versionUpdatePolicy";
+
 let mockSupabase: { from: jest.Mock } | null = null;
 
 jest.mock("@/utils/supabase", () => ({
@@ -17,19 +23,13 @@ jest.mock("expo-constants", () => ({
   },
 }));
 
-import {
-  compareVersions,
-  getActiveAppVersionPolicy,
-  isCurrentBuildOutdated,
-} from "@/services/versionUpdatePolicy";
-
 function rnPlatform() {
   const g = globalThis as { __TEST_RN_PLATFORM__?: { OS: string } };
   return g.__TEST_RN_PLATFORM__;
 }
 
 function createSupabaseChain(
-  maybeSingleResults: Array<{ data: unknown; error: { message?: string } | null }>,
+  maybeSingleResults: { data: unknown; error: { message?: string } | null }[],
 ) {
   let idx = 0;
   const firstEq = jest.fn();

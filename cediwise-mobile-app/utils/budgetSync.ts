@@ -4,6 +4,7 @@ import {
   removeQueuedMutation,
   updateQueuedMutation,
 } from "./budgetStorage";
+import { log } from "./logger";
 import { supabase } from "./supabase";
 import { isUuid } from "./uuid";
 
@@ -17,6 +18,30 @@ function errorMessage(e: unknown): string {
   } catch {
     return "Unknown error";
   }
+}
+
+/** PostgREST expects snake_case columns; camelCase keys cause schema-cache errors. */
+function recurringExpensePayloadForDb(
+  payload: Record<string, unknown>,
+): Record<string, unknown> {
+  const p = { ...payload };
+  const bridges: [string, string][] = [
+    ["userId", "user_id"],
+    ["categoryId", "category_id"],
+    ["startDate", "start_date"],
+    ["endDate", "end_date"],
+    ["isActive", "is_active"],
+    ["autoAllocate", "auto_allocate"],
+    ["createdAt", "created_at"],
+    ["updatedAt", "updated_at"],
+  ];
+  for (const [camel, snake] of bridges) {
+    if (camel in p && p[camel] !== undefined && p[snake] === undefined) {
+      p[snake] = p[camel];
+    }
+    delete p[camel];
+  }
+  return p;
 }
 
 async function attemptMutationRemote(
@@ -276,22 +301,24 @@ async function attemptMutationRemote(
 
     // Recurring Expenses
     if (kind === "insert_recurring_expense") {
-      if ("id" in payload && !isUuid(payload.id)) {
+      const row = recurringExpensePayloadForDb(payload as Record<string, unknown>);
+      if ("id" in row && !isUuid(row.id)) {
         return { ok: false, error: "Invalid recurring expense id." };
       }
       const { error } = await supabase
         .from("recurring_expenses")
-        .insert(payload);
+        .insert(row);
       if (error) return { ok: false, error: error.message };
       return { ok: true };
     }
 
     if (kind === "update_recurring_expense") {
-      const id = payload.id;
+      const row = recurringExpensePayloadForDb(payload as Record<string, unknown>);
+      const id = row.id;
       if (!isUuid(id)) {
         return { ok: false, error: "Invalid recurring expense id for update." };
       }
-      const { id: _id, ...updates } = payload;
+      const { id: _id, ...updates } = row;
       const { error } = await supabase
         .from("recurring_expenses")
         .update(updates)
@@ -524,6 +551,10 @@ const MUTATION_DEPENDENCY_ORDER: Record<string, number> = {
   insert_transaction: 3,
   update_transaction: 4,
   delete_transaction: 5,
+  // After categories (FK) and alongside other budget rows; before SME block.
+  insert_recurring_expense: 6,
+  update_recurring_expense: 7,
+  delete_recurring_expense: 8,
   // SME mutations run after budget mutations
   sme_upsert_profile: 10,
   sme_upsert_category: 11,
@@ -538,27 +569,41 @@ export async function flushBudgetQueue(
   userId: string,
   limit = 25
 ): Promise<{ okCount: number; failCount: number }> {
-  const queue = await loadBudgetQueue(userId);
-  const sorted = [...queue.items].sort((a, b) => {
-    const timeA = new Date(a.createdAt).getTime();
-    const timeB = new Date(b.createdAt).getTime();
-    if (timeA !== timeB) return timeA - timeB;
-    const orderA = MUTATION_DEPENDENCY_ORDER[a.kind] ?? 99;
-    const orderB = MUTATION_DEPENDENCY_ORDER[b.kind] ?? 99;
-    return orderA - orderB;
-  });
-  const slice = sorted.slice(0, limit);
+  try {
+    const queue = await loadBudgetQueue(userId);
+    const sorted = [...queue.items].sort((a, b) => {
+      const timeA = new Date(a.createdAt).getTime();
+      const timeB = new Date(b.createdAt).getTime();
+      if (timeA !== timeB) return timeA - timeB;
+      const orderA = MUTATION_DEPENDENCY_ORDER[a.kind] ?? 99;
+      const orderB = MUTATION_DEPENDENCY_ORDER[b.kind] ?? 99;
+      return orderA - orderB;
+    });
+    const slice = sorted.slice(0, limit);
 
-  let okCount = 0;
-  let failCount = 0;
+    let okCount = 0;
+    let failCount = 0;
 
-  for (const item of slice) {
-    const result = await trySyncMutation(userId, item);
-    if (result.ok) okCount += 1;
-    else failCount += 1;
+    for (const item of slice) {
+      const result = await trySyncMutation(userId, item);
+      if (result.ok) okCount += 1;
+      else failCount += 1;
+    }
+
+    if (failCount > 0) {
+      log.error("[budgetSync] flushBudgetQueue finished with failed mutations", {
+        userId,
+        okCount,
+        failCount,
+        attempted: slice.length,
+      });
+    }
+
+    return { okCount, failCount };
+  } catch (err) {
+    log.error("[budgetSync] flushBudgetQueue threw", { userId, err });
+    throw err;
   }
-
-  return { okCount, failCount };
 }
 
 /**

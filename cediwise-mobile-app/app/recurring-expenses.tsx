@@ -1,8 +1,8 @@
 import { FlashList } from "@shopify/flash-list";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import { Edit2, Plus, Trash2 } from "lucide-react-native";
-import React, { useCallback, useMemo, useState } from "react";
+import { Edit2, Pause, Play, Plus, Trash2 } from "lucide-react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -18,15 +18,18 @@ import { AddRecurringExpenseModal } from "@/components/AddRecurringExpenseModal"
 import { BackButton } from "@/components/BackButton";
 import { Card } from "@/components/Card";
 import { StandardHeader } from "@/components/CediWiseHeader";
-import { PrimaryButton } from "@/components/PrimaryButton";
 import { useTierContext } from "@/contexts/TierContext";
 import { useAppToast } from "@/hooks/useAppToast";
+import { useAuth } from "@/hooks/useAuth";
+import { useBudget } from "@/hooks/useBudget";
 import { useRecurringExpenses } from "@/hooks/useRecurringExpenses";
 import type {
   BudgetBucket,
   RecurringExpense,
   RecurringExpenseFrequency,
 } from "@/types/budget";
+import { log } from "@/utils/logger";
+import { toMonthlyEquivalentAmount } from "@/utils/recurringHelpers";
 import { Button } from "heroui-native";
 
 // Frequency display mapping
@@ -45,29 +48,102 @@ const BUCKET_COLORS: Record<BudgetBucket, string> = {
   savings: "#10b981",
 };
 
+/** Vertical rhythm between FlashList rows (gap in contentContainerStyle does not space cells). */
+const LIST_GAP_AFTER_BUCKET_HEADER = 10;
+const LIST_GAP_BETWEEN_EXPENSE_CARDS = 12;
+const LIST_GAP_BEFORE_NEXT_BUCKET = 20;
+
+const ACTION_EDIT_FG = "#93c5fd";
+const ACTION_PAUSE_FG = "#fcd34d";
+const ACTION_DELETE_FG = "#fca5a5";
+const ACTION_RESUME_FG = "#6ee7b7";
+
+type RecurringListItem =
+  | { type: "header"; id: string; bucket: BudgetBucket; bucketTotal: number }
+  | {
+      type: "row";
+      id: string;
+      expense: RecurringExpense;
+      bucket: BudgetBucket;
+    };
+
+function RecurringListSeparator({
+  leadingItem,
+  trailingItem,
+}: {
+  leadingItem: RecurringListItem;
+  trailingItem: RecurringListItem;
+}) {
+  let height = LIST_GAP_BETWEEN_EXPENSE_CARDS;
+  if (leadingItem.type === "header" && trailingItem.type === "row") {
+    height = LIST_GAP_AFTER_BUCKET_HEADER;
+  } else if (leadingItem.type === "row" && trailingItem.type === "header") {
+    height = LIST_GAP_BEFORE_NEXT_BUCKET;
+  } else if (leadingItem.type === "row" && trailingItem.type === "row") {
+    height = LIST_GAP_BETWEEN_EXPENSE_CARDS;
+  }
+  return <View style={{ height }} />;
+}
+
 export default function RecurringExpensesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { canAccessBudget } = useTierContext();
 
-  if (!canAccessBudget) {
-    router.replace("/(tabs)/budget");
-    return null;
-  }
-
-  const { showSuccess, showInfo } = useAppToast();
+  const { user } = useAuth();
+  const budget = useBudget(user?.id);
+  const { showSuccess, showError } = useAppToast();
   const {
     recurringExpenses,
     isLoading,
+    budgetQueueFlushError,
+    clearBudgetQueueFlushError,
     addRecurringExpense,
+    updateRecurringExpense,
     deleteRecurringExpense,
     getMonthlyTotal,
     getActiveExpenses,
     refresh,
   } = useRecurringExpenses();
 
+  useEffect(() => {
+    if (!budgetQueueFlushError) return;
+    showError("Sync issue", budgetQueueFlushError);
+    clearBudgetQueueFlushError();
+  }, [
+    budgetQueueFlushError,
+    clearBudgetQueueFlushError,
+    showError,
+  ]);
+
+  useEffect(() => {
+    if (!canAccessBudget) {
+      router.replace("/(tabs)/budget");
+    }
+  }, [canAccessBudget, router]);
+
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editing, setEditing] = useState<RecurringExpense | null>(null);
+
+  const activeCycleId = useMemo(() => {
+    if (!budget.state?.cycles.length) return null;
+    const sorted = [...budget.state.cycles].sort(
+      (a, b) =>
+        new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
+    );
+    return sorted[0]?.id ?? null;
+  }, [budget.state?.cycles]);
+
+  const cycleCategories = useMemo(() => {
+    if (!budget.state || !activeCycleId) return [];
+    return budget.state.categories.filter((c) => c.cycleId === activeCycleId);
+  }, [budget.state, activeCycleId]);
+
+  const pausedExpenses = useMemo(
+    () => recurringExpenses.filter((e) => !e.isActive),
+    [recurringExpenses],
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -87,26 +163,77 @@ export default function RecurringExpensesScreen() {
             text: "Delete",
             style: "destructive",
             onPress: async () => {
-              await deleteRecurringExpense(expense.id);
-              Haptics.notificationAsync(
-                Haptics.NotificationFeedbackType.Success,
-              );
-              showSuccess("Deleted", "Recurring expense removed successfully");
+              try {
+                await deleteRecurringExpense(expense.id);
+                await budget.recalculateBudget();
+                Haptics.notificationAsync(
+                  Haptics.NotificationFeedbackType.Success,
+                );
+                showSuccess("Deleted", "Recurring expense removed successfully");
+              } catch (err) {
+                log.error(
+                  "[recurring-expenses] delete + recalculateBudget failed",
+                  err,
+                );
+                showError(
+                  "Could not finish update",
+                  "Expense may be removed locally; open Budget to refresh totals.",
+                );
+              }
             },
           },
         ],
       );
     },
-    [deleteRecurringExpense, showSuccess],
+    [budget, deleteRecurringExpense, showError, showSuccess],
   );
 
-  const handleEdit = useCallback(
-    (expense: RecurringExpense) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      showInfo("Edit", "Edit recurring expense coming in a future update.");
+  const handleEdit = useCallback((expense: RecurringExpense) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setEditing(expense);
+    setShowAddModal(true);
+  }, []);
+
+  const handlePause = useCallback(
+    async (expense: RecurringExpense) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      try {
+        await updateRecurringExpense(expense.id, { isActive: false });
+        await budget.recalculateBudget();
+        showSuccess("Paused", `${expense.name} is paused`);
+      } catch (err) {
+        log.error("[recurring-expenses] pause", err);
+        showError(
+          "Could not pause",
+          "Update or budget refresh failed. Check your connection and try again.",
+        );
+      }
     },
-    [showInfo],
+    [budget, showError, showSuccess, updateRecurringExpense],
   );
+
+  const handleResume = useCallback(
+    async (expense: RecurringExpense) => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      try {
+        await updateRecurringExpense(expense.id, { isActive: true });
+        await budget.recalculateBudget();
+        showSuccess("Resumed", `${expense.name} is active again`);
+      } catch (err) {
+        log.error("[recurring-expenses] resume", err);
+        showError(
+          "Could not resume",
+          "Update or budget refresh failed. Check your connection and try again.",
+        );
+      }
+    },
+    [budget, showError, showSuccess, updateRecurringExpense],
+  );
+
+  const handleModalClose = useCallback(() => {
+    setShowAddModal(false);
+    setEditing(null);
+  }, []);
 
   const handleAddSubmit = useCallback(
     async (payload: {
@@ -115,18 +242,59 @@ export default function RecurringExpensesScreen() {
       frequency: RecurringExpenseFrequency;
       bucket: BudgetBucket;
       autoAllocate?: boolean;
+      categoryId?: string | null;
+      endDate?: string | null;
     }) => {
-      await addRecurringExpense({
-        name: payload.name,
-        amount: payload.amount,
-        frequency: payload.frequency,
-        bucket: payload.bucket,
-        autoAllocate: payload.autoAllocate,
-      });
-      setShowAddModal(false);
-      showSuccess("Expense added", "Recurring expense added successfully");
+      const wasEditing = Boolean(editing);
+      try {
+        if (editing) {
+          await updateRecurringExpense(editing.id, {
+            name: payload.name,
+            amount: payload.amount,
+            frequency: payload.frequency,
+            bucket: payload.bucket,
+            autoAllocate: payload.autoAllocate,
+            categoryId: payload.categoryId,
+            endDate: payload.endDate,
+          });
+        } else {
+          await addRecurringExpense({
+            name: payload.name,
+            amount: payload.amount,
+            frequency: payload.frequency,
+            bucket: payload.bucket,
+            autoAllocate: payload.autoAllocate,
+            categoryId: payload.categoryId,
+            endDate: payload.endDate,
+          });
+        }
+        await budget.recalculateBudget();
+        setEditing(null);
+        if (wasEditing) {
+          showSuccess("Saved", "Recurring expense updated");
+        } else {
+          showSuccess("Expense added", "Recurring expense added successfully");
+        }
+      } catch (err) {
+        log.error(
+          "[recurring-expenses] save recurring + recalculateBudget failed",
+          err,
+        );
+        showError(
+          "Could not update budget",
+          "Check your connection and try again, or open Budget to refresh.",
+        );
+        throw err;
+      }
     },
-    [addRecurringExpense, showSuccess],
+    [
+      addRecurringExpense,
+      budget,
+      editing,
+      showError,
+      showSuccess,
+      updateRecurringExpense,
+    ],
   );
 
   // Group by bucket
@@ -142,33 +310,21 @@ export default function RecurringExpensesScreen() {
     });
 
     return grouped;
-  }, [recurringExpenses, getActiveExpenses]);
+  }, [getActiveExpenses]);
 
   const totalMonthly = getMonthlyTotal();
 
-  type ListItem =
-    | { type: "header"; id: string; bucket: BudgetBucket; bucketTotal: number }
-    | {
-      type: "row";
-      id: string;
-      expense: RecurringExpense;
-      bucket: BudgetBucket;
-    };
-
-  const listData = useMemo((): ListItem[] => {
-    const items: ListItem[] = [];
+  const listData = useMemo((): RecurringListItem[] => {
+    const items: RecurringListItem[] = [];
     (["needs", "wants", "savings"] as BudgetBucket[]).forEach((bucket) => {
       const expenses = expensesByBucket[bucket];
       if (expenses.length === 0) return;
 
-      const bucketTotal = expenses.reduce((sum, exp) => {
-        let monthly = exp.amount;
-        if (exp.frequency === "weekly") monthly = exp.amount * 4.33;
-        else if (exp.frequency === "bi_weekly") monthly = exp.amount * 2.165;
-        else if (exp.frequency === "quarterly") monthly = exp.amount / 3;
-        else if (exp.frequency === "annually") monthly = exp.amount / 12;
-        return sum + monthly;
-      }, 0);
+      const bucketTotal = expenses.reduce(
+        (sum, exp) =>
+          sum + toMonthlyEquivalentAmount(exp.amount, exp.frequency),
+        0,
+      );
 
       items.push({ type: "header", id: `h-${bucket}`, bucket, bucketTotal });
       expenses.forEach((expense) => {
@@ -179,10 +335,10 @@ export default function RecurringExpensesScreen() {
   }, [expensesByBucket]);
 
   const renderItem = useCallback(
-    ({ item }: { item: ListItem }) => {
+    ({ item }: { item: RecurringListItem }) => {
       if (item.type === "header") {
         return (
-          <View style={[styles.bucketSection, styles.bucketHeaderWrap]}>
+          <View>
             <View style={styles.bucketHeader}>
               <View style={styles.bucketTitleRow}>
                 <View
@@ -207,25 +363,26 @@ export default function RecurringExpensesScreen() {
           </View>
         );
       }
-      return (
+        return (
         <ExpenseItem
           expense={item.expense}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onPause={handlePause}
           delay={0}
         />
       );
     },
-    [handleEdit, handleDelete],
+    [handleEdit, handleDelete, handlePause],
   );
 
-  const keyExtractor = useCallback((item: ListItem) => item.id, []);
+  const keyExtractor = useCallback((item: RecurringListItem) => item.id, []);
 
-  const getItemType = useCallback((item: ListItem) => item.type, []);
+  const getItemType = useCallback((item: RecurringListItem) => item.type, []);
 
   const listHeader = useMemo(
     () => (
-      <View className="gap-3 mt-3">
+      <View className="gap-3 pt-1 pb-4">
         <Animated.View entering={FadeInDown.duration(300).delay(0)}>
           <Card style={styles.summaryCard}>
             <Text style={styles.summaryLabel}>Total Monthly</Text>
@@ -258,6 +415,10 @@ export default function RecurringExpensesScreen() {
     [totalMonthly, recurringExpenses.length, isLoading, getActiveExpenses],
   );
 
+  if (!canAccessBudget) {
+    return null;
+  }
+
   return (
     <View style={styles.container}>
       <StandardHeader title="Recurring Expenses" leading={<BackButton />} centered />
@@ -267,6 +428,7 @@ export default function RecurringExpensesScreen() {
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         getItemType={getItemType}
+        ItemSeparatorComponent={RecurringListSeparator}
         ListHeaderComponent={listHeader}
         contentContainerStyle={[
           styles.scrollContent,
@@ -275,7 +437,38 @@ export default function RecurringExpensesScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-        ListFooterComponent={<View style={styles.listFooter} />}
+        ListFooterComponent={
+          <View style={styles.listFooter}>
+            {pausedExpenses.length > 0 ? (
+              <View style={styles.pausedSection}>
+                <Text style={styles.pausedSectionTitle}>Paused</Text>
+                {pausedExpenses.map((exp) => (
+                  <Card key={exp.id} style={styles.pausedCard}>
+                    <View style={styles.pausedRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.expenseName} numberOfLines={1}>
+                          {exp.name}
+                        </Text>
+                        <Text style={styles.pausedHint}>
+                          Not counted in your budget until resumed
+                        </Text>
+                      </View>
+                      <Pressable
+                        onPress={() => handleResume(exp)}
+                        style={({ pressed }) => [
+                          styles.resumeBtn,
+                          pressed && styles.actionPressed,
+                        ]}>
+                        <Play size={18} color={ACTION_RESUME_FG} />
+                        <Text style={styles.resumeBtnText}>Resume</Text>
+                      </Pressable>
+                    </View>
+                  </Card>
+                ))}
+              </View>
+            ) : null}
+          </View>
+        }
       />
 
       {/* Add Button */}
@@ -283,6 +476,7 @@ export default function RecurringExpensesScreen() {
         <Button
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            setEditing(null);
             setShowAddModal(true);
           }}>
           <Plus size={20} />
@@ -292,8 +486,12 @@ export default function RecurringExpensesScreen() {
 
       <AddRecurringExpenseModal
         visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
+        onClose={handleModalClose}
         onSubmit={handleAddSubmit}
+        editing={editing}
+        cycleCategories={cycleCategories}
+        peerRecurring={recurringExpenses}
+        netIncomeMonthly={budget.totals?.monthlyNetIncome}
       />
     </View>
   );
@@ -304,22 +502,19 @@ const ExpenseItem = React.memo(function ExpenseItem({
   expense,
   onEdit,
   onDelete,
+  onPause,
   delay,
 }: {
   expense: RecurringExpense;
   onEdit: (expense: RecurringExpense) => void;
   onDelete: (expense: RecurringExpense) => void;
+  onPause: (expense: RecurringExpense) => void;
   delay: number;
 }) {
-  // Calculate monthly amount
-  let monthlyAmount = expense.amount;
-  if (expense.frequency === "weekly") monthlyAmount = expense.amount * 4.33;
-  else if (expense.frequency === "bi_weekly")
-    monthlyAmount = expense.amount * 2.165;
-  else if (expense.frequency === "quarterly")
-    monthlyAmount = expense.amount / 3;
-  else if (expense.frequency === "annually")
-    monthlyAmount = expense.amount / 12;
+  const monthlyAmount = toMonthlyEquivalentAmount(
+    expense.amount,
+    expense.frequency,
+  );
 
   return (
     <Animated.View entering={FadeInDown.duration(300).delay(delay)}>
@@ -356,23 +551,34 @@ const ExpenseItem = React.memo(function ExpenseItem({
           <Pressable
             onPress={() => onEdit(expense)}
             style={({ pressed }) => [
-              styles.actionButton,
+              styles.actionButtonBase,
+              styles.actionButtonEdit,
               pressed && styles.actionPressed,
             ]}>
-            <Edit2 size={18} color="#64748B" />
-            <Text style={styles.actionText}>Edit</Text>
+            <Edit2 size={18} color={ACTION_EDIT_FG} />
+            <Text style={styles.actionTextEdit}>Edit</Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => onPause(expense)}
+            style={({ pressed }) => [
+              styles.actionButtonBase,
+              styles.actionButtonPause,
+              pressed && styles.actionPressed,
+            ]}>
+            <Pause size={18} color={ACTION_PAUSE_FG} />
+            <Text style={styles.actionTextPause}>Pause</Text>
           </Pressable>
 
           <Pressable
             onPress={() => onDelete(expense)}
             style={({ pressed }) => [
-              styles.actionButton,
+              styles.actionButtonBase,
+              styles.actionButtonDelete,
               pressed && styles.actionPressed,
             ]}>
-            <Trash2 size={18} color="#ef4444" />
-            <Text style={[styles.actionText, { color: "#ef4444" }]}>
-              Delete
-            </Text>
+            <Trash2 size={18} color={ACTION_DELETE_FG} />
+            <Text style={styles.actionTextDelete}>Delete</Text>
           </Pressable>
         </View>
       </Card>
@@ -399,14 +605,61 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   scrollContent: {
-    padding: 20,
-    gap: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 8,
   },
   headerPlaceholder: {
     width: 60,
   },
   listFooter: {
-    height: 100,
+    paddingTop: 8,
+    paddingBottom: 28,
+    gap: LIST_GAP_BETWEEN_EXPENSE_CARDS,
+  },
+  pausedSection: {
+    gap: LIST_GAP_BETWEEN_EXPENSE_CARDS,
+    marginTop: LIST_GAP_BEFORE_NEXT_BUCKET,
+  },
+  pausedSectionTitle: {
+    color: "#64748B",
+    fontFamily: "Figtree-SemiBold",
+    fontSize: 14,
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+    marginBottom: 4,
+  },
+  pausedCard: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    opacity: 0.85,
+  },
+  pausedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  pausedHint: {
+    color: "#64748B",
+    fontFamily: "Figtree-Regular",
+    fontSize: 12,
+    marginTop: 4,
+  },
+  resumeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+    minHeight: 44,
+    borderRadius: 999,
+    borderWidth: 1,
+    backgroundColor: "rgba(16, 185, 129, 0.14)",
+    borderColor: "rgba(52, 211, 153, 0.38)",
+  },
+  resumeBtnText: {
+    color: ACTION_RESUME_FG,
+    fontFamily: "Figtree-SemiBold",
+    fontSize: 13,
   },
   summaryCard: {
     alignItems: "center",
@@ -450,17 +703,11 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     maxWidth: 280,
   },
-  bucketSection: {
-    gap: 12,
-  },
-  bucketHeaderWrap: {
-    marginBottom: 4,
-  },
   bucketHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 4,
+    minHeight: 28,
   },
   bucketTitleRow: {
     flexDirection: "row",
@@ -483,8 +730,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   expenseCard: {
-    padding: 16,
-    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    gap: 14,
   },
   expenseHeader: {
     flexDirection: "row",
@@ -499,7 +747,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontFamily: "Figtree-SemiBold",
     fontSize: 16,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   expenseFrequency: {
     color: "#64748B",
@@ -536,26 +784,52 @@ const styles = StyleSheet.create({
   },
   actions: {
     flexDirection: "row",
-    gap: 12,
-    paddingTop: 8,
+    flexWrap: "wrap",
+    gap: 10,
+    paddingTop: 12,
+    marginTop: 2,
     borderTopWidth: 1,
     borderTopColor: "rgba(148, 163, 184, 0.1)",
   },
-  actionButton: {
+  actionButtonBase: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: "rgba(148, 163, 184, 0.05)",
+    gap: 8,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
+    minHeight: 44,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  actionButtonEdit: {
+    backgroundColor: "rgba(59, 130, 246, 0.14)",
+    borderColor: "rgba(96, 165, 250, 0.35)",
+  },
+  actionButtonPause: {
+    backgroundColor: "rgba(245, 158, 11, 0.14)",
+    borderColor: "rgba(251, 191, 36, 0.38)",
+  },
+  actionButtonDelete: {
+    backgroundColor: "rgba(239, 68, 68, 0.12)",
+    borderColor: "rgba(248, 113, 113, 0.38)",
   },
   actionPressed: {
-    opacity: 0.6,
+    opacity: 0.72,
+    transform: [{ scale: 0.98 }],
   },
-  actionText: {
-    color: "#64748B",
-    fontFamily: "Figtree-Medium",
+  actionTextEdit: {
+    color: ACTION_EDIT_FG,
+    fontFamily: "Figtree-SemiBold",
+    fontSize: 13,
+  },
+  actionTextPause: {
+    color: ACTION_PAUSE_FG,
+    fontFamily: "Figtree-SemiBold",
+    fontSize: 13,
+  },
+  actionTextDelete: {
+    color: ACTION_DELETE_FG,
+    fontFamily: "Figtree-SemiBold",
     fontSize: 13,
   },
   footer: {

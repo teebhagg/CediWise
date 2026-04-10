@@ -24,6 +24,12 @@ import {
   normalizeBudgetEngineMode,
   shouldShowBudgetEngineRecommendations,
 } from "../../../utils/budgetEngine";
+import { resolveBudgetPreferenceMigrationPrompt } from "../../../utils/budgetPreferenceMigrationPromptCore";
+import {
+  isBudgetPreferenceMigrationSkipped,
+  setBudgetPreferenceMigrationSkipped,
+} from "../../../utils/budgetPreferenceMigrationStorage";
+import type { BudgetPreferenceMigrationPromptPayload } from "../../../utils/budgetPreferenceTypes";
 import {
   computeCycleDeficit,
   getResolutionForCycle,
@@ -31,7 +37,6 @@ import {
   type CycleDeficitResolutionChoice,
 } from "../../../utils/cycleDeficit";
 import { computeGhanaTax2026Monthly } from "../../../utils/ghanaTax";
-import { getActiveTaxConfig, type TaxConfig } from "../../../utils/taxSync";
 import {
   analyzeAndSuggestReallocation,
   type ReallocationSuggestion,
@@ -40,12 +45,7 @@ import {
   getSpendingInsights,
   type SpendingInsight,
 } from "../../../utils/spendingPatterns";
-import {
-  isBudgetPreferenceMigrationSkipped,
-  setBudgetPreferenceMigrationSkipped,
-} from "../../../utils/budgetPreferenceMigrationStorage";
-import { resolveBudgetPreferenceMigrationPrompt } from "../../../utils/budgetPreferenceMigrationPromptCore";
-import type { BudgetPreferenceMigrationPromptPayload } from "../../../utils/budgetPreferenceTypes";
+import { getActiveTaxConfig, type TaxConfig } from "../../../utils/taxSync";
 import { DEFAULT_MIN_LIVING_BUFFER } from "../vitals/utils";
 
 export function useBudgetScreenState() {
@@ -261,8 +261,7 @@ export function useBudgetScreenState() {
   }, [state?.cycles]);
 
   const budgetEngineMode = useMemo<BudgetEngineMode>(
-    () =>
-      normalizeBudgetEngineMode(state?.prefs?.budgetEngineMode ?? null),
+    () => normalizeBudgetEngineMode(state?.prefs?.budgetEngineMode ?? null),
     [state?.prefs?.budgetEngineMode],
   );
 
@@ -294,6 +293,7 @@ export function useBudgetScreenState() {
       previousCycle,
       state.transactions,
       totals.monthlyNetIncome,
+      totals.disposableIncome,
     );
     return suggestion.shouldReallocate ? suggestion : null;
   }, [
@@ -348,7 +348,8 @@ export function useBudgetScreenState() {
     const v = profileVitals.vitals;
     if (!v?.setup_completed) return null;
     const netSalary = v.auto_tax
-      ? computeGhanaTax2026Monthly(v.stable_salary, taxConfig ?? undefined).netTakeHome
+      ? computeGhanaTax2026Monthly(v.stable_salary, taxConfig ?? undefined)
+          .netTakeHome
       : v.stable_salary;
     const netIncome = Math.max(0, netSalary + v.side_income);
     const fixedCosts = Math.max(
@@ -504,9 +505,10 @@ export function useBudgetScreenState() {
               }
               const totalAllocated =
                 totals.needsLimit + totals.wantsLimit + totals.savingsLimit;
-              if (totalAllocated > totals.monthlyNetIncome * 1.1) {
+              const flexBase = totals.disposableIncome;
+              if (flexBase > 0 && totalAllocated > flexBase * 1.05) {
                 allocationHints.push(
-                  "You're allocating more than your income. Adjust allocations to stay within budget.",
+                  "Flexible bucket totals look tight versus income after recurring bills. Review allocations.",
                 );
               }
             }
@@ -678,7 +680,7 @@ export function useBudgetScreenState() {
     async (
       id: string,
       nextLimit: number,
-      icon?: import("../../../constants/categoryIcons").CategoryIconName
+      icon?: import("../../../constants/categoryIcons").CategoryIconName,
     ) => {
       if (!activeCycle || !state?.categories?.length) {
         await updateCategoryLimit(id, nextLimit, icon);
@@ -752,10 +754,11 @@ export function useBudgetScreenState() {
   }, []);
 
   const autoApplyRollover = useCallback(
-    async (
-      preview: NonNullable<ReturnType<typeof computeNewCyclePreview>>
-    ) => {
-      if (preview.savingsCategories.length === 0 || preview.rollover.savings <= 0) {
+    async (preview: NonNullable<ReturnType<typeof computeNewCyclePreview>>) => {
+      if (
+        preview.savingsCategories.length === 0 ||
+        preview.rollover.savings <= 0
+      ) {
         await createNewCycleImmediate();
         await reload();
         return;
@@ -771,16 +774,12 @@ export function useBudgetScreenState() {
 
   const handleStartNewCycle = useCallback(async () => {
     // Check for deficit before rollover: if active cycle overspent and not yet resolved, show deficit prompt first
-    if (
-      activeCycle &&
-      totals &&
-      user?.id &&
-      totals.monthlyNetIncome > 0
-    ) {
+    if (activeCycle && totals && user?.id && totals.monthlyNetIncome > 0) {
       const deficit = computeCycleDeficit({
         cycleId: activeCycle.id,
         transactions: state?.transactions ?? [],
         monthlyNetIncome: totals.monthlyNetIncome,
+        budgetBaseline: totals.disposableIncome,
       });
       if (deficit) {
         const existing = await getResolutionForCycle(user.id, activeCycle.id);

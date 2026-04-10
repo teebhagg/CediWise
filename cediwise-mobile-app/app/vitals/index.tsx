@@ -1,3 +1,5 @@
+import { BackButton } from "@/components/BackButton";
+import { BUDGET_TEMPLATES } from "@/components/features/vitals/budgetTemplates";
 import {
   StepIncome,
   StepPreview,
@@ -7,32 +9,33 @@ import type { BudgetPreview, Draft, StepErrors } from "@/components/features/vit
 import {
   computeIntelligentStrategy,
   getNetPreview,
+  recurringStoreToWizardLines,
   toMoney,
   toMonthlySalary,
   vitalsToInitialDraft,
 } from "@/components/features/vitals/utils";
-import { BUDGET_TEMPLATES } from "@/components/features/vitals/budgetTemplates";
 import { KeyboardAwareScrollView } from "@/components/KeyboardAwareScrollView";
-import { BackButton } from "@/components/BackButton";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { useAuth } from "@/hooks/useAuth";
 import { useBudget } from "@/hooks/useBudget";
-import { analytics } from "@/utils/analytics";
-import { isOnline } from "@/utils/connectivity";
-import { log } from "@/utils/logger";
 import { usePersonalizationStore } from "@/stores/personalizationStore";
 import { useProfileVitalsStore } from "@/stores/profileVitalsStore";
+import { useRecurringExpensesStore } from "@/stores/recurringExpensesStore";
+import { analytics } from "@/utils/analytics";
+import { enqueueMutation } from "@/utils/budgetStorage";
+import { trySyncProfileWithRetries } from "@/utils/budgetSync";
+import { isOnline } from "@/utils/connectivity";
+import { log } from "@/utils/logger";
 import {
   writePersonalizationStatusCache,
   writeProfileVitalsCache,
 } from "@/utils/profileVitals";
-import { trySyncProfileWithRetries } from "@/utils/budgetSync";
-import { enqueueMutation } from "@/utils/budgetStorage";
 import { readTourSeen } from "@/utils/tourStorage";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
+import { Separator } from "heroui-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Keyboard,
@@ -57,7 +60,6 @@ import {
   SafeAreaView,
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
-import { Separator } from "heroui-native";
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 const SETUP_LOGO = require("../../assets/images/logo/cediwise-transparent-emerald-logo.png");
@@ -107,7 +109,10 @@ export default function VitalsWizard() {
   const [draft, setDraft] = useState<Draft>(() => {
     if (editMode) {
       const storedVitals = useProfileVitalsStore.getState().vitals;
-      if (storedVitals) return vitalsToInitialDraft(storedVitals);
+      if (storedVitals) {
+        // Recurring lines hydrate after loadRecurringExpenses finishes (see effects below).
+        return vitalsToInitialDraft(storedVitals);
+      }
     }
     return makeDefaultDraft();
   });
@@ -119,6 +124,7 @@ export default function VitalsWizard() {
   const containerHeight = useSharedValue(360);
   const backBtnVisible = useSharedValue(editMode ? 1 : 0);
   const outgoingStepRef = useRef<number | null>(null);
+  const editRecurringHydratedRef = useRef(false);
   const scrollViewRef = useRef<any>(null);
   const [showValidationHint, setShowValidationHint] = useState(false);
   const insets = useSafeAreaInsets();
@@ -141,13 +147,40 @@ export default function VitalsWizard() {
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }, [setupProgress]);
 
-  // Cold-start fallback: if the store wasn't populated when the component
-  // mounted (rare), hydrate the draft once vitals arrive.
+  const recurringLoading = useRecurringExpensesStore((s) => s.isLoading);
+
   useEffect(() => {
-    if (!editMode || !vitals || toMoney(draft.stableSalary) > 0) return;
-    setDraft(vitalsToInitialDraft(vitals));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editMode, vitals]);
+    editRecurringHydratedRef.current = false;
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!editMode || !user?.id) return;
+    void useRecurringExpensesStore.getState().loadRecurringExpenses();
+  }, [editMode, user?.id]);
+
+  // Cold-start fallback: hydrate draft when vitals / recurring load (salary still empty).
+  useEffect(() => {
+    if (!editMode || !vitals || recurringLoading) return;
+    if (toMoney(draft.stableSalary) > 0) return;
+    setDraft(
+      vitalsToInitialDraft(vitals, {
+        recurringFromStore: useRecurringExpensesStore.getState().recurringExpenses,
+      }),
+    );
+    editRecurringHydratedRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editMode, vitals, recurringLoading]);
+
+  // After recurring store finishes loading, merge wizard recurring lines (edit mode only).
+  useEffect(() => {
+    if (!editMode || !vitals || recurringLoading) return;
+    if (editRecurringHydratedRef.current) return;
+    const lines = recurringStoreToWizardLines(
+      useRecurringExpensesStore.getState().recurringExpenses,
+    );
+    setDraft((prev) => ({ ...prev, recurringExpenses: lines }));
+    editRecurringHydratedRef.current = true;
+  }, [editMode, vitals, recurringLoading]);
 
   useEffect(() => {
     progress.value = withTiming((draft.step + 1) / totalSteps, {
@@ -417,9 +450,8 @@ export default function VitalsWizard() {
     animateStepChange(nextStep, "back");
   }, [animateStepChange, draft.step, editMode, exitWizard, updateDraft]);
 
-  /** Shared finish logic. When `includeExtras` is false, recurring expenses and goal are not persisted. */
   const doFinish = useCallback(
-    async (includeExtras: boolean) => {
+    async () => {
       Keyboard.dismiss();
       if (!user?.id) return;
       if (Object.keys(allStepsErrors).length > 0) {
@@ -440,14 +472,12 @@ export default function VitalsWizard() {
         const rawSalary = toMoney(draft.stableSalary);
         const stableSalary = toMonthlySalary(rawSalary, draft.incomeFrequency);
 
-        // "needs" bucket → fixed costs that influence the strategy engine
+        // "needs" bucket → fixed costs that influence the strategy engine (match budgetPreview)
         const rent = 0;
-        const utilitiesTotal = includeExtras
-          ? draft.recurringExpenses
-              .filter((e) => e.bucket === "needs")
-              .reduce((sum, e) => sum + toMoney(e.amount), 0)
-          : 0;
-        const primaryGoal = includeExtras ? (draft.goalType ?? null) : null;
+        const utilitiesTotal = draft.recurringExpenses
+          .filter((e) => e.bucket === "needs")
+          .reduce((sum, e) => sum + toMoney(e.amount), 0);
+        const primaryGoal = draft.goalType ?? null;
 
         const computed = computeIntelligentStrategy({
           stableSalary,
@@ -466,10 +496,10 @@ export default function VitalsWizard() {
 
         // Resolve final percentages — named template overrides the engine output
         const tmpl = BUDGET_TEMPLATES[draft.selectedTemplate];
-        const finalNeedsPct  = tmpl.needsPct  ?? computed.needsPct;
-        const finalWantsPct  = tmpl.wantsPct  ?? computed.wantsPct;
+        const finalNeedsPct = tmpl.needsPct ?? computed.needsPct;
+        const finalWantsPct = tmpl.wantsPct ?? computed.wantsPct;
         const finalSavingsPct = tmpl.savingsPct ?? computed.savingsPct;
-        const finalStrategy  = tmpl.strategyForDb ?? computed.strategy;
+        const finalStrategy = tmpl.strategyForDb ?? computed.strategy;
 
         const createdAt = new Date().toISOString();
 
@@ -578,6 +608,32 @@ export default function VitalsWizard() {
           lifeStage: draft.lifeStage ?? null,
         });
 
+        if (draft.recurringExpenses.length > 0) {
+          const snap = useRecurringExpensesStore.getState().recurringExpenses;
+          const seen = new Set(
+            snap.map(
+              (e) =>
+                `${e.name.trim().toLowerCase()}:${e.bucket}:${e.frequency}:${e.amount}`,
+            ),
+          );
+          for (const line of draft.recurringExpenses) {
+            const amt = toMoney(line.amount);
+            if (amt <= 0 || !line.name.trim()) continue;
+            const bucket = line.bucket === "needs" ? "needs" : "wants";
+            const key = `${line.name.trim().toLowerCase()}:${bucket}:monthly:${amt}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            await useRecurringExpensesStore.getState().addRecurringExpense({
+              name: line.name.trim(),
+              amount: amt,
+              frequency: "monthly",
+              bucket,
+              autoAllocate: true,
+            });
+          }
+        }
+        await budget.recalculateBudget();
+
         try {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         } catch {
@@ -623,8 +679,7 @@ export default function VitalsWizard() {
     [allStepsErrors, budget, completeSetupProgress, draft, user?.id],
   );
 
-  const handleFinish = useCallback(() => doFinish(true), [doFinish]);
-  const handleSkipFinish = useCallback(() => doFinish(false), [doFinish]);
+  const handleFinish = useCallback(() => doFinish(), [doFinish]);
 
   const currentStepNode = () => {
     if (draft.step === 0) {
@@ -702,10 +757,14 @@ export default function VitalsWizard() {
       // Advance to preview screen without personalization
       goNext();
     } else {
-      // Screen 3: complete without recurring expenses / goal
-      handleSkipFinish();
+      // Preview: leave without persisting (same as step-0 exit; no saving overlay)
+      if (editMode) {
+        router.back();
+      } else {
+        void exitWizard();
+      }
     }
-  }, [draft.step, exitWizard, goNext, handleSkipFinish]);
+  }, [draft.step, editMode, exitWizard, goNext]);
 
   // ─── No user ────────────────────────────────────────────────────────────────
   if (noUser) {

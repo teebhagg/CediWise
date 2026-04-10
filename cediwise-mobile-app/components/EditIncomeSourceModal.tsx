@@ -10,8 +10,7 @@ import {
   Text,
   View,
   ScrollView,
-} from 'react-native';
-import { Keyboard } from 'react-native';
+ Keyboard } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassView } from '@/components/GlassView';

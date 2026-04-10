@@ -174,6 +174,13 @@ describe("calculateRollover", () => {
     expect(result.wants).toBe(300);
     expect(result.savings).toBe(200);
   });
+
+  it("scales limits to bucketLimitBase when provided", () => {
+    const result = calculateRollover(cycle, [], income, 800);
+    expect(result.needs).toBe(400);
+    expect(result.wants).toBe(240);
+    expect(result.savings).toBe(160);
+  });
 });
 
 describe("formatReallocationDetails", () => {

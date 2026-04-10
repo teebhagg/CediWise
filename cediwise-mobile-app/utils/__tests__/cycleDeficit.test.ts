@@ -100,6 +100,29 @@ describe("computeCycleDeficit", () => {
     });
     expect(result).toBeNull();
   });
+
+  it("uses budgetBaseline when higher than spent still null", () => {
+    const transactions = [makeTx("c1", 400)];
+    const result = computeCycleDeficit({
+      cycleId: "c1",
+      transactions,
+      monthlyNetIncome: 1000,
+      budgetBaseline: 500,
+    });
+    expect(result).toBeNull();
+  });
+
+  it("flags deficit against disposable baseline", () => {
+    const transactions = [makeTx("c1", 600)];
+    const result = computeCycleDeficit({
+      cycleId: "c1",
+      transactions,
+      monthlyNetIncome: 1000,
+      budgetBaseline: 500,
+    });
+    expect(result).not.toBeNull();
+    expect(result!.deficitAmount).toBe(100);
+  });
 });
 
 describe("deficit resolution storage", () => {

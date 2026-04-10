@@ -17,7 +17,7 @@ export class RootErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     if (__DEV__) {
-      // eslint-disable-next-line no-console
+       
       console.error('RootErrorBoundary caught:', error, errorInfo.componentStack);
     }
   }

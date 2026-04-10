@@ -117,22 +117,22 @@ export interface SMESubscriptionRow {
 }
 
 // Default category definitions
-export const DEFAULT_INCOME_CATEGORIES: Array<{
+export const DEFAULT_INCOME_CATEGORIES: {
   name: string;
   icon: string;
   color: string;
-}> = [
+}[] = [
   { name: "Sales", icon: "ShoppingBag", color: "#10B981" },
   { name: "Services", icon: "Briefcase", color: "#3B82F6" },
   { name: "Commissions", icon: "Percent", color: "#8B5CF6" },
   { name: "Other Income", icon: "Plus", color: "#6B7280" },
 ];
 
-export const DEFAULT_EXPENSE_CATEGORIES: Array<{
+export const DEFAULT_EXPENSE_CATEGORIES: {
   name: string;
   icon: string;
   color: string;
-}> = [
+}[] = [
   { name: "Rent", icon: "Building", color: "#EF4444" },
   { name: "Supplies", icon: "Package", color: "#F59E0B" },
   { name: "Transport", icon: "Truck", color: "#14B8A6" },

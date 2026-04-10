@@ -11,13 +11,14 @@ import { InsightsChartToggle } from '@/components/features/budget/insights/Insig
 import { InsightsRangeSelector } from '@/components/features/budget/insights/InsightsRangeSelector';
 import {
   buildInsightsRangeData,
+  buildRecurringCommitmentInsights,
   type InsightsRangeKey,
 } from '@/components/features/budget/insights/insightsData';
 import { SpendingInsightsChart } from '@/components/features/budget/insights/SpendingInsightsCharts';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { FlashList } from '@shopify/flash-list';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Receipt } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,10 +31,6 @@ export default function BudgetInsightsScreen() {
   const { canAccessBudget } = useTierContext();
   const { derived, budget, modals, ui, router } = useBudgetScreenState();
 
-  if (!canAccessBudget) {
-    router.replace("/(tabs)/budget");
-    return null;
-  }
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((event) => {
     scrollY.value = event.contentOffset.y;
@@ -42,19 +39,45 @@ export default function BudgetInsightsScreen() {
   const [chartType, setChartType] = useState<'bar' | 'line' | 'donut'>('bar');
   const [range, setRange] = useState<InsightsRangeKey>('6M');
 
-  const insightsData = useMemo(() =>
-    buildInsightsRangeData({
+  const insightsData = useMemo(
+    () =>
+      buildInsightsRangeData({
+        range,
+        cycles: budget.state?.cycles ?? [],
+        transactions: budget.state?.transactions ?? [],
+        categories: budget.state?.categories ?? [],
+      }),
+    [
       range,
-      cycles: budget.state?.cycles ?? [],
-      transactions: budget.state?.transactions ?? [],
-      categories: budget.state?.categories ?? [],
-    }),
-  [
-    range,
-    budget.state?.cycles,
-    budget.state?.transactions,
-    budget.state?.categories,
-  ]);
+      budget.state?.cycles,
+      budget.state?.transactions,
+      budget.state?.categories,
+    ],
+  );
+
+  const recurringInsights = useMemo(
+    () =>
+      budget.totals
+        ? buildRecurringCommitmentInsights({
+            monthlyNetIncome: budget.totals.monthlyNetIncome,
+            totalRecurringMonthly: budget.totals.totalRecurringMonthly,
+            disposableIncome: budget.totals.disposableIncome,
+            totalSpentInRange: insightsData.totalSpent,
+            spentWindowSpanDays: insightsData.spentWindowSpanDays,
+          })
+        : [],
+    [budget.totals, insightsData.totalSpent, insightsData.spentWindowSpanDays],
+  );
+
+  useEffect(() => {
+    if (!canAccessBudget) {
+      router.replace("/(tabs)/budget");
+    }
+  }, [canAccessBudget, router]);
+
+  if (!canAccessBudget) {
+    return null;
+  }
 
   if (!user?.id) {
     return (
@@ -149,6 +172,23 @@ export default function BudgetInsightsScreen() {
                 onMorePress={() => {}}
               />
             </View>
+
+            {recurringInsights.length > 0 ? (
+              <View className="mt-6 gap-3">
+                {recurringInsights.map((ins) => (
+                  <View
+                    key={ins.id}
+                    className={`rounded-2xl border px-4 py-3 ${
+                      ins.variant === 'warning'
+                        ? 'border-amber-500/40 bg-amber-500/10'
+                        : 'border-white/10 bg-white/5'
+                    }`}>
+                    <Text className="text-white font-semibold text-sm">{ins.title}</Text>
+                    <Text className="text-white/70 text-xs mt-2 leading-5">{ins.body}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
 
             <View className="mt-8 flex-row items-center justify-between">
               <Text className="text-white text-base font-semibold">Categories</Text>

@@ -3,7 +3,8 @@ import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { RefreshCcw, Trash2 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { BackButton } from '@/components/BackButton';
@@ -18,6 +19,12 @@ import type { BudgetMutation } from '@/types/budget';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+const QUEUE_ITEM_GAP = 12;
+
+function QueueItemSeparator() {
+  return <View style={{ height: QUEUE_ITEM_GAP }} />;
+}
 
 function formatWhen(iso?: string) {
   if (!iso) return '—';
@@ -51,12 +58,26 @@ function kindLabel(kind: string) {
       return 'Reallocation';
     case 'apply_template':
       return 'Template';
+    case 'insert_recurring_expense':
+      return 'Add recurring expense';
+    case 'update_recurring_expense':
+      return 'Update recurring expense';
+    case 'delete_recurring_expense':
+      return 'Delete recurring expense';
     default:
       return kind;
   }
 }
 
-function DangerPillButton({ label, onPress }: { label: string; onPress: () => void }) {
+function DangerPillButton({
+  label,
+  onPress,
+  style,
+}: {
+  label: string;
+  onPress: () => void;
+  style?: StyleProp<ViewStyle>;
+}) {
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -85,6 +106,7 @@ function DangerPillButton({ label, onPress }: { label: string; onPress: () => vo
           borderRadius: 999,
           flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'center',
           gap: 8,
           backgroundColor: 'rgba(239, 68, 68, 0.14)',
           borderWidth: 1,
@@ -96,6 +118,7 @@ function DangerPillButton({ label, onPress }: { label: string; onPress: () => vo
           elevation: 3,
         },
         animatedStyle,
+        style,
       ]}
     >
       <Trash2 size={16} color="#FCA5A5" />
@@ -123,6 +146,7 @@ export default function BudgetQueueScreen() {
     clearLocal,
   } = useBudget(user?.id);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [retryingMutationId, setRetryingMutationId] = useState<string | null>(null);
 
   // React only to sync run end: show one toast per run (only if run ended recently), then clear.
   useEffect(() => {
@@ -140,10 +164,10 @@ export default function BudgetQueueScreen() {
 
   const listHeader = useMemo(
     () => (
-      <>
-        <Card className="mb-4">
-          <View className="flex-row items-center justify-between">
-            <View style={queueStyles.flex1}>
+      <View style={queueStyles.listHeaderStack}>
+        <Card>
+          <View style={queueStyles.pendingCardColumn}>
+            <View>
               {isSyncing ? (
                 <Text className="text-white text-base font-semibold" style={queueStyles.textBase}>
                   Syncing…
@@ -159,25 +183,34 @@ export default function BudgetQueueScreen() {
                   : 'Pull-to-refresh isn’t wired here yet — use Retry all.'}
               </Text>
             </View>
-            <View style={queueStyles.buttonsRow}>
-              <DangerPillButton label="Clear cache" onPress={() => setShowClearConfirm(true)} />
 
-              <PrimaryButton
-                onPress={async () => {
-                  try {
-                    await syncNow();
-                    await reload();
-                    // Toast is shown by the lastSyncRunEndedAt effect with up-to-date pendingCount.
-                  } catch (e) {
-                    showError('Sync failed', e instanceof Error ? e.message : 'Could not sync');
-                  }
-                }}
-                style={queueStyles.retryAllButton}
-                disabled={isLoading || isSyncing || pendingCount === 0}
-              >
-                <RefreshCcw size={18} color="#020617" />
-                <Text style={queueStyles.retryAllText}>{isSyncing ? 'Syncing…' : 'Retry all'}</Text>
-              </PrimaryButton>
+            <View style={queueStyles.pendingButtonsRow}>
+              <View style={queueStyles.pendingButtonGrow}>
+                <DangerPillButton
+                  label="Clear cache"
+                  onPress={() => setShowClearConfirm(true)}
+                  style={queueStyles.pendingPillFill}
+                />
+              </View>
+              <View style={queueStyles.pendingButtonGrow}>
+                <PrimaryButton
+                  onPress={async () => {
+                    try {
+                      await syncNow();
+                      await reload();
+                    } catch (e) {
+                      showError('Sync failed', e instanceof Error ? e.message : 'Could not sync');
+                    }
+                  }}
+                  style={queueStyles.retryAllButtonFill}
+                  disabled={isLoading || isSyncing || pendingCount === 0}
+                >
+                  <RefreshCcw size={18} color="#020617" />
+                  <Text style={queueStyles.retryAllText}>
+                    {isSyncing ? 'Syncing…' : 'Retry all'}
+                  </Text>
+                </PrimaryButton>
+              </View>
             </View>
           </View>
         </Card>
@@ -192,48 +225,72 @@ export default function BudgetQueueScreen() {
             </Text>
           </Card>
         ) : null}
-      </>
+      </View>
     ),
-    [pendingCount, isLoading, isSyncing, showSuccess, showError]
+    [pendingCount, isLoading, isSyncing, showError],
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: BudgetMutation }) => (
-      <Card>
-        <View style={queueStyles.row}>
-          <View style={queueStyles.flex1}>
-            <Text className="text-white text-base" style={queueStyles.textBase}>
-              {kindLabel(item.kind)}
-            </Text>
-            <Text className="text-muted-foreground text-xs mt-1" style={queueStyles.textMuted}>
-              Created: {formatWhen(item.createdAt)} • Retries: {item.retryCount}
-            </Text>
-            <Text className="text-muted-foreground text-xs mt-1" style={queueStyles.textMuted}>
-              Last attempt: {formatWhen(item.lastAttemptAt)}
-            </Text>
-            {item.lastError ? (
-              <Text className="text-rose-300 text-xs mt-2" style={queueStyles.textMuted}>
-                {item.lastError}
+    ({ item }: { item: BudgetMutation }) => {
+      const isRetrying = retryingMutationId === item.id;
+      return (
+        <Card>
+          <View style={queueStyles.queueItemColumn}>
+            <View>
+              <Text className="text-white text-base" style={queueStyles.textBase}>
+                {kindLabel(item.kind)}
               </Text>
-            ) : null}
-          </View>
+              <Text className="text-muted-foreground text-xs mt-1" style={queueStyles.textMuted}>
+                Created: {formatWhen(item.createdAt)} • Retries: {item.retryCount}
+              </Text>
+              <Text className="text-muted-foreground text-xs mt-1" style={queueStyles.textMuted}>
+                Last attempt: {formatWhen(item.lastAttemptAt)}
+              </Text>
+              {item.lastError ? (
+                <Text className="text-rose-300 text-xs mt-2" style={queueStyles.textMuted}>
+                  {item.lastError}
+                </Text>
+              ) : null}
+            </View>
 
-          <Pressable
-            onPress={async () => {
-              await retryMutation(item.id);
-              await reload();
-            }}
-            style={({ pressed }) => [
-              queueStyles.retryButton,
-              { backgroundColor: pressed ? 'rgba(34,197,94,0.18)' : 'rgba(34,197,94,0.12)' },
-            ]}
-          >
-            <Text style={queueStyles.retryButtonText}>Retry</Text>
-          </Pressable>
-        </View>
-      </Card>
-    ),
-    [retryMutation, reload]
+            <Pressable
+              disabled={isRetrying || isSyncing}
+              accessibilityRole="button"
+              accessibilityLabel={isRetrying ? 'Retry in progress' : 'Retry this item'}
+              accessibilityState={{ busy: isRetrying, disabled: isRetrying || isSyncing }}
+              onPress={async () => {
+                setRetryingMutationId(item.id);
+                try {
+                  await retryMutation(item.id);
+                  await reload();
+                } finally {
+                  setRetryingMutationId((current) =>
+                    current === item.id ? null : current,
+                  );
+                }
+              }}
+              style={({ pressed }) => [
+                queueStyles.retryButtonBottom,
+                {
+                  backgroundColor: pressed ? 'rgba(34,197,94,0.18)' : 'rgba(34,197,94,0.12)',
+                  opacity: isRetrying || isSyncing ? 0.85 : 1,
+                },
+              ]}
+            >
+              {isRetrying ? (
+                <View style={queueStyles.retryButtonInner}>
+                  <ActivityIndicator size="small" color="#86EFAC" />
+                  <Text style={queueStyles.retryButtonText}>Retrying…</Text>
+                </View>
+              ) : (
+                <Text style={queueStyles.retryButtonText}>Retry</Text>
+              )}
+            </Pressable>
+          </View>
+        </Card>
+      );
+    },
+    [retryMutation, reload, retryingMutationId, isSyncing],
   );
 
   const keyExtractor = useCallback((item: BudgetMutation) => item.id, []);
@@ -256,6 +313,8 @@ export default function BudgetQueueScreen() {
           ListHeaderComponent={listHeader}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
+          extraData={retryingMutationId}
+          ItemSeparatorComponent={QueueItemSeparator}
           contentContainerStyle={queueStyles.listContent}
         />
       </View>
@@ -286,19 +345,56 @@ const queueStyles = StyleSheet.create({
   flex1: { flex: 1 },
   textBase: { fontFamily: 'Figtree-Medium' },
   textMuted: { fontFamily: 'Figtree-Regular' },
-  buttonsRow: { flexDirection: 'row', gap: 10 },
-  retryAllButton: { height: 44, paddingHorizontal: 16 },
-  retryAllText: { color: '#020617', fontFamily: 'Figtree-Medium' },
-  row: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  retryButton: {
+  listHeaderStack: {
+    gap: 16,
+    marginBottom: 4,
+  },
+  pendingCardColumn: {
+    gap: 16,
+  },
+  pendingButtonsRow: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 10,
+  },
+  pendingButtonGrow: {
+    flex: 1,
+    minWidth: 0,
+  },
+  pendingPillFill: {
+    flex: 1,
+    width: '100%',
+    alignSelf: 'stretch',
+  },
+  retryAllButtonFill: {
     height: 44,
-    paddingHorizontal: 14,
-    borderRadius: 16,
+    minHeight: 44,
+    flex: 1,
+    width: '100%',
+    paddingHorizontal: 12,
+  },
+  retryAllText: { color: '#020617', fontFamily: 'Figtree-Medium' },
+  queueItemColumn: {
+    gap: 14,
+  },
+  retryButtonBottom: {
+    minHeight: 44,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'stretch',
     borderWidth: 1,
     borderColor: 'rgba(34,197,94,0.35)',
   },
-  retryButtonText: { color: '#E2E8F0', fontFamily: 'Figtree-Medium' },
-  listContent: { paddingBottom: 32, gap: 12 },
+  retryButtonInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  retryButtonText: { color: '#E2E8F0', fontFamily: 'Figtree-SemiBold', fontSize: 14 },
+  listContent: { paddingBottom: 32 },
 });
 

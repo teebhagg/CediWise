@@ -1,5 +1,8 @@
 /** @jest-environment node */
 
+import { log } from "@/utils/logger";
+import { checkAndPromptUpdate } from "@/services/inAppUpdates";
+
 const mockCheckNeedsUpdate = jest.fn();
 const mockStartUpdate = jest.fn();
 
@@ -21,9 +24,6 @@ jest.mock("expo-constants", () => ({
     expoConfig: { version: "9.8.7" },
   },
 }));
-
-import { log } from "@/utils/logger";
-import { checkAndPromptUpdate } from "@/services/inAppUpdates";
 
 function rnPlatform() {
   const g = globalThis as { __TEST_RN_PLATFORM__?: { OS: string } };

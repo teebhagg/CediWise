@@ -4,11 +4,11 @@ import {
   type AddRecurringExpenseParams,
   type UpdateRecurringExpenseParams,
 } from "@/stores/recurringExpensesStore";
-import type {
-  BudgetBucket,
-  RecurringExpense,
-  RecurringExpenseFrequency,
-} from "@/types/budget";
+import type { BudgetBucket, RecurringExpense } from "@/types/budget";
+import {
+  filterEffectiveRecurringExpenses,
+  toMonthlyEquivalentAmount,
+} from "@/utils/recurringHelpers";
 import { useCallback, useEffect } from "react";
 
 export type { AddRecurringExpenseParams, UpdateRecurringExpenseParams };
@@ -17,10 +17,12 @@ export type UseRecurringExpensesReturn = {
   recurringExpenses: RecurringExpense[];
   isLoading: boolean;
   error: string | null;
+  budgetQueueFlushError: string | null;
+  clearBudgetQueueFlushError: () => void;
   addRecurringExpense: (params: AddRecurringExpenseParams) => Promise<void>;
   updateRecurringExpense: (
     id: string,
-    params: UpdateRecurringExpenseParams
+    params: UpdateRecurringExpenseParams,
   ) => Promise<void>;
   deleteRecurringExpense: (id: string) => Promise<void>;
   getMonthlyTotal: (bucket?: BudgetBucket) => number;
@@ -28,32 +30,14 @@ export type UseRecurringExpensesReturn = {
   refresh: () => Promise<void>;
 };
 
-function toMonthlyAmount(
-  amount: number,
-  frequency: RecurringExpenseFrequency
-): number {
-  switch (frequency) {
-    case "weekly":
-      return amount * 4.33;
-    case "bi_weekly":
-      return amount * 2.165;
-    case "monthly":
-      return amount;
-    case "quarterly":
-      return amount / 3;
-    case "annually":
-      return amount / 12;
-    default:
-      return amount;
-  }
-}
-
 export function useRecurringExpenses(): UseRecurringExpensesReturn {
   const { user } = useAuth();
   const {
     recurringExpenses,
     isLoading,
     error,
+    budgetQueueFlushError,
+    clearBudgetQueueFlushError,
     loadRecurringExpenses,
     addRecurringExpense,
     updateRecurringExpense,
@@ -66,22 +50,19 @@ export function useRecurringExpenses(): UseRecurringExpensesReturn {
 
   const getMonthlyTotal = useCallback(
     (bucket?: BudgetBucket): number => {
-      return recurringExpenses
-        .filter(
-          (expense) =>
-            expense.isActive && (!bucket || expense.bucket === bucket)
-        )
+      return filterEffectiveRecurringExpenses(recurringExpenses, new Date())
+        .filter((expense) => !bucket || expense.bucket === bucket)
         .reduce(
           (total, expense) =>
-            total + toMonthlyAmount(expense.amount, expense.frequency),
-          0
+            total + toMonthlyEquivalentAmount(expense.amount, expense.frequency),
+          0,
         );
     },
-    [recurringExpenses]
+    [recurringExpenses],
   );
 
   const getActiveExpenses = useCallback((): RecurringExpense[] => {
-    return recurringExpenses.filter((expense) => expense.isActive);
+    return filterEffectiveRecurringExpenses(recurringExpenses, new Date());
   }, [recurringExpenses]);
 
   const refresh = useCallback(async () => {
@@ -92,6 +73,8 @@ export function useRecurringExpenses(): UseRecurringExpensesReturn {
     recurringExpenses,
     isLoading,
     error,
+    budgetQueueFlushError,
+    clearBudgetQueueFlushError,
     addRecurringExpense,
     updateRecurringExpense,
     deleteRecurringExpense,

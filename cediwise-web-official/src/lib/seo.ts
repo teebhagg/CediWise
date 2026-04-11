@@ -1,3 +1,8 @@
+import {
+  CEDIWISE_ANDROID_PLAY_STORE_URL,
+  CEDIWISE_IOS_APP_STORE_URL,
+} from '@/lib/storeLinks'
+
 /**
  * SEO base URL. Override via PUBLIC_SITE_URL env var at build time.
  * @example PUBLIC_SITE_URL=https://cediwise.app
@@ -36,7 +41,8 @@ export const getAppSchema = (): SchemaGenerator => ({
       price: '0',
       priceCurrency: 'GHS',
     },
-    downloadUrl: 'https://play.google.com/store/apps/details?id=com.cediwise.app',
+    downloadUrl: CEDIWISE_ANDROID_PLAY_STORE_URL,
+    installUrl: CEDIWISE_IOS_APP_STORE_URL,
     featureList: [
       'Ghana Salary Calculator (2026 PAYE/SSNIT)',
       'Budget Management',

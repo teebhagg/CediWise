@@ -1,9 +1,13 @@
 'use client'
 
-import { ArrowRight01Icon, Download01Icon } from '@hugeicons/core-free-icons'
+import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
+import { AndroidIcon, AppleIcon } from '@/components/icons/StoreBrandIcons'
+import {
+  CEDIWISE_ANDROID_PLAY_STORE_URL,
+  CEDIWISE_IOS_APP_STORE_URL,
+} from '@/lib/storeLinks'
 import { motion } from 'framer-motion'
-// Replaced: beta CTA with Android download CTA
 
 export function BottomCTA() {
   return (
@@ -45,48 +49,24 @@ export function BottomCTA() {
             </p>
 
             <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
-              {/* <motion.a
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                href="https://apps.apple.com/app/cediwise"
+              <a
+                href={CEDIWISE_ANDROID_PLAY_STORE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={cn(
-                  buttonVariants({ size: 'lg' }),
-                  'h-16 gap-3 rounded-2xl bg-white px-8 text-lg font-bold text-black transition-all hover:bg-zinc-200',
-                )}
+                className="inline-flex cursor-pointer items-center gap-2 h-16 rounded-2xl border border-white/20 bg-white/10 px-8 text-lg font-bold text-white backdrop-blur-md transition-colors duration-200 hover:border-white/30 hover:bg-white/[0.14] motion-safe:hover:scale-[1.02] motion-reduce:hover:scale-100"
               >
-                <HugeiconsIcon icon={SmartPhone01Icon} className="size-6" />
-                iOS App
-              </motion.a>
-
-              <motion.a
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                href="https://play.google.com/store/apps/details?id=com.cediwise"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  buttonVariants({ variant: 'outline', size: 'lg' }),
-                  'h-16 gap-3 rounded-2xl border-white/10 bg-white/5 px-8 text-lg font-bold text-white backdrop-blur-sm transition-all hover:bg-white/10',
-                )}
-              >
-                <HugeiconsIcon icon={SmartPhone01Icon} className="size-6" />
+                <AndroidIcon className="size-6 shrink-0" />
                 Android App
-                <HugeiconsIcon icon={ArrowRight01Icon} className="size-5" />
-              </motion.a> */}
-
-              <div className="flex flex-col items-center gap-2">
-                <a
-                  href="https://play.google.com/store/apps/details?id=com.cediwise.app"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 h-16 rounded-2xl border border-emerald-300/60 bg-emerald-600/70 px-8 text-lg font-bold text-white backdrop-blur-md hover:bg-emerald-600/80 hover:border-emerald-400/60 transition duration-200 transform hover:scale-105"
-                >
-                  <HugeiconsIcon icon={Download01Icon} className="size-6" />
-                  Android App
-                </a>
-              </div>
+              </a>
+              <a
+                href={CEDIWISE_IOS_APP_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex cursor-pointer items-center gap-2 h-16 rounded-2xl border border-emerald-300/60 bg-emerald-600/70 px-8 text-lg font-bold text-white backdrop-blur-md transition-colors duration-200 hover:border-emerald-400/60 hover:bg-emerald-600/80 motion-safe:hover:scale-[1.02] motion-reduce:hover:scale-100"
+              >
+                <AppleIcon className="size-[1.35rem] shrink-0" />
+                iOS App
+              </a>
               {/* <motion.a
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}

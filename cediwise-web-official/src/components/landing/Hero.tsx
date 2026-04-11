@@ -1,8 +1,10 @@
 import { motion } from 'framer-motion'
-// Removed: JoinBetaButton import (beta CTA deprecated)
-import { HugeiconsIcon } from '@hugeicons/react'
-import { SmartPhone01Icon } from '@hugeicons/core-free-icons'
+import { AndroidIcon, AppleIcon } from '@/components/icons/StoreBrandIcons'
 import { GlassCard } from '@/components/ui/glass-card'
+import {
+  CEDIWISE_ANDROID_PLAY_STORE_URL,
+  CEDIWISE_IOS_APP_STORE_URL,
+} from '@/lib/storeLinks'
 import { cn } from '~/lib/utils'
 
 export function Hero() {
@@ -35,39 +37,28 @@ export function Hero() {
               one platform built for the modern Ghanaian worker.
             </p>
             <div className="mt-12 flex flex-col gap-4 sm:flex-row">
-              {/* <a
-                href="https://apps.apple.com/app/cediwise"
-                target="_blank"
-                rel="noopener noreferrer"
-                className={cn(
-                  buttonVariants({ size: 'lg' }),
-                  'h-14 gap-2 rounded-xl bg-primary px-8 text-base font-semibold text-primary-foreground hover:bg-primary/90',
-                )}
-              >
-                <HugeiconsIcon icon={SmartPhone01Icon} className="size-5" />
-                Download for iOS
-              </a> */}
               <a
-                href="https://play.google.com/store/apps/details?id=com.cediwise.app"
+                href={CEDIWISE_ANDROID_PLAY_STORE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(
-                  'inline-flex items-center gap-2 h-14 rounded-xl border border-emerald-300/60 bg-emerald-600/70 px-8 text-base font-semibold text-white backdrop-blur-md hover:bg-emerald-600/80 hover:border-emerald-400/60 transition duration-200 transform hover:scale-105 shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-300/40',
+                  'inline-flex cursor-pointer items-center gap-2 h-14 rounded-xl border border-white/20 bg-white/10 px-8 text-base font-semibold text-white backdrop-blur-md transition-colors duration-200 hover:border-white/30 hover:bg-white/[0.14] focus:outline-none focus:ring-2 focus:ring-white/40 motion-safe:hover:scale-[1.02] motion-reduce:hover:scale-100',
                 )}
               >
-                <HugeiconsIcon icon={SmartPhone01Icon} className="size-5" />
+                <AndroidIcon className="size-5 shrink-0" />
                 Get it on Android
               </a>
-              <button
-                aria-disabled="true"
-                disabled
-                className={
-                  'inline-flex items-center gap-2 h-14 px-8 rounded-xl border border-white/40 bg-white/25 text-white backdrop-blur-md opacity-60 cursor-not-allowed'
-                }
+              <a
+                href={CEDIWISE_IOS_APP_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  'inline-flex cursor-pointer items-center gap-2 h-14 rounded-xl border border-emerald-300/60 bg-emerald-600/70 px-8 text-base font-semibold text-white backdrop-blur-md shadow-sm transition-colors duration-200 hover:border-emerald-400/60 hover:bg-emerald-600/80 focus:outline-none focus:ring-2 focus:ring-emerald-300/40 motion-safe:hover:scale-[1.02] motion-reduce:hover:scale-100',
+                )}
               >
-                <HugeiconsIcon icon={SmartPhone01Icon} className="size-5" />
-                iOS Coming Soon
-              </button>
+                <AppleIcon className="size-[1.15rem] shrink-0" />
+                Download on iOS
+              </a>
             </div>
           </div>
         </div>

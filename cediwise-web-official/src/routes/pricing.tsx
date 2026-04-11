@@ -1,13 +1,14 @@
 'use client'
 
-import React, { useState } from 'react'
-import { motion } from 'framer-motion'
-import { cn } from '@/lib/utils'
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { createPageHead } from '@/lib/seo'
+import { DownloadAppDialog } from '@/components/download/DownloadAppDialog'
 import { Footer } from '@/components/layout/Footer'
-import { ArrowLeft01Icon, Tick02Icon, Cancel01Icon } from '@hugeicons/core-free-icons'
+import { createPageHead } from '@/lib/seo'
+import { cn } from '@/lib/utils'
+import { ArrowLeft01Icon, Cancel01Icon, Tick02Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { motion } from 'framer-motion'
+import React, { useState } from 'react'
 
 export const Route = createFileRoute('/pricing')({
   component: PricingPage,
@@ -50,6 +51,7 @@ const comparisonFeatures = [
 
 function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'quarterly'>('monthly')
+  const [downloadPickerOpen, setDownloadPickerOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-zinc-50">
@@ -75,7 +77,7 @@ function PricingPage() {
             </Link>
           </motion.div>
 
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
@@ -89,7 +91,7 @@ function PricingPage() {
               <span className="font-semibold text-emerald-400">First 100 users get 60 days full access FREE.</span><br />
               Everyone else gets 30 days free.
             </p>
-            
+
             <div className="mt-8 flex items-center justify-center">
               <div className="inline-flex items-center gap-3 backdrop-blur-md bg-white/5 border border-white/10 text-zinc-300 text-sm px-4 py-2 rounded-full">
                 <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold px-3 py-1 rounded-full">LAUNCH PROMO</span>
@@ -143,7 +145,7 @@ function PricingPage() {
 
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {/* FREE TIER */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
@@ -163,14 +165,19 @@ function PricingPage() {
                   <li className="flex items-center gap-3 text-zinc-500 opacity-60"><HugeiconsIcon icon={Cancel01Icon} className="size-5 text-zinc-600 shrink-0" /> Smart budget, debt, SME ledger</li>
                 </ul>
               </div>
-              <a href="https://play.google.com/store/apps/details?id=com.cediwise.app"
-                 className="mt-10 block w-full text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-4 rounded-2xl transition-colors">
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded={downloadPickerOpen}
+                onClick={() => setDownloadPickerOpen(true)}
+                className="mt-10 block w-full cursor-pointer text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-4 rounded-2xl transition-colors"
+              >
                 Use Free Calculator
-              </a>
+              </button>
             </motion.div>
 
             {/* BUDGET TIER */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -183,7 +190,7 @@ function PricingPage() {
                 <h3 className="text-2xl font-semibold text-white">Smart Budget</h3>
                 <p className="text-zinc-400 mt-2 text-sm">Budgeting • Debt • Recurring • Insights</p>
                 <p className="text-emerald-400/80 mt-1 text-xs italic">If you find one salary error, this pays for itself 10× over.</p>
-                
+
                 <div className="mt-8 flex items-baseline gap-1">
                   <span className="text-5xl font-bold text-white">
                     {billingCycle === 'monthly' ? 'GHS 15' : 'GHS 39'}
@@ -208,14 +215,19 @@ function PricingPage() {
                   <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Offline mode + charts</li>
                 </ul>
               </div>
-              <a href="https://play.google.com/store/apps/details?id=com.cediwise.app"
-                 className="mt-10 block w-full text-center bg-emerald-500 hover:bg-emerald-400 text-white font-semibold py-4 rounded-2xl transition-colors shadow-lg shadow-emerald-500/25">
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded={downloadPickerOpen}
+                onClick={() => setDownloadPickerOpen(true)}
+                className="mt-10 block w-full cursor-pointer text-center bg-emerald-500 hover:bg-emerald-400 text-white font-semibold py-4 rounded-2xl transition-colors shadow-lg shadow-emerald-500/25"
+              >
                 Start 30-Day Free Trial
-              </a>
+              </button>
             </motion.div>
 
             {/* SME TIER */}
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
@@ -225,7 +237,7 @@ function PricingPage() {
                 <h3 className="text-2xl font-semibold text-white">SME Ledger</h3>
                 <p className="text-zinc-400 mt-2 text-sm">Full business tools + everything above</p>
                 <p className="text-emerald-400/80 mt-1 text-xs italic">One GRA penalty costs more than 3 years of this tier.</p>
-                
+
                 <div className="mt-8 flex items-baseline gap-1">
                   <span className="text-5xl font-bold text-white">
                     {billingCycle === 'monthly' ? 'GHS 25' : 'GHS 65'}
@@ -251,12 +263,22 @@ function PricingPage() {
                   <li className="flex items-center gap-3 opacity-60"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-zinc-600 shrink-0" /> Invoices &amp; GRA Export <span className="ml-auto text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">Coming Q2</span></li>
                 </ul>
               </div>
-              <a href="https://play.google.com/store/apps/details?id=com.cediwise.app"
-                 className="mt-10 block w-full text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-4 rounded-2xl transition-colors">
+              <button
+                type="button"
+                aria-haspopup="dialog"
+                aria-expanded={downloadPickerOpen}
+                onClick={() => setDownloadPickerOpen(true)}
+                className="mt-10 block w-full cursor-pointer text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-4 rounded-2xl transition-colors"
+              >
                 Start 30-Day Free Trial
-              </a>
+              </button>
             </motion.div>
           </div>
+
+          <DownloadAppDialog
+            open={downloadPickerOpen}
+            onOpenChange={setDownloadPickerOpen}
+          />
 
           {/* DETAILED COMPARISON TABLE */}
           <motion.div
@@ -320,7 +342,7 @@ function PricingPage() {
           </motion.div>
 
           {/* TRIAL TERMS BAR */}
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8, delay: 0.5 }}

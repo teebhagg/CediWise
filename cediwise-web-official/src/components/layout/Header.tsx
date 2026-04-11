@@ -1,9 +1,11 @@
 'use client'
 
-// Replaced: beta CTA with Android download CTA
-import { HugeiconsIcon } from '@hugeicons/react'
-import { SmartPhone01Icon } from '@hugeicons/core-free-icons'
+import { AndroidIcon, AppleIcon } from '@/components/icons/StoreBrandIcons'
 import { MenuVertical } from '@/components/ui/menu-vertical'
+import {
+  CEDIWISE_ANDROID_PLAY_STORE_URL,
+  CEDIWISE_IOS_APP_STORE_URL,
+} from '@/lib/storeLinks'
 import { cn } from '@/lib/utils'
 import { Link } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -88,17 +90,32 @@ export function Header() {
                 <span className="absolute -bottom-1 left-0 h-px w-0 bg-primary transition-all duration-300 group-hover:w-full" />
               </Link>
             ))}
-            <a
-              href="https://play.google.com/store/apps/details?id=com.cediwise.app"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={cn(
-                'inline-flex items-center gap-2 h-10 rounded-xl border border-emerald-300/60 bg-emerald-600/70 px-6 text-sm font-bold text-white backdrop-blur-md hover:bg-emerald-600/80 hover:border-emerald-400/60 transition duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-emerald-300/40',
-              )}
-            >
-              <HugeiconsIcon icon={SmartPhone01Icon} className="size-5" />
-              Android App
-            </a>
+            <div className="flex items-center gap-2">
+              <a
+                href={CEDIWISE_ANDROID_PLAY_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Get CediWise on Google Play"
+                title="Google Play"
+                className={cn(
+                  'inline-flex size-11 cursor-pointer items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white backdrop-blur-md transition-colors duration-200 hover:border-white/30 hover:bg-white/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+                )}
+              >
+                <AndroidIcon className="size-5" />
+              </a>
+              <a
+                href={CEDIWISE_IOS_APP_STORE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Download CediWise on the App Store"
+                title="App Store"
+                className={cn(
+                  'inline-flex size-11 cursor-pointer items-center justify-center rounded-xl border border-emerald-400/35 bg-emerald-600/25 text-white backdrop-blur-md transition-colors duration-200 hover:border-emerald-400/50 hover:bg-emerald-600/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/50',
+                )}
+              >
+                <AppleIcon className="size-[1.35rem]" />
+              </a>
+            </div>
           </div>
 
           {/* Mobile Burger (Framer Component Style) */}
@@ -192,16 +209,33 @@ export function Header() {
                 />
               </div>
 
-              <div className="mt-12 px-10 flex justify-center">
+              <div className="mt-12 flex justify-center gap-4 px-10">
                 <div onClick={() => setIsOpen(false)}>
                   <a
-                    href="https://play.google.com/store/apps/details?id=com.cediwise.app"
+                    href={CEDIWISE_ANDROID_PLAY_STORE_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 h-16 w-full max-w-sm rounded-[2rem] border border-emerald-300/60 bg-emerald-600/70 px-8 text-xl font-bold text-white backdrop-blur-md hover:bg-emerald-600/80 hover:border-emerald-400/60 transition duration-200 transform hover:scale-105"
+                    aria-label="Get CediWise on Google Play"
+                    title="Google Play"
+                    className={cn(
+                      'inline-flex size-14 cursor-pointer items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-white backdrop-blur-md transition-colors duration-200 hover:border-white/30 hover:bg-white/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+                    )}
                   >
-                    <HugeiconsIcon icon={SmartPhone01Icon} className="size-6" />
-                    Android App
+                    <AndroidIcon className="size-7" />
+                  </a>
+                </div>
+                <div onClick={() => setIsOpen(false)}>
+                  <a
+                    href={CEDIWISE_IOS_APP_STORE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Download CediWise on the App Store"
+                    title="App Store"
+                    className={cn(
+                      'inline-flex size-14 cursor-pointer items-center justify-center rounded-2xl border border-emerald-400/35 bg-emerald-600/25 text-white backdrop-blur-md transition-colors duration-200 hover:border-emerald-400/50 hover:bg-emerald-600/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/50',
+                    )}
+                  >
+                    <AppleIcon className="size-[1.65rem]" />
                   </a>
                 </div>
               </div>

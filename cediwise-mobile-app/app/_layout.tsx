@@ -7,6 +7,7 @@ import { TriggerProvider } from "@/contexts/TriggerContext";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import * as WebBrowser from "expo-web-browser";
 import { HeroUINativeProvider } from "heroui-native";
+import { PostHogProvider } from 'posthog-react-native';
 import { useEffect, useState } from "react";
 import { AppState, Platform, StatusBar, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -16,33 +17,32 @@ import {
   SafeAreaProvider,
 } from "react-native-safe-area-context";
 import { Uniwind } from "uniwind";
-import { PostHogProvider } from 'posthog-react-native';
 
+import * as Sentry from '@sentry/react-native';
+import { PaystackProvider } from "react-native-paystack-webview";
 import { RootErrorBoundary } from "../components/RootErrorBoundary";
 import { TourErrorBoundary } from "../components/tour/TourErrorBoundary";
 import { AuthProvider } from "../contexts/AuthContext";
 import { TierProvider } from "../contexts/TierContext";
-import { useAuth } from "../hooks/useAuth";
 import {
   TourProvider,
   TourProviderFallback,
 } from "../contexts/TourContext";
+import { useAuth } from "../hooks/useAuth";
 import { useAuthRefresh } from "../hooks/useAuthRefresh";
 import { useBudget } from "../hooks/useBudget";
 import { useBudgetPreferenceBootstrap } from "../hooks/useBudgetPreferenceBootstrap";
+import { initNotificationSystem } from "../services/notifications";
+import { useCashFlowStore } from "../stores/cashFlowStore";
 import { usePersonalizationStore } from "../stores/personalizationStore";
 import { useProfileVitalsStore } from "../stores/profileVitalsStore";
 import { useSMELedgerStore } from "../stores/smeLedgerStore";
-import { useCashFlowStore } from "../stores/cashFlowStore";
-import { initNotificationSystem } from "../services/notifications";
-import { syncTaxConfig } from "../utils/taxSync";
-import { PaystackProvider } from "react-native-paystack-webview";
 import {
   hasHydratedThisSession,
   setHydratedThisSession,
 } from "../utils/budgetHydrateSession";
+import { syncTaxConfig } from "../utils/taxSync";
 import "./globals.css";
-import * as Sentry from '@sentry/react-native';
 
 Sentry.init({
   dsn: 'https://e80f09f6a8433bd0fe6d1f0643d1eee4@o4511124714094592.ingest.de.sentry.io/4511124717043792',
@@ -89,7 +89,7 @@ function AppShell() {
   // Central Bootstrap: Initialize all critical data stores as soon as user is ready.
   useEffect(() => {
     if (!user?.id) return;
-    
+
     // 1. Personalization & Profile Vitals & SME Data (Parallel)
     void usePersonalizationStore.getState().initForUser(user.id);
     void useProfileVitalsStore.getState().initForUser(user.id);

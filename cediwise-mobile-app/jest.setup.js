@@ -17,5 +17,5 @@ jest.mock("@react-native-async-storage/async-storage", () => {
 jest.mock("@/utils/supabase", () => ({ supabase: null }));
 
 jest.mock("@/utils/logger", () => ({
-  log: { error: jest.fn(), info: jest.fn(), warn: jest.fn() },
+  log: { error: jest.fn(), info: jest.fn(), warn: jest.fn(), debug: jest.fn() },
 }));

@@ -471,6 +471,43 @@ async function attemptMutationRemote(
       return { ok: true };
     }
 
+    if (kind === "insert_vault_deposit") {
+      if ("id" in payload && !isUuid(payload.id)) {
+        return { ok: false, error: "Invalid id for insert_vault_deposit." };
+      }
+      const row = {
+        id: payload.id,
+        user_id: payload.user_id,
+        source: payload.source,
+        amount: payload.amount,
+        source_cycle_id: payload.source_cycle_id ?? null,
+        note: payload.note ?? null,
+        deposited_at: payload.deposited_at ?? new Date().toISOString(),
+        created_at: payload.created_at ?? new Date().toISOString(),
+      };
+      const { error } = await supabase.from("vault_deposits").insert(row);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    }
+
+    if (kind === "update_vault_deposit") {
+      const id = payload.id;
+      const userId = payload.user_id;
+      if (!isUuid(id) || !isUuid(userId)) {
+        return { ok: false, error: "Invalid id for update_vault_deposit." };
+      }
+      const { error } = await supabase
+        .from("vault_deposits")
+        .update({
+          amount: payload.amount,
+          note: payload.note ?? null,
+        })
+        .eq("id", id)
+        .eq("user_id", userId);
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    }
+
     // ─── SME Ledger mutations (delegate to smeSync handlers) ────────
     if (
       kind === "sme_upsert_profile" ||
@@ -555,6 +592,8 @@ const MUTATION_DEPENDENCY_ORDER: Record<string, number> = {
   insert_recurring_expense: 6,
   update_recurring_expense: 7,
   delete_recurring_expense: 8,
+  insert_vault_deposit: 8,
+  update_vault_deposit: 8,
   // SME mutations run after budget mutations
   sme_upsert_profile: 10,
   sme_upsert_category: 11,
@@ -604,6 +643,61 @@ export async function flushBudgetQueue(
     log.error("[budgetSync] flushBudgetQueue threw", { userId, err });
     throw err;
   }
+}
+
+const FLUSH_UNTIL_MAX_ROUNDS = 80;
+const FLUSH_UNTIL_SLICE = 50;
+
+/**
+ * Runs `flushBudgetQueue` in rounds until every listed mutation id is gone from the queue
+ * (success) or any of them records `lastError` (failure). Use after enqueueing vault/profile
+ * rows so callers know whether the server accepted the write.
+ */
+export async function flushBudgetQueueUntilMutationIdsCleared(
+  userId: string,
+  mutationIds: string[],
+  options?: { maxRounds?: number; slice?: number },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (mutationIds.length === 0) return { ok: true };
+  const maxRounds = options?.maxRounds ?? FLUSH_UNTIL_MAX_ROUNDS;
+  const slice = options?.slice ?? FLUSH_UNTIL_SLICE;
+
+  const pendingWithError = async (): Promise<string | null> => {
+    const queue = await loadBudgetQueue(userId);
+    for (const mid of mutationIds) {
+      const item = queue.items.find((it) => it.id === mid);
+      if (item?.lastError) return item.lastError;
+    }
+    return null;
+  };
+
+  for (let round = 0; round < maxRounds; round++) {
+    const queue = await loadBudgetQueue(userId);
+    const stillPending = mutationIds.filter((mid) =>
+      queue.items.some((it) => it.id === mid),
+    );
+    if (stillPending.length === 0) return { ok: true };
+
+    const errEarly = await pendingWithError();
+    if (errEarly) return { ok: false, error: errEarly };
+
+    await flushBudgetQueue(userId, slice);
+  }
+
+  const queue = await loadBudgetQueue(userId);
+  const stillPending = mutationIds.filter((mid) =>
+    queue.items.some((it) => it.id === mid),
+  );
+  if (stillPending.length === 0) return { ok: true };
+
+  const errMsg = await pendingWithError();
+  if (errMsg) return { ok: false, error: errMsg };
+
+  return {
+    ok: false,
+    error:
+      "Could not sync yet. Check your connection and try again.",
+  };
 }
 
 /**

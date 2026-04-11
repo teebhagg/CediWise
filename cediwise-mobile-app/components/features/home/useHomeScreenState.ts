@@ -13,6 +13,7 @@ import {
 import { useAuth } from "../../../hooks/useAuth";
 import { useBudget } from "../../../hooks/useBudget";
 import { useProfileVitals } from "../../../hooks/useProfileVitals";
+import { useVaultStore } from "../../../stores/vaultStore";
 import type {
   BudgetCategory,
   BudgetState,
@@ -294,6 +295,7 @@ export function useHomeScreenState(): UseHomeScreenStateReturn {
       await hydrateFromRemote({ force: true });
       await profileVitals.refresh();
       await reload();
+      await useVaultStore.getState().refreshFromRemote();
     } finally {
       const elapsed = Date.now() - start;
       if (elapsed < 500) {

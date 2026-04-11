@@ -27,6 +27,7 @@ import { Pressable } from "react-native";
 import { BudgetTransactionModal } from "@/components/BudgetTransactionModal";
 import { DiscoveryHeroCard } from "@/components/features/home/DiscoveryHeroCard";
 import { MonthlyActivitiesCard } from "@/components/features/home/MonthlyActivitiesCard";
+import { VaultHeroCard } from "@/components/features/home/VaultHeroCard";
 import { VitalHeroCard } from "@/components/features/home/VitalHeroCard";
 import { VitalHeroSkeleton } from "@/components/features/home/VitalHeroSkeleton";
 import { useHomeScreenState } from "@/components/features/home/useHomeScreenState";
@@ -218,6 +219,9 @@ export default function DashboardScreen() {
                   />
                 </View>
               </TourZone>
+              <VaultHeroCard
+                animatedStyle={overviewAnimStyle as StyleProp<ViewStyle>}
+              />
               <TourZone
                 stepKey="state2-home-activities"
                 name="Your recent activity"

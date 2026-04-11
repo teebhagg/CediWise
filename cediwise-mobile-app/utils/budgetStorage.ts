@@ -167,6 +167,18 @@ export async function removeQueuedMutation(
   await saveBudgetQueue({ ...queue, items: nextItems });
 }
 
+/** Remove several queued mutations (e.g. after rolling back a failed optimistic write). */
+export async function removeQueuedMutationsByIds(
+  userId: string,
+  ids: string[],
+): Promise<void> {
+  if (ids.length === 0) return;
+  const idSet = new Set(ids);
+  const queue = await loadBudgetQueue(userId);
+  const nextItems = queue.items.filter((it) => !idSet.has(it.id));
+  await saveBudgetQueue({ ...queue, items: nextItems });
+}
+
 export async function clearBudgetLocal(userId: string): Promise<void> {
   await AsyncStorage.multiRemove([stateKey(userId), queueKey(userId)]);
   emitBudgetChanged(userId);

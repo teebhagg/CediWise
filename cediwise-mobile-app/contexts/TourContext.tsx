@@ -13,10 +13,10 @@ import {
   clearOnboardingLocalCache,
   getAccountOnboardingRecord,
   getOnboardingStatus,
-  type OnboardingStateKey,
-  type OnboardingStatus,
   setOnboardingStatus,
   upsertAccountOnboardingRecord,
+  type OnboardingStateKey,
+  type OnboardingStatus,
 } from "@/utils/onboardingState";
 import { router } from "expo-router";
 import {
@@ -29,7 +29,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { View } from "react-native";
 import {
   TourProvider as LumenTourProvider,
   useTour,
@@ -80,15 +79,15 @@ export const useTourContext = () => {
 };
 
 const NO_OP_TOUR_CONTEXT: TourContextType = {
-  startHomeTour: () => {},
-  startBudgetTour: () => {},
-  startActiveOnboardingIfEligible: async () => {},
+  startHomeTour: () => { },
+  startBudgetTour: () => { },
+  startActiveOnboardingIfEligible: async () => { },
   activeOnboardingState: null,
   onboardingLoaded: false,
   state1Status: null,
   state2Status: null,
   currentReplayState: null,
-  resetTourSeen: async () => {},
+  resetTourSeen: async () => { },
 };
 
 export function TourProviderFallback({ children }: { children: ReactNode }) {
@@ -101,7 +100,7 @@ export function TourProviderFallback({ children }: { children: ReactNode }) {
 
 export function TourProvider({ children }: { children: ReactNode }) {
   const activeRunRef = useRef<ActiveRun | null>(null);
-  const onTourEndRef = useRef<(reason: TourEndReason) => void>(() => {});
+  const onTourEndRef = useRef<(reason: TourEndReason) => void>(() => { });
 
   const renderCardWithHandler = useCallback((props: CardProps) => {
     const handleStop = () => {

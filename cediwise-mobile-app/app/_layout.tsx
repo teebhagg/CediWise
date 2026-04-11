@@ -103,6 +103,9 @@ function AppShell() {
         await hydrateFromRemote();
         await useSMELedgerStore.getState().initForUser(user.id); // Ensure SME is ready
         await import("../utils/smeSync").then((m) => m.flushSMEQueue(user.id!));
+        await import("../stores/vaultStore").then((m) =>
+          m.useVaultStore.getState().initForUser(user.id),
+        );
       })();
     }
   }, [user?.id, hydrateFromRemote]);
@@ -156,6 +159,7 @@ function AppShell() {
           <Stack.Screen name="(sme)" options={{ headerShown: false }} />
           <Stack.Screen name="upgrade" options={{ headerShown: false }} />
           <Stack.Screen name="subscription" options={{ headerShown: false }} />
+          <Stack.Screen name="vault" options={{ headerShown: false }} />
         </Stack>
       </SafeAreaListener>
     </View>

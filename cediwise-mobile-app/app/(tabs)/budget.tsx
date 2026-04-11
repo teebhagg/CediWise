@@ -4,6 +4,7 @@ import {
 } from "@/components/BudgetLoading";
 import { AddDebtModal } from "@/components/AddDebtModal";
 import { CashFlowWidget } from "@/components/features/budget/CashFlowWidget";
+import { SURVIVE_THE_MONTH_CASH_FLOW_UI_ENABLED } from "@/constants/featureFlags";
 import { Card } from "@/components/Card";
 import { DeficitResolutionModal } from "@/components/DeficitResolutionModal";
 import { RolloverAllocationModal } from "@/components/RolloverAllocationModal";
@@ -345,8 +346,8 @@ export default function BudgetScreen() {
               </View>
             )}
 
-            {/* Cash Flow Widget — F-02 */}
-            {!!user && !budget.isLoading && (
+            {/* Survive the Month / cash-flow widget — gated until product story vs Savings Vault is finalized (see featureFlags). */}
+            {SURVIVE_THE_MONTH_CASH_FLOW_UI_ENABLED && !!user && !budget.isLoading && (
               <CashFlowWidget
                 visible
                 canAccessBudget={canAccessBudget}

@@ -257,7 +257,35 @@ export type BudgetMutationKind =
   | "sme_delete_category"
   | "sme_insert_transaction"
   | "sme_update_transaction"
-  | "sme_delete_transaction";
+  | "sme_delete_transaction"
+  | "insert_vault_deposit"
+  | "update_vault_deposit";
+
+/** Wealth Vault: immutable ledger (initial + cycle-end surplus only). */
+export type VaultDepositSource = "initial" | "cycle_rollover";
+
+export type VaultDeposit = {
+  id: string;
+  userId: string;
+  source: VaultDepositSource;
+  amount: number;
+  sourceCycleId?: string | null;
+  note?: string | null;
+  depositedAt: string;
+  createdAt: string;
+};
+
+export type VaultSparklinePoint = { date: string; cumulativeTotal: number };
+
+export type VaultSummary = {
+  totalBalance: number;
+  initialBalance: number;
+  totalFromRollovers: number;
+  depositCount: number;
+  deposits: VaultDeposit[];
+  lastDepositAt: string | null;
+  sparklinePoints: VaultSparklinePoint[];
+};
 
 export type BudgetMutation = {
   id: string;

@@ -64,6 +64,10 @@ function kindLabel(kind: string) {
       return 'Update recurring expense';
     case 'delete_recurring_expense':
       return 'Delete recurring expense';
+    case 'insert_vault_deposit':
+      return 'Vault deposit';
+    case 'update_vault_deposit':
+      return 'Vault deposit update';
     default:
       return kind;
   }

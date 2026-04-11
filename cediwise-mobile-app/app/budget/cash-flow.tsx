@@ -8,6 +8,7 @@ import { useBudgetScreenState } from "@/components/features/budget/useBudgetScre
 import { CashFlowSetupModal } from "@/components/features/budget/CashFlowSetupModal";
 import { SalaryResetModal } from "@/components/features/budget/SalaryResetModal";
 import { useTierContext } from "@/contexts/TierContext";
+import { SURVIVE_THE_MONTH_CASH_FLOW_UI_ENABLED } from "@/constants/featureFlags";
 import { useAuth } from "@/hooks/useAuth";
 import { useCashFlowStore } from "@/stores/cashFlowStore";
 import { useRecurringExpensesStore } from "@/stores/recurringExpensesStore";
@@ -99,6 +100,10 @@ export default function BudgetCashFlowScreen() {
   );
 
   useEffect(() => {
+    if (!SURVIVE_THE_MONTH_CASH_FLOW_UI_ENABLED) {
+      router.replace("/(tabs)/budget");
+      return;
+    }
     if (!canAccessBudget) {
       router.replace("/(tabs)/budget");
     }
@@ -113,7 +118,7 @@ export default function BudgetCashFlowScreen() {
     });
   }, [posthog, projection, isLoading]);
 
-  if (!canAccessBudget) {
+  if (!SURVIVE_THE_MONTH_CASH_FLOW_UI_ENABLED || !canAccessBudget) {
     return null;
   }
 

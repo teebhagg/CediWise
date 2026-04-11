@@ -1,7 +1,9 @@
 import * as Haptics from "expo-haptics";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Platform } from "react-native";
 
 import { useBudgetStore } from "../stores/budgetStore";
+import { useVaultStore } from "../stores/vaultStore";
 import { usePersonalizationStore } from "../stores/personalizationStore";
 import { useProfileVitalsStore } from "../stores/profileVitalsStore";
 import { useRecurringExpensesStore } from "../stores/recurringExpensesStore";
@@ -915,6 +917,20 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       await flushBudgetQueue(userId);
       await refreshQueue();
 
+      if (rollover.savings > 0) {
+        await useVaultStore.getState().addCycleRolloverDeposit({
+          userId,
+          sourceCycleId: prevCycle.id,
+          amount: rollover.savings,
+          note: `Cycle ${prevCycle.startDate} – ${prevCycle.endDate}`,
+        });
+        if (Platform.OS !== "web") {
+          void Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Success,
+          );
+        }
+      }
+
       return { newCycleId: cycleId };
     },
     [activeCycle, persistState, state, userId, refreshQueue],
@@ -1026,6 +1042,20 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     }
     await flushBudgetQueue(userId);
     await refreshQueue();
+
+    if (rollover.savings > 0) {
+      await useVaultStore.getState().addCycleRolloverDeposit({
+        userId,
+        sourceCycleId: prevCycle.id,
+        amount: rollover.savings,
+        note: `Cycle ${prevCycle.startDate} – ${prevCycle.endDate}`,
+      });
+      if (Platform.OS !== "web") {
+        void Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        );
+      }
+    }
 
     return { newCycleId: cycleId };
   }, [activeCycle, persistState, state, taxConfig, userId, refreshQueue]);

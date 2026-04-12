@@ -1,5 +1,6 @@
 "use server";
 
+import { getCachedAuthUsers } from "@/lib/data/auth-users";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   CompletionsByDay,
@@ -14,11 +15,11 @@ import type {
 export async function fetchDashboardKpis(): Promise<DashboardKpis> {
   try {
     const admin = createAdminClient();
+    const users = await getCachedAuthUsers();
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    const [usersRes, lessonsRes, progressRes, feedbackRes] = await Promise.all([
-      admin.auth.admin.listUsers({ perPage: 1000 }),
+    const [lessonsRes, progressRes, feedbackRes] = await Promise.all([
       admin.from("lessons").select("id", { count: "exact", head: true }),
       admin
         .from("user_lesson_progress")
@@ -31,11 +32,10 @@ export async function fetchDashboardKpis(): Promise<DashboardKpis> {
         .eq("is_resolved", false),
     ]);
 
-    const usersCount = usersRes.data?.users?.length ?? 0;
     const completionsThisWeek = progressRes.count ?? 0;
 
     return {
-      usersCount,
+      usersCount: users.length,
       lessonsCount: lessonsRes.count ?? 0,
       completionsThisWeek,
       pendingFeedback: feedbackRes.count ?? 0,
@@ -47,6 +47,42 @@ export async function fetchDashboardKpis(): Promise<DashboardKpis> {
       completionsThisWeek: 0,
       pendingFeedback: 0,
     };
+  }
+}
+
+/** Lesson completions in the last 7 days vs the prior 7 days (for WoW trends). */
+export async function fetchCompletionsWeekOverWeek(): Promise<{
+  current: number;
+  previous: number;
+}> {
+  try {
+    const admin = createAdminClient();
+    const now = new Date();
+    const thisStart = new Date(now);
+    thisStart.setDate(thisStart.getDate() - 7);
+    const prevStart = new Date(now);
+    prevStart.setDate(prevStart.getDate() - 14);
+
+    const [curRes, prevRes] = await Promise.all([
+      admin
+        .from("user_lesson_progress")
+        .select("id", { count: "exact", head: true })
+        .not("completed_at", "is", null)
+        .gte("completed_at", thisStart.toISOString()),
+      admin
+        .from("user_lesson_progress")
+        .select("id", { count: "exact", head: true })
+        .not("completed_at", "is", null)
+        .gte("completed_at", prevStart.toISOString())
+        .lt("completed_at", thisStart.toISOString()),
+    ]);
+
+    return {
+      current: curRes.count ?? 0,
+      previous: prevRes.count ?? 0,
+    };
+  } catch {
+    return { current: 0, previous: 0 };
   }
 }
 
@@ -128,8 +164,7 @@ export async function fetchUserMetrics(): Promise<UserMetrics> {
     const monthAgo = new Date(now);
     monthAgo.setDate(monthAgo.getDate() - 30);
 
-    const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
-    const users = data?.users ?? [];
+    const users = await getCachedAuthUsers();
     const userIds = users.map((u) => u.id);
     const totalUsers = userIds.length;
 
@@ -178,8 +213,7 @@ export async function fetchRegistrationsByDay(
   days = 30
 ): Promise<RegistrationsByDay> {
   try {
-    const admin = createAdminClient();
-    const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
+    const users = await getCachedAuthUsers();
     const start = new Date();
     start.setDate(start.getDate() - days);
     start.setHours(0, 0, 0, 0);
@@ -190,7 +224,7 @@ export async function fetchRegistrationsByDay(
       d.setDate(d.getDate() + i);
       byDate.set(d.toISOString().slice(0, 10), 0);
     }
-    for (const u of data?.users ?? []) {
+    for (const u of users) {
       const date = u.created_at?.slice(0, 10);
       if (date && byDate.has(date)) {
         byDate.set(date, (byDate.get(date) ?? 0) + 1);
@@ -242,8 +276,8 @@ export async function fetchProfileBreakdown(): Promise<ProfileBreakdown> {
 export async function fetchRecentUsers(limit = 10): Promise<RecentUser[]> {
   try {
     const admin = createAdminClient();
-    const { data } = await admin.auth.admin.listUsers({ perPage: 500 });
-    const users = (data?.users ?? [])
+    const allUsers = await getCachedAuthUsers();
+    const users = [...allUsers]
       .sort(
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()

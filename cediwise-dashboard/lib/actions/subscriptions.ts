@@ -102,21 +102,22 @@ export async function fetchSubscriptionActivityLog(
     const { data, count } = await query;
     const userIds = [...new Set((data ?? []).map((r) => r.user_id))];
 
-    // Fetch user names from auth
     const userMap = new Map<string, { name: string | null; email: string | null }>();
     if (userIds.length > 0) {
       try {
-        const { data: authData } = await admin.auth.admin.listUsers({ perPage: 1000 });
-        for (const u of authData?.users ?? []) {
-          if (userIds.includes(u.id)) {
+        await Promise.all(
+          userIds.map(async (uid) => {
+            const { data: authData } = await admin.auth.admin.getUserById(uid);
+            const u = authData?.user;
+            if (!u) return;
             const meta = u.user_metadata as Record<string, unknown> | undefined;
             const name =
               (meta?.full_name as string) ??
               (meta?.name as string) ??
               (u.phone ? u.phone : null);
             userMap.set(u.id, { name, email: u.email ?? null });
-          }
-        }
+          })
+        );
       } catch {
         // Auth fetch failed — continue without user names
       }

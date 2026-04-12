@@ -1,3 +1,4 @@
+import { DashboardAlertsBanner } from "@/components/dashboard/dashboard-alerts-banner";
 import { RangeToggle } from "@/components/dashboard/range-toggle";
 import { RecentUsersTable } from "@/components/dashboard/recent-users-table";
 import {
@@ -17,12 +18,18 @@ import {
 import { Separator } from "@/components/ui/separator";
 import {
   fetchCompletionsByDay,
+  fetchCompletionsWeekOverWeek,
   fetchDashboardKpis,
   fetchProfileBreakdown,
   fetchRecentUsers,
   fetchRegistrationsByDay,
   fetchUserMetrics,
 } from "@/lib/actions/dashboard";
+import { getCachedAuthUsers } from "@/lib/data/auth-users";
+import {
+  computeSignupMonthOverMonth,
+  computeSignupWeekOverWeek,
+} from "@/lib/utils/signup-trends";
 import {
   fetchSubscriptionMetrics,
   fetchTierDistribution,
@@ -48,6 +55,10 @@ export default function DashboardPage({
           Overview of CediWise admin data and metrics.
         </p>
       </header>
+
+      <Suspense fallback={null}>
+        <DashboardAlertsBanner />
+      </Suspense>
 
       {/* Section 1: Key metrics (primary KPIs) */}
       <section>
@@ -201,10 +212,17 @@ export default function DashboardPage({
 }
 
 async function PrimaryKpisCards() {
-  const [metrics, kpis] = await Promise.all([
+  const [metrics, kpis, users] = await Promise.all([
     fetchUserMetrics(),
     fetchDashboardKpis(),
+    getCachedAuthUsers(),
   ]);
+  const signupWow = computeSignupWeekOverWeek(users);
+  const newWeekTrend = {
+    change: signupWow.current - signupWow.previous,
+    periodLabel: "vs prior week",
+    polarity: "higher_is_better" as const,
+  };
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <StatCard
@@ -219,6 +237,7 @@ async function PrimaryKpisCards() {
         value={metrics.newUsersThisWeek}
         description="Last 7 days"
         variant="primary"
+        trend={newWeekTrend}
       />
       <StatCard
         title="Lessons"
@@ -239,10 +258,23 @@ async function PrimaryKpisCards() {
 }
 
 async function SecondaryMetricsCards() {
-  const [metrics, kpis] = await Promise.all([
+  const [metrics, kpis, users, completionsWow] = await Promise.all([
     fetchUserMetrics(),
     fetchDashboardKpis(),
+    getCachedAuthUsers(),
+    fetchCompletionsWeekOverWeek(),
   ]);
+  const monthMom = computeSignupMonthOverMonth(users);
+  const monthTrend = {
+    change: monthMom.current - monthMom.previous,
+    periodLabel: "vs prior 30 days",
+    polarity: "higher_is_better" as const,
+  };
+  const completionsTrend = {
+    change: completionsWow.current - completionsWow.previous,
+    periodLabel: "vs prior week",
+    polarity: "higher_is_better" as const,
+  };
   return (
     <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
       <StatCard
@@ -264,11 +296,13 @@ async function SecondaryMetricsCards() {
         title="New this month"
         value={metrics.newUsersThisMonth}
         description="Last 30 days"
+        trend={monthTrend}
       />
       <StatCard
         title="Completions this week"
         value={kpis.completionsThisWeek}
         description="Lesson completions"
+        trend={completionsTrend}
       />
     </div>
   );

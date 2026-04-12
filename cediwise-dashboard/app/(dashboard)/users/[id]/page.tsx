@@ -15,6 +15,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { UserProfileForm } from "./user-profile-form";
+import { UserPushComposer } from "./user-push-composer";
 
 function formatLabel(s: string): string {
   return s
@@ -48,6 +49,44 @@ export default async function UserDetailPage({
     .select("*")
     .eq("user_id", id)
     .maybeSingle();
+
+  const { data: pushDevices } = await admin
+    .from("push_devices")
+    .select("platform, app_version, device_label, is_active, last_seen_at, expo_push_token")
+    .eq("user_id", id)
+    .order("last_seen_at", { ascending: false });
+
+  const { count: completedLessonCount } = await admin
+    .from("user_lesson_progress")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", id)
+    .not("completed_at", "is", null);
+
+  const { data: recentProgress } = await admin
+    .from("user_lesson_progress")
+    .select("lesson_id, completed_at")
+    .eq("user_id", id)
+    .not("completed_at", "is", null)
+    .order("completed_at", { ascending: false })
+    .limit(5);
+
+  const recentLessonIds = [...new Set((recentProgress ?? []).map((r) => r.lesson_id))];
+  const { data: recentLessons } =
+    recentLessonIds.length > 0
+      ? await admin.from("lessons").select("id, title, module").in("id", recentLessonIds)
+      : { data: [] as { id: string; title: string; module: string }[] };
+
+  const lessonMeta = new Map((recentLessons ?? []).map((l) => [l.id, l]));
+
+  const { data: subActivity } = await admin
+    .from("subscription_activity_log")
+    .select("id, event_type, from_tier, to_tier, from_status, to_status, created_at")
+    .eq("user_id", id)
+    .order("created_at", { ascending: false })
+    .limit(8);
+
+  const announcementsEnabled = process.env.ENABLE_ADMIN_ANNOUNCEMENTS !== "false";
+  const hasActivePushDevice = (pushDevices ?? []).some((d) => (d as { is_active?: boolean }).is_active);
 
   const user = authUser.user as {
     id: string;
@@ -115,6 +154,139 @@ export default async function UserDetailPage({
           )}
         </div>
       </div>
+
+      {announcementsEnabled && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Push notification</CardTitle>
+            <CardDescription>
+              Send a one-off push to this user&apos;s active devices (same pipeline as broadcast
+              announcements).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <UserPushComposer userId={id} hasActiveDevice={hasActivePushDevice} />
+          </CardContent>
+        </Card>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Mobile devices</CardTitle>
+          <CardDescription>Registered push tokens from the mobile app.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!pushDevices?.length ? (
+            <p className="text-sm text-muted-foreground">No devices registered.</p>
+          ) : (
+            <ul className="space-y-3 text-sm">
+              {(pushDevices as Record<string, unknown>[]).map((row) => {
+                const token = String(row.expo_push_token ?? "");
+                const shortTok =
+                  token.length > 14 ? `${token.slice(0, 8)}…${token.slice(-4)}` : token;
+                return (
+                  <li
+                    key={String(row.expo_push_token)}
+                    className="rounded-lg border border-border/80 px-3 py-2"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={row.is_active ? "default" : "secondary"}>
+                        {row.is_active ? "Active" : "Inactive"}
+                      </Badge>
+                      <span className="font-medium">
+                        {String(row.platform ?? "unknown")} · v{String(row.app_version ?? "?")}
+                      </span>
+                    </div>
+                    {row.device_label ? (
+                      <p className="text-muted-foreground mt-1 text-xs">{String(row.device_label)}</p>
+                    ) : null}
+                    <p className="text-muted-foreground mt-1 font-mono text-xs">{shortTok}</p>
+                    {row.last_seen_at ? (
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        Last seen{" "}
+                        {new Date(String(row.last_seen_at)).toLocaleString(undefined, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </p>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Learning</CardTitle>
+          <CardDescription>Lesson completions for this user.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm">
+            <span className="text-muted-foreground">Completed lessons: </span>
+            <span className="font-semibold tabular-nums">{completedLessonCount ?? 0}</span>
+          </p>
+          {(recentProgress ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">No completed lessons yet.</p>
+          ) : (
+            <ul className="space-y-2 text-sm">
+              {(recentProgress ?? []).map((row) => {
+                const meta = lessonMeta.get(row.lesson_id);
+                const label = meta?.title ?? row.lesson_id;
+                return (
+                  <li key={`${row.lesson_id}-${row.completed_at}`} className="flex flex-col gap-0.5">
+                    <span className="font-medium">{label}</span>
+                    {meta?.module ? (
+                      <span className="text-muted-foreground text-xs">Module {meta.module}</span>
+                    ) : null}
+                    <span className="text-muted-foreground text-xs">
+                      {row.completed_at
+                        ? new Date(row.completed_at).toLocaleString(undefined, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          })
+                        : ""}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      {(subActivity ?? []).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Subscription activity</CardTitle>
+            <CardDescription>Recent plan and status changes.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-sm">
+              {(subActivity as Record<string, unknown>[]).map((ev) => (
+                <li key={String(ev.id)} className="border-b border-border/60 pb-2 last:border-0">
+                  <div className="font-medium">{formatLabel(String(ev.event_type ?? ""))}</div>
+                  <div className="text-muted-foreground text-xs">
+                    {ev.from_tier != null || ev.to_tier != null ? (
+                      <span>
+                        {String(ev.from_tier ?? "—")} → {String(ev.to_tier ?? "—")}
+                      </span>
+                    ) : null}
+                    {ev.created_at
+                      ? ` · ${new Date(String(ev.created_at)).toLocaleString(undefined, {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}`
+                      : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

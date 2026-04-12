@@ -10,6 +10,8 @@ export type AnnouncementCampaignRow = {
   title: string;
   body: string;
   deep_link: string | null;
+  audience_type: string;
+  target_user_id: string | null;
   status: "draft" | "queued" | "sending" | "sent" | "failed";
   sent_at: string | null;
   attempted_count: number;
@@ -30,7 +32,7 @@ export async function listAnnouncementCampaigns(
   const { data, error, count } = await admin
     .from("announcement_campaigns")
     .select(
-      "id, title, body, deep_link, status, sent_at, attempted_count, success_count, failure_count, error_message, created_at",
+      "id, title, body, deep_link, audience_type, target_user_id, status, sent_at, attempted_count, success_count, failure_count, error_message, created_at",
       { count: "exact" }
     )
     .order("created_at", { ascending: false })
@@ -38,9 +40,14 @@ export async function listAnnouncementCampaigns(
 
   if (error) throw new Error(error.message);
 
+  const rows = (data ?? []) as Partial<AnnouncementCampaignRow>[];
   return {
-    data: (data ?? []) as AnnouncementCampaignRow[],
-    total: count ?? (data ?? []).length,
+    data: rows.map((r) => ({
+      ...r,
+      audience_type: r.audience_type ?? "all",
+      target_user_id: r.target_user_id ?? null,
+    })) as AnnouncementCampaignRow[],
+    total: count ?? rows.length,
   };
 }
 
@@ -62,120 +69,195 @@ async function requireAdminUser() {
   return user;
 }
 
+type SendAnnouncementResult = {
+  campaignId: string;
+  queued: number;
+  status: string;
+  error?: string;
+};
+
+async function queueAnnouncementAndSend(options: {
+  title: string;
+  body: string;
+  deepLink: string | null;
+  audienceType: "all" | "single_user";
+  targetUserId: string | null;
+  revalidatePaths: string[];
+}): Promise<SendAnnouncementResult> {
+  if (process.env.ENABLE_ADMIN_ANNOUNCEMENTS === "false") {
+    return {
+      campaignId: "",
+      queued: 0,
+      status: "failed",
+      error: "Announcements are disabled by configuration",
+    };
+  }
+
+  const user = await requireAdminUser();
+
+  const title = options.title.trim();
+  const body = options.body.trim();
+  const deepLink = options.deepLink?.trim() ?? "";
+
+  if (!title || !body) {
+    return {
+      campaignId: "",
+      queued: 0,
+      status: "failed",
+      error: "Title and body are required",
+    };
+  }
+
+  if (deepLink && !deepLink.startsWith("/")) {
+    return {
+      campaignId: "",
+      queued: 0,
+      status: "failed",
+      error: "Deep link must start with '/'",
+    };
+  }
+
+  if (options.audienceType === "single_user" && !options.targetUserId) {
+    return {
+      campaignId: "",
+      queued: 0,
+      status: "failed",
+      error: "User is required for targeted push",
+    };
+  }
+
+  const adminClient = createAdminClient();
+
+  const { data: campaign, error: campaignError } = await adminClient
+    .from("announcement_campaigns")
+    .insert({
+      title,
+      body,
+      deep_link: deepLink || null,
+      audience_type: options.audienceType,
+      target_user_id: options.targetUserId,
+      status: "queued",
+      created_by: user.id,
+    })
+    .select("id")
+    .single();
+
+  if (campaignError || !campaign) {
+    return {
+      campaignId: "",
+      queued: 0,
+      status: "failed",
+      error: campaignError?.message ?? "Failed to create campaign",
+    };
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    return {
+      campaignId: campaign.id,
+      queued: 0,
+      status: "failed",
+      error: "Missing Supabase service credentials",
+    };
+  }
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/send-announcement`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${serviceRoleKey}`,
+      apikey: serviceRoleKey,
+    },
+    body: JSON.stringify({ campaign_id: campaign.id }),
+    cache: "no-store",
+  });
+
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    await adminClient
+      .from("announcement_campaigns")
+      .update({
+        status: "failed",
+        error_message: typeof result?.error === "string" ? result.error : "Send function failed",
+      })
+      .eq("id", campaign.id);
+
+    for (const p of options.revalidatePaths) {
+      revalidatePath(p);
+    }
+
+    return {
+      campaignId: campaign.id,
+      queued: 0,
+      status: "failed",
+      error: typeof result?.error === "string" ? result.error : "Announcement send failed",
+    };
+  }
+
+  for (const p of options.revalidatePaths) {
+    revalidatePath(p);
+  }
+
+  return {
+    campaignId: campaign.id,
+    queued: Number(result?.attempted ?? 0),
+    status: String(result?.status ?? "sent"),
+  };
+}
+
 export async function sendAnnouncementNow(input: {
   title: string;
   body: string;
   deepLink?: string | null;
-}): Promise<{ campaignId: string; queued: number; status: string; error?: string }> {
+}): Promise<SendAnnouncementResult> {
   try {
-    if (process.env.ENABLE_ADMIN_ANNOUNCEMENTS === "false") {
-      return {
-        campaignId: "",
-        queued: 0,
-        status: "failed",
-        error: "Announcements are disabled by configuration",
-      };
-    }
-
-    const user = await requireAdminUser();
-
-    const title = input.title.trim();
-    const body = input.body.trim();
-    const deepLink = (input.deepLink ?? "").trim();
-
-    if (!title || !body) {
-      return {
-        campaignId: "",
-        queued: 0,
-        status: "failed",
-        error: "Title and body are required",
-      };
-    }
-
-    if (deepLink && !deepLink.startsWith("/")) {
-      return {
-        campaignId: "",
-        queued: 0,
-        status: "failed",
-        error: "Deep link must start with '/'",
-      };
-    }
-
-    const adminClient = createAdminClient();
-
-    const { data: campaign, error: campaignError } = await adminClient
-      .from("announcement_campaigns")
-      .insert({
-        title,
-        body,
-        deep_link: deepLink || null,
-        audience_type: "all",
-        status: "queued",
-        created_by: user.id,
-      })
-      .select("id")
-      .single();
-
-    if (campaignError || !campaign) {
-      return {
-        campaignId: "",
-        queued: 0,
-        status: "failed",
-        error: campaignError?.message ?? "Failed to create campaign",
-      };
-    }
-
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !serviceRoleKey) {
-      return {
-        campaignId: campaign.id,
-        queued: 0,
-        status: "failed",
-        error: "Missing Supabase service credentials",
-      };
-    }
-
-    const response = await fetch(`${supabaseUrl}/functions/v1/send-announcement`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${serviceRoleKey}`,
-        apikey: serviceRoleKey,
-      },
-      body: JSON.stringify({ campaign_id: campaign.id }),
-      cache: "no-store",
+    return await queueAnnouncementAndSend({
+      title: input.title,
+      body: input.body,
+      deepLink: input.deepLink ?? null,
+      audienceType: "all",
+      targetUserId: null,
+      revalidatePaths: ["/announcements"],
     });
+  } catch (error) {
+    return {
+      campaignId: "",
+      queued: 0,
+      status: "failed",
+      error: error instanceof Error ? error.message : "Announcement send failed",
+    };
+  }
+}
 
-    const result = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      await adminClient
-        .from("announcement_campaigns")
-        .update({
-          status: "failed",
-          error_message: typeof result?.error === "string" ? result.error : "Send function failed",
-        })
-        .eq("id", campaign.id);
-
-      revalidatePath("/announcements");
-
+/** Push announcement to a single user’s registered devices only. */
+export async function sendAnnouncementToUser(input: {
+  targetUserId: string;
+  title: string;
+  body: string;
+  deepLink?: string | null;
+}): Promise<SendAnnouncementResult> {
+  try {
+    const uid = input.targetUserId.trim();
+    if (!uid) {
       return {
-        campaignId: campaign.id,
+        campaignId: "",
         queued: 0,
         status: "failed",
-        error: typeof result?.error === "string" ? result.error : "Announcement send failed",
+        error: "User id is required",
       };
     }
 
-    revalidatePath("/announcements");
-
-    return {
-      campaignId: campaign.id,
-      queued: Number(result?.attempted ?? 0),
-      status: String(result?.status ?? "sent"),
-    };
+    return await queueAnnouncementAndSend({
+      title: input.title,
+      body: input.body,
+      deepLink: input.deepLink ?? null,
+      audienceType: "single_user",
+      targetUserId: uid,
+      revalidatePaths: ["/announcements", `/users/${uid}`],
+    });
   } catch (error) {
     return {
       campaignId: "",

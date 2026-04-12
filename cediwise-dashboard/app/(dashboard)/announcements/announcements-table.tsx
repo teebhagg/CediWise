@@ -1,10 +1,12 @@
 "use client";
 
 import { Pagination } from "@/components/ui/pagination";
+import type { AnnouncementCampaignRow } from "@/lib/actions/announcements";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 interface AnnouncementsTableProps {
-  data: any[];
+  data: AnnouncementCampaignRow[];
   total: number;
   page: number;
   perPage: number;
@@ -40,6 +42,7 @@ export function AnnouncementsTable({
             <thead>
               <tr className="border-b bg-muted/50">
                 <th className="h-10 px-4 text-left font-medium">Title</th>
+                <th className="h-10 px-4 text-left font-medium">Audience</th>
                 <th className="h-10 px-4 text-left font-medium">Status</th>
                 <th className="h-10 px-4 text-left font-medium">Attempted</th>
                 <th className="h-10 px-4 text-left font-medium">Success</th>
@@ -53,6 +56,18 @@ export function AnnouncementsTable({
                   <td className="px-4 py-3">
                     <div className="font-medium">{campaign.title}</div>
                     <div className="text-xs text-muted-foreground truncate max-w-xs">{campaign.body}</div>
+                  </td>
+                  <td className="px-4 py-3 text-xs">
+                    {campaign.audience_type === "single_user" && campaign.target_user_id ? (
+                      <Link
+                        href={`/users/${campaign.target_user_id}`}
+                        className="text-primary underline-offset-2 hover:underline"
+                      >
+                        Single user
+                      </Link>
+                    ) : (
+                      <span className="text-muted-foreground">All devices</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 uppercase text-xs tracking-wide">{campaign.status}</td>
                   <td className="px-4 py-3">{campaign.attempted_count}</td>

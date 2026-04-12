@@ -2,6 +2,12 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
+export type StatCardTrend = {
+  change: number;
+  periodLabel: string;
+  polarity: "higher_is_better" | "lower_is_better";
+};
+
 interface StatCardProps {
   title: string;
   value: string | number;
@@ -9,6 +15,33 @@ interface StatCardProps {
   href?: string;
   /** Larger variant for primary KPIs */
   variant?: "default" | "primary";
+  /** Week-over-week or similar delta; respects prefers-reduced-motion via color only */
+  trend?: StatCardTrend | null;
+}
+
+function TrendHint({ trend }: { trend: StatCardTrend }) {
+  const { change, periodLabel, polarity } = trend;
+  if (change === 0) {
+    return (
+      <p className="text-muted-foreground mt-1 text-xs tabular-nums">
+        Same {periodLabel}
+      </p>
+    );
+  }
+  const good =
+    polarity === "higher_is_better" ? change > 0 : change < 0;
+  const prefix = change > 0 ? "+" : "";
+  return (
+    <p
+      className={cn(
+        "mt-1 text-xs font-medium tabular-nums",
+        good ? "text-emerald-600 dark:text-emerald-500" : "text-amber-700 dark:text-amber-500"
+      )}
+    >
+      {prefix}
+      {change} {periodLabel}
+    </p>
+  );
 }
 
 export function StatCard({
@@ -17,11 +50,12 @@ export function StatCard({
   description,
   href,
   variant = "default",
+  trend,
 }: StatCardProps) {
   const content = (
     <Card
       className={cn(
-        "transition-all duration-200",
+        "transition-[box-shadow,border-color] duration-200",
         href && "cursor-pointer hover:border-primary/30 hover:shadow-md",
         variant === "primary" && "border-primary/20 bg-primary/5"
       )}
@@ -39,6 +73,7 @@ export function StatCard({
           {value}
         </p>
         <p className="text-muted-foreground mt-1 text-xs">{description}</p>
+        {trend ? <TrendHint trend={trend} /> : null}
       </CardContent>
     </Card>
   );

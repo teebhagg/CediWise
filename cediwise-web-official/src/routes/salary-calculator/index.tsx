@@ -81,7 +81,7 @@ function SalaryCalculatorPage() {
         description="Verify your PAYE and SSNIT against official GRA rates in seconds. If your employer is over-deducting, you're losing money every single month."
         icon={CreditCardIcon}
         iconBgColor="bg-emerald-500/20"
-        image="/assets/android/img-11.webp"
+        image="/assets/ios/img-5.webp"
         highlights={highlights}
       >
         <div className="mb-10 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-5 max-w-2xl">

@@ -74,7 +74,7 @@ function BudgetingToolPage() {
         description="See the exact date your money runs out if current spending continues. Your safe-to-spend figure, updated daily — so you always know where you stand."
         icon={ChartLineDataIcon}
         iconBgColor="bg-primary/30"
-        image="/assets/android/img-2.webp"
+        image="/assets/ios/img-2.webp"
         highlights={highlights}
       >
         <h2>How it works</h2>

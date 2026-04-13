@@ -42,7 +42,7 @@ export function Hero() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(
-                  'inline-flex cursor-pointer items-center gap-2 h-14 rounded-xl border border-white/20 bg-white/10 px-8 text-base font-semibold text-white backdrop-blur-md transition-colors duration-200 hover:border-white/30 hover:bg-white/[0.14] focus:outline-none focus:ring-2 focus:ring-white/40 motion-safe:hover:scale-[1.02] motion-reduce:hover:scale-100',
+                  'inline-flex cursor-pointer items-center justify-center gap-2 h-14 rounded-full border border-white/20 bg-white/10 px-8 text-base font-semibold text-white backdrop-blur-md transition-colors duration-200 hover:border-white/30 hover:bg-white/[0.14] focus:outline-none focus:ring-2 focus:ring-white/40 motion-safe:hover:scale-[1.02] motion-reduce:hover:scale-100',
                 )}
               >
                 <AndroidIcon className="size-5 shrink-0" />
@@ -53,7 +53,7 @@ export function Hero() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(
-                  'inline-flex cursor-pointer items-center gap-2 h-14 rounded-xl border border-emerald-300/60 bg-emerald-600/70 px-8 text-base font-semibold text-white backdrop-blur-md shadow-sm transition-colors duration-200 hover:border-emerald-400/60 hover:bg-emerald-600/80 focus:outline-none focus:ring-2 focus:ring-emerald-300/40 motion-safe:hover:scale-[1.02] motion-reduce:hover:scale-100',
+                  'inline-flex cursor-pointer items-center justify-center gap-2 h-14 rounded-full border border-emerald-300/60 bg-emerald-600/70 px-8 text-base font-semibold text-white backdrop-blur-md shadow-sm transition-colors duration-200 hover:border-emerald-400/60 hover:bg-emerald-600/80 focus:outline-none focus:ring-2 focus:ring-emerald-300/40 motion-safe:hover:scale-[1.02] motion-reduce:hover:scale-100',
                 )}
               >
                 <AppleIcon className="size-[1.15rem] shrink-0" />
@@ -70,7 +70,7 @@ export function Hero() {
             <div className="absolute left-[12%] z-0 w-[28%] transition-transform hover:translate-x-[-10px] hover:-rotate-2">
               <div className="aspect-9/19 overflow-hidden shadow-xl opacity-90">
                 <img
-                  src="/assets/android/img-3.webp"
+                  src="/assets/ios/img-4.webp"
                   alt="CediWise SME Ledger and expense tracking screenshot"
                   className="h-full w-full object-cover"
                   loading="lazy"
@@ -82,7 +82,7 @@ export function Hero() {
             <div className="absolute right-[12%] z-0 w-[28%] transition-transform hover:translate-x-[10px] hover:rotate-2">
               <div className="aspect-9/19 overflow-hidden shadow-xl opacity-90">
                 <img
-                  src="/assets/android/img-15.webp"
+                  src="/assets/ios/img-3.webp"
                   alt="CediWise financial literacy and analytics dashboard"
                   className="h-full w-full object-cover"
                   loading="lazy"
@@ -94,7 +94,7 @@ export function Hero() {
             <div className="relative z-10 w-[38%] transition-transform hover:scale-[1.05]">
               <div className="aspect-9/19 overflow-hidden shadow-2xl">
                 <img
-                  src="/assets/android/img-14.webp"
+                  src="/assets/ios/img-13.webp"
                   alt="CediWise salary calculator and budgeting app interface"
                   className="h-full w-full object-cover"
                   loading="lazy"

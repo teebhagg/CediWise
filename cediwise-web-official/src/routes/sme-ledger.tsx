@@ -72,7 +72,7 @@ function SMELedgerPage() {
       description="Stay VAT-compliant, audit-ready, and ahead of your GHS 750K threshold — without hiring an accountant. Automatic 20% VAT calculations under Act 1151."
       icon={Invoice02Icon}
       iconBgColor="bg-blue-500/30"
-      image="/assets/android/img-6.webp"
+      image="/assets/ios/img-4.webp"
       highlights={highlights}
     >
       <div className="grid gap-6 md:grid-cols-2 mt-8">

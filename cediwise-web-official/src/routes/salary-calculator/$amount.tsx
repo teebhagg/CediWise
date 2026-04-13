@@ -42,7 +42,7 @@ function DynamicSalaryPage() {
       description={`Detailed 2026 tax and pension breakdown for a monthly gross salary of ${formattedAmount}.`}
       icon={CreditCardIcon}
       iconBgColor="bg-emerald-500/20"
-      image="/assets/android/img-11.webp"
+      image="/assets/ios/img-5.webp"
       highlights={[
         {
           title: 'Precision Taxing',

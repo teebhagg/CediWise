@@ -53,7 +53,7 @@ export function BottomCTA() {
                 href={CEDIWISE_ANDROID_PLAY_STORE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex cursor-pointer items-center gap-2 h-16 rounded-2xl border border-white/20 bg-white/10 px-8 text-lg font-bold text-white backdrop-blur-md transition-colors duration-200 hover:border-white/30 hover:bg-white/[0.14] motion-safe:hover:scale-[1.02] motion-reduce:hover:scale-100"
+                className="inline-flex cursor-pointer items-center justify-center gap-2 h-16 rounded-full border border-white/20 bg-white/10 px-8 text-lg font-bold text-white backdrop-blur-md transition-colors duration-200 hover:border-white/30 hover:bg-white/[0.14] motion-safe:hover:scale-[1.02] motion-reduce:hover:scale-100"
               >
                 <AndroidIcon className="size-6 shrink-0" />
                 Android App
@@ -62,7 +62,7 @@ export function BottomCTA() {
                 href={CEDIWISE_IOS_APP_STORE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex cursor-pointer items-center gap-2 h-16 rounded-2xl border border-emerald-300/60 bg-emerald-600/70 px-8 text-lg font-bold text-white backdrop-blur-md transition-colors duration-200 hover:border-emerald-400/60 hover:bg-emerald-600/80 motion-safe:hover:scale-[1.02] motion-reduce:hover:scale-100"
+                className="inline-flex cursor-pointer items-center justify-center gap-2 h-16 rounded-full border border-emerald-300/60 bg-emerald-600/70 px-8 text-lg font-bold text-white backdrop-blur-md transition-colors duration-200 hover:border-emerald-400/60 hover:bg-emerald-600/80 motion-safe:hover:scale-[1.02] motion-reduce:hover:scale-100"
               >
                 <AppleIcon className="size-[1.35rem] shrink-0" />
                 iOS App

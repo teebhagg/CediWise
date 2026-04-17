@@ -42,7 +42,7 @@ function MonthlyActivitiesCardInner({
   }, [onRecordExpensePress]);
 
   return (
-    <AnimatedView style={animatedStyle} className="mb-16">
+    <AnimatedView style={animatedStyle}>
       <Card>
         <View className="gap-4">
           <View className="flex-row items-center justify-between">

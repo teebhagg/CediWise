@@ -14,8 +14,8 @@ export interface BudgetQuickActionsProps {
 
 export function BudgetQuickActions({
   visible,
-  onLogExpense,
-  disabledLogExpense,
+  onLogExpense: _onLogExpense,
+  disabledLogExpense: _disabledLogExpense,
 }: BudgetQuickActionsProps) {
   const router = useRouter();
   const { canAccessBudget } = useTierContext();
@@ -44,6 +44,7 @@ export function BudgetQuickActions({
             onPress={() => handlePress(() => router.push('/budget/categories'))}
             accessibilityRole="button"
             accessibilityLabel="View categories"
+            accessibilityHint="Open budget category limits and spending"
             className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl bg-slate-500/15 border border-slate-400/25 active:bg-slate-500/25"
           >
             <LayoutGrid size={16} color="#94A3B8" />
@@ -53,6 +54,7 @@ export function BudgetQuickActions({
             onPress={() => handlePress(() => router.push('/budget/income'))}
             accessibilityRole="button"
             accessibilityLabel="Manage income"
+            accessibilityHint="Edit income sources and paycheck details"
             className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl bg-slate-500/15 border border-slate-400/25 active:bg-slate-500/25"
           >
             <Wallet size={16} color="#94A3B8" />
@@ -62,6 +64,11 @@ export function BudgetQuickActions({
             onPress={() => handlePress(handleInsightsPress)}
             accessibilityRole="button"
             accessibilityLabel="View insights"
+            accessibilityHint={
+              canAccessBudget
+                ? 'Open charts and spending breakdown'
+                : 'Opens upgrade options; charts require Smart Budget'
+            }
             className={`flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl border active:opacity-70 ${
               !canAccessBudget
                 ? 'bg-slate-500/10 border-slate-400/15 opacity-50'

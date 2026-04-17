@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Easing,
   Extrapolate,
@@ -13,7 +13,10 @@ import {
 import { useAuth } from "../../../hooks/useAuth";
 import { useBudget } from "../../../hooks/useBudget";
 import { useProfileVitals } from "../../../hooks/useProfileVitals";
+import { useBudgetStore } from "../../../stores/budgetStore";
+import { useProfileVitalsStore } from "../../../stores/profileVitalsStore";
 import { useVaultStore } from "../../../stores/vaultStore";
+import { waitWhile } from "../../../utils/waitWhile";
 import type {
   BudgetCategory,
   BudgetState,
@@ -104,18 +107,10 @@ export function useHomeScreenState(): UseHomeScreenStateReturn {
   const [refreshing, setRefreshing] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [estimateTaxEnabled, setEstimateTaxEnabled] = useState(true);
-  const didVitalsRefreshRef = useRef(false);
 
   const overviewAnim = useSharedValue(0);
   const salaryAnim = useSharedValue(0);
   const ledgerAnim = useSharedValue(0);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    if (didVitalsRefreshRef.current) return;
-    didVitalsRefreshRef.current = true;
-    void profileVitals.refresh();
-  }, [profileVitals, user?.id]);
 
   const activeCycleId = useMemo(() => {
     const sorted = [...(budgetState?.cycles ?? [])].sort(
@@ -297,6 +292,13 @@ export function useHomeScreenState(): UseHomeScreenStateReturn {
       await reload();
       await useVaultStore.getState().refreshFromRemote();
     } finally {
+      await waitWhile(
+        () =>
+          useBudgetStore.getState().isLoading ||
+          useProfileVitalsStore.getState().isLoading ||
+          useVaultStore.getState().isLoading,
+        { timeoutMs: 15_000, intervalMs: 48 },
+      );
       const elapsed = Date.now() - start;
       if (elapsed < 500) {
         await new Promise((r) => setTimeout(r, 500 - elapsed));

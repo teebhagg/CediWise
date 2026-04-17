@@ -18,9 +18,12 @@ export function KeyboardDoneAccessory({ accessoryId }: { accessoryId: string }) 
       >
         <Pressable
           onPress={() => Keyboard.dismiss()}
+          accessibilityRole="button"
+          accessibilityLabel="Dismiss keyboard"
           style={({ pressed }) => ({
-            minHeight: 36,
-            paddingHorizontal: 14,
+            minHeight: 44,
+            minWidth: 72,
+            paddingHorizontal: 16,
             borderRadius: 999,
             alignItems: "center",
             justifyContent: "center",

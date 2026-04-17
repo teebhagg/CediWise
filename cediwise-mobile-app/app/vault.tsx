@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppDialog } from "@/components/AppDialog";
 import { BackButton } from "@/components/BackButton";
 import { Card } from "@/components/Card";
+import { FeatureErrorBoundary } from "@/components/FeatureErrorBoundary";
 import { StandardHeader } from "@/components/CediWiseHeader";
 import {
   filterAndSortVaultDeposits,
@@ -28,8 +29,10 @@ import {
   type InitialBalanceInputRef,
 } from "@/components/features/vault/InitialBalanceInput";
 import { VaultSparkline } from "@/components/features/vault/VaultSparkline";
+import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
 import { useAuth } from "@/hooks/useAuth";
 import { useVaultStore } from "@/stores/vaultStore";
+import { waitWhile } from "@/utils/waitWhile";
 import type { VaultDeposit } from "@/types/budget";
 import { computeVaultTotal } from "@/utils/vaultCalculator";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -49,7 +52,7 @@ const headerActionStyles = StyleSheet.create({
   },
 });
 
-export default function VaultScreen() {
+function VaultScreenInner() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const deposits = useVaultStore((s) => s.deposits);
@@ -75,9 +78,18 @@ export default function VaultScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    const start = Date.now();
     try {
       await refreshFromRemote();
     } finally {
+      await waitWhile(() => useVaultStore.getState().isLoading, {
+        timeoutMs: 15_000,
+        intervalMs: 48,
+      });
+      const elapsed = Date.now() - start;
+      if (elapsed < 500) {
+        await new Promise<void>((r) => setTimeout(r, 500 - elapsed));
+      }
       setRefreshing(false);
     }
   }, [refreshFromRemote]);
@@ -205,12 +217,13 @@ export default function VaultScreen() {
           ListEmptyComponent={listEmpty}
           ItemSeparatorComponent={itemSeparator}
           renderItem={renderItem}
+          estimatedItemSize={96}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor="#22C55E"
-              colors={["#22C55E"]}
+              tintColor={PULL_REFRESH_EMERALD}
+              colors={[PULL_REFRESH_EMERALD]}
             />
           }
           contentContainerStyle={{
@@ -249,5 +262,17 @@ export default function VaultScreen() {
         />
       </AppDialog>
     </View>
+  );
+}
+
+export default function VaultScreen() {
+  return (
+    <FeatureErrorBoundary
+      feature="vault"
+      title="Savings Vault unavailable"
+      description="We could not show your vault. Try again or go back and reopen Savings Vault."
+    >
+      <VaultScreenInner />
+    </FeatureErrorBoundary>
   );
 }

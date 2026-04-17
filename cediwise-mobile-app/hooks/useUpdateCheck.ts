@@ -1,5 +1,4 @@
-import Constants from "expo-constants";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, InteractionManager, Linking, Platform } from "react-native";
 
 import { getActiveAppVersionPolicy, isCurrentBuildOutdated } from "@/services/versionUpdatePolicy";
@@ -16,8 +15,10 @@ import { iosAppStoreUrl } from "@/constants/update";
 export function useUpdateCheck() {
   const [mandatoryVisible, setMandatoryVisible] = useState(false);
   const [releaseNotes, setReleaseNotes] = useState<string | null>(null);
+  const mountedRef = useRef(true);
 
   const check = useCallback(() => {
+    if (!mountedRef.current) return;
     if (Platform.OS === "android") {
       // Immediate update flow via Play native UI.
       void checkAndPromptUpdate({ immediate: true });
@@ -32,6 +33,7 @@ export function useUpdateCheck() {
     void (async () => {
       try {
         const policy = await getActiveAppVersionPolicy();
+        if (!mountedRef.current) return;
         log.info("iOS update policy", policy);
         if (!policy) return;
 
@@ -61,11 +63,22 @@ export function useUpdateCheck() {
     }
   }, []);
 
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
   // Initial check after interactions to avoid blocking first paint
   useEffect(() => {
-    InteractionManager.runAfterInteractions(() => {
-      check();
+    const task = InteractionManager.runAfterInteractions(() => {
+      if (mountedRef.current) check();
     });
+    return () => {
+      const cancel = (task as { cancel?: () => void }).cancel;
+      if (typeof cancel === "function") cancel();
+    };
   }, [check]);
 
   // Re‑check when app becomes active again

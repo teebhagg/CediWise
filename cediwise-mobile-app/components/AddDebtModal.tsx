@@ -6,8 +6,7 @@ import {
   StyleSheet,
   Text,
   View,
- Keyboard } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+} from "react-native";
 import { AppDialog } from './AppDialog';
 import { AppTextField } from "./AppTextField";
 
@@ -50,22 +49,7 @@ export function AddDebtModal({
   const [monthlyPayment, setMonthlyPayment] = useState("");
   const [interestRate, setInterestRate] = useState("");
   const [error, setError] = useState<string | undefined>();
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
-  useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setKeyboardVisible(true)
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setKeyboardVisible(false)
-    );
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -136,7 +120,6 @@ export function AddDebtModal({
     onClose();
   };
 
-  const insets = useSafeAreaInsets();
 
   return (
     <AppDialog

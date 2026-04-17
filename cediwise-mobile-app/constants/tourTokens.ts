@@ -2,13 +2,29 @@
  * Design tokens for tour (onboarding overlay, card, zone highlight).
  * Single source for colors, radii, offsets, and timing.
  */
+/** Max width for tour card; actual width uses `getTourCardWidth`. */
+export const TOUR_CARD_MAX_WIDTH = 320;
+
+/** Minimum width on very small phones. */
+export const TOUR_CARD_MIN_WIDTH = 260;
+
+/** Horizontal margin from screen edge when sizing the card. */
+export const TOUR_CARD_SCREEN_MARGIN = 40;
+
+export function getTourCardWidth(screenWidth: number): number {
+  const capped = screenWidth - TOUR_CARD_SCREEN_MARGIN;
+  return Math.max(
+    TOUR_CARD_MIN_WIDTH,
+    Math.min(TOUR_CARD_MAX_WIDTH, capped),
+  );
+}
+
 export const tourTokens = {
   card: {
     background: "#151518",
     border: "rgb(40, 40, 42)",
     borderRadius: 36,
     padding: 16,
-    width: 320,
   },
   title: {
     color: "#ffffff",

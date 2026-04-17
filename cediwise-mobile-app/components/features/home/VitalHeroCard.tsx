@@ -156,7 +156,7 @@ function VitalHeroCardInner({
   }, [router]);
 
   return (
-    <AnimatedView style={animatedStyle} className="mb-6">
+    <AnimatedView style={animatedStyle}>
       <Card>
         <View className="gap-5">
           <View className="gap-3">

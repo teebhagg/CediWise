@@ -49,6 +49,7 @@ import {
   DEFAULT_STANDARD_HEIGHT,
   ExpandedHeader,
 } from "@/components/CediWiseHeader";
+import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
 import { BUDGET_TOUR_READY_TIMEOUT_MS } from "@/constants/tourTokens";
 import { analytics } from "@/utils/analytics";
 import { computeNextCycleFromPrevious } from "@/utils/nextCycle";
@@ -235,6 +236,8 @@ export default function BudgetScreen() {
         scrollY={scrollY}
         title="Budget"
         subtitle="Needs / Wants / Savings — payday-based."
+        refreshing={refreshing}
+        refreshTintColor={PULL_REFRESH_EMERALD}
         actions={[
           isConnected === false && (
             <View
@@ -308,12 +311,12 @@ export default function BudgetScreen() {
                     showError("Error", "Failed to sync budget");
                   });
               }}
-              tintColor="#10B981"
-              colors={["#10B981"]}
+              tintColor={PULL_REFRESH_EMERALD}
+              colors={[PULL_REFRESH_EMERALD]}
               progressViewOffset={Platform.OS === "android" ? 60 : undefined}
             />
           }>
-          <View className="gap-4 mb-6">
+          <View className="gap-4">
             {/* Onboarding: Personalize first (new users who haven't done vitals) */}
             {!!user &&
             !personalization.isLoading &&

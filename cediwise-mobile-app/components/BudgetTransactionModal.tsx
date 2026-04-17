@@ -1,8 +1,8 @@
 import * as Haptics from 'expo-haptics';
 import { History, ReceiptText } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { Keyboard, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+
 
 import type { BudgetBucket, BudgetCategory, BudgetTransaction } from '../types/budget';
 import { AppDialog } from './AppDialog';
@@ -43,23 +43,6 @@ export function BudgetTransactionModal({
   );
 
   const isEditMode = !!initialTransaction;
-
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
-
-  useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setKeyboardVisible(true)
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setKeyboardVisible(false)
-    );
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -151,7 +134,6 @@ export function BudgetTransactionModal({
     onClose();
   };
 
-  const insets = useSafeAreaInsets();
 
   return (
     <AppDialog

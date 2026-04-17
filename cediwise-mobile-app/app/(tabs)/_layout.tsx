@@ -1,14 +1,11 @@
 import { CustomTabBar } from "@/components/CustomTabBar";
-import { useTierContext } from "@/contexts/TierContext";
 // import { UpdateDialog } from '@/components/UpdateDialog';
 import { UpdateCheckProvider } from "@/contexts/UpdateCheckContext";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { Tabs } from "expo-router";
-import { BookOpen, BriefcaseBusiness, TrendingUp, Wallet, Zap } from "lucide-react-native";
+import { BookOpen, BriefcaseBusiness, Wallet, Zap } from "lucide-react-native";
 
 function TabLayoutContent() {
-  const { canAccessSME } = useTierContext();
-
   return (
     <>
       <Tabs

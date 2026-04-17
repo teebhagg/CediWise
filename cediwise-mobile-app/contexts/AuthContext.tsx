@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { AppState, AppStateStatus } from "react-native";
@@ -34,21 +35,103 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<StoredUserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const authEventDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  /** Bumps on auth transitions so stale async work cannot commit React state. */
+  const authEventIdRef = useRef(0);
+  const isMountedRef = useRef(true);
 
-  const loadUser = useCallback(async () => {
+  const loadUser = useCallback(async (expectedToken: number) => {
     try {
       const authData = await getStoredAuthData();
+      if (
+        expectedToken !== authEventIdRef.current ||
+        !isMountedRef.current
+      ) {
+        return;
+      }
       setUser(authData?.user ?? null);
     } catch (e) {
       log.error("Error loading user:", e);
+      if (
+        expectedToken !== authEventIdRef.current ||
+        !isMountedRef.current
+      ) {
+        return;
+      }
       setUser(null);
     } finally {
-      setIsLoading(false);
+      // Spinner: always clear when mounted so superseded loads / refreshAuth never strand `isLoading`.
+      // `setUser` above remains gated by `expectedToken`.
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    loadUser();
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    void loadUser(0);
+  }, [loadUser]);
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    const clearDebounce = () => {
+      if (authEventDebounceRef.current) {
+        clearTimeout(authEventDebounceRef.current);
+        authEventDebounceRef.current = null;
+      }
+    };
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "INITIAL_SESSION") return;
+
+      if (event === "SIGNED_OUT") {
+        clearDebounce();
+        setUser(null);
+        setIsLoading(false);
+        authEventIdRef.current += 1;
+        const capturedToken = authEventIdRef.current;
+        void (async () => {
+          try {
+            await clearAuthData();
+            await resetStoresOnLogout();
+          } catch (e) {
+            log.warn("Auth state SIGNED_OUT cleanup:", e);
+          }
+          if (
+            capturedToken !== authEventIdRef.current ||
+            !isMountedRef.current
+          ) {
+            return;
+          }
+        })();
+        return;
+      }
+
+      clearDebounce();
+      authEventDebounceRef.current = setTimeout(() => {
+        authEventDebounceRef.current = null;
+        authEventIdRef.current += 1;
+        const tokenAtFire = authEventIdRef.current;
+        void loadUser(tokenAtFire);
+      }, 350);
+    });
+
+    return () => {
+      clearDebounce();
+      subscription.unsubscribe();
+    };
   }, [loadUser]);
 
   useEffect(() => {
@@ -56,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       "change",
       (nextState: AppStateStatus) => {
         if (nextState === "active") {
-          loadUser();
+          void loadUser(authEventIdRef.current);
         }
       },
     );
@@ -64,6 +147,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadUser]);
 
   const logout = useCallback(async () => {
+    authEventIdRef.current += 1;
+    const capturedToken = authEventIdRef.current;
     try {
       const userId = user?.id;
       if (userId) {
@@ -82,6 +167,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (storeErr) {
         log.warn("resetStoresOnLogout failed (continuing logout):", storeErr);
       }
+      if (
+        capturedToken !== authEventIdRef.current ||
+        !isMountedRef.current
+      ) {
+        return;
+      }
       setUser(null);
     } catch (e) {
       log.error("Error during logout:", e);
@@ -90,8 +181,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user?.id]);
 
   const refreshAuth = useCallback(async () => {
+    authEventIdRef.current += 1;
+    const token = authEventIdRef.current;
+    if (!isMountedRef.current) return;
     setIsLoading(true);
-    await loadUser();
+    await loadUser(token);
   }, [loadUser]);
 
   return (

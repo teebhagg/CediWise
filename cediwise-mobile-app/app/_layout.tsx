@@ -9,7 +9,13 @@ import * as WebBrowser from "expo-web-browser";
 import { HeroUINativeProvider } from "heroui-native";
 import { PostHogProvider } from 'posthog-react-native';
 import { useEffect, useState } from "react";
-import { AppState, Platform, StatusBar, View } from "react-native";
+import {
+  AppState,
+  InteractionManager,
+  Platform,
+  StatusBar,
+  View,
+} from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import {
@@ -18,8 +24,10 @@ import {
 } from "react-native-safe-area-context";
 import { Uniwind } from "uniwind";
 
-import * as Sentry from '@sentry/react-native';
+import * as Sentry from "@sentry/react-native";
 import { PaystackProvider } from "react-native-paystack-webview";
+import { AnalyticsIdentitySync } from "../components/AnalyticsIdentitySync";
+import { AnalyticsRouteObserver } from "../components/AnalyticsRouteObserver";
 import { RootErrorBoundary } from "../components/RootErrorBoundary";
 import { TourErrorBoundary } from "../components/tour/TourErrorBoundary";
 import { AuthProvider } from "../contexts/AuthContext";
@@ -44,30 +52,124 @@ import {
 import { syncTaxConfig } from "../utils/taxSync";
 import "./globals.css";
 
-Sentry.init({
-  dsn: 'https://e80f09f6a8433bd0fe6d1f0643d1eee4@o4511124714094592.ingest.de.sentry.io/4511124717043792',
+const SENSITIVE = /(token|password|secret|authorization|cookie|api[_-]?key)/i;
+const REDACTED = "[redacted]";
 
-  // Adds more context data to events (IP address, cookies, user, etc.)
-  // For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
+function isSensitiveKey(key: string): boolean {
+  return SENSITIVE.test(key);
+}
+
+/** Recursively redacts values for keys matching {@link SENSITIVE}. Mutates plain objects and arrays in place. */
+function redact(target: unknown): void {
+  if (target === null || target === undefined) return;
+  if (typeof target !== "object") return;
+
+  if (Array.isArray(target)) {
+    for (const item of target) {
+      redact(item);
+    }
+    return;
+  }
+
+  const obj = target as Record<string, unknown>;
+  for (const key of Object.keys(obj)) {
+    if (isSensitiveKey(key)) {
+      obj[key] = REDACTED;
+    } else {
+      redact(obj[key]);
+    }
+  }
+}
+
+/** Best-effort scrub of `name=value` pairs in a Cookie header string. */
+function redactCookieHeader(cookieHeader: string): string {
+  return cookieHeader.replace(
+    /([^;=\s]+)\s*=\s*([^;]*)/g,
+    (full, name: string) =>
+      isSensitiveKey(name.trim()) ? `${name.trim()}=${REDACTED}` : full,
+  );
+}
+
+Sentry.init({
+  dsn: "https://e80f09f6a8433bd0fe6d1f0643d1eee4@o4511124714094592.ingest.de.sentry.io/4511124717043792",
+
+  /**
+   * L3 / privacy: `sendDefaultPii` adds IP and similar defaults per Sentry docs.
+   * Revisit with legal/compliance before strict jurisdictions; pair with `beforeSend` scrubbing.
+   */
   sendDefaultPii: true,
 
-  // Enable Logs
   enableLogs: true,
 
-  // Configure Session Replay
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1,
   integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration()],
 
-  // uncomment the line below to enable Spotlight (https://spotlightjs.com)
-  // spotlight: __DEV__,
+  /** Performance monitoring sample rate (tunable if volume is high). */
+  tracesSampleRate: 0.1,
+
+  beforeSend(event) {
+    if (event.extra && typeof event.extra === "object") {
+      redact(event.extra);
+    }
+    if (event.tags && typeof event.tags === "object") {
+      redact(event.tags);
+    }
+    if (event.contexts && typeof event.contexts === "object") {
+      redact(event.contexts);
+    }
+
+    const req = event.request;
+    if (req?.headers && typeof req.headers === "object") {
+      redact(req.headers);
+    }
+    if (req?.cookies != null) {
+      const cookies = req.cookies as string | Record<string, string>;
+      if (typeof cookies === "string") {
+        (req as { cookies: string | Record<string, string> }).cookies =
+          redactCookieHeader(cookies);
+      } else {
+        redact(cookies);
+      }
+    }
+
+    if (event.breadcrumbs?.length) {
+      for (const bc of event.breadcrumbs) {
+        if (bc.data && typeof bc.data === "object") {
+          redact(bc.data);
+        }
+      }
+    }
+
+    const exceptions = event.exception?.values;
+    if (exceptions?.length) {
+      for (const ex of exceptions) {
+        const frames = ex.stacktrace?.frames;
+        if (frames?.length) {
+          for (const frame of frames) {
+            if (frame.vars && typeof frame.vars === "object") {
+              redact(frame.vars);
+            }
+          }
+        }
+      }
+    }
+
+    return event;
+  },
 });
 
-// Apply dark theme before first paint (same as NativeWind dark app)
+// M7: Single-theme product — `Uniwind.setTheme("dark")` matches `app.json` `userInterfaceStyle: "dark"`.
 Uniwind.setTheme("dark");
 
 SplashScreen.preventAutoHideAsync();
 
+/**
+ * Budget wiring: `useBudget` runs here for `hydrateFromRemote` / sync; `useBudgetPreferenceBootstrap`
+ * needs its own `useBudget` for bootstrap actions. `TriggerProvider` (outer layout) also calls
+ * `useBudget` for literacy trigger signals. `budgetStore.initForUser` is idempotent per user after
+ * the first successful load so these mounts do not thrash disk/loading.
+ */
 function AppShell() {
   const { user } = useAuth();
   const { hydrateFromRemote } = useBudget(user?.id);
@@ -112,6 +214,7 @@ function AppShell() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "black" }}>
+      <AnalyticsRouteObserver />
       <StatusBar backgroundColor="black" translucent={true} />
       <SafeAreaListener
         onChange={({ insets }) => {
@@ -186,8 +289,10 @@ export default Sentry.wrap(function RootLayout() {
     }
 
     WebBrowser.maybeCompleteAuthSession();
-    void syncTaxConfig(); // Sync tax rates for offline usage and global calculations
 
+    const taxTask = InteractionManager.runAfterInteractions(() => {
+      void syncTaxConfig();
+    });
 
     // Only configure native Google Sign-In when not in Expo Go (dynamic require avoids loading native module in Expo Go).
     const isExpoGo = (Constants.appOwnership ?? "") === "expo";
@@ -198,14 +303,19 @@ export default Sentry.wrap(function RootLayout() {
       try {
         const { GoogleSignin } = require("@react-native-google-signin/google-signin");
         GoogleSignin.configure({
-          // Web client ID from google-services.json (client_type: 3)
           webClientId:
+            process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
             "758685762731-vh9reoikjerbsu8pbcigndi29tdb7fp9.apps.googleusercontent.com",
         });
       } catch (e) {
         console.warn("GoogleSignin.configure failed", e);
       }
     }
+
+    return () => {
+      const cancel = (taxTask as { cancel?: () => void }).cancel;
+      if (typeof cancel === "function") cancel();
+    };
   }, [fontsLoaded]);
 
   if (!appIsReady) {
@@ -215,6 +325,7 @@ export default Sentry.wrap(function RootLayout() {
   return (
     <PostHogProvider
       apiKey={process.env.EXPO_PUBLIC_POSTHOG_API_KEY || ""}
+      autocapture={{ captureScreens: false }}
       options={{
         host: process.env.EXPO_PUBLIC_POSTHOG_HOST || "",
       }}>
@@ -235,6 +346,7 @@ export default Sentry.wrap(function RootLayout() {
               <SafeAreaProvider>
                 <PaystackProvider publicKey={process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY || ""}>
                   <AuthProvider>
+                    <AnalyticsIdentitySync />
                     <TierProvider>
                       <TourErrorBoundary
                         fallback={

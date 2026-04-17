@@ -11,7 +11,7 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import type { QuizQuestion } from "@/types/literacy";
 import * as Haptics from "expo-haptics";
 import { CheckCircle2, Lightbulb, XCircle } from "lucide-react-native";
-import React, { memo, useCallback, useState } from "react";
+import React, { memo, useCallback, useMemo, useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -141,6 +141,8 @@ export const QuizCard = memo(function QuizCard({
               state={state}
               onPress={() => handleOptionPress(idx)}
               index={idx}
+              isUserSelected={selectedIndex === idx}
+              isAnswered={isAnswered}
             />
           );
         })}
@@ -218,6 +220,8 @@ type OptionRowProps = {
   state: OptionState;
   onPress: () => void;
   index: number;
+  isUserSelected: boolean;
+  isAnswered: boolean;
 };
 
 const OptionRow = memo(function OptionRow({
@@ -226,7 +230,18 @@ const OptionRow = memo(function OptionRow({
   state,
   onPress,
   index,
+  isUserSelected,
+  isAnswered,
 }: OptionRowProps) {
+  const a11yLabel = useMemo(() => {
+    const base = `Option ${letter}. ${text}`;
+    if (!isAnswered || (state !== "correct" && state !== "wrong")) {
+      return base;
+    }
+    if (state === "wrong") return `${base}. Incorrect.`;
+    return `${base}. ${isUserSelected ? "Correct." : "Correct answer."}`;
+  }, [letter, text, isAnswered, state, isUserSelected]);
+
   const letterStyle = [
     styles.optionLetter,
     state === "correct" && styles.optionLetterCorrect,
@@ -239,6 +254,12 @@ const OptionRow = memo(function OptionRow({
     >
       <Pressable
         onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={a11yLabel}
+        accessibilityState={{
+          selected: isUserSelected,
+        }}
+        hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
         style={({ pressed }) => [
           styles.option,
           state === "correct" && styles.optionCorrect,
@@ -326,11 +347,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+    minHeight: 48,
     backgroundColor: "rgba(255,255,255,0.03)",
     borderWidth: 1.5,
     borderColor: "rgba(255,255,255,0.08)",
     borderRadius: 50,
-    padding: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
   },
   optionPressed: {
     backgroundColor: "rgba(30,41,59,0.8)",

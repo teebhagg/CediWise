@@ -47,6 +47,10 @@ import {
 } from "../../../utils/spendingPatterns";
 import { getActiveTaxConfig, type TaxConfig } from "../../../utils/taxSync";
 import { DEFAULT_MIN_LIVING_BUFFER } from "../vitals/utils";
+import { useBudgetStore } from "@/stores/budgetStore";
+import { useProfileVitalsStore } from "@/stores/profileVitalsStore";
+import { reportError } from "@/utils/telemetry";
+import { waitWhile } from "@/utils/waitWhile";
 
 export function useBudgetScreenState() {
   const router = useRouter();
@@ -591,12 +595,31 @@ export function useBudgetScreenState() {
     } catch {
       // ignore
     } finally {
-      // Ensure spinner is visible for at least 500ms so users see feedback
-      const elapsed = Date.now() - start;
-      if (elapsed < 500) {
-        await new Promise((r) => setTimeout(r, 500 - elapsed));
+      try {
+        await waitWhile(
+          () => {
+            const s = useBudgetStore.getState();
+            return (
+              s.isLoading ||
+              s.isSyncing ||
+              useProfileVitalsStore.getState().isLoading
+            );
+          },
+          { timeoutMs: 20_000, intervalMs: 48 },
+        );
+        // Ensure spinner is visible for at least 500ms so users see feedback
+        const elapsed = Date.now() - start;
+        if (elapsed < 500) {
+          await new Promise((r) => setTimeout(r, 500 - elapsed));
+        }
+      } catch (error) {
+        reportError(error, {
+          feature: "budget",
+          operation: "on_refresh_wait_while",
+        });
+      } finally {
+        setRefreshing(false);
       }
-      setRefreshing(false);
     }
   };
 
@@ -938,7 +961,11 @@ export function useBudgetScreenState() {
       await reload();
       setBudgetPreferenceMigration(null);
     } catch (e) {
-      console.error("[Budget] Preference migration update failed", e);
+      reportError(e, {
+        feature: "budget",
+        operation: "preference_migration_update",
+        extra: { cycleId },
+      });
     }
   }, [
     user?.id,

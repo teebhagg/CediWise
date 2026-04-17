@@ -1,28 +1,27 @@
+import { ANALYTICS_EVENTS } from "@/constants/analyticsEvents";
+import { getPostHogOptional } from "@/utils/analytics/posthogClientRef";
 import { router } from "expo-router";
-// Full tree state for a path (used so back cannot return to pre-auth screens).
-import { store } from "expo-router/build/global-state/router-store";
-import { getPostAuthRoute } from "./profileVitals";
 import {
   hasNotificationGateCompleted,
   setPendingNotificationRoute,
 } from "@/services/notifications";
 import { log } from "./logger";
+import { getPostAuthRoute } from "./profileVitals";
 
 /**
- * Reset the root navigation state to `/auth` so the stack does not retain
- * authenticated routes (unlike `router.replace`, which only swaps the top screen).
+ * Leave authenticated stacks and land on `/auth` using the public Expo Router API.
+ * `dismissTo` collapses nested stacks toward `/auth` when that route exists in
+ * history; `replace` then pins the root to auth so back cannot return to
+ * pre-logout screens (per Expo Router `dismissTo` / `replace` semantics).
  */
 export function resetNavigationToAuth(): void {
   try {
-    const state = store.getStateForHref("/auth");
-    if (state && store.navigationRef.isReady()) {
-      store.navigationRef.resetRoot(state);
-      return;
-    }
+    router.dismissTo("/auth");
+    return; 
   } catch (e) {
-    log.warn("resetNavigationToAuth: resetRoot failed, falling back to replace", e);
+    log.warn("resetNavigationToAuth: dismissTo failed", e);
+    router.replace("/auth");
   }
-  router.replace("/auth");
 }
 
 /**
@@ -36,8 +35,14 @@ export async function onLoginSuccess(userId: string): Promise<void> {
   if (!notificationGateCompleted) {
     await setPendingNotificationRoute(route);
     router.replace("/notifications");
+    getPostHogOptional()?.capture(ANALYTICS_EVENTS.authLoginCompleted, {
+      source: "onLoginSuccess",
+    });
     return;
   }
 
   router.replace(route);
+  getPostHogOptional()?.capture(ANALYTICS_EVENTS.authLoginCompleted, {
+    source: "onLoginSuccess",
+  });
 }

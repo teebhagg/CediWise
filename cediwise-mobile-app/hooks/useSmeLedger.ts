@@ -4,9 +4,9 @@
  * Wraps the smeLedgerStore, VAT engine, and threshold monitoring.
  */
 
-import  React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSMELedgerStore } from "@/stores/smeLedgerStore";
-import type { SMETotals, ThresholdInfo, TransactionType } from "@/types/sme";
+import type { SMETotals, ThresholdInfo } from "@/types/sme";
 import {
   computeTotals,
   computeAnnualTurnover,
@@ -14,6 +14,7 @@ import {
 } from "@/utils/vatEngine";
 import { flushSMEQueue, hydrateSMEFromRemote } from "@/utils/smeSync";
 import { loadSMEQueue } from "@/utils/smeStorage";
+import { reportError } from "@/utils/telemetry";
 
 export function useSmeLedger() {
   const {
@@ -140,7 +141,10 @@ export function useSmeLedger() {
       try {
         await hydrateSMEFromRemote(userId, options);
       } catch (err) {
-        console.warn("SME Hydration Error:", err);
+        reportError(err, {
+          feature: "sme",
+          operation: "hydrate_from_remote",
+        });
       }
       await loadState();
       await refreshQueue();

@@ -7,6 +7,7 @@ import * as WebBrowser from "expo-web-browser";
 import { Platform } from "react-native";
 import { log } from "./logger";
 import { supabase } from "./supabase";
+import * as Sentry from "@sentry/react-native";
 
 /** Firebase Phone Auth: confirmation result stored after signInWithPhoneNumber for use on OTP screen. */
 let firebasePhoneConfirmation: {
@@ -438,6 +439,12 @@ export async function refreshStoredSession(
         });
       } catch (e) {
         // Non-fatal: keep local auth; user may be offline.
+        Sentry.addBreadcrumb({
+          category: "auth",
+          message: "setSession from stored auth failed (non-fatal)",
+          level: "warning",
+          data: { reason: String(e) },
+        });
         log.warn("setSession from stored auth failed (non-fatal):", e);
       }
       return authData;
@@ -487,10 +494,20 @@ export async function refreshStoredSession(
       };
 
       await storeAuthData(refreshed);
-      await supabase.auth.setSession({
-        access_token: refreshed.accessToken,
-        refresh_token: refreshed.refreshToken,
-      });
+      try {
+        await supabase.auth.setSession({
+          access_token: refreshed.accessToken,
+          refresh_token: refreshed.refreshToken,
+        });
+      } catch (e) {
+        Sentry.addBreadcrumb({
+          category: "auth",
+          message: "setSession after refresh failed (non-fatal)",
+          level: "warning",
+          data: { reason: String(e) },
+        });
+        log.warn("setSession after refresh failed (non-fatal):", e);
+      }
       return refreshed;
     })();
 

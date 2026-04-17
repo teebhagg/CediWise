@@ -5,10 +5,11 @@
  */
 import * as Haptics from "expo-haptics";
 import { Button, Dialog, ScrollShadow } from "heroui-native";
-import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useEffect, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { KeyboardCenteringScrollView } from "./common/KeyboardCenteringScrollView";
 
 import { GlassView } from "@/components/GlassView";
 
@@ -51,16 +52,22 @@ export function AppDialog({
   primaryButtonClassName = 'bg-emerald-500',
   primaryLabelClassName = 'text-slate-950',
 }: AppDialogProps) {
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  // Track keyboard height so we can pass it into KeyboardCenteringScrollView.
+  // AppDialog uses KeyboardAvoidingView which already resizes the layout, so the
+  // scroll view's onLayout height will reflect the reduced available space.
+  // We do NOT need to pass keyboardHeight to KeyboardCenteringScrollView here —
+  // KAV handles the offset, and measureLayout will compute positions within the
+  // already-shrunk view.
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
-      () => setKeyboardVisible(true)
+      (e) => setKeyboardHeight(e.endCoordinates.height),
     );
     const hideSub = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
-      () => setKeyboardVisible(false)
+      () => setKeyboardHeight(0),
     );
     return () => {
       showSub.remove();
@@ -106,6 +113,7 @@ export function AppDialog({
   };
 
   const insets = useSafeAreaInsets();
+  const isKeyboardVisible = keyboardHeight > 0;
 
   return (
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
@@ -119,17 +127,25 @@ export function AppDialog({
             onTouchEnd={handleSecondary}
           />
         )}
+        {/*
+         * KeyboardAvoidingView shrinks the available space when the keyboard appears.
+         * We keep `justifyContent: 'center'` always — the dialog stays centered in
+         * the remaining space. This avoids the layout jump that occurred when switching
+         * between 'center' and 'flex-end'.
+         *
+         * KeyboardCenteringScrollView inside the dialog handles scrolling the focused
+         * field into view within that shrunk space.
+         */}
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ 
-            flex: 1, 
-            justifyContent: isKeyboardVisible ? 'flex-end' : 'center', 
+          style={{
+            flex: 1,
+            justifyContent: 'center',
             alignItems: 'center',
             paddingTop: insets.top + 16,
             paddingBottom: isKeyboardVisible ? 12 : insets.bottom + 16,
-            paddingHorizontal: 16
+            paddingHorizontal: 16,
           }}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
           <Dialog.Content
             className="max-w-[360px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
@@ -144,7 +160,16 @@ export function AppDialog({
               />
             )}
             <ScrollShadow color="#121621" LinearGradientComponent={LinearGradient}>
-              <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+              {/*
+               * keyboardHeight is NOT passed here. AppDialog's parent KeyboardAvoidingView
+               * already shrinks the layout, so KeyboardCenteringScrollView's onLayout
+               * height is already the reduced visible height — no need to subtract keyboard
+               * height a second time.
+               */}
+              <KeyboardCenteringScrollView
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+              >
                 <View style={[styles.content, isKeyboardVisible && { paddingVertical: 20 }]}>
                   {/* Header: icon + title */}
                   <View style={styles.header}>
@@ -190,7 +215,7 @@ export function AppDialog({
                     </View>
                   )}
                 </View>
-              </ScrollView>
+              </KeyboardCenteringScrollView>
             </ScrollShadow>
           </Dialog.Content>
         </KeyboardAvoidingView>

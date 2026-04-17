@@ -4,7 +4,6 @@
  */
 
 import { GlassView } from "@/components/GlassView";
-import { BackButton } from "@/components/BackButton";
 import { useSmeLedger } from "@/hooks/useSmeLedger";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "expo-router";
@@ -35,6 +34,9 @@ import {
   ExpandedHeader,
   StandardHeader,
 } from "@/components/CediWiseHeader";
+import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
+import { useSMELedgerStore } from "@/stores/smeLedgerStore";
+import { waitWhile } from "@/utils/waitWhile";
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
@@ -70,9 +72,18 @@ export default function SMEDashboardScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    const start = Date.now();
     try {
       await sme.hydrate();
     } finally {
+      await waitWhile(() => useSMELedgerStore.getState().isLoading, {
+        timeoutMs: 15_000,
+        intervalMs: 48,
+      });
+      const elapsed = Date.now() - start;
+      if (elapsed < 500) {
+        await new Promise<void>((r) => setTimeout(r, 500 - elapsed));
+      }
       setRefreshing(false);
     }
   }, [sme]);
@@ -120,7 +131,12 @@ export default function SMEDashboardScreen() {
           }}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#10B981" colors={["#10B981"]} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={PULL_REFRESH_EMERALD}
+              colors={[PULL_REFRESH_EMERALD]}
+            />
           }
         >
           <View style={styles.setupContainer}>
@@ -150,7 +166,6 @@ export default function SMEDashboardScreen() {
           scrollY={scrollY}
           title="SME Ledger"
           subtitle="Loading your data..."
-          leading={<BackButton />}
           actions={[connectivityIndicator]}
         />
         <View style={[styles.centered, { flex: 1 }]}>
@@ -176,6 +191,8 @@ export default function SMEDashboardScreen() {
         scrollY={scrollY}
         title={sme.profile?.businessName ?? "SME Ledger"}
         subtitle={sme.profile?.businessCategory ?? "Business Finance & VAT Tracker"}
+        refreshing={refreshing}
+        refreshTintColor={PULL_REFRESH_EMERALD}
         actions={[connectivityIndicator, listAction]}
       />
 
@@ -191,7 +208,12 @@ export default function SMEDashboardScreen() {
           paddingHorizontal: 20,
         }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#10B981" colors={["#10B981"]} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={PULL_REFRESH_EMERALD}
+            colors={[PULL_REFRESH_EMERALD]}
+          />
         }
         showsVerticalScrollIndicator={false}
       >

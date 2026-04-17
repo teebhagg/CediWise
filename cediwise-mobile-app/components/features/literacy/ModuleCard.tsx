@@ -53,6 +53,9 @@ function ModuleCardInner({
     <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
       <Pressable
         onPress={handlePress}
+        accessibilityRole="button"
+        accessibilityLabel={`Open module: ${module.title}`}
+        accessibilityHint="View lessons and progress for this topic"
         style={({ pressed }) => ({ opacity: pressed ? 0.95 : 1 })}
         className="active:opacity-95"
       >

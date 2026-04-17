@@ -20,7 +20,7 @@ import {
   Target,
   Trophy,
 } from "lucide-react-native";
-import React, { memo, useMemo } from "react";
+import React, { memo, useCallback, useMemo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Animated, {
   FadeInDown,
@@ -134,6 +134,55 @@ export default function ModuleOverviewScreen() {
   const allDone = totalCount > 0 && completedCount === totalCount;
   const inProgress = completedCount > 0 && !allDone;
 
+  const lessonItemSeparator = useCallback(
+    () => <View style={styles.separator} />,
+    [],
+  );
+
+  const renderObjectiveRow = useCallback(
+    ({ item: objective, index: idx }: { item: string; index: number }) => (
+      <Animated.View
+        entering={FadeInDown.delay(100 + idx * 50).springify()}
+        style={styles.objectiveRow}>
+        <View style={styles.objectiveDot} />
+        <Text style={styles.objectiveText}>{objective}</Text>
+      </Animated.View>
+    ),
+    [],
+  );
+
+  const objectiveKeyExtractor = useCallback(
+    (item: string, idx: number) =>
+      `${moduleId ?? "mod"}-obj-${idx}-${item.slice(0, 24)}`,
+    [moduleId],
+  );
+
+  const renderLessonItem = useCallback(
+    ({ item, index }: { item: Lesson; index: number }) => (
+      <LessonRow
+        lesson={item}
+        index={index}
+        isCompleted={isCompleted(item.id)}
+        isLocked={false}
+      />
+    ),
+    [isCompleted],
+  );
+
+  const listEmptyLessons = useCallback(
+    () => (
+      <View style={styles.lessonsEmptyWrap}>
+        <BookOpen size={28} color="#475569" />
+        <Text style={styles.lessonsEmptyTitle}>No lessons yet</Text>
+        <Text style={styles.lessonsEmptySubtitle}>
+          There are no lessons for this module yet. Check back after an update,
+          or open another module from Learn.
+        </Text>
+      </View>
+    ),
+    [],
+  );
+
   if (!module) {
     return (
       <View style={styles.errorContainer}>
@@ -155,6 +204,7 @@ export default function ModuleOverviewScreen() {
 
   const handleCta = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (moduleLessons.length === 0) return;
     if (allDone) {
       // Navigate to completion/celebration screen
       router.push(`/literacy/module-complete?moduleId=${module.id}`);
@@ -218,15 +268,13 @@ export default function ModuleOverviewScreen() {
           <Target size={16} color="#C9A84C" />
           <Text style={styles.sectionTitle}>What you will learn</Text>
         </View>
-        {module.learning_objectives.map((obj, idx) => (
-          <Animated.View
-            key={idx}
-            entering={FadeInDown.delay(100 + idx * 50).springify()}
-            style={styles.objectiveRow}>
-            <View style={styles.objectiveDot} />
-            <Text style={styles.objectiveText}>{obj}</Text>
-          </Animated.View>
-        ))}
+        <FlashList
+          data={module.learning_objectives}
+          scrollEnabled={false}
+          nestedScrollEnabled
+          keyExtractor={objectiveKeyExtractor}
+          renderItem={renderObjectiveRow}
+        />
       </View>
 
       {/* ── Lessons header ─── */}
@@ -300,14 +348,8 @@ export default function ModuleOverviewScreen() {
         data={moduleLessons}
         ListHeaderComponent={ListHeader}
         ListFooterComponent={ListFooter}
-        renderItem={({ item, index }: any) => (
-          <LessonRow
-            lesson={item}
-            index={index as number}
-            isCompleted={isCompleted(item.id)}
-            isLocked={false}
-          />
-        )}
+        ListEmptyComponent={listEmptyLessons}
+        renderItem={renderLessonItem}
         keyExtractor={(item: any) => item.id}
         contentContainerStyle={[
           styles.list,
@@ -315,8 +357,7 @@ export default function ModuleOverviewScreen() {
             paddingTop: DEFAULT_EXPANDED_HEIGHT + insets.top + 20,
           },
         ]}
-        ItemSeparatorComponent={() => <View style={styles.separator} />}
-        estimatedItemSize={80}
+        ItemSeparatorComponent={lessonItemSeparator}
       />
     </View>
   );
@@ -349,6 +390,26 @@ const styles = StyleSheet.create({
     fontFamily: "Figtree-Regular",
     fontSize: 15,
     marginBottom: 12,
+  },
+  lessonsEmptyWrap: {
+    alignItems: "center",
+    paddingVertical: 28,
+    paddingHorizontal: 16,
+    gap: 8,
+  },
+  lessonsEmptyTitle: {
+    color: "#e2e8f0",
+    fontFamily: "Figtree-SemiBold",
+    fontSize: 16,
+    marginTop: 4,
+  },
+  lessonsEmptySubtitle: {
+    color: "#64748b",
+    fontFamily: "Figtree-Regular",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    maxWidth: 280,
   },
 
   // Header card

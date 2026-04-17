@@ -23,11 +23,6 @@ jest.mock("expo-constants", () => ({
   },
 }));
 
-function rnPlatform() {
-  const g = globalThis as { __TEST_RN_PLATFORM__?: { OS: string } };
-  return g.__TEST_RN_PLATFORM__;
-}
-
 function createSupabaseChain(
   maybeSingleResults: { data: unknown; error: { message?: string } | null }[],
 ) {
@@ -58,8 +53,7 @@ function createSupabaseChain(
 describe("versionUpdatePolicy", () => {
   beforeEach(() => {
     mockSupabase = null;
-    const p = rnPlatform();
-    if (p) p.OS = "ios";
+    globalThis.__JEST_RN_PLATFORM_OS__ = "ios";
     jest.clearAllMocks();
   });
 
@@ -124,8 +118,7 @@ describe("versionUpdatePolicy", () => {
     });
 
     it("uses android platform when OS is android", async () => {
-      const p = rnPlatform();
-      if (p) p.OS = "android";
+      globalThis.__JEST_RN_PLATFORM_OS__ = "android";
       const chain = createSupabaseChain([
         {
           data: { version: "1.2.3", release_notes: null, requires_update: false },

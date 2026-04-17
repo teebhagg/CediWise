@@ -1,19 +1,15 @@
 import * as Haptics from 'expo-haptics';
-import { Button, Dialog, ScrollShadow } from 'heroui-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Banknote } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import {
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   StyleSheet,
   Text,
   View,
-  ScrollView,
- Keyboard } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from 'react-native';
 
-import { GlassView } from '@/components/GlassView';
+import { AppDialog } from '@/components/AppDialog';
 import type { IncomeSourceType } from '../types/budget';
 import { AppTextField } from './AppTextField';
 
@@ -35,22 +31,6 @@ export function EditIncomeSourceModal({ visible, initial, onClose, onSave }: Pro
   const [amount, setAmount] = useState('');
   const [applyDeductions, setApplyDeductions] = useState(true);
   const [error, setError] = useState<string | undefined>();
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
-
-  useEffect(() => {
-    const showSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setKeyboardVisible(true)
-    );
-    const hideSub = Keyboard.addListener(
-      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setKeyboardVisible(false)
-    );
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
 
   useEffect(() => {
     if (visible) {
@@ -66,30 +46,17 @@ export function EditIncomeSourceModal({ visible, initial, onClose, onSave }: Pro
     if (!open) onClose();
   };
 
-  const handleClose = async () => {
-    try {
-      await Haptics.selectionAsync();
-    } catch {
-      // ignore
-    }
-    onClose();
-  };
-
   const handleSave = async () => {
-    const parsed = Number(amount);
+    const parsed = parseFloat(amount.replace(/,/g, ''));
     if (!name.trim()) {
       setError('Enter a name');
       return;
     }
-    if (!Number.isFinite(parsed) || parsed <= 0) {
+    if (isNaN(parsed) || parsed <= 0) {
       setError('Enter a valid amount');
       return;
     }
-    try {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    } catch {
-      // ignore
-    }
+
     onSave({
       name: name.trim(),
       type,
@@ -99,151 +66,124 @@ export function EditIncomeSourceModal({ visible, initial, onClose, onSave }: Pro
     onClose();
   };
 
-  const insets = useSafeAreaInsets();
-
   return (
-    <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="bg-black/65" />
-        {Platform.OS === 'ios' && <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ 
-            flex: 1, 
-            justifyContent: isKeyboardVisible ? 'flex-end' : 'center', 
-            alignItems: 'center',
-            paddingTop: insets.top + 16,
-            paddingBottom: isKeyboardVisible ? 12 : insets.bottom + 16,
-            paddingHorizontal: 16
-          }}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-        >
-          <Dialog.Content
-            className="max-w-[380px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
-            style={[styles.contentShadow, isKeyboardVisible && { maxHeight: '100%' }]}
+    <AppDialog
+      visible={visible}
+      onOpenChange={handleOpenChange}
+      icon={
+        <View style={styles.iconCircle}>
+          <Banknote size={22} color="#10b981" />
+        </View>
+      }
+      title="Edit income source"
+      description="Update salary or side hustle details."
+      primaryLabel="Save changes"
+      onPrimary={handleSave}
+      secondaryLabel="Cancel"
+      onSecondary={onClose}
+      onClose={onClose}
+    >
+      <View style={styles.content}>
+        <View style={styles.field}>
+          <AppTextField
+            label="Name"
+            value={name}
+            onChangeText={(v) => {
+              setName(v);
+              if (error) setError(undefined);
+            }}
+            placeholder="Primary Salary"
+            returnKeyType="done"
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>Type</Text>
+          <View style={styles.typeRow}>
+            {(['primary', 'side'] as const).map((opt) => (
+              <Pressable
+                key={opt}
+                onPress={async () => {
+                  try {
+                    await Haptics.selectionAsync();
+                  } catch {
+                    // ignore
+                  }
+                  setType(opt);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={opt === 'primary' ? 'Primary income' : 'Side income'}
+                style={[
+                  styles.typeButton,
+                  opt === type ? styles.typeButtonActive : styles.typeButtonInactive,
+                ]}
+              >
+                <Text style={styles.typeButtonText}>
+                  {opt === 'primary' ? 'Primary' : 'Side'}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {type === 'primary' ? (
+          <Pressable
+            onPress={async () => {
+              try {
+                await Haptics.selectionAsync();
+              } catch {
+                // ignore
+              }
+              setApplyDeductions((v) => !v);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={`Apply SSNIT and PAYE deductions: ${applyDeductions ? 'On' : 'Off'}. Tap to toggle.`}
+            style={[
+              styles.deductionsToggle,
+              applyDeductions ? styles.deductionsOn : styles.deductionsOff,
+            ]}
           >
-            <Dialog.Close
-              variant="ghost"
-              className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-slate-600/60 border border-slate-500/50"
-              iconProps={{ size: 20, color: "#e2e8f0" }}
-              onPress={handleClose}
-              accessibilityLabel="Close"
-              accessibilityRole="button"
-            />
-            <ScrollShadow color="#121621" LinearGradientComponent={LinearGradient} className="flex-1">
-              <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
-                <View style={[styles.content, isKeyboardVisible && { paddingVertical: 16 }]}>
-                  <Dialog.Title className="text-[22px] font-bold text-slate-200 text-center mb-2">
-                    Edit income source
-                  </Dialog.Title>
+            <Text style={styles.deductionsText}>
+              Apply SSNIT/PAYE deductions: {applyDeductions ? 'On' : 'Off'}
+            </Text>
+          </Pressable>
+        ) : null}
 
-                  <View style={styles.field}>
-                    <AppTextField
-                      label="Name"
-                      value={name}
-                      onChangeText={setName}
-                      placeholder="Primary Salary"
-                      returnKeyType="done"
-                    />
-                  </View>
+        <View style={styles.field}>
+          <AppTextField
+            label="Monthly amount (GHS)"
+            value={amount}
+            onChangeText={(v) => {
+              setAmount(v);
+              if (error) setError(undefined);
+            }}
+            keyboardType="decimal-pad"
+            placeholder="0.00"
+            returnKeyType="done"
+          />
+        </View>
 
-                  <View style={styles.field}>
-                    <Text style={styles.fieldLabel}>Type</Text>
-                    <View style={styles.typeRow}>
-                      {(['primary', 'side'] as const).map((opt) => (
-                        <Pressable
-                          key={opt}
-                          onPress={async () => {
-                            try {
-                              await Haptics.selectionAsync();
-                            } catch {
-                              // ignore
-                            }
-                            setType(opt);
-                          }}
-                          accessibilityRole="button"
-                          accessibilityLabel={opt === 'primary' ? 'Primary income' : 'Side income'}
-                          style={[
-                            styles.typeButton,
-                            opt === type ? styles.typeButtonActive : styles.typeButtonInactive,
-                          ]}
-                        >
-                          <Text style={styles.typeButtonText}>
-                            {opt === 'primary' ? 'Primary' : 'Side'}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  </View>
-
-                  {type === 'primary' ? (
-                    <Pressable
-                      onPress={async () => {
-                        try {
-                          await Haptics.selectionAsync();
-                        } catch {
-                          // ignore
-                        }
-                        setApplyDeductions((v) => !v);
-                      }}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Apply SSNIT and PAYE deductions: ${applyDeductions ? 'On' : 'Off'}. Tap to toggle.`}
-                      style={[
-                        styles.deductionsToggle,
-                        applyDeductions ? styles.deductionsOn : styles.deductionsOff,
-                      ]}
-                    >
-                      <Text style={styles.deductionsText}>
-                        Apply SSNIT/PAYE deductions: {applyDeductions ? 'On' : 'Off'}
-                      </Text>
-                    </Pressable>
-                  ) : null}
-
-                  <View style={styles.field}>
-                    <AppTextField
-                      label="Monthly amount (GHS)"
-                      value={amount}
-                      onChangeText={setAmount}
-                      keyboardType="decimal-pad"
-                      placeholder="0.00"
-                      returnKeyType="done"
-                    />
-                  </View>
-
-                  {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-                  <Button variant="primary" onPress={handleSave} className="mt-1.5 h-12 rounded-full bg-emerald-500">
-                    <Button.Label className="text-slate-900 font-semibold">Save changes</Button.Label>
-                  </Button>
-                </View>
-              </ScrollView>
-            </ScrollShadow>
-          </Dialog.Content>
-        </KeyboardAvoidingView>
-      </Dialog.Portal>
-    </Dialog>
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      </View>
+    </AppDialog>
   );
 }
 
 const styles = StyleSheet.create({
-  contentShadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: '#020617',
-        shadowOpacity: 0.35,
-        shadowRadius: 28,
-        shadowOffset: { width: 0, height: 12 },
-      },
-      android: { elevation: 18 },
-    }),
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
   },
   content: {
-    padding: 24,
-    // paddingTop: 52,
-    gap: 12,
+    gap: 16,
+    marginTop: 4,
   },
   field: {
-    gap: 6,
+    gap: 8,
   },
   fieldLabel: {
     fontSize: 12,
@@ -276,6 +216,7 @@ const styles = StyleSheet.create({
   typeButtonText: {
     color: '#E2E8F0',
     fontSize: 13,
+    fontWeight: '500',
   },
   deductionsToggle: {
     paddingHorizontal: 12,
@@ -302,3 +243,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
+

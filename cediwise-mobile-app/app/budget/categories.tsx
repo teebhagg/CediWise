@@ -14,16 +14,16 @@ import { computeSuggestedLimit } from '@/utils/spendingPatternsLogic';
 import { formatCurrency } from '@/utils/formatCurrency';
 import * as Haptics from 'expo-haptics';
 import { Check, MoreVertical } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   LayoutAnimation,
   Platform,
   Pressable,
-  ScrollView,
   Text,
   UIManager,
   View,
 } from 'react-native';
+import { FlashList } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Menu } from 'heroui-native';
 
@@ -69,7 +69,9 @@ export default function BudgetCategoriesScreen() {
 
   const selectedCount = selectedCategories.length;
 
-  const handleFilterChange = (key: 'all' | BudgetBucket) => {
+  // M6 / Phase 8: Reanimated shared-element here was deprioritized; LayoutAnimation stays for
+  // filter-driven list changes (cheap, predictable on mid-range Android with experimental API on).
+  const handleFilterChange = useCallback((key: 'all' | BudgetBucket) => {
     if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
       UIManager.setLayoutAnimationEnabledExperimental(true);
     }
@@ -81,7 +83,7 @@ export default function BudgetCategoriesScreen() {
     });
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setFilter(key);
-  };
+  }, []);
 
   const exitManageMode = () => {
     setIsManaging(false);
@@ -123,6 +125,64 @@ export default function BudgetCategoriesScreen() {
     const extra = names.length > 3 ? `, +${names.length - 3} more` : '';
     return `The selected categories will be removed from this cycle. Past transactions will stay in your history but will no longer be linked to these categories.\n\n${preview}${extra}`;
   }, [selectedCount, selectedCategories]);
+
+  const categoryListHeader = useMemo(
+    () => (
+      <View className="gap-5">
+        <View>
+          <Text className="text-white text-2xl font-bold">Budget Categories</Text>
+          <Text className="text-slate-400 text-sm mt-2">
+            Keep this simple: pick a bucket filter, then add or edit limits.
+          </Text>
+        </View>
+
+        <View className="flex-row flex-wrap gap-1.5">
+          {FILTERS.map((item) => {
+            const selected = filter === item.key;
+            return (
+              <Pressable
+                key={item.key}
+                onPress={() => handleFilterChange(item.key)}
+                accessibilityRole="button"
+                accessibilityLabel={`Filter by ${item.label}`}
+                style={({ pressed }) => ({
+                  paddingHorizontal: 12,
+                  paddingVertical: 14,
+                  borderRadius: 16,
+                  backgroundColor: selected
+                    ? 'rgba(16,185,129,0.25)'
+                    : pressed
+                      ? 'rgba(71,85,105,0.35)'
+                      : 'rgba(71,85,105,0.2)',
+                  borderWidth: 1,
+                  borderColor: selected ? 'rgba(16,185,129,0.5)' : 'rgba(148,163,184,0.2)',
+                })}
+              >
+                <Text
+                  className={`text-sm font-medium ${selected ? 'text-emerald-400' : 'text-slate-400'}`}
+                >
+                  {item.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+    ),
+    [filter, handleFilterChange],
+  );
+
+  const categoryListEmpty = useMemo(
+    () => (
+      <Card>
+        <Text className="text-white text-base font-semibold">No categories yet</Text>
+        <Text className="text-slate-400 text-sm mt-2">
+          Add your first category to start tracking this cycle.
+        </Text>
+      </Card>
+    ),
+    [],
+  );
 
   if (!user?.id) {
     return (
@@ -262,158 +322,112 @@ export default function BudgetCategoriesScreen() {
               ]
         }
       />
-      <ScrollView
+      <FlashList
+        style={{ flex: 1 }}
         className="px-5"
+        data={visibleCategories}
+        keyExtractor={(c) => c.id}
+        ListHeaderComponent={categoryListHeader}
+        ListEmptyComponent={categoryListEmpty}
+        estimatedItemSize={112}
+        ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
+        extraData={{ isManaging, selectedIds: [...selectedIds].sort().join(',') }}
         contentContainerStyle={{ paddingTop: headerPadding + 10, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
-      >
-        <View className="gap-5">
-          <View>
-            <Text className="text-white text-2xl font-bold">Budget Categories</Text>
-            <Text className="text-slate-400 text-sm mt-2">
-              Keep this simple: pick a bucket filter, then add or edit limits.
-            </Text>
-          </View>
-
-          <View className="flex-row flex-wrap gap-1.5">
-            {FILTERS.map((item) => {
-              const selected = filter === item.key;
-              return (
-                <Pressable
-                  key={item.key}
-                  onPress={() => handleFilterChange(item.key)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Filter by ${item.label}`}
-                  style={({ pressed }) => ({
-                    paddingHorizontal: 12,
-                    paddingVertical: 14,
-                    borderRadius: 16,
-                    backgroundColor: selected
-                      ? 'rgba(16,185,129,0.25)'
-                      : pressed
-                        ? 'rgba(71,85,105,0.35)'
-                        : 'rgba(71,85,105,0.2)',
-                    borderWidth: 1,
-                    borderColor: selected ? 'rgba(16,185,129,0.5)' : 'rgba(148,163,184,0.2)',
-                  })}
-                >
-                  <Text
-                    className={`text-sm font-medium ${selected ? 'text-emerald-400' : 'text-slate-400'}`}
-                  >
-                    {item.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-
-          {visibleCategories.length === 0 ? (
-            <Card>
-              <Text className="text-white text-base font-semibold">No categories yet</Text>
-              <Text className="text-slate-400 text-sm mt-2">
-                Add your first category to start tracking this cycle.
-              </Text>
-            </Card>
-          ) : (
-            <View className="gap-3">
-              {visibleCategories.map((cat, idx) => {
-                const icon =
-                  (cat.icon as import('@/constants/categoryIcons').CategoryIconName) ??
-                  getCategoryIcon(cat.name);
-                const bgColor = CATEGORY_ICON_COLORS[idx % CATEGORY_ICON_COLORS.length];
-                 const isSelected = isManaging && selectedIds.has(cat.id);
-                return (
-                  <Pressable
-                    key={cat.id}
-                    onPress={() => {
-                      if (isManaging) {
-                        toggleSelectCategory(cat.id);
-                        return;
-                      }
-                      modals.setEditingLimit({
-                        id: cat.id,
-                        name: cat.name,
-                        current: cat.limitAmount,
-                        icon: cat.icon ?? null,
-                      });
-                      modals.setShowEditLimitModal(true);
-                    }}
-                    className="active:opacity-90"
-                    accessibilityRole="button"
-                    accessibilityLabel={
-                      isManaging
-                        ? `${cat.name}, ${isSelected ? 'selected' : 'tap to select'}`
-                        : `${cat.name}, ${cat.bucket}, ₵${formatCurrency(cat.limitAmount)}, tap to edit`
-                    }
-                  >
-                    <Card>
-                      <View className="flex-row items-center justify-between gap-3">
-                        <View className="flex-row items-center gap-3 flex-1 min-w-0">
-                          {isManaging && (
-                            <View
-                              style={{
-                                width: 22,
-                                height: 22,
-                                borderRadius: 11,
-                                borderWidth: 1.5,
-                                borderColor: isSelected ? '#fb7185' : 'rgba(148,163,184,0.6)',
-                                backgroundColor: isSelected ? 'rgba(248,113,113,0.18)' : 'transparent',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                              }}
-                            >
-                              {isSelected && <Check size={14} color="#f9fafb" strokeWidth={2.4} />}
-                            </View>
-                          )}
-                          <CategoryIcon
-                            icon={icon}
-                            size={44}
-                            backgroundColor={bgColor}
-                            color="#fff"
-                          />
-                          <View className="flex-1 min-w-0">
-                            <Text className="text-white text-base font-semibold" numberOfLines={1}>
-                              {cat.name}
-                            </Text>
-                            <Text className="text-slate-400 text-xs mt-0.5 capitalize">
-                              {cat.bucket}
-                            </Text>
-                          </View>
-                        </View>
-                        <View className="items-end shrink-0">
-                          <Text className="text-emerald-300 text-base font-bold">
-                            ₵{formatCurrency(cat.limitAmount)}
-                          </Text>
-                          {!isManaging && (
-                            <Pressable
-                              onPress={() => {
-                                modals.setEditingLimit({
-                                  id: cat.id,
-                                  name: cat.name,
-                                  current: cat.limitAmount,
-                                  icon: cat.icon ?? null,
-                                });
-                                modals.setShowEditLimitModal(true);
-                              }}
-                              style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
-                              className="mt-2"
-                              hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
-                              accessibilityRole="button"
-                              accessibilityLabel={`Edit ${cat.name}`}
-                            >
-                              <Text className="text-slate-400 text-sm">Edit</Text>
-                            </Pressable>
-                          )}
-                        </View>
+        renderItem={({ item: cat, index: idx }) => {
+          const icon =
+            (cat.icon as import('@/constants/categoryIcons').CategoryIconName) ??
+            getCategoryIcon(cat.name);
+          const bgColor = CATEGORY_ICON_COLORS[idx % CATEGORY_ICON_COLORS.length];
+          const isSelected = isManaging && selectedIds.has(cat.id);
+          return (
+            <Pressable
+              onPress={() => {
+                if (isManaging) {
+                  toggleSelectCategory(cat.id);
+                  return;
+                }
+                modals.setEditingLimit({
+                  id: cat.id,
+                  name: cat.name,
+                  current: cat.limitAmount,
+                  icon: cat.icon ?? null,
+                });
+                modals.setShowEditLimitModal(true);
+              }}
+              className="active:opacity-90"
+              accessibilityRole="button"
+              accessibilityLabel={
+                isManaging
+                  ? `${cat.name}, ${isSelected ? 'selected' : 'tap to select'}`
+                  : `${cat.name}, ${cat.bucket}, ₵${formatCurrency(cat.limitAmount)}, tap to edit`
+              }
+            >
+              <Card>
+                <View className="flex-row items-center justify-between gap-3">
+                  <View className="flex-row items-center gap-3 flex-1 min-w-0">
+                    {isManaging && (
+                      <View
+                        style={{
+                          width: 22,
+                          height: 22,
+                          borderRadius: 11,
+                          borderWidth: 1.5,
+                          borderColor: isSelected ? '#fb7185' : 'rgba(148,163,184,0.6)',
+                          backgroundColor: isSelected ? 'rgba(248,113,113,0.18)' : 'transparent',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {isSelected && <Check size={14} color="#f9fafb" strokeWidth={2.4} />}
                       </View>
-                    </Card>
-                  </Pressable>
-                );
-              })}
-            </View>
-          )}
-        </View>
-      </ScrollView>
+                    )}
+                    <CategoryIcon
+                      icon={icon}
+                      size={44}
+                      backgroundColor={bgColor}
+                      color="#fff"
+                    />
+                    <View className="flex-1 min-w-0">
+                      <Text className="text-white text-base font-semibold" numberOfLines={1}>
+                        {cat.name}
+                      </Text>
+                      <Text className="text-slate-400 text-xs mt-0.5 capitalize">
+                        {cat.bucket}
+                      </Text>
+                    </View>
+                  </View>
+                  <View className="items-end shrink-0">
+                    <Text className="text-emerald-300 text-base font-bold">
+                      ₵{formatCurrency(cat.limitAmount)}
+                    </Text>
+                    {!isManaging && (
+                      <Pressable
+                        onPress={() => {
+                          modals.setEditingLimit({
+                            id: cat.id,
+                            name: cat.name,
+                            current: cat.limitAmount,
+                            icon: cat.icon ?? null,
+                          });
+                          modals.setShowEditLimitModal(true);
+                        }}
+                        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+                        className="mt-2"
+                        hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Edit ${cat.name}`}
+                      >
+                        <Text className="text-slate-400 text-sm">Edit</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+              </Card>
+            </Pressable>
+          );
+        }}
+      />
 
       <ConfirmModal
         visible={showMultiDeleteConfirm}

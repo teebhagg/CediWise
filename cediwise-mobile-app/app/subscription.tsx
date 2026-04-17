@@ -5,9 +5,12 @@
 
 import { BackButton } from "@/components/BackButton";
 import { PrimaryButton } from "@/components/PrimaryButton";
+import { ANALYTICS_EVENTS } from "@/constants/analyticsEvents";
 import { useTierContext } from "@/contexts/TierContext";
 import { useAuth } from "@/hooks/useAuth";
+import { getPostHogOptional } from "@/utils/analytics/posthogClientRef";
 import { supabase } from "@/utils/supabase";
+import { reportError } from "@/utils/telemetry";
 import type { UserTier } from "@/utils/tierGate";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
@@ -24,8 +27,9 @@ import {
   Zap,
   ChevronRight,
 } from "lucide-react-native";
-import { useCallback, useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FlashList } from "@shopify/flash-list";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -108,16 +112,48 @@ export default function SubscriptionScreen() {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(
     null
   );
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [subscriptionLoadError, setSubscriptionLoadError] = useState<
+    string | null
+  >(null);
+  const fetchAbortRef = useRef(false);
 
-  useEffect(() => {
-    if (!user?.id || !supabase) return;
+  const loadSubscription = useCallback(() => {
+    fetchAbortRef.current = false;
+    if (!user?.id || !supabase) {
+      setSubscription(null);
+      setSubscriptionLoading(false);
+      setSubscriptionLoadError(null);
+      return;
+    }
 
-    supabase
-      .from("subscriptions")
-      .select("plan, status, current_period_end, current_period_start")
-      .eq("user_id", user.id)
-      .single()
-      .then(({ data }) => {
+    setSubscriptionLoading(true);
+    setSubscriptionLoadError(null);
+
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("subscriptions")
+          .select("plan, status, current_period_end, current_period_start")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (fetchAbortRef.current) return;
+
+        if (error) {
+          setSubscriptionLoadError(error.message);
+          reportError(error, {
+            feature: "subscription",
+            operation: "fetch_subscription",
+            screen: "/subscription",
+            extra: { code: error.code },
+          });
+          getPostHogOptional()?.capture(ANALYTICS_EVENTS.subscriptionFetchFailed, {
+            error_code: error.code ?? "unknown",
+          });
+          return;
+        }
+
         if (data) {
           setSubscription({
             plan: data.plan,
@@ -126,8 +162,32 @@ export default function SubscriptionScreen() {
             currentPeriodStart: data.current_period_start,
           });
         }
-      });
+      } catch (e) {
+        if (fetchAbortRef.current) return;
+        const message = e instanceof Error ? e.message : "Unknown error";
+        setSubscriptionLoadError(message);
+        reportError(e, {
+          feature: "subscription",
+          operation: "fetch_subscription",
+          screen: "/subscription",
+        });
+        getPostHogOptional()?.capture(ANALYTICS_EVENTS.subscriptionFetchFailed, {
+          error_code: "exception",
+        });
+      } finally {
+        if (!fetchAbortRef.current) {
+          setSubscriptionLoading(false);
+        }
+      }
+    })();
   }, [user?.id]);
+
+  useEffect(() => {
+    loadSubscription();
+    return () => {
+      fetchAbortRef.current = true;
+    };
+  }, [loadSubscription]);
 
   const getTrialDaysLeft = useCallback((endsAt: string | null) => {
     if (!endsAt) return 0;
@@ -163,6 +223,26 @@ export default function SubscriptionScreen() {
     router.push("/upgrade");
   }, [router]);
 
+  const renderFeatureRow = useCallback(
+    ({ item: feature }: { item: string }) => (
+      <View style={styles.featureRow}>
+        <Check
+          color={effectiveTier === "free" ? "#6B7280" : "#10B981"}
+          size={18}
+        />
+        <Text
+          style={[
+            styles.featureText,
+            effectiveTier === "free" && { color: "#6B7280" },
+          ]}
+        >
+          {feature}
+        </Text>
+      </View>
+    ),
+    [effectiveTier],
+  );
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header */}
@@ -171,6 +251,28 @@ export default function SubscriptionScreen() {
         <Text style={styles.headerTitle}>Subscription</Text>
         <View style={{ width: 40 }} />
       </View>
+
+      {subscriptionLoading ? (
+        <View style={styles.inlineNoticeRow}>
+          <ActivityIndicator size="small" color="#94A3B8" />
+          <Text style={styles.inlineNoticeMuted}>Loading subscription…</Text>
+        </View>
+      ) : null}
+      {subscriptionLoadError ? (
+        <View style={styles.inlineNotice}>
+          <Text style={styles.inlineNoticeError}>
+            Could not load billing details from the server.
+          </Text>
+          <Text style={styles.inlineNoticeMutedSmall}>{subscriptionLoadError}</Text>
+          <PrimaryButton
+            onPress={() => {
+              loadSubscription();
+            }}
+            style={styles.subscriptionRetryButton}>
+            <Text style={styles.subscriptionRetryLabel}>Try again</Text>
+          </PrimaryButton>
+        </View>
+      ) : null}
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -359,22 +461,15 @@ export default function SubscriptionScreen() {
         <Animated.View entering={FadeInDown.delay(100).duration(400)}>
           <Text style={styles.sectionTitle}>Your Features</Text>
           <View style={styles.featuresCard}>
-            {config.features.map((feature, i) => (
-              <View key={i} style={styles.featureRow}>
-                <Check
-                  color={effectiveTier === "free" ? "#6B7280" : "#10B981"}
-                  size={18}
-                />
-                <Text
-                  style={[
-                    styles.featureText,
-                    effectiveTier === "free" && { color: "#6B7280" },
-                  ]}
-                >
-                  {feature}
-                </Text>
-              </View>
-            ))}
+            <FlashList
+              data={config.features}
+              scrollEnabled={false}
+              nestedScrollEnabled
+              keyExtractor={(item, index) => `${effectiveTier}-${index}-${item}`}
+              estimatedItemSize={44}
+              extraData={effectiveTier}
+              renderItem={renderFeatureRow}
+            />
           </View>
         </Animated.View>
 
@@ -450,6 +545,41 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 18,
     fontWeight: "600",
+  },
+  inlineNotice: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  inlineNoticeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
+  subscriptionRetryButton: {
+    marginTop: 12,
+    alignSelf: "flex-start",
+    minHeight: 44,
+    paddingHorizontal: 20,
+  },
+  subscriptionRetryLabel: {
+    color: "#020617",
+    fontFamily: "Figtree-SemiBold",
+    fontSize: 15,
+  },
+  inlineNoticeMuted: {
+    color: "#94a3b8",
+    fontSize: 14,
+  },
+  inlineNoticeMutedSmall: {
+    color: "#64748b",
+    fontSize: 12,
+    marginTop: 4,
+  },
+  inlineNoticeError: {
+    color: "#f87171",
+    fontSize: 14,
   },
   scrollContent: {
     paddingHorizontal: 16,

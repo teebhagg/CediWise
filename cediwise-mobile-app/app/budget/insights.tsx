@@ -1,6 +1,5 @@
 import { BackButton } from '@/components/BackButton';
 import {
-  DEFAULT_EXPANDED_HEIGHT,
   DEFAULT_STANDARD_HEIGHT,
   ExpandedHeader,
 } from '@/components/CediWiseHeader';
@@ -13,17 +12,22 @@ import {
   buildInsightsRangeData,
   buildRecurringCommitmentInsights,
   type InsightsRangeKey,
+  type RecurringCommitmentInsight,
 } from '@/components/features/budget/insights/insightsData';
 import { SpendingInsightsChart } from '@/components/features/budget/insights/SpendingInsightsCharts';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { FlashList } from '@shopify/flash-list';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Receipt } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { useTierContext } from '@/contexts/TierContext';
+import {
+  getExpandedHeaderScrollPaddingTop,
+  INSIGHTS_EXPANDED_HEADER_HEIGHT,
+} from '@/utils/screenHeaderInsets';
 
 export default function BudgetInsightsScreen() {
   const { user } = useAuth();
@@ -38,6 +42,15 @@ export default function BudgetInsightsScreen() {
 
   const [chartType, setChartType] = useState<'bar' | 'line' | 'donut'>('bar');
   const [range, setRange] = useState<InsightsRangeKey>('6M');
+
+  const flashListRef = useRef<FlashList>(null);
+
+  useEffect(() => {
+    flashListRef.current?.scrollToOffset({
+      offset: 0,
+      animated: true,
+    });
+  }, [range, chartType]);
 
   const insightsData = useMemo(
     () =>
@@ -69,6 +82,35 @@ export default function BudgetInsightsScreen() {
     [budget.totals, insightsData.totalSpent, insightsData.spentWindowSpanDays],
   );
 
+  const renderRecurringInsight = useCallback(
+    ({ item: ins }: { item: RecurringCommitmentInsight }) => (
+      <View
+        className={`rounded-2xl border px-4 py-3 ${
+          ins.variant === 'warning'
+            ? 'border-amber-500/40 bg-amber-500/10'
+            : 'border-white/10 bg-white/5'
+        }`}>
+        <Text className="text-white font-semibold text-sm">{ins.title}</Text>
+        <Text className="text-white/70 text-xs mt-2 leading-5">{ins.body}</Text>
+      </View>
+    ),
+    [],
+  );
+
+  const recurringInsightSeparator = useCallback(
+    () => <View style={{ height: 12 }} />,
+    [],
+  );
+
+  const renderCategoryBreakdownRow = useCallback(
+    ({ item }: { item: (typeof insightsData.categoryBreakdown)[number] }) => (
+      <View className="px-5 mt-3">
+        <CategoryBreakdownRow item={item} />
+      </View>
+    ),
+    [insightsData.categoryBreakdown],
+  );
+
   useEffect(() => {
     if (!canAccessBudget) {
       router.replace("/(tabs)/budget");
@@ -83,7 +125,13 @@ export default function BudgetInsightsScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: 'black' }}>
         <ExpandedHeader scrollY={scrollY} title="Spending Insights" leading={<BackButton />} />
-        <View className="px-5 py-4" style={{ paddingTop: DEFAULT_EXPANDED_HEIGHT + insets.top + 20 }}>
+        <View
+          className="px-5 py-4"
+          style={{
+            paddingTop: getExpandedHeaderScrollPaddingTop(insets.top, {
+              expandedHeight: INSIGHTS_EXPANDED_HEADER_HEIGHT,
+            }),
+          }}>
           <Text className="text-white mt-8 text-center">Sign in to view insights.</Text>
         </View>
       </View>
@@ -94,7 +142,13 @@ export default function BudgetInsightsScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: 'black' }}>
         <ExpandedHeader scrollY={scrollY} title="Spending Insights" leading={<BackButton />} />
-        <View className="px-5 py-4" style={{ paddingTop: DEFAULT_EXPANDED_HEIGHT + insets.top + 20 }}>
+        <View
+          className="px-5 py-4"
+          style={{
+            paddingTop: getExpandedHeaderScrollPaddingTop(insets.top, {
+              expandedHeight: INSIGHTS_EXPANDED_HEADER_HEIGHT,
+            }),
+          }}>
           <Text className="text-white mt-8 text-center">
             Add categories and log expenses to see insights.
           </Text>
@@ -109,7 +163,7 @@ export default function BudgetInsightsScreen() {
         scrollY={scrollY}
         title="Spending Insights"
         collapsedTitle="Insights"
-        expandedHeight={130}
+        expandedHeight={INSIGHTS_EXPANDED_HEADER_HEIGHT}
         leading={<BackButton />}
         actions={[
           <InsightsChartToggle key="toggle" value={chartType} onChange={setChartType} />,
@@ -117,17 +171,24 @@ export default function BudgetInsightsScreen() {
       />
 
       <AnimatedFlashList
+        ref={flashListRef}
         data={insightsData.categoryBreakdown}
         keyExtractor={(item) => item.categoryId}
         showsVerticalScrollIndicator={false}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
-        snapToOffsets={[0, DEFAULT_EXPANDED_HEIGHT - DEFAULT_STANDARD_HEIGHT]}
+        snapToOffsets={[
+          0,
+          INSIGHTS_EXPANDED_HEADER_HEIGHT - DEFAULT_STANDARD_HEIGHT,
+        ]}
         snapToEnd={false}
         decelerationRate="fast"
+        estimatedItemSize={76}
         contentContainerStyle={{
           paddingBottom: 120,
-          paddingTop: 100 + insets.top + 20,
+          paddingTop: getExpandedHeaderScrollPaddingTop(insets.top, {
+            expandedHeight: INSIGHTS_EXPANDED_HEADER_HEIGHT,
+          }),
         }}
         ListHeaderComponent={
           <View className="px-5">
@@ -174,19 +235,16 @@ export default function BudgetInsightsScreen() {
             </View>
 
             {recurringInsights.length > 0 ? (
-              <View className="mt-6 gap-3">
-                {recurringInsights.map((ins) => (
-                  <View
-                    key={ins.id}
-                    className={`rounded-2xl border px-4 py-3 ${
-                      ins.variant === 'warning'
-                        ? 'border-amber-500/40 bg-amber-500/10'
-                        : 'border-white/10 bg-white/5'
-                    }`}>
-                    <Text className="text-white font-semibold text-sm">{ins.title}</Text>
-                    <Text className="text-white/70 text-xs mt-2 leading-5">{ins.body}</Text>
-                  </View>
-                ))}
+              <View className="mt-6">
+                <FlashList
+                  data={recurringInsights}
+                  scrollEnabled={false}
+                  nestedScrollEnabled
+                  keyExtractor={(ins) => ins.id}
+                  estimatedItemSize={92}
+                  ItemSeparatorComponent={recurringInsightSeparator}
+                  renderItem={renderRecurringInsight}
+                />
               </View>
             ) : null}
 
@@ -210,11 +268,7 @@ export default function BudgetInsightsScreen() {
             ) : null}
           </View>
         }
-        renderItem={({ item }) => (
-          <View className="px-5 mt-3">
-            <CategoryBreakdownRow item={item} />
-          </View>
-        )}
+        renderItem={renderCategoryBreakdownRow}
       />
 
       <BudgetModals

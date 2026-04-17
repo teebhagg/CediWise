@@ -16,6 +16,7 @@ import type { UserTier, TierInfo } from "@/utils/tierGate";
 import { getTierInfo, getTrialDays } from "@/utils/tierGate";
 import { supabase } from "@/utils/supabase";
 import { log } from "@/utils/logger";
+import { reportError } from "@/utils/telemetry";
 
 type TierContextValue = {
   tier: UserTier;
@@ -69,29 +70,66 @@ export function TierProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      // 1. Count total registered users
-      const { data: userCount } = await supabase.rpc('get_user_count');
-      const isEarlyBird = (userCount ?? 999) < 100;
+      const [rpcResult, subResult] = await Promise.all([
+        supabase.rpc("get_user_count"),
+        supabase
+          .from("subscriptions")
+          .select(
+            "plan, status, trial_ends_at, pending_tier, pending_tier_start_date, cancel_at_period_end"
+          )
+          .eq("user_id", user.id)
+          .maybeSingle(),
+      ]);
+
+      const { data: userCount, error: rpcError } = rpcResult;
+      if (rpcError) {
+        reportError(rpcError, {
+          feature: "tier",
+          operation: "rpc_get_user_count",
+          extra: { code: rpcError.code },
+        });
+      }
+      const isEarlyBird = !rpcError && (userCount ?? 999) < 100;
       const trialDays = getTrialDays(isEarlyBird);
 
-      // 2. Check subscriptions table (source of truth)
-      const { data: sub } = await supabase
-        .from("subscriptions")
-        .select("plan, status, trial_ends_at, pending_tier, pending_tier_start_date, cancel_at_period_end")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const { data: sub, error: subError } = subResult;
+
+      if (subError) {
+        reportError(subError, {
+          feature: "tier",
+          operation: "fetch_subscription",
+          extra: { code: subError.code },
+        });
+        setTierInfo(getTierInfo("free", null));
+        return;
+      }
 
       if (!sub) {
         // First login ever — create trial subscription
         const trialEndsAt = new Date(Date.now() + trialDays * 86400000).toISOString();
 
-        await supabase.from("subscriptions").upsert({
-          user_id: user.id,
-          plan: "sme",
-          status: "trial",
-          trial_ends_at: trialEndsAt,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "user_id" });
+        const { error: upsertError } = await supabase
+          .from("subscriptions")
+          .upsert(
+            {
+              user_id: user.id,
+              plan: "sme",
+              status: "trial",
+              trial_ends_at: trialEndsAt,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "user_id" }
+          );
+
+        if (upsertError) {
+          reportError(upsertError, {
+            feature: "tier",
+            operation: "create_trial_subscription",
+            extra: { code: upsertError.code },
+          });
+          setTierInfo(getTierInfo("free", null));
+          return;
+        }
 
         setTierInfo(getTierInfo("sme", trialEndsAt));
         return;
@@ -104,9 +142,10 @@ export function TierProvider({ children }: { children: React.ReactNode }) {
       let pendingTierStartDate = sub.pending_tier_start_date;
       const cancelAtPeriodEnd = sub.cancel_at_period_end ?? false;
 
+      const now = new Date();
+
       // 4. Janitor — activate pending tier if date reached AND trial is over
       if (pendingTier && pendingTierStartDate) {
-        const now = new Date();
         const startDate = new Date(pendingTierStartDate.replace(' ', 'T'));
         const trialExpiryString = trialEndsAt?.replace(' ', 'T');
         const trialExpiry = trialExpiryString ? new Date(trialExpiryString) : null;
@@ -117,16 +156,62 @@ export function TierProvider({ children }: { children: React.ReactNode }) {
         if (isAtActivationTime && isTrialOver) {
           log.info(`[Janitor] Activating pending tier: ${pendingTier}`);
 
-          await supabase.from("subscriptions").update({
-            plan: pendingTier,
-            status: pendingTier === "free" ? "expired" : "active",
-            pending_tier: null,
-            pending_tier_start_date: null,
-            cancel_at_period_end: false,
-            updated_at: now.toISOString(),
-          }).eq("user_id", user.id);
+          const { error: updateError } = await supabase
+            .from("subscriptions")
+            .update({
+              plan: pendingTier,
+              status: pendingTier === "free" ? "expired" : "active",
+              pending_tier: null,
+              pending_tier_start_date: null,
+              cancel_at_period_end: false,
+              updated_at: now.toISOString(),
+            })
+            .eq("user_id", user.id);
 
-          setTierInfo(getTierInfo(pendingTier, trialEndsAt, null, null, false));
+          if (updateError) {
+            reportError(updateError, {
+              feature: "tier",
+              operation: "janitor_activate_pending",
+              extra: { code: updateError.code, pendingTier },
+            });
+            // Fall through: keep tier from current row rather than assuming activation.
+          } else {
+            setTierInfo(getTierInfo(pendingTier, trialEndsAt, null, null, false));
+            return;
+          }
+        }
+      }
+
+      // Expire trials with no pending tier
+      if (!pendingTier && trialEndsAt) {
+        const trialExpiry = trialEndsAt.includes(' ')
+          ? new Date(trialEndsAt.replace(' ', 'T'))
+          : new Date(trialEndsAt);
+
+        if (!isNaN(trialExpiry.getTime()) && trialExpiry <= now && tier !== "free") {
+          const { error: expireError } = await supabase
+            .from("subscriptions")
+            .update({
+              status: "expired",
+              updated_at: now.toISOString(),
+            })
+            .eq("user_id", user.id);
+
+          if (expireError) {
+            log.error(
+              "[Tier] Expire trial DB update failed; degrading client to free",
+              expireError,
+            );
+            reportError(expireError, {
+              feature: "tier",
+              operation: "expire_trial",
+              extra: { code: expireError.code },
+            });
+            setTierInfo(getTierInfo("free", trialEndsAt, null, null, false));
+            return;
+          }
+          log.info(`[Tier] Expired trial for user: ${user.id}`);
+          setTierInfo(getTierInfo("free", trialEndsAt, null, null, false));
           return;
         }
       }

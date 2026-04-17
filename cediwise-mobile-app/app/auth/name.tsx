@@ -5,6 +5,7 @@ import { PrimaryButton } from '@/components/PrimaryButton';
 import { authTokens } from '@/constants/authTokens';
 import { useAuth } from '@/hooks/useAuth';
 import { getStoredAuthData, updateUserProfileName } from '@/utils/auth';
+import { reportError } from '@/utils/telemetry';
 import { onLoginSuccess } from '@/utils/authRouting';
 import { useEffect, useState } from 'react';
 import {
@@ -31,6 +32,13 @@ export default function AuthNameScreen() {
           await refreshAuth();
           await onLoginSuccess(auth.user.id);
         }
+      })
+      .catch((e) => {
+        reportError(e, {
+          feature: 'auth',
+          operation: 'name_prefill_load',
+          screen: '/auth/name',
+        });
       })
       .finally(() => setCheckingAuth(false));
   }, [refreshAuth]);
@@ -102,6 +110,7 @@ export default function AuthNameScreen() {
               onChangeText={setName}
               placeholder="Enter your name"
               error={error}
+              onSubmitEditing={onSubmit}
             />
 
             <PrimaryButton loading={loading} onPress={onSubmit}>

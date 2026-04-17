@@ -11,7 +11,15 @@ import {
   TrendingDown,
 } from "lucide-react-native";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, RefreshControl, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -21,12 +29,16 @@ import { AppTextField } from "@/components/AppTextField";
 import { BackButton } from "@/components/BackButton";
 import { Card } from "@/components/Card";
 import { StandardHeader } from "@/components/CediWiseHeader";
+import { getStandardHeaderBodyOffsetTop } from "@/utils/screenHeaderInsets";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
 import { useBudget } from "@/hooks/useBudget";
 import { useTierContext } from "@/contexts/TierContext";
 import { useDebts } from "@/hooks/useDebts";
+import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
+import { useDebtStore } from "@/stores/debtStore";
 import type { BudgetBucket, Debt } from "@/types/budget";
+import { waitWhile } from "@/utils/waitWhile";
 import { Button } from "heroui-native";
 
 export default function DebtDashboardScreen() {
@@ -41,6 +53,7 @@ export default function DebtDashboardScreen() {
 
   const {
     isLoading,
+    error: debtsError,
     insights,
     addDebt,
     deleteDebt,
@@ -64,8 +77,20 @@ export default function DebtDashboardScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refresh();
-    setRefreshing(false);
+    const start = Date.now();
+    try {
+      await refresh();
+    } finally {
+      await waitWhile(() => useDebtStore.getState().isLoading, {
+        timeoutMs: 15_000,
+        intervalMs: 48,
+      });
+      const elapsed = Date.now() - start;
+      if (elapsed < 500) {
+        await new Promise<void>((r) => setTimeout(r, 500 - elapsed));
+      }
+      setRefreshing(false);
+    }
   }, [refresh]);
 
   const handleDelete = useCallback(
@@ -166,6 +191,35 @@ export default function DebtDashboardScreen() {
   const listHeader = useMemo(
     () => (
       <>
+        {debtsError ? (
+          <Animated.View entering={FadeInDown.duration(300).delay(0)}>
+            <Card style={styles.errorCard}>
+              <Text style={styles.errorTitle}>Could not load debts</Text>
+              <Text style={styles.errorDetail}>{debtsError}</Text>
+              <Pressable
+                onPress={() => {
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  void refresh();
+                }}
+                style={({ pressed }) => [
+                  styles.retryButton,
+                  pressed && styles.retryButtonPressed,
+                ]}>
+                <Text style={styles.retryButtonText}>Try again</Text>
+              </Pressable>
+            </Card>
+          </Animated.View>
+        ) : null}
+
+        {!debtsError && isLoading && !hasDebts ? (
+          <Animated.View entering={FadeInDown.duration(300).delay(0)}>
+            <Card style={styles.loadingCard}>
+              <ActivityIndicator size="large" color="#94A3B8" />
+              <Text style={styles.loadingLabel}>Loading debts…</Text>
+            </Card>
+          </Animated.View>
+        ) : null}
+
         {hasDebts && (
           <View className="mt-5 gap-3">
             <Animated.View entering={FadeInDown.duration(300).delay(0)}>
@@ -234,7 +288,7 @@ export default function DebtDashboardScreen() {
           </View>
         )}
 
-        {!hasDebts && !isLoading && (
+        {!hasDebts && !isLoading && !debtsError && (
           <Animated.View entering={FadeInDown.duration(300).delay(0)}>
             <Card style={styles.emptyCard}>
               <Text style={styles.emptyTitle}>No Active Debts</Text>
@@ -247,12 +301,60 @@ export default function DebtDashboardScreen() {
         )}
       </>
     ),
-    [hasDebts, isLoading, insights],
+    [hasDebts, isLoading, insights, debtsError, refresh],
   );
 
   if (!canAccessBudget) {
     return null;
   }
+
+  const handlePaymentSave = async () => {
+    if (!paymentDebt) return;
+    const amount = parseFloat(paymentAmount || "0");
+    if (
+      Number.isNaN(amount) ||
+      amount <= 0 ||
+      amount > paymentDebt.remainingAmount
+    ) {
+      setPaymentError(
+        `Enter an amount between 0 and ₵${paymentDebt.remainingAmount.toLocaleString(
+          "en-GB",
+        )}`,
+      );
+      return;
+    }
+    try {
+      await recordPayment(paymentDebt.id, amount);
+      const categories = budget.state?.categories ?? [];
+      const activeCycleId = budget.activeCycle?.id;
+      const debtPaymentsCategory = categories.find(
+        (c) =>
+          c.name === "Debt Payments" &&
+          (!activeCycleId || c.cycleId === activeCycleId),
+      );
+      const bucket: BudgetBucket = "needs";
+      await budget.addTransaction({
+        bucket,
+        categoryId: debtPaymentsCategory?.id ?? null,
+        amount,
+        note: "Debt Payment",
+        occurredAt: new Date(),
+        debtId: paymentDebt.id,
+      });
+      await Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success,
+      );
+      showSuccess("Payment recorded", "Debt updated successfully");
+      setPaymentDebt(null);
+      setPaymentAmount("");
+      setPaymentError(null);
+    } catch (err) {
+      showError(
+        "Error",
+        err instanceof Error ? err.message : "Failed to record payment",
+      );
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -265,12 +367,18 @@ export default function DebtDashboardScreen() {
         ListHeaderComponent={listHeader}
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingTop: 64 + insets.top },
+          { paddingTop: getStandardHeaderBodyOffsetTop(insets.top) },
         ]}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={PULL_REFRESH_EMERALD}
+            colors={[PULL_REFRESH_EMERALD]}
+          />
         }
         ListFooterComponent={<View style={styles.listFooter} />}
+        estimatedItemSize={168}
       />
 
       {/* Add Button */}
@@ -313,53 +421,7 @@ export default function DebtDashboardScreen() {
             : "Enter payment amount."
         }
         primaryLabel="Save payment"
-        onPrimary={async () => {
-          if (!paymentDebt) return;
-          const amount = parseFloat(paymentAmount || "0");
-          if (
-            Number.isNaN(amount) ||
-            amount <= 0 ||
-            amount > paymentDebt.remainingAmount
-          ) {
-            setPaymentError(
-              `Enter an amount between 0 and ₵${paymentDebt.remainingAmount.toLocaleString(
-                "en-GB",
-              )}`,
-            );
-            return;
-          }
-          try {
-            await recordPayment(paymentDebt.id, amount);
-            const categories = budget.state?.categories ?? [];
-            const activeCycleId = budget.activeCycle?.id;
-            const debtPaymentsCategory = categories.find(
-              (c) =>
-                c.name === "Debt Payments" &&
-                (!activeCycleId || c.cycleId === activeCycleId),
-            );
-            const bucket: BudgetBucket = "needs";
-            await budget.addTransaction({
-              bucket,
-              categoryId: debtPaymentsCategory?.id ?? null,
-              amount,
-              note: "Debt Payment",
-              occurredAt: new Date(),
-              debtId: paymentDebt.id,
-            });
-            await Haptics.notificationAsync(
-              Haptics.NotificationFeedbackType.Success,
-            );
-            showSuccess("Payment recorded", "Debt updated successfully");
-            setPaymentDebt(null);
-            setPaymentAmount("");
-            setPaymentError(null);
-          } catch (err) {
-            showError(
-              "Error",
-              err instanceof Error ? err.message : "Failed to record payment",
-            );
-          }
-        }}
+        onPrimary={handlePaymentSave}
         secondaryLabel="Cancel"
         onSecondary={() => {
           setPaymentDebt(null);
@@ -377,6 +439,7 @@ export default function DebtDashboardScreen() {
             }}
             keyboardType="decimal-pad"
             placeholder="0.00"
+            onSubmitEditing={handlePaymentSave}
           />
         </View>
         {paymentError ? (
@@ -616,6 +679,50 @@ const styles = StyleSheet.create({
     color: "#f59e0b",
     fontFamily: "Figtree-Medium",
     fontSize: 13,
+  },
+  errorCard: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    gap: 10,
+  },
+  errorTitle: {
+    color: "#fecaca",
+    fontFamily: "Figtree-SemiBold",
+    fontSize: 16,
+  },
+  errorDetail: {
+    color: "#94A3B8",
+    fontFamily: "Figtree-Regular",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  retryButton: {
+    marginTop: 4,
+    alignSelf: "flex-start",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 999,
+    backgroundColor: "rgba(34,197,94,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(34,197,94,0.4)",
+  },
+  retryButtonPressed: {
+    opacity: 0.85,
+  },
+  retryButtonText: {
+    color: "#86efac",
+    fontFamily: "Figtree-SemiBold",
+    fontSize: 14,
+  },
+  loadingCard: {
+    alignItems: "center",
+    paddingVertical: 32,
+    gap: 12,
+  },
+  loadingLabel: {
+    color: "#94A3B8",
+    fontFamily: "Figtree-Medium",
+    fontSize: 14,
   },
   emptyCard: {
     alignItems: "center",

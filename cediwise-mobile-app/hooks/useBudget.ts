@@ -61,7 +61,12 @@ import {
   writePersonalizationStatusCache,
 } from "../utils/profileVitals";
 import { addMonths, computeNextCycleFromPrevious } from "../utils/nextCycle";
-import { getActiveTaxConfig, type TaxConfig } from "../utils/taxSync";
+import {
+  getActiveTaxConfig,
+  GHANA_TAX_FALLBACK_2026,
+  type TaxConfig,
+} from "../utils/taxSync";
+import { reportError } from "../utils/telemetry";
 import { uuidv4 } from "../utils/uuid";
 
 function makeQueueId() {
@@ -361,7 +366,23 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
   const [taxConfig, setTaxConfig] = useState<TaxConfig | null>(null);
 
   useEffect(() => {
-    getActiveTaxConfig().then(setTaxConfig);
+    let cancelled = false;
+    void getActiveTaxConfig()
+      .then((tc) => {
+        if (!cancelled) setTaxConfig(tc);
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          reportError(e, {
+            feature: "budget",
+            operation: "tax_config_load",
+          });
+          setTaxConfig(GHANA_TAX_FALLBACK_2026);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const recurringSnapshot = useRecurringExpensesStore((s) => s.recurringExpenses);

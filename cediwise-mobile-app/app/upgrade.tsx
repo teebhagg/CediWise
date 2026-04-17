@@ -22,7 +22,10 @@ import {
   Zap,
   X
 } from "lucide-react-native";
+import { ANALYTICS_EVENTS } from "@/constants/analyticsEvents";
+import { getPostHogOptional } from "@/utils/analytics/posthogClientRef";
 import { log } from "@/utils/logger";
+import { reportError } from "@/utils/telemetry";
 import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -34,6 +37,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePaystack } from "react-native-paystack-webview";
+import { FlashList } from "@shopify/flash-list";
 
 type PlanKey = "free_tier" | "budget_monthly" | "budget_quarterly" | "sme_monthly" | "sme_quarterly";
 type BillingCycle = "monthly" | "quarterly";
@@ -103,7 +107,7 @@ export default function UpgradeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { tier: currentTier, isOnTrial, trialEndsAt, pendingTier, pendingTierStartDate, refreshTier } = useTierContext();
-  const { showSuccess, showError } = useAppToast();
+  const { showSuccess, showError, showInfo } = useAppToast();
 
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -137,48 +141,90 @@ export default function UpgradeScreen() {
 
   const onPaymentSuccess = useCallback(async (res: any, planKey: PlanKey) => {
     setIsProcessing(true);
-    
+
     // OPTIMISTIC WRITE: Update DB immediately while waiting for webhook
     const isSme = planKey.includes("sme");
     const targetTier = isSme ? "sme" : "budget";
 
+    const reconcilingMessage = {
+      title: "Payment received",
+      description:
+        "Your account is reconciling. Close and reopen the app if your plan doesn't update shortly.",
+    } as const;
+
+    let optimisticUpdateSucceeded = false;
+
     try {
-      if (!supabase) return;
-      const now = new Date().toISOString();
-
-      if (isOnTrial) {
-        // STACK: Set as pending — starts after trial ends
-        await supabase.from("subscriptions").update({
-          pending_tier: targetTier,
-          pending_tier_start_date: trialEndsAt,
-          updated_at: now,
-        }).eq("user_id", user?.id);
-      } else {
-        // UPGRADE: Immediate
-        await supabase.from("subscriptions").update({
-          plan: targetTier,
-          status: "active",
-          pending_tier: null,
-          pending_tier_start_date: null,
-          updated_at: now,
-        }).eq("user_id", user?.id);
+      if (!supabase || !user?.id) {
+        showInfo(reconcilingMessage.title, reconcilingMessage.description);
+        return;
       }
-      
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      showSuccess("Success!", isOnTrial ? "Your sub is stacked! Paid plan starts after trial." : "Plan upgraded!");
-    } catch (err) {
-      // SILENT FALLBACK: Webhook will handle it
-      log.warn("Optimistic update failed:", err);
-      showSuccess("Payment Received!", "Your account is being updated. Close and reopen the app if changes don't appear in a moment.");
-    }
 
-    await refreshTier();
-    setIsProcessing(false);
-    router.back();
-  }, [user?.id, isOnTrial, trialEndsAt, refreshTier, showSuccess, router]);
+      const now = new Date().toISOString();
+      const { error: updateError } = isOnTrial
+        ? await supabase
+            .from("subscriptions")
+            .update({
+              pending_tier: targetTier,
+              pending_tier_start_date: trialEndsAt,
+              updated_at: now,
+            })
+            .eq("user_id", user.id)
+        : await supabase
+            .from("subscriptions")
+            .update({
+              plan: targetTier,
+              status: "active",
+              pending_tier: null,
+              pending_tier_start_date: null,
+              updated_at: now,
+            })
+            .eq("user_id", user.id);
+
+      if (updateError) {
+        reportError(updateError, {
+          feature: "billing",
+          operation: "upgrade_optimistic_update",
+          extra: {
+            code: updateError.code,
+            isOnTrial,
+            planKey,
+          },
+        });
+        log.warn("Optimistic subscription update failed:", updateError.message);
+        showInfo(reconcilingMessage.title, reconcilingMessage.description);
+      } else {
+        optimisticUpdateSucceeded = true;
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        showSuccess(
+          "Success!",
+          isOnTrial
+            ? "Your sub is stacked! Paid plan starts after trial."
+            : "Plan upgraded!"
+        );
+      }
+    } catch (err) {
+      reportError(err, {
+        feature: "billing",
+        operation: "upgrade_optimistic_update_unexpected",
+        extra: { planKey },
+      });
+      log.warn("Optimistic update threw:", err);
+      showInfo(reconcilingMessage.title, reconcilingMessage.description);
+    } finally {
+      await refreshTier();
+      setIsProcessing(false);
+      if (optimisticUpdateSucceeded) {
+        router.back();
+      }
+    }
+  }, [user?.id, isOnTrial, trialEndsAt, refreshTier, showSuccess, showInfo, router]);
 
   const onPaymentCancel = useCallback(() => {
     setIsProcessing(false);
+    getPostHogOptional()?.capture(ANALYTICS_EVENTS.paystackCheckoutCancelled, {
+      stage: "user_cancelled",
+    });
   }, []);
 
   const handleSelectPlan = useCallback(
@@ -222,19 +268,28 @@ export default function UpgradeScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       try {
-        // Get current period end
-        const { data: sub } = await supabase
+        const { data: sub, error: fetchError } = await supabase
           .from("subscriptions")
           .select("current_period_end")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
+
+        if (fetchError) {
+          reportError(fetchError, {
+            feature: "billing",
+            operation: "downgrade_fetch_subscription",
+            extra: { code: fetchError.code },
+          });
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          showError("Error", "Could not load subscription. Try again.");
+          return;
+        }
 
         const periodEnd =
           sub?.current_period_end ||
           new Date(Date.now() + 30 * 86400000).toISOString();
 
-        // Set pending tier + cancel flag (on subscriptions, not profiles)
-        await supabase
+        const { error: updateError } = await supabase
           .from("subscriptions")
           .update({
             pending_tier: targetTier,
@@ -243,6 +298,17 @@ export default function UpgradeScreen() {
             updated_at: new Date().toISOString(),
           })
           .eq("user_id", user.id);
+
+        if (updateError) {
+          reportError(updateError, {
+            feature: "billing",
+            operation: "downgrade_schedule_update",
+            extra: { code: updateError.code, targetTier },
+          });
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+          showError("Error", "Could not schedule downgrade. Try again.");
+          return;
+        }
 
         await refreshTier();
 
@@ -260,7 +326,12 @@ export default function UpgradeScreen() {
           `${label} starts on ${date}. You keep current access until then.`
         );
         router.back();
-      } catch {
+      } catch (e) {
+        reportError(e, {
+          feature: "billing",
+          operation: "downgrade_unexpected",
+          extra: { targetTier },
+        });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         showError("Error", "Could not schedule downgrade. Try again.");
       } finally {
@@ -350,14 +421,38 @@ export default function UpgradeScreen() {
         </View>
 
         {/* Plan Cards */}
-        <View style={styles.plansList}>
-          {PLANS.map((plan) => {
+        <FlashList
+          data={PLANS}
+          keyExtractor={(p) => p.key}
+          scrollEnabled={false}
+          nestedScrollEnabled
+          estimatedItemSize={380}
+          ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
+          extraData={{
+            billingCycle,
+            showTrialButtons,
+            isProcessing,
+            currentTier,
+            pendingTier,
+            isOnTrial,
+          }}
+          renderItem={({ item: plan }) => {
             const Icon = plan.icon;
             const isFree = plan.key === "free_tier";
+            const isBudgetPlan = plan.key.startsWith("budget_");
+            const isSmePlan = plan.key.startsWith("sme_");
+            const isCurrentPlan =
+              (currentTier === "free" && isFree) ||
+              (currentTier === "budget" && isBudgetPlan) ||
+              (currentTier === "sme" && isSmePlan);
+            const planPaidTier: "budget" | "sme" | null = isFree
+              ? null
+              : isSmePlan
+                ? "sme"
+                : "budget";
 
             return (
               <Card 
-                key={plan.key} 
                 className={`mb-4 ${plan.recommended ? "border-emerald-500/40 border-2" : "border-white/10"}`}
                 style={[styles.planCard]}
               >
@@ -383,8 +478,8 @@ export default function UpgradeScreen() {
                 </View>
 
                 <View style={styles.featuresList}>
-                  {plan.features.map((feature, i) => (
-                    <View key={i} style={styles.featureRow}>
+                  {plan.features.map((feature) => (
+                    <View key={feature} style={styles.featureRow}>
                       <View className="w-5 h-5 rounded-full bg-emerald-500/10 items-center justify-center">
                         <Check color="#10B981" size={12} strokeWidth={3} />
                       </View>
@@ -397,15 +492,20 @@ export default function UpgradeScreen() {
                   <PrimaryButton
                     onPress={() => handleSelectPlan(plan)}
                     loading={isProcessing && !isFree}
-                    disabled={(currentTier === "budget" && (plan.key === "budget_monthly" || plan.key === "budget_quarterly" || plan.name === "Smart Budget")) || (currentTier === "sme" && (plan.key === "sme_monthly" || plan.key === "sme_quarterly" || plan.name === "SME Ledger")) || (currentTier === "free" && isFree)}
+                    disabled={isCurrentPlan}
                     style={{ marginTop: 8 }}
                   >
-                    {isFree 
-                      ? (currentTier === "free" ? "Current Plan" : "Default Plan") 
-                      : (currentTier === "budget" && (plan.key === "budget_monthly" || plan.key === "budget_quarterly" || plan.name === "Smart Budget")) || (currentTier === "sme" && (plan.key === "sme_monthly" || plan.key === "sme_quarterly" || plan.name === "SME Ledger"))
-                        ? (pendingTier === (plan.key.includes('sme') ? 'sme' : 'budget') ? "Active at Period End" : "Current Plan")
-                        : isOnTrial ? "Subscribe Now" : "Upgrade"
-                    }
+                    {isFree
+                      ? currentTier === "free"
+                        ? "Current Plan"
+                        : "Default Plan"
+                      : isCurrentPlan
+                        ? pendingTier === planPaidTier
+                          ? "Active at Period End"
+                          : "Current Plan"
+                        : isOnTrial
+                          ? "Subscribe Now"
+                          : "Upgrade"}
                   </PrimaryButton>
                 ) : !isFree ? (
                   <View style={styles.chooseLaterRow}>
@@ -416,8 +516,8 @@ export default function UpgradeScreen() {
                 ) : null}
               </Card>
             );
-          })}
-        </View>
+          }}
+        />
 
         <View style={styles.trustRow}>
           <Shield color="#4B5563" size={14} />

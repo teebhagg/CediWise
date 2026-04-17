@@ -1,5 +1,8 @@
+import { ANALYTICS_EVENTS } from "@/constants/analyticsEvents";
 import { useAuth } from "@/hooks/useAuth";
+import { getPostHogOptional } from "@/utils/analytics/posthogClientRef";
 import { supabase } from "@/utils/supabase";
+import { reportError } from "@/utils/telemetry";
 import { useCallback } from "react";
 
 export type LiteracyEventType =
@@ -41,12 +44,11 @@ export function useLiteracyAnalytics() {
       calculatorId,
       triggerId,
       metadata = {},
-    }: TrackEventParams) => {
-      // Skip if user not authenticated
-      if (!user?.id || !supabase) return;
+    }: TrackEventParams): Promise<boolean> => {
+      if (!user?.id || !supabase) return false;
 
       try {
-        await supabase.from("literacy_events").insert({
+        const { error } = await supabase.from("literacy_events").insert({
           user_id: user.id,
           event_type: eventType,
           lesson_id: lessonId,
@@ -55,11 +57,22 @@ export function useLiteracyAnalytics() {
           trigger_id: triggerId,
           metadata,
         });
-      } catch (error) {
-        // Fail silently - don't break user experience for analytics
-        if (__DEV__) {
-          console.warn("[Analytics] Failed to track event:", error);
+        if (error) {
+          reportError(error, {
+            feature: "literacy",
+            operation: "literacy_event_insert",
+            extra: { eventType, code: error.code },
+          });
+          return false;
         }
+        return true;
+      } catch (error) {
+        reportError(error, {
+          feature: "literacy",
+          operation: "literacy_event_insert",
+          extra: { eventType },
+        });
+        return false;
       }
     },
     [user?.id]
@@ -73,8 +86,12 @@ export function useLiteracyAnalytics() {
   );
 
   const trackLessonComplete = useCallback(
-    (lessonId: string, moduleId: string, timeSpentSeconds?: number) => {
-      trackEvent({
+    async (
+      lessonId: string,
+      moduleId: string,
+      timeSpentSeconds?: number
+    ) => {
+      const ok = await trackEvent({
         eventType: "lesson_completed",
         lessonId,
         moduleId,
@@ -82,6 +99,12 @@ export function useLiteracyAnalytics() {
           ? { time_spent_seconds: timeSpentSeconds }
           : {},
       });
+      if (ok) {
+        getPostHogOptional()?.capture(ANALYTICS_EVENTS.literacyLessonCompleted, {
+          lesson_id: lessonId,
+          module_id: moduleId,
+        });
+      }
     },
     [trackEvent]
   );

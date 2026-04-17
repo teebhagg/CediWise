@@ -15,13 +15,13 @@ import {
 import type { TaxConfig } from "@/utils/taxSync";
 import { GHANA_TAX_FALLBACK_2026 } from "@/utils/taxSync";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import * as Sharing from "expo-sharing";
 import { usePostHog } from "posthog-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   Platform,
   Pressable,
   Share,
@@ -312,7 +312,8 @@ export function PayeVerificationSection({
               <Image
                 source={require("@/assets/images/logo/cediwise-transparent-emerald-logo.png")}
                 style={{ width: 32, height: 32 }}
-                resizeMode="contain"
+                contentFit="contain"
+                accessibilityIgnoresInvertColors
               />
             </View>
           </View>

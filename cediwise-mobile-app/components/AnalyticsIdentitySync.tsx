@@ -14,10 +14,12 @@ const SUPER_PROPS_REGISTERED = { current: false };
  * Registers PostHog client for non-React modules, wires Sentry user + PostHog identify on auth changes,
  * and registers super-properties once per app process.
  */
+type LastSentUser = { id: string; email: string | null; name: string | null };
+
 export function AnalyticsIdentitySync() {
   const { user, isLoading } = useAuth();
   const posthog = usePostHog();
-  const lastIdentifiedUserIdRef = useRef<string | null>(null);
+  const lastSentUserRef = useRef<LastSentUser | null>(null);
   useLayoutEffect(() => {
     setPostHogClientForModules(posthog);
     return () => setPostHogClientForModules(null);
@@ -46,11 +48,21 @@ export function AnalyticsIdentitySync() {
     if (isLoading) return;
 
     if (user?.id) {
-      if (lastIdentifiedUserIdRef.current !== user.id) {
-        lastIdentifiedUserIdRef.current = user.id;
+      const email = user.email ?? null;
+      const name = user.name ?? null;
+      const prev = lastSentUserRef.current;
+      const profileChanged =
+        !prev ||
+        prev.id !== user.id ||
+        prev.email !== email ||
+        prev.name !== name;
+
+      if (profileChanged) {
+        lastSentUserRef.current = { id: user.id, email, name };
         Sentry.setUser({
           id: user.id,
           ...(user.email ? { email: user.email } : {}),
+          ...(user.name ? { username: user.name } : {}),
         });
         posthog?.identify(user.id, {
           ...(user.email ? { email: user.email } : {}),
@@ -58,7 +70,7 @@ export function AnalyticsIdentitySync() {
         });
       }
     } else {
-      lastIdentifiedUserIdRef.current = null;
+      lastSentUserRef.current = null;
       Sentry.setUser(null);
       posthog?.reset();
     }

@@ -22,20 +22,31 @@ export type ReportErrorContext = {
 function sanitizeExtras(
   extra: Record<string, unknown>,
 ): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(extra)) {
-    const lower = k.toLowerCase();
-    if (
-      SENSITIVE_EXTRA_KEYS.has(lower) ||
-      lower.includes("token") ||
-      lower.includes("secret")
-    ) {
-      out[k] = "[redacted]";
-    } else {
-      out[k] = v;
+  const seen = new WeakSet<object>();
+  const TOKEN_RE =
+    /(bearer\s+[a-z0-9._-]+|eyJ[\w-]+\.[\w-]+\.[\w-]+|sk_(live|test)_[a-z0-9]+)/gi;
+
+  const walk = (val: unknown): unknown => {
+    if (val == null) return val;
+    if (typeof val === "string") return val.replace(TOKEN_RE, "[redacted]");
+    if (typeof val !== "object") return val;
+    if (seen.has(val as object)) return "[circular]";
+    seen.add(val as object);
+    if (Array.isArray(val)) return val.map(walk);
+    const obj: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(val as Record<string, unknown>)) {
+      const lower = k.toLowerCase();
+      obj[k] =
+        SENSITIVE_EXTRA_KEYS.has(lower) ||
+        lower.includes("token") ||
+        lower.includes("secret")
+          ? "[redacted]"
+          : walk(v);
     }
-  }
-  return out;
+    return obj;
+  };
+
+  return walk(extra) as Record<string, unknown>;
 }
 
 /**

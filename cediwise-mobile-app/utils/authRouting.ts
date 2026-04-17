@@ -17,10 +17,11 @@ import { getPostAuthRoute } from "./profileVitals";
 export function resetNavigationToAuth(): void {
   try {
     router.dismissTo("/auth");
+    return; 
   } catch (e) {
     log.warn("resetNavigationToAuth: dismissTo failed", e);
+    router.replace("/auth");
   }
-  router.replace("/auth");
 }
 
 /**

@@ -38,21 +38,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const authEventDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  /** Bumps on auth transitions so stale async work cannot commit React state. */
+  const authEventIdRef = useRef(0);
+  const isMountedRef = useRef(true);
 
-  const loadUser = useCallback(async () => {
+  const loadUser = useCallback(async (expectedToken: number) => {
     try {
       const authData = await getStoredAuthData();
+      if (
+        expectedToken !== authEventIdRef.current ||
+        !isMountedRef.current
+      ) {
+        return;
+      }
       setUser(authData?.user ?? null);
     } catch (e) {
       log.error("Error loading user:", e);
+      if (
+        expectedToken !== authEventIdRef.current ||
+        !isMountedRef.current
+      ) {
+        return;
+      }
       setUser(null);
     } finally {
-      setIsLoading(false);
+      // Spinner: always clear when mounted so superseded loads / refreshAuth never strand `isLoading`.
+      // `setUser` above remains gated by `expectedToken`.
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
-    loadUser();
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    void loadUser(0);
   }, [loadUser]);
 
   useEffect(() => {
@@ -72,6 +98,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (event === "SIGNED_OUT") {
         clearDebounce();
+        setUser(null);
+        setIsLoading(false);
+        authEventIdRef.current += 1;
+        const capturedToken = authEventIdRef.current;
         void (async () => {
           try {
             await clearAuthData();
@@ -79,8 +109,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } catch (e) {
             log.warn("Auth state SIGNED_OUT cleanup:", e);
           }
-          setUser(null);
-          setIsLoading(false);
+          if (
+            capturedToken !== authEventIdRef.current ||
+            !isMountedRef.current
+          ) {
+            return;
+          }
         })();
         return;
       }
@@ -88,7 +122,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       clearDebounce();
       authEventDebounceRef.current = setTimeout(() => {
         authEventDebounceRef.current = null;
-        void loadUser();
+        authEventIdRef.current += 1;
+        const tokenAtFire = authEventIdRef.current;
+        void loadUser(tokenAtFire);
       }, 350);
     });
 
@@ -103,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       "change",
       (nextState: AppStateStatus) => {
         if (nextState === "active") {
-          loadUser();
+          void loadUser(authEventIdRef.current);
         }
       },
     );
@@ -111,6 +147,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadUser]);
 
   const logout = useCallback(async () => {
+    authEventIdRef.current += 1;
+    const capturedToken = authEventIdRef.current;
     try {
       const userId = user?.id;
       if (userId) {
@@ -129,6 +167,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (storeErr) {
         log.warn("resetStoresOnLogout failed (continuing logout):", storeErr);
       }
+      if (
+        capturedToken !== authEventIdRef.current ||
+        !isMountedRef.current
+      ) {
+        return;
+      }
       setUser(null);
     } catch (e) {
       log.error("Error during logout:", e);
@@ -137,8 +181,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user?.id]);
 
   const refreshAuth = useCallback(async () => {
+    authEventIdRef.current += 1;
+    const token = authEventIdRef.current;
+    if (!isMountedRef.current) return;
     setIsLoading(true);
-    await loadUser();
+    await loadUser(token);
   }, [loadUser]);
 
   return (

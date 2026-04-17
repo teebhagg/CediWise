@@ -107,7 +107,7 @@ export default function UpgradeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { tier: currentTier, isOnTrial, trialEndsAt, pendingTier, pendingTierStartDate, refreshTier } = useTierContext();
-  const { showSuccess, showError } = useAppToast();
+  const { showSuccess, showError, showInfo } = useAppToast();
 
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -146,12 +146,17 @@ export default function UpgradeScreen() {
     const isSme = planKey.includes("sme");
     const targetTier = isSme ? "sme" : "budget";
 
+    const reconcilingMessage = {
+      title: "Payment received",
+      description:
+        "Your account is reconciling. Close and reopen the app if your plan doesn't update shortly.",
+    } as const;
+
+    let optimisticUpdateSucceeded = false;
+
     try {
       if (!supabase || !user?.id) {
-        showSuccess(
-          "Payment Received!",
-          "Your account is being updated. Close and reopen the app if changes don't appear in a moment."
-        );
+        showInfo(reconcilingMessage.title, reconcilingMessage.description);
         return;
       }
 
@@ -187,11 +192,9 @@ export default function UpgradeScreen() {
           },
         });
         log.warn("Optimistic subscription update failed:", updateError.message);
-        showSuccess(
-          "Payment Received!",
-          "Your account is being updated. Close and reopen the app if changes don't appear in a moment."
-        );
+        showInfo(reconcilingMessage.title, reconcilingMessage.description);
       } else {
+        optimisticUpdateSucceeded = true;
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         showSuccess(
           "Success!",
@@ -207,16 +210,15 @@ export default function UpgradeScreen() {
         extra: { planKey },
       });
       log.warn("Optimistic update threw:", err);
-      showSuccess(
-        "Payment Received!",
-        "Your account is being updated. Close and reopen the app if changes don't appear in a moment."
-      );
+      showInfo(reconcilingMessage.title, reconcilingMessage.description);
     } finally {
       await refreshTier();
       setIsProcessing(false);
-      router.back();
+      if (optimisticUpdateSucceeded) {
+        router.back();
+      }
     }
-  }, [user?.id, isOnTrial, trialEndsAt, refreshTier, showSuccess, router]);
+  }, [user?.id, isOnTrial, trialEndsAt, refreshTier, showSuccess, showInfo, router]);
 
   const onPaymentCancel = useCallback(() => {
     setIsProcessing(false);
@@ -437,6 +439,17 @@ export default function UpgradeScreen() {
           renderItem={({ item: plan }) => {
             const Icon = plan.icon;
             const isFree = plan.key === "free_tier";
+            const isBudgetPlan = plan.key.startsWith("budget_");
+            const isSmePlan = plan.key.startsWith("sme_");
+            const isCurrentPlan =
+              (currentTier === "free" && isFree) ||
+              (currentTier === "budget" && isBudgetPlan) ||
+              (currentTier === "sme" && isSmePlan);
+            const planPaidTier: "budget" | "sme" | null = isFree
+              ? null
+              : isSmePlan
+                ? "sme"
+                : "budget";
 
             return (
               <Card 
@@ -479,15 +492,20 @@ export default function UpgradeScreen() {
                   <PrimaryButton
                     onPress={() => handleSelectPlan(plan)}
                     loading={isProcessing && !isFree}
-                    disabled={(currentTier === "budget" && (plan.key === "budget_monthly" || plan.key === "budget_quarterly" || plan.name === "Smart Budget")) || (currentTier === "sme" && (plan.key === "sme_monthly" || plan.key === "sme_quarterly" || plan.name === "SME Ledger")) || (currentTier === "free" && isFree)}
+                    disabled={isCurrentPlan}
                     style={{ marginTop: 8 }}
                   >
-                    {isFree 
-                      ? (currentTier === "free" ? "Current Plan" : "Default Plan") 
-                      : (currentTier === "budget" && (plan.key === "budget_monthly" || plan.key === "budget_quarterly" || plan.name === "Smart Budget")) || (currentTier === "sme" && (plan.key === "sme_monthly" || plan.key === "sme_quarterly" || plan.name === "SME Ledger"))
-                        ? (pendingTier === (plan.key.includes('sme') ? 'sme' : 'budget') ? "Active at Period End" : "Current Plan")
-                        : isOnTrial ? "Subscribe Now" : "Upgrade"
-                    }
+                    {isFree
+                      ? currentTier === "free"
+                        ? "Current Plan"
+                        : "Default Plan"
+                      : isCurrentPlan
+                        ? pendingTier === planPaidTier
+                          ? "Active at Period End"
+                          : "Current Plan"
+                        : isOnTrial
+                          ? "Subscribe Now"
+                          : "Upgrade"}
                   </PrimaryButton>
                 ) : !isFree ? (
                   <View style={styles.chooseLaterRow}>

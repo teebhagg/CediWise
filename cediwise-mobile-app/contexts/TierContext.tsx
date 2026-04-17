@@ -198,16 +198,21 @@ export function TierProvider({ children }: { children: React.ReactNode }) {
             .eq("user_id", user.id);
 
           if (expireError) {
+            log.error(
+              "[Tier] Expire trial DB update failed; degrading client to free",
+              expireError,
+            );
             reportError(expireError, {
               feature: "tier",
               operation: "expire_trial",
               extra: { code: expireError.code },
             });
-          } else {
-            log.info(`[Tier] Expired trial for user: ${user.id}`);
             setTierInfo(getTierInfo("free", trialEndsAt, null, null, false));
             return;
           }
+          log.info(`[Tier] Expired trial for user: ${user.id}`);
+          setTierInfo(getTierInfo("free", trialEndsAt, null, null, false));
+          return;
         }
       }
 

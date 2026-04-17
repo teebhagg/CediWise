@@ -24,8 +24,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useBudget } from "@/hooks/useBudget";
 import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
 import { useRecurringExpenses } from "@/hooks/useRecurringExpenses";
-import { useRecurringExpensesStore } from "@/stores/recurringExpensesStore";
-import { waitWhile } from "@/utils/waitWhile";
 import type {
   BudgetBucket,
   RecurringExpense,
@@ -154,10 +152,6 @@ export default function RecurringExpensesScreen() {
     try {
       await refresh();
     } finally {
-      await waitWhile(() => useRecurringExpensesStore.getState().isLoading, {
-        timeoutMs: 15_000,
-        intervalMs: 48,
-      });
       const elapsed = Date.now() - start;
       if (elapsed < 500) {
         await new Promise<void>((r) => setTimeout(r, 500 - elapsed));

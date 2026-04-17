@@ -52,6 +52,44 @@ import {
 import { syncTaxConfig } from "../utils/taxSync";
 import "./globals.css";
 
+const SENSITIVE = /(token|password|secret|authorization|cookie|api[_-]?key)/i;
+const REDACTED = "[redacted]";
+
+function isSensitiveKey(key: string): boolean {
+  return SENSITIVE.test(key);
+}
+
+/** Recursively redacts values for keys matching {@link SENSITIVE}. Mutates plain objects and arrays in place. */
+function redact(target: unknown): void {
+  if (target === null || target === undefined) return;
+  if (typeof target !== "object") return;
+
+  if (Array.isArray(target)) {
+    for (const item of target) {
+      redact(item);
+    }
+    return;
+  }
+
+  const obj = target as Record<string, unknown>;
+  for (const key of Object.keys(obj)) {
+    if (isSensitiveKey(key)) {
+      obj[key] = REDACTED;
+    } else {
+      redact(obj[key]);
+    }
+  }
+}
+
+/** Best-effort scrub of `name=value` pairs in a Cookie header string. */
+function redactCookieHeader(cookieHeader: string): string {
+  return cookieHeader.replace(
+    /([^;=\s]+)\s*=\s*([^;]*)/g,
+    (full, name: string) =>
+      isSensitiveKey(name.trim()) ? `${name.trim()}=${REDACTED}` : full,
+  );
+}
+
 Sentry.init({
   dsn: "https://e80f09f6a8433bd0fe6d1f0643d1eee4@o4511124714094592.ingest.de.sentry.io/4511124717043792",
 
@@ -71,20 +109,52 @@ Sentry.init({
   tracesSampleRate: 0.1,
 
   beforeSend(event) {
-    const extra = event.extra;
-    if (extra && typeof extra === "object") {
-      for (const key of Object.keys(extra)) {
-        const lower = key.toLowerCase();
-        if (
-          lower.includes("token") ||
-          lower.includes("password") ||
-          lower.includes("secret") ||
-          lower.includes("authorization")
-        ) {
-          (extra as Record<string, unknown>)[key] = "[redacted]";
+    if (event.extra && typeof event.extra === "object") {
+      redact(event.extra);
+    }
+    if (event.tags && typeof event.tags === "object") {
+      redact(event.tags);
+    }
+    if (event.contexts && typeof event.contexts === "object") {
+      redact(event.contexts);
+    }
+
+    const req = event.request;
+    if (req?.headers && typeof req.headers === "object") {
+      redact(req.headers);
+    }
+    if (req?.cookies != null) {
+      const cookies = req.cookies as string | Record<string, string>;
+      if (typeof cookies === "string") {
+        (req as { cookies: string | Record<string, string> }).cookies =
+          redactCookieHeader(cookies);
+      } else {
+        redact(cookies);
+      }
+    }
+
+    if (event.breadcrumbs?.length) {
+      for (const bc of event.breadcrumbs) {
+        if (bc.data && typeof bc.data === "object") {
+          redact(bc.data);
         }
       }
     }
+
+    const exceptions = event.exception?.values;
+    if (exceptions?.length) {
+      for (const ex of exceptions) {
+        const frames = ex.stacktrace?.frames;
+        if (frames?.length) {
+          for (const frame of frames) {
+            if (frame.vars && typeof frame.vars === "object") {
+              redact(frame.vars);
+            }
+          }
+        }
+      }
+    }
+
     return event;
   },
 });

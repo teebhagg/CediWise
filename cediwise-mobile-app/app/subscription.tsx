@@ -136,7 +136,7 @@ export default function SubscriptionScreen() {
           .from("subscriptions")
           .select("plan, status, current_period_end, current_period_start")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle();
 
         if (fetchAbortRef.current) return;
 

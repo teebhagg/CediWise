@@ -1,6 +1,7 @@
 import type { TriggerId } from "@/constants/triggers";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/utils/supabase";
+import { reportError } from "@/utils/telemetry";
 import { router } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -26,14 +27,24 @@ export function useTriggers(context: TriggerContext) {
       return;
     }
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("trigger_dismissals")
         .select("trigger_id")
         .eq("user_id", user.id);
-      const ids = new Set((data ?? []).map((r) => r.trigger_id as TriggerId));
-      setDismissedIds(ids);
-    } catch {
-      // Offline or error
+      if (error) {
+        reportError(error, {
+          feature: "triggers",
+          operation: "load_trigger_dismissals",
+          extra: { code: error.code },
+        });
+        setDismissedIds(new Set());
+      } else {
+        const ids = new Set((data ?? []).map((r) => r.trigger_id as TriggerId));
+        setDismissedIds(ids);
+      }
+    } catch (e) {
+      reportError(e, { feature: "triggers", operation: "load_trigger_dismissals" });
+      setDismissedIds(new Set());
     } finally {
       setDismissedLoaded(true);
     }
@@ -49,7 +60,7 @@ export function useTriggers(context: TriggerContext) {
       setPendingTrigger(null);
       if (!user?.id || !supabase) return;
       try {
-        await supabase.from("trigger_dismissals").upsert(
+        const { error } = await supabase.from("trigger_dismissals").upsert(
           {
             user_id: user.id,
             trigger_id: triggerId,
@@ -57,9 +68,21 @@ export function useTriggers(context: TriggerContext) {
           },
           { onConflict: "user_id,trigger_id" }
         );
+        if (error) {
+          reportError(error, {
+            feature: "triggers",
+            operation: "upsert_trigger_dismissal",
+            extra: { triggerId, code: error.code },
+          });
+          return;
+        }
         setDismissedIds((prev) => new Set([...prev, triggerId]));
-      } catch {
-        setDismissedIds((prev) => new Set([...prev, triggerId]));
+      } catch (e) {
+        reportError(e, {
+          feature: "triggers",
+          operation: "upsert_trigger_dismissal",
+          extra: { triggerId },
+        });
       }
     },
     [user?.id]

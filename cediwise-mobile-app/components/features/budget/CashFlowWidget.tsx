@@ -93,9 +93,9 @@ export function CashFlowWidget({
     isLoading,
   ]);
 
-  // PostHog: fire cash_flow_viewed once when projection is available
+  // PostHog: fire cash_flow_viewed once when the widget is visible and projection is available
   useEffect(() => {
-    if (visible || !projection || analyticsLoggedRef.current) return;
+    if (!visible || !projection || analyticsLoggedRef.current) return;
     analyticsLoggedRef.current = true;
     posthog?.capture("cash_flow_viewed", {
       days_to_runout: projection.daysUntilRunOut ?? -1,
@@ -128,6 +128,9 @@ export function CashFlowWidget({
         {onUpgradePress && (
           <Pressable
             onPress={onUpgradePress}
+            accessibilityRole="button"
+            accessibilityLabel="Upgrade to Smart Budget"
+            accessibilityHint="Unlock cash flow and budgeting features"
             className="mt-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 items-center active:bg-emerald-500/20">
             <Text className="text-emerald-400 font-semibold text-sm">
               Upgrade to Smart Budget
@@ -170,6 +173,9 @@ export function CashFlowWidget({
           </View>
           <Pressable
             onPress={() => setShowResetModal(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Reset cash flow data"
+            accessibilityHint="Opens a flow to update your balance and reset stale projections"
             className="mt-3 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 items-center active:bg-amber-500/20">
             <Text className="text-amber-400 font-semibold text-sm">
               Reset now
@@ -217,6 +223,9 @@ export function CashFlowWidget({
           </Text>
           <Pressable
             onPress={() => setShowSetupModal(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Set up cash flow"
+            accessibilityHint="Add your balance to see safe-to-spend and projections"
             className="py-3 rounded-xl bg-emerald-500 active:bg-emerald-600 items-center">
             <Text className="text-slate-900 font-bold text-sm">
               Set up in under a minute
@@ -257,7 +266,8 @@ export function CashFlowWidget({
               onPress={() => setShowResetModal(true)}
               accessibilityRole="button"
               accessibilityLabel="Update cash balance"
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityHint="Edit balance used for survive-the-month calculations"
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               className="w-11 h-11 items-center justify-center rounded-lg bg-slate-700/50 active:bg-slate-700">
               <Pencil size={18} color={EMERALD} />
             </Pressable>
@@ -288,6 +298,10 @@ export function CashFlowWidget({
 
           <Pressable
             onPress={openCashFlowDetail}
+            accessibilityRole="button"
+            accessibilityLabel="Open full cash flow screen"
+            accessibilityHint="View run-out date, daily burn, and details"
+            hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
             className="mt-2 flex-row items-center justify-center gap-1 py-2 active:opacity-70">
             <Text className="text-emerald-400 text-xs font-semibold">
               See more
@@ -330,7 +344,8 @@ export function CashFlowWidget({
               onPress={() => setShowResetModal(true)}
               accessibilityRole="button"
               accessibilityLabel="Update cash balance"
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              accessibilityHint="Edit balance used for survive-the-month calculations"
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               className="w-11 h-11 items-center justify-center rounded-lg bg-slate-700/50 active:bg-slate-700">
               <Pencil size={18} color={EMERALD} />
             </Pressable>
@@ -369,6 +384,10 @@ export function CashFlowWidget({
 
           <Pressable
             onPress={openCashFlowDetail}
+            accessibilityRole="button"
+            accessibilityLabel="Open full cash flow screen"
+            accessibilityHint="View run-out date, daily burn, and details"
+            hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
             className="mt-2 flex-row items-center justify-center gap-1 py-2 active:opacity-70">
             <Text className="text-emerald-400 text-xs font-semibold">
               See more
@@ -418,7 +437,8 @@ export function CashFlowWidget({
             onPress={() => setShowResetModal(true)}
             accessibilityRole="button"
             accessibilityLabel="Update cash balance"
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            accessibilityHint="Edit balance used for survive-the-month calculations"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             className="w-11 h-11 items-center justify-center rounded-lg bg-slate-700/50 active:bg-slate-700">
             <Pencil size={18} color={EMERALD} />
           </Pressable>
@@ -460,6 +480,10 @@ export function CashFlowWidget({
 
         <Pressable
           onPress={openCashFlowDetail}
+          accessibilityRole="button"
+          accessibilityLabel="Open full cash flow screen"
+          accessibilityHint="View run-out date, daily burn, and details"
+          hitSlop={{ top: 8, bottom: 8, left: 12, right: 12 }}
           className="mt-2 flex-row items-center justify-center gap-1 py-2 active:opacity-70">
           <Text className="text-emerald-400 text-xs font-semibold">
             See more

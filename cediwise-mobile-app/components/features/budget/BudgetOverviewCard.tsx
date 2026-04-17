@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import { Lock } from 'lucide-react-native';
+import Animated, { FadeIn, LinearTransition, useSharedValue, useAnimatedStyle, withTiming, withDelay } from 'react-native-reanimated';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { Card } from '../../Card';
 import { ProgressBar } from './ProgressBar';
@@ -61,6 +63,37 @@ export interface BudgetOverviewCardProps {
   healthLabel?: string;
   healthSummary?: string | null;
   canAccessBudget?: boolean;
+}
+
+function AnimatedHealthSummary({ text }: { text: string }) {
+  const sizeObj = useSharedValue(0.1); // Small non-zero value to prevent dividing by zero formatting bugs natively
+  const opacityObj = useSharedValue(0);
+
+  useEffect(() => {
+    sizeObj.value = withTiming(12, { duration: 400 });
+    opacityObj.value = withDelay(400, withTiming(1, { duration: 500 }));
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      fontSize: sizeObj.value,
+      opacity: opacityObj.value,
+      lineHeight: sizeObj.value * 1.5,
+    };
+  });
+
+  return (
+    <Animated.Text
+      layout={LinearTransition.springify().damping(18).stiffness(150)}
+      style={[
+        { color: '#94A3B8', marginBottom: 12 },
+        animatedStyle,
+      ]}
+      numberOfLines={2}
+    >
+      {text}
+    </Animated.Text>
+  );
 }
 
 export function BudgetOverviewCard({
@@ -131,112 +164,113 @@ export function BudgetOverviewCard({
   // ─── Paid user: full view ──────────────────────────
   return (
     <Card className="border border-emerald-500/20">
-      <View className="flex-row items-center justify-between gap-3 mb-3">
-        <View className="flex-1">
-          <Text className="text-white text-lg font-semibold">Budget Overview</Text>
-          {cycle ? (
-            <View>
-              <Text className="text-muted-foreground text-[13px] mt-0.5">
-                {formatDate(cycle.startDate)} — {formatDate(cycle.endDate)}
-                {daysLeft > 0 ? ` • ${daysLeft} days left` : ' • Cycle ended'}
-              </Text>
-              <View className="flex-row items-center gap-1.5 mt-1">
-                <View className="bg-emerald-500/15 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                  <Text className="text-emerald-400 text-[11px] font-bold uppercase tracking-wider">
-                    {strategyLabel} {strategyPercents}
-                  </Text>
+      <Animated.View layout={LinearTransition.springify().damping(18).stiffness(150)}>
+        <View className="flex-row items-center justify-between gap-3 mb-3">
+          <View className="flex-1">
+            <Text className="text-white text-lg font-semibold">Budget Overview</Text>
+            {cycle ? (
+              <View>
+                <Text className="text-muted-foreground text-[13px] mt-0.5">
+                  {formatDate(cycle.startDate)} — {formatDate(cycle.endDate)}
+                  {daysLeft > 0 ? ` • ${daysLeft} days left` : ' • Cycle ended'}
+                </Text>
+                <View className="flex-row items-center gap-1.5 mt-1">
+                  <View className="bg-emerald-500/15 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                    <Text className="text-emerald-400 text-[11px] font-bold uppercase tracking-wider">
+                      {strategyLabel} {strategyPercents}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          ) : (
-            <Text className="text-muted-foreground text-sm mt-0.5">
-              Net income: ₵{formatCurrency(totals.monthlyNetIncome)}
-            </Text>
+            ) : (
+              <Text className="text-muted-foreground text-sm mt-0.5">
+                Net income: ₵{formatCurrency(totals.monthlyNetIncome)}
+              </Text>
+            )}
+          </View>
+          {healthDisplay != null && (
+            <Animated.View
+              entering={FadeIn.delay(400).duration(800)}
+              className={`px-3 py-2 rounded-full ${healthDisplay.bgColor} border border-slate-400/20`}
+            >
+              <Text className={`${healthDisplay.color} font-bold text-base`}>
+                {Math.round(healthScore ?? 0)}
+              </Text>
+              <Text className="text-slate-400 text-[10px]">/ 100</Text>
+              <Text className={`${healthDisplay.color} text-[10px] font-medium mt-0.5`}>
+                {healthLabel ?? healthDisplay.label}
+              </Text>
+            </Animated.View>
           )}
         </View>
-        {healthDisplay != null && (
-          <View
-            className={`px-3 py-2 rounded-full ${healthDisplay.bgColor} border border-slate-400/20`}
-          >
-            <Text className={`${healthDisplay.color} font-bold text-base`}>
-              {Math.round(healthScore ?? 0)}
-            </Text>
-            <Text className="text-slate-400 text-[10px]">/ 100</Text>
-            <Text className={`${healthDisplay.color} text-[10px] font-medium mt-0.5`}>
-              {healthLabel ?? healthDisplay.label}
-            </Text>
-          </View>
-        )}
-      </View>
 
-      {healthSummary ? (
-        <Text className="text-slate-400 text-xs mb-3" numberOfLines={2}>
-          {healthSummary}
-        </Text>
-      ) : null}
+        {healthSummary ? (
+          <AnimatedHealthSummary text={healthSummary} />
+        ) : null}
 
-      <View className="gap-3">
-        <View>
-          <View className="flex-row justify-between">
-            <Text className="text-slate-200 font-medium text-sm">Needs</Text>
-            <Text className="text-slate-400 font-medium text-sm">
-              ₵{formatCurrency(totals.spentByBucket.needs)} / ₵{formatCurrency(totals.needsLimit)}
-            </Text>
+        <View className="gap-3">
+          <View>
+            <View className="flex-row justify-between">
+              <Text className="text-slate-200 font-medium text-sm">Needs</Text>
+              <Text className="text-slate-400 font-medium text-sm">
+                ₵{formatCurrency(totals.spentByBucket.needs)} / ₵{formatCurrency(totals.needsLimit)}
+              </Text>
+            </View>
+            <View className="mt-1.5">
+              <ProgressBar
+                value={
+                  totals.needsLimit > 0 ? totals.spentByBucket.needs / totals.needsLimit : 0
+                }
+              />
+            </View>
           </View>
-          <View className="mt-1.5">
-            <ProgressBar
-              value={
-                totals.needsLimit > 0 ? totals.spentByBucket.needs / totals.needsLimit : 0
-              }
-            />
+
+          <View>
+            <View className="flex-row justify-between">
+              <Text className="text-slate-200 font-medium text-sm">Wants</Text>
+              <Text className="text-slate-400 font-medium text-sm">
+                ₵{formatCurrency(totals.spentByBucket.wants)} / ₵{formatCurrency(totals.wantsLimit)}
+              </Text>
+            </View>
+            <View className="mt-1.5">
+              <ProgressBar
+                value={
+                  totals.wantsLimit > 0 ? totals.spentByBucket.wants / totals.wantsLimit : 0
+                }
+              />
+            </View>
+          </View>
+
+          <View>
+            <View className="flex-row justify-between">
+              <Text className="text-slate-200 font-medium text-sm">Savings</Text>
+              <Text className="text-slate-400 font-medium text-sm">
+                ₵{formatCurrency(totals.spentByBucket.savings)} / ₵
+                {formatCurrency(totals.savingsLimit)}
+              </Text>
+            </View>
+            <View className="mt-1.5">
+              <ProgressBar
+                value={
+                  totals.savingsLimit > 0
+                    ? totals.spentByBucket.savings / totals.savingsLimit
+                    : 0
+                }
+              />
+            </View>
           </View>
         </View>
 
-        <View>
-          <View className="flex-row justify-between">
-            <Text className="text-slate-200 font-medium text-sm">Wants</Text>
-            <Text className="text-slate-400 font-medium text-sm">
-              ₵{formatCurrency(totals.spentByBucket.wants)} / ₵{formatCurrency(totals.wantsLimit)}
-            </Text>
+        <View className="mt-3 pt-3 border-t border-slate-400/20 flex-row justify-between items-center">
+          <View>
+            <Text className="text-slate-400 text-sm font-medium">Unspent this month</Text>
+            <Text className="text-slate-500 text-[11px] mt-0.5">Auto-rolls to Savings at cycle end</Text>
           </View>
-          <View className="mt-1.5">
-            <ProgressBar
-              value={
-                totals.wantsLimit > 0 ? totals.spentByBucket.wants / totals.wantsLimit : 0
-              }
-            />
-          </View>
+          <Text className="text-emerald-400 font-bold text-base">
+            ₵{formatCurrency(totals.unspentThisMonth)}
+          </Text>
         </View>
-
-        <View>
-          <View className="flex-row justify-between">
-            <Text className="text-slate-200 font-medium text-sm">Savings</Text>
-            <Text className="text-slate-400 font-medium text-sm">
-              ₵{formatCurrency(totals.spentByBucket.savings)} / ₵
-              {formatCurrency(totals.savingsLimit)}
-            </Text>
-          </View>
-          <View className="mt-1.5">
-            <ProgressBar
-              value={
-                totals.savingsLimit > 0
-                  ? totals.spentByBucket.savings / totals.savingsLimit
-                  : 0
-              }
-            />
-          </View>
-        </View>
-      </View>
-
-      <View className="mt-3 pt-3 border-t border-slate-400/20 flex-row justify-between items-center">
-        <View>
-          <Text className="text-slate-400 text-sm font-medium">Unspent this month</Text>
-          <Text className="text-slate-500 text-[11px] mt-0.5">Auto-rolls to Savings at cycle end</Text>
-        </View>
-        <Text className="text-emerald-400 font-bold text-base">
-          ₵{formatCurrency(totals.unspentThisMonth)}
-        </Text>
-      </View>
+      </Animated.View>
     </Card>
   );
 }

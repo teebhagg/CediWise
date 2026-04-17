@@ -20,8 +20,16 @@ export type BudgetStoreState = {
   retryIn: number | null;
 };
 
+export type BudgetInitOptions = {
+  /** When true, reload from disk even if this user is already hydrated. */
+  force?: boolean;
+};
+
 export type BudgetStoreActions = {
-  initForUser: (userId: string | null) => Promise<void>;
+  initForUser: (
+    userId: string | null,
+    options?: BudgetInitOptions,
+  ) => Promise<void>;
   reload: () => Promise<void>;
   persistState: (next: BudgetState) => Promise<void>;
   refreshQueue: () => Promise<void>;
@@ -47,12 +55,22 @@ const initialState: BudgetStoreState = {
 export const useBudgetStore = create<BudgetStore>((set, get) => ({
   ...initialState,
 
-  initForUser: async (userId: string | null) => {
-    set({ userId, isLoading: true });
+  initForUser: async (userId: string | null, options?: BudgetInitOptions) => {
+    const force = options?.force ?? false;
     if (!userId) {
-      set({ state: null, queue: null, isLoading: false });
+      set({ userId: null, state: null, queue: null, isLoading: false });
       return;
     }
+
+    const { userId: currentId, state, isLoading } = get();
+    if (!force && userId === currentId && isLoading) {
+      return;
+    }
+    if (!force && userId === currentId && state !== null && !isLoading) {
+      return;
+    }
+
+    set({ userId, isLoading: true });
     const startUserId = userId;
     try {
       const [state, queue] = await Promise.all([

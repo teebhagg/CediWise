@@ -1,6 +1,7 @@
 import { FieldError, Input, Label, TextField } from "heroui-native";
-import { forwardRef, useState } from "react";
+import React, { forwardRef, useState } from "react";
 import { TextInput, TextInputProps, View } from "react-native";
+import { useKeyboardCentering } from "./common/KeyboardCenteringScrollView";
 
 const PLACEHOLDER_COLOR = "rgba(148,163,184,0.6)";
 
@@ -29,6 +30,7 @@ export const AppTextField = forwardRef<TextInput, AppTextFieldProps>(
       containerClassName,
       inputClassName,
       placeholderTextColor = PLACEHOLDER_COLOR,
+      returnKeyType = "done",
       onFocus,
       onBlur,
       ...rest
@@ -36,42 +38,67 @@ export const AppTextField = forwardRef<TextInput, AppTextFieldProps>(
     ref,
   ) {
     const [focused, setFocused] = useState(false);
+    const inputRef = React.useRef<TextInput>(null);
 
-    const borderClass = error
-      ? "border-red-500/45"
+    // Merge the forwarded ref with our internal ref so the centering logic
+    // can call measureLayout() on the native node, and parent screens can
+    // still call .focus() / .blur() via the forwarded ref.
+    const mergedRef = (node: TextInput | null) => {
+      inputRef.current = node;
+      if (typeof ref === "function") {
+        ref(node);
+      } else if (ref) {
+        ref.current = node;
+      }
+    };
+
+    // Provided by the nearest KeyboardCenteringScrollView ancestor.
+    // Null when AppTextField is rendered outside that context (no-op).
+    const centering = useKeyboardCentering();
+
+    const stateClass = error
+      ? "border-red-500/45 border-2"
       : focused
-        ? "border-emerald-500/60"
-        : "border-slate-400/40";
+        ? "ring-2 ring-emerald-500/20"
+        : "ring-1 ring-white/10";
 
     return (
-      <TextField>
-        {prefixIcon && (
-          <View className="absolute left-3 top-1/2 -translate-y-1/2">
-            {prefixIcon}
-          </View>
-        )}
-        <Label>{label}</Label>
-        {suffixIcon && (
-          <View className="absolute right-3 top-1/2 -translate-y-1/2">
-            {suffixIcon}
-          </View>
-        )}
-        <Input
-          ref={ref}
-          {...rest}
-          onFocus={(e) => {
-            setFocused(true);
-            onFocus?.(e);
-          }}
-          onBlur={(e) => {
-            setFocused(false);
-            onBlur?.(e);
-          }}
-          placeholderTextColor="rgba(148,163,184,0.6)"
-          className={`rounded-[18px] focus:ring-0 focus:${borderClass}`}
-        />
-        <FieldError>{error}</FieldError>
-      </TextField>
+      <View className={containerClassName}>
+        <TextField>
+          {prefixIcon && (
+            <View className="absolute left-3 top-1/2 -translate-y-1/2">
+              {prefixIcon}
+            </View>
+          )}
+          <Label>{label}</Label>
+          {suffixIcon && (
+            <View className="absolute right-3 top-1/2 -translate-y-1/2">
+              {suffixIcon}
+            </View>
+          )}
+          <Input
+            ref={mergedRef}
+            returnKeyType={returnKeyType}
+            placeholderTextColor={PLACEHOLDER_COLOR}
+            {...rest}
+            onFocus={(e) => {
+              setFocused(true);
+              // Trigger measurement-based centering when inside a
+              // KeyboardCenteringScrollView. No-op when centering is null.
+              if (centering?.scrollToCenter && inputRef.current) {
+                centering.scrollToCenter(inputRef);
+              }
+              onFocus?.(e);
+            }}
+            onBlur={(e) => {
+              setFocused(false);
+              onBlur?.(e);
+            }}
+            className={`rounded-[18px] ${stateClass} ${inputClassName || ""}`}
+          />
+          <FieldError>{error}</FieldError>
+        </TextField>
+      </View>
     );
   },
 );

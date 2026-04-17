@@ -46,12 +46,13 @@ function currentVersion(): string {
  * If new columns are not available yet, falls back to version-only read.
  */
 export async function getActiveAppVersionPolicy(): Promise<ActiveAppVersionPolicy | null> {
-  if (!supabase) return null;
+  const client = supabase;
+  if (!client) return null;
 
   const platform = Platform.OS === "ios" ? "ios" : "android";
 
   const query = () =>
-    supabase
+    client
       .from("app_versions")
       .select("version,release_notes,requires_update")
       .eq("platform", platform)
@@ -61,7 +62,7 @@ export async function getActiveAppVersionPolicy(): Promise<ActiveAppVersionPolic
       .maybeSingle();
 
   const fallbackQuery = () =>
-    supabase
+    client
       .from("app_versions")
       .select("version")
       .eq("platform", platform)

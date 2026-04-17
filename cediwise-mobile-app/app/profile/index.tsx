@@ -630,52 +630,137 @@ export default function ProfileScreen() {
           <View>
             <Text className={SECTION_LABEL_CLASS}>Budget preferences</Text>
             <ListGroup variant="tertiary" className={LIST_GROUP_CONTAINER_CLASS}>
-              {budgetEngineOptions.map((option, index) => {
-                const selected = budgetEngineMode === option.value;
-                const isLast = index === budgetEngineOptions.length - 1;
-                return (
-                  <View key={option.value}>
-                    <PressableFeedback
-                      animation={false}
-                      onPress={onItemPress(() => handleBudgetEngineModeChange(option.value))}
-                    >
-                      <PressableFeedback.Scale />
-                      <PressableFeedback.Ripple />
-                      <ListGroup.Item disabled>
-                        <ListGroup.ItemPrefix>
-                          <View
-                            className={`w-10 h-10 rounded-xl justify-center items-center border ${
-                              selected
-                                ? "bg-emerald-500/20 border-emerald-400/60"
-                                : "bg-slate-500/15 border-slate-400/20"
-                            }`}
-                          >
-                            <Text
-                              className={`text-base font-bold ${
-                                selected ? "text-emerald-300" : "text-slate-400"
-                              }`}
-                            >
-                              {selected ? "•" : "○"}
-                            </Text>
-                          </View>
-                        </ListGroup.ItemPrefix>
-                        <ListGroup.ItemContent>
-                          <ListGroup.ItemTitle>{option.title}</ListGroup.ItemTitle>
-                          <ListGroup.ItemDescription>
-                            {option.description}
-                          </ListGroup.ItemDescription>
-                        </ListGroup.ItemContent>
-                        <ListGroup.ItemSuffix>
-                          {budgetEngineLoading && selected ? (
-                            <Text className="text-slate-400 text-sm">Updating…</Text>
-                          ) : null}
-                        </ListGroup.ItemSuffix>
-                      </ListGroup.Item>
-                    </PressableFeedback>
-                    {!isLast ? <Separator className="mx-4" /> : null}
-                  </View>
-                );
-              })}
+              <View key={budgetEngineOptions[0].value}>
+                <PressableFeedback
+                  animation={false}
+                  onPress={onItemPress(() =>
+                    handleBudgetEngineModeChange(budgetEngineOptions[0].value),
+                  )}
+                >
+                  <PressableFeedback.Scale />
+                  <PressableFeedback.Ripple />
+                  <ListGroup.Item disabled>
+                    <ListGroup.ItemPrefix>
+                      <View
+                        className={`w-10 h-10 rounded-xl justify-center items-center border ${
+                          budgetEngineMode === budgetEngineOptions[0].value
+                            ? "bg-emerald-500/20 border-emerald-400/60"
+                            : "bg-slate-500/15 border-slate-400/20"
+                        }`}
+                      >
+                        <Text
+                          className={`text-base font-bold ${
+                            budgetEngineMode === budgetEngineOptions[0].value
+                              ? "text-emerald-300"
+                              : "text-slate-400"
+                          }`}
+                        >
+                          {budgetEngineMode === budgetEngineOptions[0].value ? "•" : "○"}
+                        </Text>
+                      </View>
+                    </ListGroup.ItemPrefix>
+                    <ListGroup.ItemContent>
+                      <ListGroup.ItemTitle>{budgetEngineOptions[0].title}</ListGroup.ItemTitle>
+                      <ListGroup.ItemDescription>
+                        {budgetEngineOptions[0].description}
+                      </ListGroup.ItemDescription>
+                    </ListGroup.ItemContent>
+                    <ListGroup.ItemSuffix>
+                      {budgetEngineLoading && budgetEngineMode === budgetEngineOptions[0].value ? (
+                        <Text className="text-slate-400 text-sm">Updating…</Text>
+                      ) : null}
+                    </ListGroup.ItemSuffix>
+                  </ListGroup.Item>
+                </PressableFeedback>
+                <Separator className="mx-4" />
+              </View>
+              <View key={budgetEngineOptions[1].value}>
+                <PressableFeedback
+                  animation={false}
+                  onPress={onItemPress(() =>
+                    handleBudgetEngineModeChange(budgetEngineOptions[1].value),
+                  )}
+                >
+                  <PressableFeedback.Scale />
+                  <PressableFeedback.Ripple />
+                  <ListGroup.Item disabled>
+                    <ListGroup.ItemPrefix>
+                      <View
+                        className={`w-10 h-10 rounded-xl justify-center items-center border ${
+                          budgetEngineMode === budgetEngineOptions[1].value
+                            ? "bg-emerald-500/20 border-emerald-400/60"
+                            : "bg-slate-500/15 border-slate-400/20"
+                        }`}
+                      >
+                        <Text
+                          className={`text-base font-bold ${
+                            budgetEngineMode === budgetEngineOptions[1].value
+                              ? "text-emerald-300"
+                              : "text-slate-400"
+                          }`}
+                        >
+                          {budgetEngineMode === budgetEngineOptions[1].value ? "•" : "○"}
+                        </Text>
+                      </View>
+                    </ListGroup.ItemPrefix>
+                    <ListGroup.ItemContent>
+                      <ListGroup.ItemTitle>{budgetEngineOptions[1].title}</ListGroup.ItemTitle>
+                      <ListGroup.ItemDescription>
+                        {budgetEngineOptions[1].description}
+                      </ListGroup.ItemDescription>
+                    </ListGroup.ItemContent>
+                    <ListGroup.ItemSuffix>
+                      {budgetEngineLoading && budgetEngineMode === budgetEngineOptions[1].value ? (
+                        <Text className="text-slate-400 text-sm">Updating…</Text>
+                      ) : null}
+                    </ListGroup.ItemSuffix>
+                  </ListGroup.Item>
+                </PressableFeedback>
+                <Separator className="mx-4" />
+              </View>
+              <View key={budgetEngineOptions[2].value}>
+                <PressableFeedback
+                  animation={false}
+                  onPress={onItemPress(() =>
+                    handleBudgetEngineModeChange(budgetEngineOptions[2].value),
+                  )}
+                >
+                  <PressableFeedback.Scale />
+                  <PressableFeedback.Ripple />
+                  <ListGroup.Item disabled>
+                    <ListGroup.ItemPrefix>
+                      <View
+                        className={`w-10 h-10 rounded-xl justify-center items-center border ${
+                          budgetEngineMode === budgetEngineOptions[2].value
+                            ? "bg-emerald-500/20 border-emerald-400/60"
+                            : "bg-slate-500/15 border-slate-400/20"
+                        }`}
+                      >
+                        <Text
+                          className={`text-base font-bold ${
+                            budgetEngineMode === budgetEngineOptions[2].value
+                              ? "text-emerald-300"
+                              : "text-slate-400"
+                          }`}
+                        >
+                          {budgetEngineMode === budgetEngineOptions[2].value ? "•" : "○"}
+                        </Text>
+                      </View>
+                    </ListGroup.ItemPrefix>
+                    <ListGroup.ItemContent>
+                      <ListGroup.ItemTitle>{budgetEngineOptions[2].title}</ListGroup.ItemTitle>
+                      <ListGroup.ItemDescription>
+                        {budgetEngineOptions[2].description}
+                      </ListGroup.ItemDescription>
+                    </ListGroup.ItemContent>
+                    <ListGroup.ItemSuffix>
+                      {budgetEngineLoading && budgetEngineMode === budgetEngineOptions[2].value ? (
+                        <Text className="text-slate-400 text-sm">Updating…</Text>
+                      ) : null}
+                    </ListGroup.ItemSuffix>
+                  </ListGroup.Item>
+                </PressableFeedback>
+              </View>
             </ListGroup>
           </View>
 

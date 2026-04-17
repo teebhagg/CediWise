@@ -21,6 +21,7 @@ import {
   DEFAULT_STANDARD_HEIGHT,
   ExpandedHeader,
 } from "@/components/CediWiseHeader";
+import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
 import { Avatar } from "heroui-native";
 import { Pressable } from "react-native";
 
@@ -135,6 +136,8 @@ export default function DashboardScreen() {
         title={headerTitle}
         collapsedTitle={headerCollapsedTitle}
         subtitle={headerSubtitle}
+        refreshing={refreshing}
+        refreshTintColor={PULL_REFRESH_EMERALD}
         actions={[
           isConnected === false && (
             <View
@@ -176,20 +179,20 @@ export default function DashboardScreen() {
         className="flex-1"
         contentContainerStyle={{
           paddingTop: DEFAULT_EXPANDED_HEIGHT + insets.top + 20, // 170 + top + 20px gap
-          paddingBottom: insets.bottom + 24,
+          paddingBottom: insets.bottom + 88,
           paddingHorizontal: 20,
         }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefreshWithUpdateCheck}
-            tintColor="#22C55E"
-            colors={["#22C55E"]}
+            tintColor={PULL_REFRESH_EMERALD}
+            colors={[PULL_REFRESH_EMERALD]}
             progressViewOffset={Platform.OS === "android" ? 60 : undefined}
           />
         }
         showsVerticalScrollIndicator={false}>
-        <View className="bg-background">
+        <View className="bg-background gap-4">
           {isHomeLoading ? (
             <VitalHeroSkeleton />
           ) : !setupCompleted ? (

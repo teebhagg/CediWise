@@ -98,7 +98,6 @@ export function EditCategoryLimitModal({
             paddingBottom: isKeyboardVisible ? 12 : insets.bottom + 16,
             paddingHorizontal: 16
           }}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
         >
           <Dialog.Content
             className="max-w-[400px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
@@ -109,6 +108,8 @@ export function EditCategoryLimitModal({
               className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-slate-600/60 border border-slate-500/50"
               iconProps={{ size: 20, color: "#e2e8f0" }}
               onPress={handleClose}
+              accessibilityLabel="Close"
+              accessibilityRole="button"
             />
             <ScrollShadow color="#121621" LinearGradientComponent={LinearGradient} className="flex-1">
               <ScrollView showsVerticalScrollIndicator={false} bounces={false}>

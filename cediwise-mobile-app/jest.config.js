@@ -11,6 +11,7 @@ module.exports = {
     "**/calculators/__tests__/**/*.test.ts",
     "**/stores/__tests__/**/*.test.ts",
     "**/utils/__tests__/**/*.test.ts",
+    "**/services/__tests__/**/*.test.ts",
     "**/components/features/vitals/__tests__/**/*.test.ts",
   ],
   collectCoverageFrom: [

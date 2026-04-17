@@ -87,6 +87,34 @@ const BUCKET_META: Record<RecurringExpenseBucket, { label: string; color: string
 
 const BUCKET_OPTIONS: RecurringExpenseBucket[] = ["needs", "wants"];
 
+const stepHeadingStyles = StyleSheet.create({
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  iconBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(34,197,94,0.14)",
+    borderWidth: 1,
+    borderColor: "rgba(34,197,94,0.32)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    color: "#FFFFFF",
+    fontFamily: "Figtree-Bold",
+    fontSize: 24,
+    letterSpacing: -0.5,
+    flexShrink: 1,
+  },
+  subtitle: {
+    color: "#94A3AF",
+    fontFamily: "Figtree-Regular",
+    fontSize: 13,
+    marginTop: 10,
+    lineHeight: 20,
+  },
+});
+
 // ─── Strategy display meta ────────────────────────────────────────────────────
 
 const STRATEGY_META: Record<string, { label: string; color: string; bg: string }> = {
@@ -103,42 +131,14 @@ const STRATEGY_META: Record<string, { label: string; color: string; bg: string }
 function StepHeading({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <View>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-        <View
-          style={{
-            width: 34,
-            height: 34,
-            borderRadius: 17,
-            backgroundColor: "rgba(34,197,94,0.14)",
-            borderWidth: 1,
-            borderColor: "rgba(34,197,94,0.32)",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
+      <View style={stepHeadingStyles.titleRow}>
+        <View style={stepHeadingStyles.iconBadge}>
           <Sparkles size={17} color="#22C55E" />
         </View>
-        <Text
-          style={{
-            color: "#FFFFFF",
-            fontFamily: "Figtree-Bold",
-            fontSize: 24,
-            letterSpacing: -0.5,
-            flexShrink: 1,
-          }}>
-          {title}
-        </Text>
+        <Text style={stepHeadingStyles.title}>{title}</Text>
       </View>
       {subtitle ? (
-        <Text
-          style={{
-            color: "#94A3AF",
-            fontFamily: "Figtree-Regular",
-            fontSize: 13,
-            marginTop: 10,
-            lineHeight: 20,
-          }}>
-          {subtitle}
-        </Text>
+        <Text style={stepHeadingStyles.subtitle}>{subtitle}</Text>
       ) : null}
     </View>
   );

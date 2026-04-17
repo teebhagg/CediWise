@@ -12,6 +12,7 @@ import { DEFAULT_STANDARD_HEIGHT, StandardHeader } from "@/components/CediWiseHe
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { LEVEL_COLORS, LEVEL_LABELS, MODULES } from "@/constants/literacy";
+import { FlashList } from "@shopify/flash-list";
 import { useProgress } from "@/hooks/useProgress";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
@@ -300,12 +301,21 @@ export default function ModuleCompleteScreen() {
             <BookOpen size={16} color="#C9A84C" />
             <Text style={styles.takeawaysTitle}>Key Takeaways</Text>
           </View>
-          {module.learning_objectives.map((obj, idx) => (
-            <View key={idx} style={styles.takeawayRow}>
-              <CheckCircle2 size={16} color="#2D9B5A" />
-              <Text style={styles.takeawayText}>{obj}</Text>
-            </View>
-          ))}
+          <FlashList
+            data={module.learning_objectives}
+            scrollEnabled={false}
+            nestedScrollEnabled
+            keyExtractor={(item, index) =>
+              `${module.id}-objective-${index}-${item.slice(0, 48)}`
+            }
+            estimatedItemSize={52}
+            renderItem={({ item: obj }) => (
+              <View style={styles.takeawayRow}>
+                <CheckCircle2 size={16} color="#2D9B5A" />
+                <Text style={styles.takeawayText}>{obj}</Text>
+              </View>
+            )}
+          />
         </Animated.View>
 
         {/* Next module teaser */}

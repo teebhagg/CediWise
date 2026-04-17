@@ -29,6 +29,7 @@ export default function BudgetIncomeScreen() {
     }
   }, []);
 
+  // M6 / Phase 8: Same rationale as categories — LayoutAnimation for expand/collapse, no shared-element spike.
   const toggleIncomeForm = () => {
     LayoutAnimation.configureNext({
       duration: 260,

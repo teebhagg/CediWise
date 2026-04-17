@@ -1,6 +1,13 @@
 import { GlassView } from "@/components/GlassView";
-import React, { ReactNode } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
+import React, { ReactNode, useMemo } from "react";
+import {
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import Animated, {
   Extrapolation,
   interpolate,
@@ -11,7 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const DEFAULT_EXPANDED_HEIGHT = 170;
+export const DEFAULT_EXPANDED_HEIGHT = 140;
 export const DEFAULT_STANDARD_HEIGHT = 64;
 export const DEFAULT_BOTTOM_HEIGHT = 52;
 
@@ -46,6 +53,14 @@ export interface ExpandedHeaderProps extends HeaderProps {
   expandedHeight?: number;
   /** Explicit height for the `bottom` slot.  Measured or estimated by caller. */
   bottomHeight?: number;
+  /**
+   * When true, shows a spinner in the nav bar on iOS while the list refresh runs.
+   * Native `RefreshControl` renders under this absolutely-positioned header, so it
+   * stays invisible unless surfaced here.
+   */
+  refreshing?: boolean;
+  /** Spinner color for {@link ExpandedHeaderProps.refreshing} (iOS). */
+  refreshTintColor?: string;
 }
 
 // ─── Height utility ───────────────────────────────────────────────────────────
@@ -225,8 +240,26 @@ export const ExpandedHeader: React.FC<ExpandedHeaderProps> = ({
   centered = false,
   expandedHeight = DEFAULT_EXPANDED_HEIGHT,
   standardHeight = DEFAULT_STANDARD_HEIGHT,
+  refreshing = false,
+  refreshTintColor = PULL_REFRESH_EMERALD,
 }) => {
   const insets = useSafeAreaInsets();
+
+  const navActions = useMemo(() => {
+    const base = (actions ?? []).filter(Boolean) as ReactNode[];
+    if (Platform.OS !== "ios" || !refreshing) {
+      return base.length ? base : undefined;
+    }
+    return [
+      <View
+        key="__expanded_header_refresh__"
+        collapsable={false}
+        style={styles.refreshIndicatorSlot}>
+        <ActivityIndicator size="small" color={refreshTintColor} />
+      </View>,
+      ...base,
+    ];
+  }, [actions, refreshTintColor, refreshing]);
 
   // Resolve heights
   const bottomH = bottom ? (bottomHeightProp ?? DEFAULT_BOTTOM_HEIGHT) : 0;
@@ -241,7 +274,7 @@ export const ExpandedHeader: React.FC<ExpandedHeaderProps> = ({
   const compactBgStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
       scrollY.value,
-      [collapseRange * 0.7, collapseRange],
+      [collapseRange * 0.5, collapseRange * 0.85],
       [0, 1],
       Extrapolation.CLAMP,
     );
@@ -252,39 +285,38 @@ export const ExpandedHeader: React.FC<ExpandedHeaderProps> = ({
   const expandedContentStyle = useAnimatedStyle(() => {
     const opacity = interpolate(
       scrollY.value,
-      [0, collapseRange * 0.6],
+      [0, collapseRange * 0.55],
       [1, 0],
       Extrapolation.CLAMP,
     );
     const scale = interpolate(
       scrollY.value,
       [0, collapseRange],
-      [1, 0.96],
+      [1, 0.97],
       Extrapolation.CLAMP,
     );
     // Parallax: content rises slightly slower than the header itself
     const translateY = interpolate(
       scrollY.value,
       [0, collapseRange],
-      [0, -collapseRange * 0.25],
+      [0, -collapseRange * 0.3],
       Extrapolation.CLAMP,
     );
     return { opacity, transform: [{ scale }, { translateY }] };
   });
 
-  // ── Compact title: slides up + fades in ───────────────────────────────────
+  // ── Compact title: slides up + fades in (cross-fades with expanded title) ─
   const compactTitleStyle = useAnimatedStyle(() => {
-    const triggerAt = collapseRange * 0.75;
     const opacity = interpolate(
       scrollY.value,
-      [triggerAt, collapseRange],
+      [collapseRange * 0.5, collapseRange * 0.85],
       [0, 1],
       Extrapolation.CLAMP,
     );
     const translateY = interpolate(
       scrollY.value,
-      [triggerAt, collapseRange],
-      [10, 0],
+      [collapseRange * 0.5, collapseRange * 0.85],
+      [8, 0],
       Extrapolation.CLAMP,
     );
     return { opacity, transform: [{ translateY }] };
@@ -307,7 +339,7 @@ export const ExpandedHeader: React.FC<ExpandedHeaderProps> = ({
      * overflow: visible so nothing is clipped during the open state.
      * The compact background sits at the very top and never grows.
      */
-    <View style={[styles.container, { height: totalExpandedH }]}>
+    <View pointerEvents="box-none" style={[styles.container, { height: totalExpandedH }]}>
 
       {/* ── Compact glassmorphic band (top portion only) ─────────────────── */}
       <Animated.View
@@ -334,7 +366,7 @@ export const ExpandedHeader: React.FC<ExpandedHeaderProps> = ({
         <NavBarContent
           title={collapsedTitle ?? title}
           leading={leading}
-          actions={actions}
+          actions={navActions}
           centered={centered}
           animatedTitleStyle={compactTitleStyle}
           isExpandedHeader={true}
@@ -387,7 +419,7 @@ export const ExpandedHeader: React.FC<ExpandedHeaderProps> = ({
         <Animated.View
           style={[
             styles.bottomSlot,
-            { height: bottomH, marginTop: -16 },
+            { height: bottomH },
             bottomSlotStyle,
           ]}>
           {bottom}
@@ -482,6 +514,15 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
 
+  /** iOS pull-refresh: spinner shown in nav bar (native control is under the header). */
+  refreshIndicatorSlot: {
+    justifyContent: "center",
+    alignItems: "center",
+    minWidth: 28,
+    minHeight: 36,
+    marginRight: 2,
+  },
+
   /* Compact title text */
   standardTitleText: {
     color: "#ffffff",
@@ -497,7 +538,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     justifyContent: "flex-end",
-    paddingBottom: 16,
+    paddingBottom: 12,
   },
   expandedInner: {
     width: "100%",

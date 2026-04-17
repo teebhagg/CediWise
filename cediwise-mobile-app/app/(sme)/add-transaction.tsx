@@ -6,14 +6,19 @@
 import { AppTextField } from "@/components/AppTextField";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { StandardHeader, DEFAULT_STANDARD_HEIGHT } from "@/components/CediWiseHeader";
+import {
+  CediCalendarPickerModal,
+  cediCalendarPickerStyles,
+} from "@/components/CediCalendarPickerModal";
 import { BackButton } from "@/components/BackButton";
 import { useSmeLedger } from "@/hooks/useSmeLedger";
 import { extractVAT } from "@/utils/vatEngine";
 import { PAYMENT_METHOD_LABELS } from "@/types/sme";
 import type { PaymentMethod, TransactionType } from "@/types/sme";
 import { useAppToast } from "@/hooks/useAppToast";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import * as Haptics from "expo-haptics";
+import moment, { type Moment } from "moment";
+import Calendar from "react-native-calendar-datepicker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowDownRight,
@@ -21,17 +26,19 @@ import {
   ChevronRight,
   Check,
 } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  FlatList,
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   View,
 } from "react-native";
+import { KeyboardCenteringScrollView } from "@/components/common/KeyboardCenteringScrollView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const PAYMENT_METHODS: PaymentMethod[] = ["cash", "momo", "bank", "card", "cheque", "other"];
@@ -62,6 +69,7 @@ export default function AddTransactionScreen() {
   const [transactionDate, setTransactionDate] = useState(
     editTransaction?.transactionDate ?? new Date().toISOString().split("T")[0]
   );
+  const [draftDate, setDraftDate] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(
     editTransaction?.paymentMethod ?? null
@@ -74,6 +82,9 @@ export default function AddTransactionScreen() {
   const { showError } = useAppToast();
 
   const [isSaving, setIsSaving] = useState(false);
+
+  const descriptionRef = useRef<TextInput>(null);
+  const notesRef = useRef<TextInput>(null);
 
   // Categories based on transaction type
   const availableCategories = useMemo(() => {
@@ -89,12 +100,64 @@ export default function AddTransactionScreen() {
     }
   }, [availableCategories, category]);
 
+  /** Expense dates are capped at today; clamp if user toggles type from income. */
+  useEffect(() => {
+    if (txType !== "expense") return;
+    const m = moment(transactionDate, "YYYY-MM-DD", true);
+    if (m.isValid() && m.isAfter(moment(), "day")) {
+      setTransactionDate(moment().format("YYYY-MM-DD"));
+    }
+  }, [txType, transactionDate]);
+
   // VAT preview
   const vatPreview = useMemo(() => {
     const num = parseFloat(amount);
     if (isNaN(num) || num <= 0) return null;
     return extractVAT(num);
   }, [amount]);
+
+  /** Calendar bounds: expenses cannot be dated in the future; income allows typical forward range. */
+  const calendarBounds = useMemo(() => {
+    const minDate = moment("1990-01-01", "YYYY-MM-DD").startOf("day");
+    const maxDate =
+      txType === "expense"
+        ? moment().endOf("day")
+        : moment().add(10, "years").endOf("day");
+    return { minDate, maxDate };
+  }, [txType]);
+
+  const selectedMoment = useMemo((): Moment => {
+    const m = moment(draftDate ?? transactionDate, "YYYY-MM-DD", true);
+    return m.isValid() ? m : moment().startOf("day");
+  }, [transactionDate, draftDate]);
+
+  const dateDisplayLabel = useMemo(() => {
+    const m = moment(draftDate ?? transactionDate, "YYYY-MM-DD", true);
+    return m.isValid()
+      ? m.format("ddd, D MMM YYYY")
+      : (draftDate ?? transactionDate);
+  }, [transactionDate, draftDate]);
+
+  const handleCalendarChange = useCallback(
+    (date: Moment) => {
+      setDraftDate(date.format("YYYY-MM-DD"));
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    },
+    [],
+  );
+
+  const confirmDate = useCallback(() => {
+    if (draftDate) {
+      setTransactionDate(draftDate);
+    }
+    setShowDatePicker(false);
+    setDraftDate(null);
+  }, [draftDate]);
+
+  const cancelDate = useCallback(() => {
+    setShowDatePicker(false);
+    setDraftDate(null);
+  }, []);
 
   const handleSave = useCallback(async () => {
     const numAmount = parseFloat(amount);
@@ -169,7 +232,7 @@ export default function AddTransactionScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <StandardHeader
-        title={`${editTransaction ? "Edit" : "Add"} Transaction`}
+        title={editTransaction ? "Edit transaction" : "Add transaction"}
         centered
         leading={<BackButton />}
         actions={[
@@ -179,7 +242,7 @@ export default function AddTransactionScreen() {
         ]}
       />
 
-      <ScrollView
+      <KeyboardCenteringScrollView
         contentContainerStyle={[styles.scrollContent, { paddingTop: 10 }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -228,7 +291,9 @@ export default function AddTransactionScreen() {
           value={amount}
           onChangeText={setAmount}
           autoFocus={!editTransaction}
-          inputClassName="text-2xl font-bold py-2"
+          // inputClassName="text-2xl font-bold py-2"
+          returnKeyType="next"
+          onSubmitEditing={() => descriptionRef.current?.focus()}
         />
         {vatPreview && vatApplicable && (
           <Text style={styles.vatPreview} className="mt-1 ml-1 mb-4">
@@ -239,25 +304,28 @@ export default function AddTransactionScreen() {
         {/* Description */}
         <View className="mt-4">
           <AppTextField
+            ref={descriptionRef}
             label="Description"
             placeholder={txType === "income" ? "e.g. Daily sales" : "e.g. Market supplies"}
             value={description}
             onChangeText={setDescription}
+            returnKeyType="next"
+            onSubmitEditing={() => notesRef.current?.focus()}
           />
         </View>
 
         {/* Category */}
         <View className="mt-4">
           <Text style={styles.label}>Category</Text>
-          <ScrollView
+          <FlatList
             horizontal
+            data={availableCategories}
+            keyExtractor={(cat) => cat}
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoryRow}
             className="mt-2"
-          >
-            {availableCategories.map((cat) => (
+            renderItem={({ item: cat }) => (
               <Pressable
-                key={cat}
                 style={[styles.categoryPill, category === cat && styles.categoryPillActive]}
                 onPress={() => setCategory(cat)}
               >
@@ -270,34 +338,72 @@ export default function AddTransactionScreen() {
                   {cat}
                 </Text>
               </Pressable>
-            ))}
-          </ScrollView>
+            )}
+          />
         </View>
 
         {/* Date */}
-        <View className="mt-6 border-b border-white/10 pb-4">
+        <View className="mt-6">
           <Text style={styles.label}>Date</Text>
-          <Pressable 
-            onPress={() => setShowDatePicker(true)} 
-            className="flex-row items-center justify-between mt-2 px-1"
+          <Pressable
+            onPress={() => setShowDatePicker(true)}
+            className="flex-row items-center justify-between mt-2 px-4 py-4 rounded-2xl bg-white/5 border border-white/10 active:bg-white/10 transition-colors"
           >
-            <Text style={{ color: "white", fontSize: 16 }}>{transactionDate}</Text>
-            <ChevronRight color="#64748b" size={18} />
+            <Text style={{ color: "#F1F5F9", fontSize: 16, fontWeight: "500" }}>{dateDisplayLabel}</Text>
+            <ChevronRight color="#94A3B8" size={20} />
           </Pressable>
-          {showDatePicker && (
-            <DateTimePicker
-              value={new Date(transactionDate)}
-              mode="date"
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(Platform.OS === "ios");
-                if (selectedDate) {
-                  setTransactionDate(selectedDate.toISOString().split("T")[0]);
-                }
-              }}
-            />
-          )}
         </View>
+
+        <CediCalendarPickerModal
+          visible={showDatePicker}
+          onRequestClose={cancelDate}
+          title="Select date"
+          subtitle={
+            txType === "expense"
+              ? "Expense entries can’t be dated in the future."
+              : "Pick the day this income should appear on your ledger."
+          }
+          footer={
+            <View style={{ flexDirection: "row", gap: 12, marginTop: 16, flexWrap: "wrap", justifyContent: "space-between" }}>
+              <Pressable
+                style={{ flex: 1, backgroundColor: "rgba(148, 163, 184, 0.12)", borderWidth: 1, borderColor: "rgba(148, 163, 184, 0.25)", paddingVertical: 14, borderRadius: 999, alignItems: "center" }}
+                onPress={cancelDate}
+              >
+                <Text style={{ color: "#E2E8F0", fontSize: 15, fontWeight: "600" }}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={{ flex: 1, backgroundColor: "rgba(16, 185, 129, 0.2)", borderWidth: 1, borderColor: "rgba(52, 211, 153, 0.35)", paddingVertical: 14, borderRadius: 999, alignItems: "center" }}
+                onPress={confirmDate}
+              >
+                <Text style={{ color: "#6EE7B7", fontSize: 15, fontWeight: "700" }}>Confirm</Text>
+              </Pressable>
+            </View>
+          }
+        >
+          <Calendar
+            selected={selectedMoment}
+            onChange={handleCalendarChange}
+            minDate={calendarBounds.minDate}
+            maxDate={calendarBounds.maxDate}
+            showArrows
+            style={cediCalendarPickerStyles.calendarWrap}
+            barView={cediCalendarPickerStyles.calendarBar}
+            barText={cediCalendarPickerStyles.calendarBarText}
+            stageView={cediCalendarPickerStyles.calendarStage}
+            dayHeaderText={cediCalendarPickerStyles.calendarDayHeader}
+            dayRowView={cediCalendarPickerStyles.calendarDayRow}
+            dayText={cediCalendarPickerStyles.calendarDayText}
+            dayTodayText={cediCalendarPickerStyles.calendarDayToday}
+            daySelectedText={cediCalendarPickerStyles.calendarDaySelected}
+            daySelectedView={cediCalendarPickerStyles.calendarDaySelectedView}
+            dayDisabledText={cediCalendarPickerStyles.calendarDayDisabled}
+            monthText={cediCalendarPickerStyles.calendarMonthText}
+            monthDisabledText={cediCalendarPickerStyles.calendarMonthDisabled}
+            monthSelectedText={cediCalendarPickerStyles.calendarMonthSelected}
+            yearMinTintColor="#34D399"
+            yearMaxTintColor="#475569"
+          />
+        </CediCalendarPickerModal>
 
         {/* Payment Method */}
         <View className="mt-6">
@@ -341,12 +447,17 @@ export default function AddTransactionScreen() {
         {/* Notes */}
         <View className="mt-6">
           <AppTextField
+            ref={notesRef}
             label="Notes (optional)"
             placeholder="Add a note..."
             value={notes}
             onChangeText={setNotes}
             multiline
             numberOfLines={3}
+            inputClassName="min-h-[100px] py-3"
+            // style={{ textAlignVertical: "top" }}
+            returnKeyType="done"
+            onSubmitEditing={handleSave}
           />
         </View>
 
@@ -359,7 +470,7 @@ export default function AddTransactionScreen() {
             {editTransaction ? "Update Transaction" : "Save Transaction"}
           </PrimaryButton>
         </View>
-      </ScrollView>
+      </KeyboardCenteringScrollView>
     </KeyboardAvoidingView>
   );
 }

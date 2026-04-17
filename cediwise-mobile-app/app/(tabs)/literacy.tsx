@@ -20,7 +20,7 @@ import { useProgress } from "@/hooks/useProgress";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import { BookMarked, ChevronRight, WifiOff } from "lucide-react-native";
-import React from "react";
+import React, { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { TourZone, useTour } from "react-native-lumen";
 import Animated, {
@@ -42,6 +42,44 @@ export default function LiteracyScreen() {
   const scrollHandler = useAnimatedScrollHandler((event) => {
     scrollY.value = event.contentOffset.y;
   });
+
+  const renderModuleItem = useCallback(
+    ({
+      item: module,
+      index,
+    }: {
+      item: (typeof MODULES)[number];
+      index: number;
+    }) => {
+      const completedCount = module.lessonIds.filter((id) =>
+        isCompleted(id),
+      ).length;
+      const totalCount = module.lessonIds.length;
+      const card = (
+        <ModuleCard
+          module={module}
+          completedCount={completedCount}
+          totalCount={totalCount}
+          index={index}
+        />
+      );
+      if (index === 0) {
+        return (
+          <TourZone
+            stepKey="literacy-lessons"
+            name="Lessons"
+            description="Take lessons on budgeting, saving, and more. Tap a module to start."
+            shape="rounded-rect"
+            borderRadius={12}
+            style={{ width: "100%" }}>
+            <View collapsable={false}>{card}</View>
+          </TourZone>
+        );
+      }
+      return card;
+    },
+    [isCompleted],
+  );
 
   return (
     <View style={styles.root} collapsable={false}>
@@ -126,42 +164,19 @@ export default function LiteracyScreen() {
             </Text>
           </Animated.View>
 
-          {/* Module cards */}
+          {/* Module cards — column + gap keeps spacing consistent (no nested list). */}
           {loading ? (
             <View style={styles.loadingState}>
               <Text style={styles.loadingText}>Loading...</Text>
             </View>
           ) : (
-            MODULES.map((module, index) => {
-              const completedCount = module.lessonIds.filter((id) =>
-                isCompleted(id),
-              ).length;
-              const totalCount = module.lessonIds.length;
-              const card = (
-                <ModuleCard
-                  key={module.id}
-                  module={module}
-                  completedCount={completedCount}
-                  totalCount={totalCount}
-                  index={index}
-                />
-              );
-              if (index === 0) {
-                return (
-                  <TourZone
-                    key={module.id}
-                    stepKey="literacy-lessons"
-                    name="Lessons"
-                    description="Take lessons on budgeting, saving, and more. Tap a module to start."
-                    shape="rounded-rect"
-                    borderRadius={12}
-                    style={{ width: "100%" }}>
-                    <View collapsable={false}>{card}</View>
-                  </TourZone>
-                );
-              }
-              return card;
-            })
+            <View style={styles.moduleStack}>
+              {MODULES.map((module, index) => (
+                <View key={module.id} style={{ width: "100%" }}>
+                  {renderModuleItem({ item: module, index })}
+                </View>
+              ))}
+            </View>
           )}
         </View>
       </Animated.ScrollView>
@@ -172,6 +187,10 @@ export default function LiteracyScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  moduleStack: {
+    width: "100%",
+    gap: 16,
+  },
   root: {
     flex: 1,
     backgroundColor: "#000000",

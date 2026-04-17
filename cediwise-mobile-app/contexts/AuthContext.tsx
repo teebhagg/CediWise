@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { AppState, AppStateStatus } from "react-native";
@@ -34,6 +35,9 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<StoredUserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const authEventDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
   const loadUser = useCallback(async () => {
     try {
@@ -49,6 +53,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     loadUser();
+  }, [loadUser]);
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    const clearDebounce = () => {
+      if (authEventDebounceRef.current) {
+        clearTimeout(authEventDebounceRef.current);
+        authEventDebounceRef.current = null;
+      }
+    };
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "INITIAL_SESSION") return;
+
+      if (event === "SIGNED_OUT") {
+        clearDebounce();
+        void (async () => {
+          try {
+            await clearAuthData();
+            await resetStoresOnLogout();
+          } catch (e) {
+            log.warn("Auth state SIGNED_OUT cleanup:", e);
+          }
+          setUser(null);
+          setIsLoading(false);
+        })();
+        return;
+      }
+
+      clearDebounce();
+      authEventDebounceRef.current = setTimeout(() => {
+        authEventDebounceRef.current = null;
+        void loadUser();
+      }, 350);
+    });
+
+    return () => {
+      clearDebounce();
+      subscription.unsubscribe();
+    };
   }, [loadUser]);
 
   useEffect(() => {

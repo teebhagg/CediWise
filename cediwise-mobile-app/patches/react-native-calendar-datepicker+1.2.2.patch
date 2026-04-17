@@ -1,0 +1,103 @@
+diff --git a/node_modules/react-native-calendar-datepicker/src/container/Calendar.react.js b/node_modules/react-native-calendar-datepicker/src/container/Calendar.react.js
+index 6018cfc..4b9dee0 100644
+--- a/node_modules/react-native-calendar-datepicker/src/container/Calendar.react.js
++++ b/node_modules/react-native-calendar-datepicker/src/container/Calendar.react.js
+@@ -3,12 +3,9 @@
+ * @flow
+ */
+ 
+-console.ignoredYellowBox = ['Warning: Overriding '];
+-
+-import React, { Component, PropTypes } from 'react';
++import React, { Component } from 'react';
+ import {
+   LayoutAnimation,
+-  Slider,
+   View,
+   Text,
+   TouchableHighlight,
+@@ -69,7 +66,7 @@ type Props = {
+   // Styling properties for selecting the year.
+   yearMinTintColor?: string,
+   yearMaxTintColor?: string,
+-  yearSlider?: Slider.propTypes.style,
++  yearSlider?: Object,
+   yearText?: Text.propTypes.style,
+ };
+ type State = {
+diff --git a/node_modules/react-native-calendar-datepicker/src/pure/DaySelector.react.js b/node_modules/react-native-calendar-datepicker/src/pure/DaySelector.react.js
+index 974aa98..c0fa2b9 100644
+--- a/node_modules/react-native-calendar-datepicker/src/pure/DaySelector.react.js
++++ b/node_modules/react-native-calendar-datepicker/src/pure/DaySelector.react.js
+@@ -3,7 +3,7 @@
+ * @flow
+ */
+ 
+-import React, { Component, PropTypes } from 'react';
++import React, { Component } from 'react';
+ import {
+   Dimensions,
+   PanResponder,
+@@ -52,13 +52,14 @@ export default class DaySelector extends Component {
+ 
+   constructor(props: Props) {
+     super(props);
++    this._wrapperRef = React.createRef();
+     this.state = {
+       days: this._computeDays(props),
+     }
+   }
+ 
+   _slide = (dx : number) => {
+-    this.refs.wrapper.setNativeProps({
++    this._wrapperRef.current?.setNativeProps({
+       style: {
+         left: dx,
+       }
+@@ -189,7 +190,7 @@ export default class DaySelector extends Component {
+             </Text>
+           )}
+         </View>
+-        <View ref="wrapper" {...this._panResponder.panHandlers}>
++        <View ref={this._wrapperRef} {...this._panResponder.panHandlers}>
+           {_.map(this.state.days, (week, i) =>
+             <View key={i} style={[
+                 styles.rowView,
+diff --git a/node_modules/react-native-calendar-datepicker/src/pure/MonthSelector.react.js b/node_modules/react-native-calendar-datepicker/src/pure/MonthSelector.react.js
+index 98e2aa6..5ed5506 100644
+--- a/node_modules/react-native-calendar-datepicker/src/pure/MonthSelector.react.js
++++ b/node_modules/react-native-calendar-datepicker/src/pure/MonthSelector.react.js
+@@ -3,7 +3,7 @@
+ * @flow
+ */
+ 
+-import React, { Component, PropTypes } from 'react';
++import React, { Component } from 'react';
+ import {
+   LayoutAnimation,
+   TouchableHighlight,
+diff --git a/node_modules/react-native-calendar-datepicker/src/pure/YearSelector.react.js b/node_modules/react-native-calendar-datepicker/src/pure/YearSelector.react.js
+index d83fa01..89abdd6 100644
+--- a/node_modules/react-native-calendar-datepicker/src/pure/YearSelector.react.js
++++ b/node_modules/react-native-calendar-datepicker/src/pure/YearSelector.react.js
+@@ -3,9 +3,9 @@
+ * @flow
+ */
+ 
+-import React, { Component, PropTypes } from 'react';
++import React, { Component } from 'react';
++import Slider from '@react-native-community/slider';
+ import {
+-  Slider,
+   View,
+   Text,
+   StyleSheet,
+@@ -26,7 +26,7 @@ type Props = {
+   // Styling properties.
+   minimumTrackTintColor?: string,
+   maximumTrackTintColor?: string,
+-  yearSlider?: Slider.propTypes.style,
++  yearSlider?: Object,
+   yearText?: Text.propTypes.style,
+ };
+ type State = {

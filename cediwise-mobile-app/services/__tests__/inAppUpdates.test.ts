@@ -3,20 +3,22 @@
 import { log } from "@/utils/logger";
 import { checkAndPromptUpdate } from "@/services/inAppUpdates";
 
-const mockCheckNeedsUpdate = jest.fn();
-const mockStartUpdate = jest.fn();
-
-jest.mock("sp-react-native-in-app-updates", () => ({
-  __esModule: true,
-  default: jest.fn().mockImplementation(() => ({
-    checkNeedsUpdate: mockCheckNeedsUpdate,
-    startUpdate: mockStartUpdate,
-  })),
-  IAUUpdateKind: {
-    IMMEDIATE: "IMMEDIATE",
-    FLEXIBLE: "FLEXIBLE",
-  },
-}));
+jest.mock("sp-react-native-in-app-updates", () => {
+  const checkNeedsUpdate = jest.fn();
+  const startUpdate = jest.fn();
+  return {
+    __esModule: true,
+    default: jest.fn().mockImplementation(() => ({
+      checkNeedsUpdate,
+      startUpdate,
+    })),
+    IAUUpdateKind: {
+      IMMEDIATE: "IMMEDIATE",
+      FLEXIBLE: "FLEXIBLE",
+    },
+    __test: { checkNeedsUpdate, startUpdate },
+  };
+});
 
 jest.mock("expo-constants", () => ({
   __esModule: true,
@@ -25,15 +27,16 @@ jest.mock("expo-constants", () => ({
   },
 }));
 
-function rnPlatform() {
-  const g = globalThis as { __TEST_RN_PLATFORM__?: { OS: string } };
-  return g.__TEST_RN_PLATFORM__;
-}
+const spMock = jest.requireMock("sp-react-native-in-app-updates") as {
+  __test: { checkNeedsUpdate: jest.Mock; startUpdate: jest.Mock };
+};
+
+const mockCheckNeedsUpdate = spMock.__test.checkNeedsUpdate;
+const mockStartUpdate = spMock.__test.startUpdate;
 
 describe("inAppUpdates", () => {
   beforeEach(() => {
-    const p = rnPlatform();
-    if (p) p.OS = "android";
+    globalThis.__JEST_RN_PLATFORM_OS__ = "android";
     mockCheckNeedsUpdate.mockReset();
     mockStartUpdate.mockReset();
     mockCheckNeedsUpdate.mockResolvedValue({ shouldUpdate: true });
@@ -58,8 +61,7 @@ describe("inAppUpdates", () => {
   });
 
   it("does not start update on iOS even if shouldUpdate is true", async () => {
-    const p = rnPlatform();
-    if (p) p.OS = "ios";
+    globalThis.__JEST_RN_PLATFORM_OS__ = "ios";
     await checkAndPromptUpdate({ immediate: true });
     expect(mockCheckNeedsUpdate).toHaveBeenCalled();
     expect(mockStartUpdate).not.toHaveBeenCalled();

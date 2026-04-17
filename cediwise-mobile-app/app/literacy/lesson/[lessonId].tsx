@@ -38,6 +38,8 @@ export default function LessonScreen() {
     useLiteracyAnalytics();
 
   const lessonStartTime = useRef<number>(Date.now());
+  const moduleNavTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mountedRef = useRef(true);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [lessonMarkedComplete, setLessonMarkedComplete] = useState(false);
   const insets = useSafeAreaInsets();
@@ -83,6 +85,17 @@ export default function LessonScreen() {
     }
   }, [lesson?.id, lesson?.module, trackLessonView]);
 
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (moduleNavTimerRef.current) {
+        clearTimeout(moduleNavTimerRef.current);
+        moduleNavTimerRef.current = null;
+      }
+    };
+  }, []);
+
   // ── Helpers ─────────────────────────────────────────────────────────────────
 
   /** After saving progress, check if this was the last lesson in the module */
@@ -95,8 +108,14 @@ export default function LessonScreen() {
         (id) => id === completedLessonId || isCompleted(id),
       );
       if (allDone) {
-        setTimeout(() => {
-          router.replace(`/literacy/module-complete?moduleId=${mod.id}`);
+        if (moduleNavTimerRef.current) {
+          clearTimeout(moduleNavTimerRef.current);
+        }
+        moduleNavTimerRef.current = setTimeout(() => {
+          moduleNavTimerRef.current = null;
+          if (mountedRef.current) {
+            router.replace(`/literacy/module-complete?moduleId=${mod.id}`);
+          }
         }, 800);
       }
     },

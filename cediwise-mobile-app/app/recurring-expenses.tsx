@@ -22,7 +22,10 @@ import { useTierContext } from "@/contexts/TierContext";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
 import { useBudget } from "@/hooks/useBudget";
+import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
 import { useRecurringExpenses } from "@/hooks/useRecurringExpenses";
+import { useRecurringExpensesStore } from "@/stores/recurringExpensesStore";
+import { waitWhile } from "@/utils/waitWhile";
 import type {
   BudgetBucket,
   RecurringExpense,
@@ -147,8 +150,20 @@ export default function RecurringExpensesScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refresh();
-    setRefreshing(false);
+    const start = Date.now();
+    try {
+      await refresh();
+    } finally {
+      await waitWhile(() => useRecurringExpensesStore.getState().isLoading, {
+        timeoutMs: 15_000,
+        intervalMs: 48,
+      });
+      const elapsed = Date.now() - start;
+      if (elapsed < 500) {
+        await new Promise<void>((r) => setTimeout(r, 500 - elapsed));
+      }
+      setRefreshing(false);
+    }
   }, [refresh]);
 
   const handleDelete = useCallback(
@@ -430,12 +445,18 @@ export default function RecurringExpensesScreen() {
         getItemType={getItemType}
         ItemSeparatorComponent={RecurringListSeparator}
         ListHeaderComponent={listHeader}
+        estimatedItemSize={112}
         contentContainerStyle={[
           styles.scrollContent,
           { paddingTop: 64 + insets.top },
         ]}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={PULL_REFRESH_EMERALD}
+            colors={[PULL_REFRESH_EMERALD]}
+          />
         }
         ListFooterComponent={
           <View style={styles.listFooter}>

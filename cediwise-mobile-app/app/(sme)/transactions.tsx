@@ -6,7 +6,6 @@
 import { BackButton } from "@/components/BackButton";
 import { Card } from "@/components/Card";
 import { useSmeLedger } from "@/hooks/useSmeLedger";
-import { PAYMENT_METHOD_LABELS } from "@/types/sme";
 import type { SMETransaction, TransactionType } from "@/types/sme";
 import { useRouter } from "expo-router";
 import {
@@ -19,11 +18,14 @@ import {
 } from "lucide-react-native";
 import {
   DEFAULT_EXPANDED_HEIGHT,
-  DEFAULT_STANDARD_HEIGHT,
   ExpandedHeader,
 } from "@/components/CediWiseHeader";
-import { useCallback, useMemo, useState } from "react";
+import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
+import { useSMELedgerStore } from "@/stores/smeLedgerStore";
+import { waitWhile } from "@/utils/waitWhile";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Platform,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -57,12 +59,25 @@ export default function TransactionsScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    const start = Date.now();
     try {
       await sme.hydrate();
     } finally {
+      await waitWhile(() => useSMELedgerStore.getState().isLoading, {
+        timeoutMs: 15_000,
+        intervalMs: 48,
+      });
+      const elapsed = Date.now() - start;
+      if (elapsed < 500) {
+        await new Promise<void>((r) => setTimeout(r, 500 - elapsed));
+      }
       setRefreshing(false);
     }
   }, [sme]);
+
+  useEffect(() => {
+    void sme.hydrate();
+  }, [sme.hydrate]);
 
   const filteredTransactions = useMemo(() => {
     let txs = sme.transactions;
@@ -84,7 +99,7 @@ export default function TransactionsScreen() {
   }, [sme.transactions, filter, searchQuery]);
 
   const formatGHS = (amount: number) =>
-    `GH₵${amount.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    `GH₵ ${amount.toLocaleString("en-GH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -101,12 +116,14 @@ export default function TransactionsScreen() {
         <Pressable
           onPress={() =>
             router.push({
-              pathname: "/(sme)/add-transaction",
-              params: { editId: item.id },
+              pathname: "/(sme)/transaction/[id]",
+              params: { id: item.id },
             })
           }
+          accessibilityRole="button"
+          accessibilityLabel={`View transaction, ${item.description}`}
         >
-          <Card style={styles.txCard} className="mb-2 flex-row items-center gap-3">
+          <Card style={styles.txCard} className="flex-row items-center gap-3">
             <View
               className={`w-11 h-11 rounded-2xl items-center justify-center ${
                 item.type === "income"
@@ -161,6 +178,8 @@ export default function TransactionsScreen() {
         title="Transactions"
         subtitle="Manage your business cash flow"
         leading={<BackButton />}
+        refreshing={refreshing}
+        refreshTintColor={PULL_REFRESH_EMERALD}
         bottom={
           <View className="gap-3">
             <View className="px-4">
@@ -224,14 +243,21 @@ export default function TransactionsScreen() {
         renderItem={renderTransaction}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
+        removeClippedSubviews={Platform.OS === "android"}
         contentContainerStyle={{
           paddingTop: DEFAULT_EXPANDED_HEIGHT + insets.top + 116 + 16,
           paddingHorizontal: 20,
           paddingBottom: insets.bottom + 100,
+          gap: 12,
         }}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#10B981" />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={PULL_REFRESH_EMERALD}
+            colors={[PULL_REFRESH_EMERALD]}
+          />
         }
         ListEmptyComponent={
           <View className="items-center justify-center pt-20 gap-4">

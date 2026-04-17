@@ -218,155 +218,150 @@ export function AddRecurringExpenseModal({
       onClose={handleClose}
       loading={submitting}
     >
-      <ScrollView
-        style={{ maxHeight: 420 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}>
-        <View className="gap-3">
-          <View style={styles.field}>
-            <AppTextField
-              label="Name"
-              value={name}
-              onChangeText={setName}
-              placeholder="e.g. Netflix, Gym"
-            />
-          </View>
+      <View className="gap-3">
+        <View style={styles.field}>
+          <AppTextField
+            label="Name"
+            value={name}
+            onChangeText={setName}
+            placeholder="e.g. Netflix, Gym"
+          />
+        </View>
 
-          <View style={styles.field}>
-            <AppTextField
-              label="Amount (GHS)"
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="decimal-pad"
-              placeholder="0.00"
-              returnKeyType="done"
-            />
-          </View>
+        <View style={styles.field}>
+          <AppTextField
+            label="Amount (GHS)"
+            value={amount}
+            onChangeText={setAmount}
+            keyboardType="decimal-pad"
+            placeholder="0.00"
+            returnKeyType="done"
+          />
+        </View>
 
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>Frequency</Text>
+          <View style={styles.rowWrap}>
+            {FREQUENCIES.map((f) => (
+              <Pressable
+                key={f.value}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  setFrequency(f.value);
+                }}
+                style={[
+                  styles.chip,
+                  frequency === f.value && styles.chipActive,
+                ]}>
+                <Text
+                  style={[
+                    styles.chipText,
+                    frequency === f.value && styles.chipTextActive,
+                  ]}>
+                  {f.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.fieldLabel}>Bucket</Text>
+          <View style={styles.row}>
+            {BUCKETS.map((b) => (
+              <Pressable
+                key={b.value}
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  setBucket(b.value);
+                }}
+                style={[styles.chip, bucket === b.value && styles.chipActive]}>
+                <Text
+                  style={[
+                    styles.chipText,
+                    bucket === b.value && styles.chipTextActive,
+                  ]}>
+                  {b.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+
+        {autoAllocate && bucketCategories.length > 0 ? (
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Frequency</Text>
+            <Text style={styles.fieldLabel}>
+              Category (optional — reserves limit when set)
+            </Text>
             <View style={styles.rowWrap}>
-              {FREQUENCIES.map((f) => (
+              <Pressable
+                onPress={() => {
+                  Haptics.selectionAsync().catch(() => {});
+                  setCategoryId(null);
+                }}
+                style={[styles.chip, categoryId == null && styles.chipActive]}>
+                <Text
+                  style={[
+                    styles.chipText,
+                    categoryId == null && styles.chipTextActive,
+                  ]}>
+                  None
+                </Text>
+              </Pressable>
+              {bucketCategories.map((c) => (
                 <Pressable
-                  key={f.value}
+                  key={c.id}
                   onPress={() => {
                     Haptics.selectionAsync().catch(() => {});
-                    setFrequency(f.value);
+                    setCategoryId(c.id);
                   }}
                   style={[
                     styles.chip,
-                    frequency === f.value && styles.chipActive,
+                    categoryId === c.id && styles.chipActive,
                   ]}>
                   <Text
                     style={[
                       styles.chipText,
-                      frequency === f.value && styles.chipTextActive,
-                    ]}>
-                    {f.label}
+                      categoryId === c.id && styles.chipTextActive,
+                    ]}
+                    numberOfLines={1}>
+                    {c.name}
                   </Text>
                 </Pressable>
               ))}
             </View>
           </View>
+        ) : null}
 
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Bucket</Text>
-            <View style={styles.row}>
-              {BUCKETS.map((b) => (
-                <Pressable
-                  key={b.value}
-                  onPress={() => {
-                    Haptics.selectionAsync().catch(() => {});
-                    setBucket(b.value);
-                  }}
-                  style={[styles.chip, bucket === b.value && styles.chipActive]}>
-                  <Text
-                    style={[
-                      styles.chipText,
-                      bucket === b.value && styles.chipTextActive,
-                    ]}>
-                    {b.label}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          </View>
+        <View style={styles.field}>
+          <AppTextField
+            label="End date (optional, YYYY-MM-DD)"
+            value={endDate}
+            onChangeText={setEndDate}
+            placeholder="Leave empty if ongoing"
+            autoCapitalize="none"
+          />
+        </View>
 
-          {autoAllocate && bucketCategories.length > 0 ? (
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>
-                Category (optional — reserves limit when set)
-              </Text>
-              <View style={styles.rowWrap}>
-                <Pressable
-                  onPress={() => {
-                    Haptics.selectionAsync().catch(() => {});
-                    setCategoryId(null);
-                  }}
-                  style={[styles.chip, categoryId == null && styles.chipActive]}>
-                  <Text
-                    style={[
-                      styles.chipText,
-                      categoryId == null && styles.chipTextActive,
-                    ]}>
-                    None
-                  </Text>
-                </Pressable>
-                {bucketCategories.map((c) => (
-                  <Pressable
-                    key={c.id}
-                    onPress={() => {
-                      Haptics.selectionAsync().catch(() => {});
-                      setCategoryId(c.id);
-                    }}
-                    style={[
-                      styles.chip,
-                      categoryId === c.id && styles.chipActive,
-                    ]}>
-                    <Text
-                      style={[
-                        styles.chipText,
-                        categoryId === c.id && styles.chipTextActive,
-                      ]}
-                      numberOfLines={1}>
-                      {c.name}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          ) : null}
-
-          <View style={styles.field}>
-            <AppTextField
-              label="End date (optional, YYYY-MM-DD)"
-              value={endDate}
-              onChangeText={setEndDate}
-              placeholder="Leave empty if ongoing"
-              autoCapitalize="none"
+        <Pressable
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => {});
+            setAutoAllocate((v) => !v);
+          }}
+          style={styles.toggleRow}>
+          <Text style={styles.toggleLabel}>Auto-allocate each cycle</Text>
+          <View style={[styles.toggle, autoAllocate && styles.toggleOn]}>
+            <View
+              style={[styles.toggleThumb, autoAllocate && styles.toggleThumbOn]}
             />
           </View>
+        </Pressable>
 
-          <Pressable
-            onPress={() => {
-              Haptics.selectionAsync().catch(() => {});
-              setAutoAllocate((v) => !v);
-            }}
-            style={styles.toggleRow}>
-            <Text style={styles.toggleLabel}>Auto-allocate each cycle</Text>
-            <View style={[styles.toggle, autoAllocate && styles.toggleOn]}>
-              <View
-                style={[styles.toggleThumb, autoAllocate && styles.toggleThumbOn]}
-              />
-            </View>
-          </Pressable>
-
-          {incomeCapWarning ? (
-            <Text style={styles.warnText}>{incomeCapWarning}</Text>
-          ) : null}
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        </View>
-      </ScrollView>
+        {incomeCapWarning ? (
+          <Text style={styles.warnText}>{incomeCapWarning}</Text>
+        ) : null}
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+      </View>
     </AppDialog>
   );
 }

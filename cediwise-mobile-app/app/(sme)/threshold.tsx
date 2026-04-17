@@ -14,6 +14,9 @@ import {
   DEFAULT_STANDARD_HEIGHT,
   ExpandedHeader,
 } from "@/components/CediWiseHeader";
+import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
+import { useSMELedgerStore } from "@/stores/smeLedgerStore";
+import { waitWhile } from "@/utils/waitWhile";
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
@@ -42,9 +45,18 @@ export default function ThresholdScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    const start = Date.now();
     try {
       await sme.hydrate();
     } finally {
+      await waitWhile(() => useSMELedgerStore.getState().isLoading, {
+        timeoutMs: 15_000,
+        intervalMs: 48,
+      });
+      const elapsed = Date.now() - start;
+      if (elapsed < 500) {
+        await new Promise<void>((r) => setTimeout(r, 500 - elapsed));
+      }
       setRefreshing(false);
     }
   }, [sme]);
@@ -80,6 +92,8 @@ export default function ThresholdScreen() {
         title="VAT Threshold"
         subtitle="Ghana Revenue Authority Monitor"
         leading={<BackButton />}
+        refreshing={refreshing}
+        refreshTintColor={PULL_REFRESH_EMERALD}
       />
 
       <Animated.ScrollView
@@ -94,7 +108,12 @@ export default function ThresholdScreen() {
           paddingHorizontal: 20,
         }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#10B981" />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={PULL_REFRESH_EMERALD}
+            colors={[PULL_REFRESH_EMERALD]}
+          />
         }
         showsVerticalScrollIndicator={false}
       >

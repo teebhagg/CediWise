@@ -1,4 +1,4 @@
-import { log } from "@/utils/logger";
+import { reportError } from "@/utils/telemetry";
 import React, { Component, type ReactNode } from "react";
 
 type Props = {
@@ -25,7 +25,13 @@ export class TourErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
-    log.error("[Tour] Error boundary caught error", { error, errorInfo });
+    reportError(error, {
+      feature: "tour",
+      operation: "tour_error_boundary",
+      extra: {
+        componentStack: errorInfo.componentStack ?? "",
+      },
+    });
   }
 
   render(): ReactNode {

@@ -167,7 +167,13 @@ export const useSMELedgerStore = create<SMELedgerStore>((set, get) => ({
     }
 
     const startUserId = userId;
-    set({ isLoading: true, error: null });
+    const isInitialLoad = !get().profile && get().transactions.length === 0;
+    
+    if (isInitialLoad) {
+      set({ isLoading: true, error: null });
+    } else {
+      set({ error: null });
+    }
 
     try {
       const state = await loadSMEState(startUserId);

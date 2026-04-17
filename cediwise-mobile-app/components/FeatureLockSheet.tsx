@@ -9,7 +9,7 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { Lock, Sparkles, Zap, Crown } from "lucide-react-native";
-import { Pressable, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 type FeatureLockSheetProps = {
   isOpen: boolean;
@@ -34,6 +34,66 @@ const TIER_CONFIG = {
     color: "#10B981",
   },
 };
+
+const sheetStyles = StyleSheet.create({
+  columnGap: { gap: 16 },
+  heroBlock: { alignItems: "center", gap: 12 },
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+  description: {
+    color: "#D1D5DB",
+    fontSize: 14,
+    fontFamily: "Figtree-Regular",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  highlightsList: { gap: 10, paddingLeft: 4 },
+  highlightRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  highlightText: {
+    color: "#D1D5DB",
+    fontSize: 13,
+    fontFamily: "Figtree-Medium",
+    flex: 1,
+  },
+  tierRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: "rgba(16,185,129,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(16,185,129,0.15)",
+  },
+  tierTextCol: { flex: 1 },
+  tierLabel: {
+    color: "#10B981",
+    fontSize: 14,
+    fontFamily: "Figtree-SemiBold",
+  },
+  tierPrice: {
+    color: "#6B7280",
+    fontSize: 12,
+    fontFamily: "Figtree-Regular",
+  },
+  ctaLabel: {
+    color: "#020617",
+    fontSize: 15,
+    fontFamily: "Figtree-SemiBold",
+  },
+});
 
 export function FeatureLockSheet({
   isOpen,
@@ -60,111 +120,39 @@ export function FeatureLockSheet({
       isOpen={isOpen}
       onOpenChange={onOpenChange}
     >
-      <View style={{ gap: 16 }}>
+      <View style={sheetStyles.columnGap}>
         {/* Lock icon + feature description */}
-        <View style={{ alignItems: "center", gap: 12 }}>
-          <View
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 28,
-              backgroundColor: "rgba(255,255,255,0.05)",
-              justifyContent: "center",
-              alignItems: "center",
-              borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.1)",
-            }}
-          >
+        <View style={sheetStyles.heroBlock}>
+          <View style={sheetStyles.iconCircle}>
             <Lock color="#6B7280" size={24} />
           </View>
-          <Text
-            style={{
-              color: "#D1D5DB",
-              fontSize: 14,
-              fontFamily: "Figtree-Regular",
-              textAlign: "center",
-              lineHeight: 20,
-            }}
-          >
-            {featureDescription}
-          </Text>
+          <Text style={sheetStyles.description}>{featureDescription}</Text>
         </View>
 
         {/* Highlights */}
         {highlights.length > 0 && (
-          <View style={{ gap: 10, paddingLeft: 4 }}>
+          <View style={sheetStyles.highlightsList}>
             {highlights.map((item, i) => (
-              <View
-                key={i}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  gap: 10,
-                }}
-              >
+              <View key={i} style={sheetStyles.highlightRow}>
                 <Sparkles color="#F59E0B" size={16} />
-                <Text
-                  style={{
-                    color: "#D1D5DB",
-                    fontSize: 13,
-                    fontFamily: "Figtree-Medium",
-                    flex: 1,
-                  }}
-                >
-                  {item}
-                </Text>
+                <Text style={sheetStyles.highlightText}>{item}</Text>
               </View>
             ))}
           </View>
         )}
 
         {/* Tier required */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 10,
-            padding: 12,
-            borderRadius: 12,
-            backgroundColor: "rgba(16,185,129,0.08)",
-            borderWidth: 1,
-            borderColor: "rgba(16,185,129,0.15)",
-          }}
-        >
+        <View style={sheetStyles.tierRow}>
           <TierIcon color={config.color} size={20} />
-          <View style={{ flex: 1 }}>
-            <Text
-              style={{
-                color: "#10B981",
-                fontSize: 14,
-                fontFamily: "Figtree-SemiBold",
-              }}
-            >
-              {config.label}
-            </Text>
-            <Text
-              style={{
-                color: "#6B7280",
-                fontSize: 12,
-                fontFamily: "Figtree-Regular",
-              }}
-            >
-              {config.price}
-            </Text>
+          <View style={sheetStyles.tierTextCol}>
+            <Text style={sheetStyles.tierLabel}>{config.label}</Text>
+            <Text style={sheetStyles.tierPrice}>{config.price}</Text>
           </View>
         </View>
 
         {/* Upgrade button */}
         <PrimaryButton onPress={handleUpgrade}>
-          <Text
-            style={{
-              color: "#020617",
-              fontSize: 15,
-              fontFamily: "Figtree-SemiBold",
-            }}
-          >
-            Unlock with {config.label}
-          </Text>
+          <Text style={sheetStyles.ctaLabel}>Unlock with {config.label}</Text>
         </PrimaryButton>
       </View>
     </CustomBottomSheet>

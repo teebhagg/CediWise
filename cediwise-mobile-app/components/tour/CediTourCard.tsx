@@ -1,6 +1,6 @@
-import { tourTokens } from "@/constants/tourTokens";
+import { getTourCardWidth, tourTokens } from "@/constants/tourTokens";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import type { CardProps } from "react-native-lumen";
 
 type CediTourCardProps = CardProps & {
@@ -18,12 +18,13 @@ export function CediTourCard({
   completed = true,
   nextLabel,
 }: CediTourCardProps) {
+  const { width: windowWidth } = useWindowDimensions();
   const isNextDisabled = completed === false;
   const resolvedNextLabel = nextLabel ?? (isLast ? "Finish" : "Next");
 
   return (
     <View
-      style={styles.container}
+      style={[styles.container, { width: getTourCardWidth(windowWidth) }]}
       accessibilityRole="summary"
       accessibilityLabel={step.name ?? "Tour step"}>
       {step.name ? (
@@ -85,7 +86,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: tourTokens.card.borderRadius,
     padding: tourTokens.card.padding,
-    width: tourTokens.card.width,
   },
   title: {
     color: tourTokens.title.color,

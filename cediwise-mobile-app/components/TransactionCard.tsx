@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { ChevronDown, LucideIcon, Trash2 } from 'lucide-react-native';
 import { useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import Animated, {
   Extrapolate,
@@ -85,34 +85,24 @@ export function TransactionCard({
   const backgroundColor = `${color}15`; // 15% opacity
 
   const renderRightActions = () => (
-    <View
-      style={{
-        width: 60,
-        height: 60,
-        backgroundColor: '#EF4444',
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderRadius: 50,
-        marginHorizontal: 12,
-        marginVertical: 12,
-        paddingHorizontal: 12,
-        shadowColor: '#000',
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 4 },
-      }}
-    >
+    <View style={styles.swipeDeleteWrap}>
       <Pressable
         onPress={() => {
           swipeableRef.current?.close();
           onRequestDelete?.();
         }}
+        accessibilityRole="button"
+        accessibilityLabel="Delete transaction"
+        accessibilityHint="Removes this transaction from your ledger"
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         style={({ pressed }) => ({
           display: 'flex',
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
           borderRadius: 16,
+          minWidth: 44,
+          minHeight: 44,
           paddingHorizontal: 12,
           paddingVertical: 8,
           backgroundColor: pressed ? 'rgba(255,255,255,0.15)' : 'transparent',
@@ -139,80 +129,37 @@ export function TransactionCard({
         blurred={true}
         style={[
           cardAnimatedStyle,
-          {
-            width: '100%',
-            backgroundColor,
-            marginBottom: 12,
-            overflow: 'hidden',
-          },
+          styles.cardBase,
+          { backgroundColor },
         ]}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 4, paddingHorizontal: 4 }}>
+        <View style={styles.row}>
           {/* Icon */}
-          <View
-            style={{
-              width: 48,
-              height: 48,
-              borderRadius: 12,
-              backgroundColor: `${color}30`,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginRight: 12,
-            }}
-          >
+          <View style={[styles.iconWrap, { backgroundColor: `${color}30` }]}>
             <Icon color={color} size={24} />
           </View>
 
           {/* Category and Amount */}
-          <View style={{ flex: 1 }}>
-            <Text
-              style={{
-                color: '#E5E7EB',
-                fontSize: 14,
-                fontWeight: '600',
-                fontFamily: 'Figtree-Medium',
-                marginBottom: 4,
-              }}
-            >
-              {category}
-            </Text>
-            {date && (
-              <Text
-                style={{
-                  color: '#9CA3AF',
-                  fontSize: 11,
-                  fontFamily: 'Figtree-Regular',
-                }}
-              >
-                {date}
-              </Text>
-            )}
+          <View style={styles.categoryCol}>
+            <Text style={styles.categoryText}>{category}</Text>
+            {date && <Text style={styles.dateText}>{date}</Text>}
           </View>
 
           {/* Amount */}
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text
-              style={{
-                color: amountColor,
-                fontSize: 16,
-                fontWeight: '700',
-                fontFamily: 'Figtree-Bold',
-                marginLeft: 12,
-              }}
-            >
+          <View style={styles.amountRow}>
+            <Text style={[styles.amountText, { color: amountColor }]}>
               {amountPrefix}₵{formatCurrency(amount)}
             </Text>
-            <AnimatedView style={[chevronStyle, { marginLeft: 6 }]}>
+            <AnimatedView style={[chevronStyle, styles.chevronWrap]}>
               <Pressable
                 onPress={handlePress}
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 20,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  backgroundColor: 'rgba(255,255,255,0.08)',
-                }}
+                style={styles.chevronHit}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  isExpanded ? 'Collapse transaction details' : 'Expand transaction details'
+                }
+                accessibilityState={{ expanded: isExpanded }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <AnimatedChevron color="#94A3AF" size={20} />
               </Pressable>
@@ -222,62 +169,17 @@ export function TransactionCard({
 
         {/* Expandable Details */}
         {isExpanded && (
-          <AnimatedView
-            style={[
-              detailsAnimatedStyle,
-              {
-                borderTopWidth: 1,
-                borderTopColor: 'rgba(255,255,255,0.1)',
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                backgroundColor: 'rgba(18,22,33,0.4)',
-              },
-            ]}
-          >
+          <AnimatedView style={[detailsAnimatedStyle, styles.detailsPanel]}>
             {description && (
-              <View style={{ marginBottom: 8 }}>
-                <Text
-                  style={{
-                    color: '#9CA3AF',
-                    fontSize: 11,
-                    fontFamily: 'Figtree-Regular',
-                    marginBottom: 2,
-                  }}
-                >
-                  Description
-                </Text>
-                <Text
-                  style={{
-                    color: '#E5E7EB',
-                    fontSize: 13,
-                    fontFamily: 'Figtree-Regular',
-                  }}
-                >
-                  {description}
-                </Text>
+              <View style={styles.detailBlock}>
+                <Text style={styles.detailLabel}>Description</Text>
+                <Text style={styles.detailValue}>{description}</Text>
               </View>
             )}
             {vat !== undefined && (
               <View>
-                <Text
-                  style={{
-                    color: '#9CA3AF',
-                    fontSize: 11,
-                    fontFamily: 'Figtree-Regular',
-                    marginBottom: 2,
-                  }}
-                >
-                  VAT (20%)
-                </Text>
-                <Text
-                  style={{
-                    color: '#FCA5A5',
-                    fontSize: 13,
-                    fontFamily: 'Figtree-Medium',
-                  }}
-                >
-                  ₵{formatCurrency(vat)}
-                </Text>
+                <Text style={styles.detailLabel}>VAT (20%)</Text>
+                <Text style={styles.vatValue}>₵{formatCurrency(vat)}</Text>
               </View>
             )}
           </AnimatedView>
@@ -286,4 +188,94 @@ export function TransactionCard({
     </Swipeable>
   );
 }
+
+const styles = StyleSheet.create({
+  swipeDeleteWrap: {
+    width: 60,
+    height: 60,
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 50,
+    marginHorizontal: 12,
+    marginVertical: 12,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  cardBase: {
+    width: '100%',
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+  iconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  categoryCol: { flex: 1 },
+  categoryText: {
+    color: '#E5E7EB',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Figtree-Medium',
+    marginBottom: 4,
+  },
+  dateText: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    fontFamily: 'Figtree-Regular',
+  },
+  amountRow: { flexDirection: 'row', alignItems: 'center' },
+  amountText: {
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Figtree-Bold',
+    marginLeft: 12,
+  },
+  chevronWrap: { marginLeft: 6 },
+  chevronHit: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  detailsPanel: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(18,22,33,0.4)',
+  },
+  detailBlock: { marginBottom: 8 },
+  detailLabel: {
+    color: '#9CA3AF',
+    fontSize: 11,
+    fontFamily: 'Figtree-Regular',
+    marginBottom: 2,
+  },
+  detailValue: {
+    color: '#E5E7EB',
+    fontSize: 13,
+    fontFamily: 'Figtree-Regular',
+  },
+  vatValue: {
+    color: '#FCA5A5',
+    fontSize: 13,
+    fontFamily: 'Figtree-Medium',
+  },
+});
 

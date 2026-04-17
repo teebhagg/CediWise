@@ -1,5 +1,7 @@
-import * as React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import * as React from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+
+import { reportError } from "@/utils/telemetry";
 
 type Props = { children: React.ReactNode };
 type State = { hasError: boolean; error: Error | null };
@@ -16,9 +18,19 @@ export class RootErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    reportError(error, {
+      feature: "app",
+      operation: "root_error_boundary",
+      extra: {
+        componentStack: errorInfo.componentStack ?? "",
+      },
+    });
     if (__DEV__) {
-       
-      console.error('RootErrorBoundary caught:', error, errorInfo.componentStack);
+      console.error(
+        "RootErrorBoundary caught:",
+        error,
+        errorInfo.componentStack,
+      );
     }
   }
 
@@ -41,7 +53,10 @@ export class RootErrorBoundary extends React.Component<Props, State> {
           ) : null}
           <Pressable
             onPress={this.handleRetry}
-            style={({ pressed }) => [styles.retryButton, pressed && styles.retryButtonPressed]}
+            style={({ pressed }) => [
+              styles.retryButton,
+              pressed && styles.retryButtonPressed,
+            ]}
           >
             <Text style={styles.retryButtonText}>Try again</Text>
           </Pressable>
@@ -55,41 +70,41 @@ export class RootErrorBoundary extends React.Component<Props, State> {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#020617',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#020617",
+    justifyContent: "center",
+    alignItems: "center",
     padding: 24,
   },
   title: {
-    color: '#E5E7EB',
+    color: "#E5E7EB",
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
     marginBottom: 8,
   },
   message: {
-    color: '#9CA3AF',
+    color: "#9CA3AF",
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
   },
   stack: {
-    color: '#6B7280',
+    color: "#6B7280",
     fontSize: 11,
     marginTop: 16,
-    textAlign: 'left',
+    textAlign: "left",
   },
   retryButton: {
     marginTop: 24,
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: '#10b981',
+    backgroundColor: "#10b981",
     borderRadius: 9999,
   },
   retryButtonPressed: {
     opacity: 0.8,
   },
   retryButtonText: {
-    color: '#020617',
+    color: "#020617",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

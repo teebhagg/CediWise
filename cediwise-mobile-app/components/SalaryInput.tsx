@@ -99,6 +99,8 @@ export function SalaryInput({ label = 'Monthly Salary', value, onChangeText, onF
                     <Text className="text-slate-200 text-lg mr-1">₵</Text>
                     <TextInput
                         ref={inputRef}
+                        accessibilityLabel={label}
+                        accessibilityHint="Enter amount in Ghana cedis"
                         value={displayValue}
                         onChangeText={(text) => {
                             const sanitized = stripFormatting(text);
@@ -125,8 +127,10 @@ export function SalaryInput({ label = 'Monthly Salary', value, onChangeText, onF
                                 inputRef.current?.focus();
                             }
                         }}
-                        className="w-8 h-8 rounded-sm justify-center items-center ml-3 bg-slate-400/15"
-                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={value && value.length > 0 ? 'Clear amount' : 'Edit amount'}
+                        className="w-10 h-10 rounded-sm justify-center items-center ml-3 bg-slate-400/15"
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
                         {value && value.length > 0 ? (
                             <X color="#E5E7EB" size={18} />

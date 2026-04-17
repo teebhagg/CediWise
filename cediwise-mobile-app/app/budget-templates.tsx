@@ -6,17 +6,19 @@ import { CheckCircle2, ChevronRight, Info, LayoutTemplate } from "lucide-react-n
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BackButton } from "@/components/BackButton";
+import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
 import { Card } from "@/components/Card";
 import { StandardHeader } from "@/components/CediWiseHeader";
 import { useAppToast } from "@/hooks/useAppToast";
@@ -26,8 +28,10 @@ import type { BudgetTemplate, LifeStage } from "@/types/budget";
 import { analytics } from "@/utils/analytics";
 import { emitBudgetChangedNow } from "@/utils/budgetStorage";
 import { log } from "@/utils/logger";
+import { reportError } from "@/utils/telemetry";
 import { formatAllocation } from "@/utils/reallocationEngine";
 import { supabase } from "@/utils/supabase";
+import { getStandardHeaderWithBottomBodyOffsetTop } from "@/utils/screenHeaderInsets";
 
 const LIFE_STAGE_FILTERS: { value: LifeStage | "all"; label: string }[] = [
   { value: "all", label: "All" },
@@ -38,6 +42,7 @@ const LIFE_STAGE_FILTERS: { value: LifeStage | "all"; label: string }[] = [
 ];
 
 export default function BudgetTemplatesScreen() {
+  const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const budget = useBudget(user?.id);
   const { showSuccess, showError, showInfo } = useAppToast();
@@ -82,6 +87,11 @@ export default function BudgetTemplatesScreen() {
       setTemplates(loadedTemplates);
     } catch (error) {
       log.error("Failed to load templates:", error);
+      reportError(error, {
+        feature: "budget",
+        operation: "load_budget_templates",
+        screen: "/budget-templates",
+      });
       showError("Error", "Failed to load budget templates");
     } finally {
       setLoading(false);
@@ -94,8 +104,16 @@ export default function BudgetTemplatesScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadTemplates();
-    setRefreshing(false);
+    const start = Date.now();
+    try {
+      await loadTemplates();
+    } finally {
+      const elapsed = Date.now() - start;
+      if (elapsed < 500) {
+        await new Promise<void>((r) => setTimeout(r, 500 - elapsed));
+      }
+      setRefreshing(false);
+    }
   }, [loadTemplates]);
 
   const openApplyModal = useCallback((template: BudgetTemplate) => {
@@ -154,6 +172,34 @@ export default function BudgetTemplatesScreen() {
     showInfo("Preview", "Preview modal coming soon");
   }, [showInfo]);
 
+  const renderTemplateRow = useCallback(
+    ({ item }: { item: BudgetTemplate }) => (
+      <TemplateCard
+        template={item}
+        onApply={openApplyModal}
+        onPreview={handlePreview}
+        delay={0}
+      />
+    ),
+    [openApplyModal, handlePreview],
+  );
+
+  const renderLifeStageFilter = useCallback(
+    ({ item }: { item: (typeof LIFE_STAGE_FILTERS)[number] }) => (
+      <FilterChip
+        label={item.label}
+        selected={selectedLifeStage === item.value}
+        onPress={() => setSelectedLifeStage(item.value)}
+      />
+    ),
+    [selectedLifeStage],
+  );
+
+  const lifeStageKeyExtractor = useCallback(
+    (item: (typeof LIFE_STAGE_FILTERS)[number]) => item.value,
+    [],
+  );
+
   // Filter templates
   const filteredTemplates = templates.filter(
     (t) => selectedLifeStage === "all" || t.lifeStage === selectedLifeStage
@@ -164,20 +210,14 @@ export default function BudgetTemplatesScreen() {
     : "";
 
   const lifeStageBottom = (
-    <ScrollView
+    <FlatList
       horizontal
+      data={LIFE_STAGE_FILTERS}
+      keyExtractor={lifeStageKeyExtractor}
+      renderItem={renderLifeStageFilter}
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ flexDirection: "row", gap: 10, alignItems: "center", }}
-    >
-      {LIFE_STAGE_FILTERS.map(({ value, label }) => (
-        <FilterChip
-          key={value}
-          label={label}
-          selected={selectedLifeStage === value}
-          onPress={() => setSelectedLifeStage(value)}
-        />
-      ))}
-    </ScrollView>
+      contentContainerStyle={{ flexDirection: "row", gap: 10, alignItems: "center" }}
+    />
   );
 
   return (
@@ -192,17 +232,21 @@ export default function BudgetTemplatesScreen() {
       <FlashList
         data={filteredTemplates}
         keyExtractor={(t) => t.id}
-        renderItem={({ item }) => (
-          <TemplateCard
-            template={item}
-            onApply={openApplyModal}
-            onPreview={handlePreview}
-            delay={0}
-          />
-        )}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 32, gap: 16, marginTop: 164 }}
+        estimatedItemSize={240}
+        renderItem={renderTemplateRow}
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: getStandardHeaderWithBottomBodyOffsetTop(insets.top) + 8,
+          paddingBottom: 32,
+          gap: 16,
+        }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={PULL_REFRESH_EMERALD}
+            colors={[PULL_REFRESH_EMERALD]}
+          />
         }
         ListEmptyComponent={
           !loading ? (

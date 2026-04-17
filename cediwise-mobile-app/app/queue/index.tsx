@@ -184,7 +184,7 @@ export default function BudgetQueueScreen() {
               <Text className="text-muted-foreground text-xs mt-1" style={queueStyles.textMuted}>
                 {isSyncing
                   ? 'Sync run in progress — UI updates when run finishes.'
-                  : 'Pull-to-refresh isn’t wired here yet — use Retry all.'}
+                  : 'List updates when you sync, retry items, or clear cache.'}
               </Text>
             </View>
 
@@ -218,20 +218,23 @@ export default function BudgetQueueScreen() {
             </View>
           </View>
         </Card>
-
-        {pendingCount === 0 ? (
-          <Card>
-            <Text className="text-white text-base font-semibold" style={queueStyles.textBase}>
-              All synced
-            </Text>
-            <Text className="text-muted-foreground text-sm mt-2" style={queueStyles.textMuted}>
-              You’re good — no failed writes are waiting.
-            </Text>
-          </Card>
-        ) : null}
       </View>
     ),
     [pendingCount, isLoading, isSyncing, showError],
+  );
+
+  const listEmpty = useCallback(
+    () => (
+      <View style={queueStyles.emptyListWrap}>
+        <Text className="text-white text-base font-semibold" style={queueStyles.textBase}>
+          Nothing pending
+        </Text>
+        <Text className="text-muted-foreground text-sm mt-2" style={queueStyles.textMuted}>
+          You’re all caught up — no items are waiting to sync.
+        </Text>
+      </View>
+    ),
+    [],
   );
 
   const renderItem = useCallback(
@@ -313,13 +316,15 @@ export default function BudgetQueueScreen() {
 
       <View className="px-5 flex-1">
         <FlashList
-          data={pendingCount === 0 ? [] : (queue?.items ?? [])}
+          data={queue?.items ?? []}
           ListHeaderComponent={listHeader}
+          ListEmptyComponent={listEmpty}
           renderItem={renderItem}
           keyExtractor={keyExtractor}
-          extraData={retryingMutationId}
+          extraData={`${retryingMutationId}-${pendingCount}`}
           ItemSeparatorComponent={QueueItemSeparator}
           contentContainerStyle={queueStyles.listContent}
+          estimatedItemSize={128}
         />
       </View>
 
@@ -400,5 +405,9 @@ const queueStyles = StyleSheet.create({
   },
   retryButtonText: { color: '#E2E8F0', fontFamily: 'Figtree-SemiBold', fontSize: 14 },
   listContent: { paddingBottom: 32 },
+  emptyListWrap: {
+    paddingVertical: 24,
+    paddingHorizontal: 4,
+  },
 });
 

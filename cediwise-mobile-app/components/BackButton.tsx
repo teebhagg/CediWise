@@ -31,9 +31,14 @@ export function BackButton({ label = 'Back', onPress, className }: BackButtonPro
     }
   };
 
+  const a11yLabel = label === 'Back' ? 'Go back' : `${label}, go back`;
+
   return (
     <Pressable
       onPress={handlePress}
+      accessibilityRole="button"
+      accessibilityLabel={a11yLabel}
+      hitSlop={{ top: 12, bottom: 12, left: 8, right: 8 }}
       className={
         className ??
         'flex flex-row items-center gap-2 rounded-full'

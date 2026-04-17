@@ -26,7 +26,9 @@ import { router } from "expo-router";
 import { ChevronRight, ExternalLink, Search, X } from "lucide-react-native";
 import React, { memo, useCallback, useMemo, useRef, useState } from "react";
 import {
+  KeyboardAvoidingView,
   Linking,
+  Platform,
   Pressable,
   SectionList,
   StyleSheet,
@@ -59,10 +61,14 @@ const TermCard = memo(function TermCard({
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           onPress(term);
         }}
+        accessibilityRole="button"
+        accessibilityLabel={term.term}
+        accessibilityHint="Opens full definition"
         style={({ pressed }) => [
           styles.termCard,
           pressed && styles.termCardPressed,
-        ]}>
+        ]}
+      >
         <View style={styles.termCardContent}>
           <Text style={styles.termName}>{term.term}</Text>
           {term.full_form && (
@@ -128,7 +134,13 @@ function TermDetailModal({
           )}
 
           {term.source && (
-            <Pressable style={styles.sheetSource} onPress={handleOpenSource}>
+            <Pressable
+              style={styles.sheetSource}
+              onPress={handleOpenSource}
+              accessibilityRole="button"
+              accessibilityLabel={`Open source: ${term.source.label}`}
+              accessibilityHint="Opens the reference link in your browser"
+            >
               <Text style={styles.sheetSourceLabel}>
                 Source: {term.source.label}
               </Text>
@@ -167,9 +179,38 @@ export default function GlossaryScreen() {
 
   const sections = useMemo(() => getGlossarySections(filtered), [filtered]);
 
+  const glossaryItemSeparator = useCallback(
+    () => <View style={styles.separator} />,
+    [],
+  );
+  const glossarySectionSeparator = useCallback(
+    () => <View style={styles.sectionSeparator} />,
+    [],
+  );
+
   const handleTermPress = useCallback((term: GlossaryTerm) => {
     setSelectedTerm(term);
   }, []);
+
+  const renderGlossaryItem = useCallback(
+    ({ item, index }: { item: GlossaryTerm; index: number }) => (
+      <TermCard
+        term={item}
+        onPress={handleTermPress}
+        index={index % 10}
+      />
+    ),
+    [handleTermPress],
+  );
+
+  const renderGlossarySectionHeader = useCallback(
+    ({ section }: { section: { letter: string } }) => (
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionLetter}>{section.letter}</Text>
+      </View>
+    ),
+    [],
+  );
 
   const clearSearch = () => {
     setQuery("");
@@ -183,7 +224,12 @@ export default function GlossaryScreen() {
         prefixIcon={<Search size={16} color="#64748b" />}
         suffixIcon={
           query.length > 0 && (
-            <Pressable onPress={clearSearch} hitSlop={8}>
+            <Pressable
+              onPress={clearSearch}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+              hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+            >
               <X size={15} color="#64748b" />
             </Pressable>
           )
@@ -199,7 +245,10 @@ export default function GlossaryScreen() {
   );
 
   return (
-    <View style={styles.root}>
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
       <ExpandedHeader
         scrollY={scrollY}
         title="Financial Glossary"
@@ -225,7 +274,11 @@ export default function GlossaryScreen() {
           <Text style={styles.emptyText}>
             No terms match &quot;{query}&quot;
           </Text>
-          <Pressable onPress={clearSearch}>
+          <Pressable
+            onPress={clearSearch}
+            accessibilityRole="button"
+            accessibilityLabel="Clear search"
+          >
             <Text style={styles.clearText}>Clear search</Text>
           </Pressable>
         </View>
@@ -236,25 +289,16 @@ export default function GlossaryScreen() {
           snapToOffsets={[0, DEFAULT_EXPANDED_HEIGHT - DEFAULT_STANDARD_HEIGHT]}
           snapToEnd={false}
           decelerationRate="fast"
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
           sections={sections}
           keyExtractor={(item: any) => item.id}
           stickySectionHeadersEnabled
-          renderSectionHeader={({ section }: any) => (
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionLetter}>{section.letter}</Text>
-            </View>
-          )}
-          renderItem={({ item, index }: any) => (
-            <TermCard
-              term={item}
-              onPress={handleTermPress}
-              index={index % 10}
-            />
-          )}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          SectionSeparatorComponent={() => (
-            <View style={styles.sectionSeparator} />
-          )}
+          renderSectionHeader={renderGlossarySectionHeader as never}
+          renderItem={renderGlossaryItem as never}
+          ItemSeparatorComponent={glossaryItemSeparator}
+          SectionSeparatorComponent={glossarySectionSeparator}
+          removeClippedSubviews={Platform.OS === "android"}
           contentContainerStyle={[
             styles.listContent,
             {
@@ -270,7 +314,7 @@ export default function GlossaryScreen() {
         term={selectedTerm}
         onClose={() => setSelectedTerm(null)}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

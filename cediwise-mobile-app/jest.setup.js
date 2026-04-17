@@ -1,10 +1,23 @@
 global.__DEV__ = true;
 
+/** Mutable OS for node tests that import `Platform` from `react-native` (e.g. services). */
+globalThis.__JEST_RN_PLATFORM_OS__ = "ios";
+
+const Platform = {};
+Object.defineProperty(Platform, "OS", {
+  configurable: true,
+  enumerable: true,
+  get() {
+    return globalThis.__JEST_RN_PLATFORM_OS__ ?? "ios";
+  },
+});
+
 jest.mock("react-native", () => ({
   DeviceEventEmitter: {
     addListener: jest.fn(),
     emit: jest.fn(),
   },
+  Platform,
 }));
 
 jest.mock("react-native-url-polyfill/auto", () => {});

@@ -1,3 +1,5 @@
+import { ANALYTICS_EVENTS } from "@/constants/analyticsEvents";
+import { getPostHogOptional } from "@/utils/analytics/posthogClientRef";
 import type { BudgetMutation, BudgetMutationKind } from "../types/budget";
 import {
   loadBudgetQueue,
@@ -636,11 +638,20 @@ export async function flushBudgetQueue(
         failCount,
         attempted: slice.length,
       });
+      getPostHogOptional()?.capture(ANALYTICS_EVENTS.budgetSyncFailed, {
+        reason_bucket: "mutation_failed",
+        fail_count: failCount,
+        ok_count: okCount,
+        attempted: slice.length,
+      });
     }
 
     return { okCount, failCount };
   } catch (err) {
     log.error("[budgetSync] flushBudgetQueue threw", { userId, err });
+    getPostHogOptional()?.capture(ANALYTICS_EVENTS.budgetSyncFailed, {
+      reason_bucket: "sync_throw",
+    });
     throw err;
   }
 }

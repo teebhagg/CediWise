@@ -1,7 +1,7 @@
 import { authTokens } from "@/constants/authTokens";
 import { useAuth } from "@/hooks/useAuth";
 import { router } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import {
   extractUserData,
@@ -11,33 +11,39 @@ import {
 import { onLoginSuccess } from "../utils/authRouting";
 import { log } from "../utils/logger";
 import { supabase } from "../utils/supabase";
+import { reportError } from "../utils/telemetry";
 
 const MAX_RETRIES = 2;
 
 export default function Index() {
   const [isLoading, setIsLoading] = useState(true);
   const { refreshAuth } = useAuth();
+  const cancelledRef = useRef(false);
 
   const checkSession = useCallback(async () => {
     try {
+      if (cancelledRef.current) return;
       if (!supabase) {
-        router.replace("/auth");
+        if (!cancelledRef.current) router.replace("/auth");
         return;
       }
       // 1) Fast path: use local auth, refreshing if needed.
       const storedAuth = await refreshStoredSession();
+      if (cancelledRef.current) return;
       if (storedAuth?.user?.id) {
         log.debug("Using stored auth data for user:", storedAuth.user.email);
         await refreshAuth();
+        if (cancelledRef.current) return;
         await onLoginSuccess(storedAuth.user.id);
         return;
       }
 
       // 2) Fallback: check Supabase persisted session and store locally.
       const { data, error } = await supabase.auth.getSession();
+      if (cancelledRef.current) return;
       if (error) {
         log.error("Session check error:", error);
-        router.replace("/onboarding");
+        if (!cancelledRef.current) router.replace("/onboarding");
         return;
       }
 
@@ -56,18 +62,20 @@ export default function Index() {
           expiresAt,
           user: userData,
         });
+        if (cancelledRef.current) return;
         if (!stored?.user?.id) {
           log.error("Auth data not persisted; not navigating");
-          router.replace("/onboarding");
+          if (!cancelledRef.current) router.replace("/onboarding");
           return;
         }
         await refreshAuth();
+        if (cancelledRef.current) return;
         await onLoginSuccess(stored.user.id);
         return;
       }
 
       log.debug("No session found, redirecting to onboarding");
-      router.replace("/onboarding");
+      if (!cancelledRef.current) router.replace("/onboarding");
     } catch (e) {
       log.error("Error checking session:", e);
       throw e;
@@ -77,10 +85,12 @@ export default function Index() {
   }, [refreshAuth]);
 
   useEffect(() => {
+    cancelledRef.current = false;
     let retries = 0;
 
     const run = async () => {
       while (retries <= MAX_RETRIES) {
+        if (cancelledRef.current) return;
         setIsLoading(true);
         try {
           await checkSession();
@@ -89,7 +99,12 @@ export default function Index() {
           retries++;
           if (retries > MAX_RETRIES) {
             log.error("Session check failed after retries:", e);
-            router.replace("/onboarding");
+            reportError(e, {
+              feature: "auth",
+              operation: "index_session_retries",
+              screen: "/index",
+            });
+            if (!cancelledRef.current) router.replace("/onboarding");
             return;
           }
           await new Promise((r) => setTimeout(r, 500 * retries));
@@ -97,7 +112,10 @@ export default function Index() {
       }
     };
 
-    run();
+    void run();
+    return () => {
+      cancelledRef.current = true;
+    };
   }, [checkSession]);
 
   return (

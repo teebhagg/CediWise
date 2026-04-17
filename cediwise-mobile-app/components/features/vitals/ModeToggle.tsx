@@ -13,6 +13,10 @@ export function ModeToggle({ value, onChange }: ModeToggleProps) {
       <View style={{ flexDirection: "row", gap: 10 }}>
         <Pressable
           onPress={() => onChange("general")}
+          accessibilityRole="button"
+          accessibilityLabel="General utilities mode"
+          accessibilityHint="One combined total for utilities like ECG and water"
+          accessibilityState={{ selected: value === "general" }}
           style={({ pressed }) => ({
             flex: 1,
             minHeight: 44,
@@ -30,6 +34,10 @@ export function ModeToggle({ value, onChange }: ModeToggleProps) {
         </Pressable>
         <Pressable
           onPress={() => onChange("precise")}
+          accessibilityRole="button"
+          accessibilityLabel="Precise utilities mode"
+          accessibilityHint="Track ECG and water as separate amounts"
+          accessibilityState={{ selected: value === "precise" }}
           style={({ pressed }) => ({
             flex: 1,
             minHeight: 44,

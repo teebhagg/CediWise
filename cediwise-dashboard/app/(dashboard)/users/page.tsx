@@ -1,5 +1,9 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { listUsersWithProfiles } from "@/lib/actions/users";
+import {
+  listUsersWithProfiles,
+  type UsersListFilters,
+} from "@/lib/actions/users";
+import { sanitizeInactiveDays } from "@/lib/utils/user-filters";
 import { UserSearch01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Suspense } from "react";
@@ -9,11 +13,13 @@ import { UsersTable } from "./users-table";
 export default async function UsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; perPage?: string; search?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const { page: pageStr, perPage: perPageStr, search } = await searchParams;
+  const params = await searchParams;
+  const { page: pageStr, perPage: perPageStr } = params;
   const page = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
   const perPage = Math.max(1, parseInt(perPageStr ?? "20", 10) || 20);
+  const filters = parseUsersFilters(params);
 
   return (
     <div className="space-y-6">
@@ -34,7 +40,7 @@ export default async function UsersPage({
         </CardHeader>
         <CardContent>
           <Suspense fallback={<UsersTableSkeleton />}>
-            <UsersTableWrapper page={page} perPage={perPage} search={search} />
+            <UsersTableWrapper page={page} perPage={perPage} filters={filters} />
           </Suspense>
         </CardContent>
       </Card>
@@ -45,22 +51,60 @@ export default async function UsersPage({
 async function UsersTableWrapper({
   page,
   perPage,
-  search,
+  filters,
 }: {
   page: number;
   perPage: number;
-  search?: string;
+  filters: UsersListFilters;
 }) {
-  const { users, total } = await listUsersWithProfiles(page, perPage, search);
+  const { users, total } = await listUsersWithProfiles(page, perPage, filters);
   return (
     <UsersTable
+      key={JSON.stringify({ page, perPage, ...filters })}
       users={users}
       total={total}
       page={page}
       perPage={perPage}
-      searchQuery={search}
+      filters={filters}
     />
   );
+}
+
+function parseUsersFilters(
+  searchParams: Record<string, string | undefined>
+): UsersListFilters {
+  const profileStatus = searchParams.profileStatus;
+  const tier = searchParams.tier;
+  const subscriptionStatus = searchParams.subscriptionStatus;
+  const versionStatus = searchParams.versionStatus;
+
+  return {
+    search: searchParams.search?.trim() || undefined,
+    profileStatus:
+      profileStatus === "complete" ||
+      profileStatus === "incomplete" ||
+      profileStatus === "missing"
+        ? profileStatus
+        : undefined,
+    tier:
+      tier === "free" || tier === "budget" || tier === "sme"
+        ? tier
+        : undefined,
+    subscriptionStatus:
+      subscriptionStatus === "active" ||
+      subscriptionStatus === "trial" ||
+      subscriptionStatus === "expired" ||
+      subscriptionStatus === "canceled"
+        ? subscriptionStatus
+        : undefined,
+    inactiveDays: sanitizeInactiveDays(searchParams.inactiveDays),
+    versionStatus:
+      versionStatus === "outdated" ||
+      versionStatus === "current" ||
+      versionStatus === "unknown"
+        ? versionStatus
+        : undefined,
+  };
 }
 
 function UsersTableSkeleton() {

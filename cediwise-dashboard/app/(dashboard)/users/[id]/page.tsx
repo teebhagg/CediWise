@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmailComposerDialog } from "@/components/emails/email-composer-dialog";
+import { SmsComposerDialog } from "@/components/sms/sms-composer-dialog";
 import {
   Card,
   CardContent,
@@ -9,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getPrimaryContact } from "@/lib/utils/users";
+import { getPrimaryContact, isCediwisePhoneUser } from "@/lib/utils/users";
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
@@ -101,6 +102,7 @@ export default async function UserDetailPage({
     (user.user_metadata?.name as string) ??
     null;
   const { primary, secondary } = getPrimaryContact(user.email ?? null, user.phone ?? null);
+  const isPhoneAuth = isCediwisePhoneUser(user.email ?? null);
 
   const p = profile as Record<string, unknown> | null;
   const profileDetails: { label: string; value: string | number | null }[] = [
@@ -134,8 +136,19 @@ export default async function UserDetailPage({
             {user.id}
           </p>
         </div>
-        <div className="ml-auto">
-          {user.email ? (
+        <div className="ml-auto flex gap-2">
+          {isPhoneAuth && (user.phone || primary) ? (
+            <SmsComposerDialog
+              triggerLabel="Send SMS"
+              triggerVariant="default"
+              triggerSize="default"
+              recipients={[{ userId: user.id, phone: user.phone ?? primary, name: name ?? undefined }]}
+              audienceType="single"
+              source="user_profile"
+              title="SMS user"
+              description="Send an SMS directly to this user."
+            />
+          ) : user.email && !isPhoneAuth ? (
             <EmailComposerDialog
               triggerLabel="Send Email"
               triggerVariant="default"
@@ -149,7 +162,7 @@ export default async function UserDetailPage({
             />
           ) : (
             <Button variant="ghost" disabled>
-              No email on file
+              No contact on file
             </Button>
           )}
         </div>

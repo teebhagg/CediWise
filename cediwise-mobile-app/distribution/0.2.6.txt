@@ -1,0 +1,6 @@
+• SME transactions: clearer workflows for sales and spending, with improved filtering and export-friendly tooling.
+• Home dashboard updates so your money snapshot is quicker to scan and act on.
+• Notifications: reorganized hub with inbox-style browsing so you stay on top of what matters.
+• Subscriptions & upgrades: steadier tier handling and a smoother path when you choose a paid plan.
+• Profile: streamlined layout plus profile editing improvements.
+• Dedicated feedback screen and thoughtful periodic prompts so we hear from you without getting in your way.

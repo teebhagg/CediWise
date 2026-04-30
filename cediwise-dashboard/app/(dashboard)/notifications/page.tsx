@@ -1,6 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { listFeedback } from "@/lib/actions/lesson-feedback";
+import {
+  listFeedback as listMobileAppFeedback,
+  type FeedbackRecord as AppFeedbackRecord,
+} from "@/lib/actions/feedback";
+import { listFeedback as listPendingLessonFeedback } from "@/lib/actions/lesson-feedback";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
@@ -44,6 +48,28 @@ export default async function NotificationsPage({
           </div>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Mobile app feedback</CardTitle>
+          <CardDescription>
+            Messages sent from the CediWise mobile app (bugs, ideas, and comments). Reply by email to follow up.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Suspense fallback={<FeedbackSkeleton />}>
+            <MobileAppFeedbackList />
+          </Suspense>
+          <div className="mt-4">
+            <Link href="/feedback?source=mobile_app">
+              <Button variant="outline" size="sm">
+                View in Feedback
+                <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="ml-1 size-4" />
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -51,7 +77,7 @@ export default async function NotificationsPage({
 const NOTIFICATIONS_PER_PAGE = 10;
 
 async function FeedbackNotificationList({ page }: { page: number }) {
-  const { data: unresolved, total } = await listFeedback(
+  const { data: unresolved, total } = await listPendingLessonFeedback(
     undefined,
     false,
     page,
@@ -113,6 +139,74 @@ async function FeedbackNotificationList({ page }: { page: number }) {
           </Link>
         </p>
       )}
+    </div>
+  );
+}
+
+const MOBILE_FEEDBACK_LIMIT = 15;
+
+async function MobileAppFeedbackList() {
+  const { data: rows, total } = await listMobileAppFeedback(
+    { source: "mobile_app" },
+    1,
+    MOBILE_FEEDBACK_LIMIT
+  );
+
+  if (rows.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        No mobile app feedback yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-medium">
+        <span className="text-muted-foreground">{total}</span> submission{total === 1 ? "" : "s"} (showing{" "}
+        {rows.length})
+      </p>
+      <div className="rounded-lg border overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/50">
+                <th className="h-10 px-4 text-left font-medium">Category</th>
+                <th className="h-10 px-4 text-left font-medium">Message</th>
+                <th className="h-10 px-4 text-left font-medium">Email</th>
+                <th className="h-10 px-4 text-left font-medium">Version</th>
+                <th className="h-10 px-4 text-left font-medium">Created</th>
+                <th className="h-10 px-4 text-left font-medium">Reply</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((f: AppFeedbackRecord) => (
+                <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-3">{f.category}</td>
+                  <td className="px-4 py-3 max-w-xs truncate" title={f.feedback_text}>
+                    {f.feedback_text}
+                  </td>
+                  <td className="px-4 py-3 font-mono text-xs">{f.email}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{f.version}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {new Date(f.created_at).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3">
+                    <a
+                      className="text-primary underline-offset-4 hover:underline text-xs font-medium"
+                      href={`mailto:${f.email}?subject=${encodeURIComponent("Re: Your CediWise feedback")}&body=${encodeURIComponent(
+                        `Hi,\n\nThanks for your feedback in the CediWise app.\n\n---\n${f.feedback_text.slice(0, 500)}${f.feedback_text.length > 500 ? "…" : ""}\n`
+                      )}`}
+                    >
+                      Email
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

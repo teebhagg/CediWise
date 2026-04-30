@@ -233,6 +233,40 @@ export async function sendAnnouncementNow(input: {
 }
 
 /** Push announcement to a single user’s registered devices only. */
+/** Permanently remove a campaign, delivery rows (CASCADE), and mobile read receipts (CASCADE). */
+export async function deleteAnnouncementCampaign(
+  campaignId: string
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    await requireAdminUser();
+    const id = campaignId.trim();
+    if (!id) {
+      return { ok: false, error: "Invalid campaign id" };
+    }
+
+    const admin = createAdminClient();
+    const { error, count } = await admin
+      .from("announcement_campaigns")
+      .delete({ count: "exact" })
+      .eq("id", id);
+
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+    if (count === 0) {
+      return { ok: false, error: "Campaign not found or already deleted" };
+    }
+
+    revalidatePath("/announcements");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Delete failed",
+    };
+  }
+}
+
 export async function sendAnnouncementToUser(input: {
   targetUserId: string;
   title: string;

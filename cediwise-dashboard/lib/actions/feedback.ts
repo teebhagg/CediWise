@@ -23,6 +23,8 @@ export type FeedbackListFilters = {
   fromDate?: string;
   toDate?: string;
   search?: string;
+  /** e.g. `mobile_app` for in-app submissions */
+  source?: string;
 };
 
 export type ListFeedbackResult = { data: FeedbackRecord[]; total: number };
@@ -39,6 +41,7 @@ export async function listFeedback(
   if (filters.category) query = query.eq("category", filters.category);
   if (filters.rating) query = query.eq("rating", filters.rating);
   if (typeof filters.isBeta === "boolean") query = query.eq("is_beta", filters.isBeta);
+  if (filters.source) query = query.eq("source", filters.source);
   if (filters.fromDate) query = query.gte("created_at", `${filters.fromDate}T00:00:00.000Z`);
   if (filters.toDate) query = query.lte("created_at", `${filters.toDate}T23:59:59.999Z`);
   if (filters.search) {

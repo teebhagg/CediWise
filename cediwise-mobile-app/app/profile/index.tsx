@@ -6,8 +6,10 @@ import {
   Bell,
   Database,
   DollarSign,
+  Inbox,
   LogOut,
   Mail,
+  MessageCircle,
   Phone,
   RotateCcw,
   Sparkles,
@@ -36,7 +38,6 @@ import {
 } from "@/components/CediWiseHeader";
 import { AppDialog } from "@/components/AppDialog";
 import { LogoutModal } from "@/components/LogoutModal";
-import { useBudgetScreenState } from "@/components/features/budget/useBudgetScreenState";
 import { useTourContext } from "@/contexts/TourContext";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
@@ -52,6 +53,7 @@ import {
   scheduleDailyExpenseReminder,
   setReminderFrequency,
 } from "@/services/notifications";
+import { useAnnouncementInboxStore } from "@/stores/notificationsStore";
 import { deleteAccountRemote, getDisplayContact } from "@/utils/auth";
 import { resetNavigationToAuth } from "@/utils/authRouting";
 import { clearBudgetLocal } from "@/utils/budgetStorage";
@@ -97,16 +99,15 @@ export default function ProfileScreen() {
   const { resetTourSeen, startHomeTour, startBudgetTour } = useTourContext();
   const { showError, showSuccess } = useAppToast();
   const personalization = usePersonalizationStatus(user?.id);
-  const { derived, budget } = useBudgetScreenState();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [budgetEngineLoading, setBudgetEngineLoading] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
   const [reminderFrequency, setReminderFrequencyState] = useState<ReminderFrequency>("daily");
   const [reminderFrequencyLoading, setReminderFrequencyLoading] = useState(false);
   const { effectiveTier, isOnTrial, trialEndsAt, pendingTier, pendingTierStartDate } = useTierContext();
+  const inboxUnread = useAnnouncementInboxStore((s) => s.unreadCount);
 
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
@@ -117,6 +118,11 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (!user?.id) return;
     void getNotificationsEnabled().then(setNotificationsEnabled);
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    void useAnnouncementInboxStore.getState().refresh(user.id);
   }, [user?.id]);
 
   useEffect(() => {
@@ -336,48 +342,12 @@ export default function ProfileScreen() {
     [],
   );
 
-  const budgetEngineMode = derived.budgetEngineMode ?? "auto_apply_safe_rules";
-
-  const budgetEngineOptions = [
-    {
-      value: "recommend_only" as const,
-      title: "Recommend only",
-      description: "Show suggestions, but let me approve everything.",
-    },
-    {
-      value: "auto_apply_safe_rules" as const,
-      title: "Auto-apply safe rules",
-      description: "Automatically move unspent money to Savings.",
-    },
-    {
-      value: "manual_off" as const,
-      title: "Manual / off",
-      description: "Turn off engine suggestions and automatic actions.",
-    },
-  ];
-
-  const handleBudgetEngineModeChange = useCallback(
-    async (mode: (typeof budgetEngineOptions)[number]["value"]) => {
-      if (budgetEngineLoading || budgetEngineMode === mode) return;
-      setBudgetEngineLoading(true);
-      try {
-        await budget.updateBudgetEngineMode(mode);
-      } catch (e) {
-        log.error("Budget engine mode update failed:", e);
-        showError("Error", "Could not update budget engine mode");
-      } finally {
-        setBudgetEngineLoading(false);
-      }
-    },
-    [budget, budgetEngineLoading, budgetEngineMode, showError],
-  );
-
   return (
     <View className="flex-1 bg-black">
       <ExpandedHeader
         scrollY={scrollY}
         title="Profile & Settings"
-        subtitle="Manage your account and preferences"
+        subtitle="Account, notifications, and preferences"
         centered={true}
         leading={<BackButton onPress={handleBackPress} />}
       />
@@ -425,9 +395,16 @@ export default function ProfileScreen() {
               </View>
             </View>
           </Card>
-          
-          {/* Subscription Status Card */}
-          <PressableFeedback animation={false} onPress={onItemPress(() => router.push(effectiveTier === "free" ? "/upgrade" : "/subscription"))}>
+
+          {/* Plan & billing */}
+          <View>
+            <Text className={SECTION_LABEL_CLASS}>Plan &amp; billing</Text>
+            <PressableFeedback
+              animation={false}
+              onPress={onItemPress(() =>
+                router.push(effectiveTier === "free" ? "/upgrade" : "/subscription"),
+              )}
+            >
             <PressableFeedback.Scale />
             <PressableFeedback.Ripple />
             <Card className="border-emerald-500/30 overflow-hidden">
@@ -489,10 +466,65 @@ export default function ProfileScreen() {
                </View>
             </Card>
           </PressableFeedback>
+          </View>
 
-          {/* Notifications */}
+          {/* Your account */}
           <View>
-            <Text className={SECTION_LABEL_CLASS}>Notifications</Text>
+            <Text className={SECTION_LABEL_CLASS}>Your account</Text>
+            <ListGroup variant="tertiary" className={LIST_GROUP_CONTAINER_CLASS}>
+              <PressableFeedback
+                animation={false}
+                onPress={onItemPress(() =>
+                  router.push("/profile/edit" as never),
+                )}
+              >
+                <PressableFeedback.Scale />
+                <PressableFeedback.Ripple />
+                <ListGroup.Item disabled>
+                  <ListGroup.ItemPrefix>
+                    <IconPrefix icon={UserIcon} color="#60A5FA" />
+                  </ListGroup.ItemPrefix>
+                  <ListGroup.ItemContent>
+                    <ListGroup.ItemTitle>Edit profile</ListGroup.ItemTitle>
+                    <ListGroup.ItemDescription>
+                      Name and account type
+                    </ListGroup.ItemDescription>
+                  </ListGroup.ItemContent>
+                  <ListGroup.ItemSuffix />
+                </ListGroup.Item>
+              </PressableFeedback>
+              <Separator className="mx-4" />
+              <PressableFeedback
+                animation={false}
+                onPress={onItemPress(() => router.push("/vitals?mode=edit"))}
+              >
+                <PressableFeedback.Scale />
+                <PressableFeedback.Ripple />
+                <ListGroup.Item disabled>
+                  <ListGroup.ItemPrefix>
+                    <IconPrefix icon={UserIcon} color="#10B981" />
+                  </ListGroup.ItemPrefix>
+                  <ListGroup.ItemContent>
+                    <ListGroup.ItemTitle>Personalization</ListGroup.ItemTitle>
+                    <ListGroup.ItemDescription>
+                      {personalization.isLoading
+                        ? "Checking…"
+                        : personalization.setupCompleted
+                          ? "Income, bills, and budget setup complete"
+                          : "Set up your money profile for a tailored budget"}
+                    </ListGroup.ItemDescription>
+                  </ListGroup.ItemContent>
+                  <ListGroup.ItemSuffix />
+                </ListGroup.Item>
+              </PressableFeedback>
+            </ListGroup>
+          </View>
+
+          {/* Notifications & announcements */}
+          <View>
+            <Text className={SECTION_LABEL_CLASS}>
+              Notifications &amp; announcements
+            </Text>
             <ListGroup variant="tertiary" className={LIST_GROUP_CONTAINER_CLASS}>
               <ListGroup.Item disabled>
                 <ListGroup.ItemPrefix>
@@ -585,182 +617,60 @@ export default function ProfileScreen() {
                   </ListGroup.Item>
                 </>
               ) : null}
-            </ListGroup>
-          </View>
-
-          {/* Profile and personalization */}
-          <View>
-            <Text className={SECTION_LABEL_CLASS}>Profile and personalization</Text>
-            <ListGroup variant="tertiary" className={LIST_GROUP_CONTAINER_CLASS}>
-              <ListGroup.Item disabled>
-                <ListGroup.ItemPrefix>
-                  <IconPrefix icon={UserIcon} color="#60A5FA" />
-                </ListGroup.ItemPrefix>
-                <ListGroup.ItemContent>
-                  <ListGroup.ItemTitle>Edit Profile</ListGroup.ItemTitle>
-                  <ListGroup.ItemDescription>Coming soon</ListGroup.ItemDescription>
-                </ListGroup.ItemContent>
-                <ListGroup.ItemSuffix />
-              </ListGroup.Item>
               <Separator className="mx-4" />
-              <PressableFeedback animation={false} onPress={onItemPress(() => router.push("/vitals?mode=edit"))}>
+              <PressableFeedback
+                animation={false}
+                onPress={onItemPress(() => router.push("/notifications/inbox" as never))}
+              >
                 <PressableFeedback.Scale />
                 <PressableFeedback.Ripple />
                 <ListGroup.Item disabled>
                   <ListGroup.ItemPrefix>
-                    <IconPrefix icon={UserIcon} color="#10B981" />
+                    <IconPrefix icon={Inbox} color="#34D399" />
                   </ListGroup.ItemPrefix>
                   <ListGroup.ItemContent>
-                    <ListGroup.ItemTitle>Personalization settings</ListGroup.ItemTitle>
+                    <ListGroup.ItemTitle>Updates inbox</ListGroup.ItemTitle>
                     <ListGroup.ItemDescription>
-                      {personalization.isLoading
-                        ? "Checking…"
-                        : personalization.setupCompleted
-                          ? "Completed"
-                          : "Not set"}
+                      Announcements from CediWise
                     </ListGroup.ItemDescription>
                   </ListGroup.ItemContent>
-                  <ListGroup.ItemSuffix />
+                  <ListGroup.ItemSuffix>
+                    {inboxUnread > 0 ? (
+                      <View className="min-w-[22px] h-[22px] rounded-full bg-emerald-500 items-center justify-center px-1.5">
+                        <Text className="text-white text-xs font-bold">
+                          {inboxUnread > 99 ? "99+" : inboxUnread}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </ListGroup.ItemSuffix>
                 </ListGroup.Item>
               </PressableFeedback>
             </ListGroup>
           </View>
 
-          {/* Budget preferences */}
+          {/* Help */}
           <View>
-            <Text className={SECTION_LABEL_CLASS}>Budget preferences</Text>
+            <Text className={SECTION_LABEL_CLASS}>Help</Text>
             <ListGroup variant="tertiary" className={LIST_GROUP_CONTAINER_CLASS}>
-              <View key={budgetEngineOptions[0].value}>
-                <PressableFeedback
-                  animation={false}
-                  onPress={onItemPress(() =>
-                    handleBudgetEngineModeChange(budgetEngineOptions[0].value),
-                  )}
-                >
-                  <PressableFeedback.Scale />
-                  <PressableFeedback.Ripple />
-                  <ListGroup.Item disabled>
-                    <ListGroup.ItemPrefix>
-                      <View
-                        className={`w-10 h-10 rounded-xl justify-center items-center border ${
-                          budgetEngineMode === budgetEngineOptions[0].value
-                            ? "bg-emerald-500/20 border-emerald-400/60"
-                            : "bg-slate-500/15 border-slate-400/20"
-                        }`}
-                      >
-                        <Text
-                          className={`text-base font-bold ${
-                            budgetEngineMode === budgetEngineOptions[0].value
-                              ? "text-emerald-300"
-                              : "text-slate-400"
-                          }`}
-                        >
-                          {budgetEngineMode === budgetEngineOptions[0].value ? "•" : "○"}
-                        </Text>
-                      </View>
-                    </ListGroup.ItemPrefix>
-                    <ListGroup.ItemContent>
-                      <ListGroup.ItemTitle>{budgetEngineOptions[0].title}</ListGroup.ItemTitle>
-                      <ListGroup.ItemDescription>
-                        {budgetEngineOptions[0].description}
-                      </ListGroup.ItemDescription>
-                    </ListGroup.ItemContent>
-                    <ListGroup.ItemSuffix>
-                      {budgetEngineLoading && budgetEngineMode === budgetEngineOptions[0].value ? (
-                        <Text className="text-slate-400 text-sm">Updating…</Text>
-                      ) : null}
-                    </ListGroup.ItemSuffix>
-                  </ListGroup.Item>
-                </PressableFeedback>
-                <Separator className="mx-4" />
-              </View>
-              <View key={budgetEngineOptions[1].value}>
-                <PressableFeedback
-                  animation={false}
-                  onPress={onItemPress(() =>
-                    handleBudgetEngineModeChange(budgetEngineOptions[1].value),
-                  )}
-                >
-                  <PressableFeedback.Scale />
-                  <PressableFeedback.Ripple />
-                  <ListGroup.Item disabled>
-                    <ListGroup.ItemPrefix>
-                      <View
-                        className={`w-10 h-10 rounded-xl justify-center items-center border ${
-                          budgetEngineMode === budgetEngineOptions[1].value
-                            ? "bg-emerald-500/20 border-emerald-400/60"
-                            : "bg-slate-500/15 border-slate-400/20"
-                        }`}
-                      >
-                        <Text
-                          className={`text-base font-bold ${
-                            budgetEngineMode === budgetEngineOptions[1].value
-                              ? "text-emerald-300"
-                              : "text-slate-400"
-                          }`}
-                        >
-                          {budgetEngineMode === budgetEngineOptions[1].value ? "•" : "○"}
-                        </Text>
-                      </View>
-                    </ListGroup.ItemPrefix>
-                    <ListGroup.ItemContent>
-                      <ListGroup.ItemTitle>{budgetEngineOptions[1].title}</ListGroup.ItemTitle>
-                      <ListGroup.ItemDescription>
-                        {budgetEngineOptions[1].description}
-                      </ListGroup.ItemDescription>
-                    </ListGroup.ItemContent>
-                    <ListGroup.ItemSuffix>
-                      {budgetEngineLoading && budgetEngineMode === budgetEngineOptions[1].value ? (
-                        <Text className="text-slate-400 text-sm">Updating…</Text>
-                      ) : null}
-                    </ListGroup.ItemSuffix>
-                  </ListGroup.Item>
-                </PressableFeedback>
-                <Separator className="mx-4" />
-              </View>
-              <View key={budgetEngineOptions[2].value}>
-                <PressableFeedback
-                  animation={false}
-                  onPress={onItemPress(() =>
-                    handleBudgetEngineModeChange(budgetEngineOptions[2].value),
-                  )}
-                >
-                  <PressableFeedback.Scale />
-                  <PressableFeedback.Ripple />
-                  <ListGroup.Item disabled>
-                    <ListGroup.ItemPrefix>
-                      <View
-                        className={`w-10 h-10 rounded-xl justify-center items-center border ${
-                          budgetEngineMode === budgetEngineOptions[2].value
-                            ? "bg-emerald-500/20 border-emerald-400/60"
-                            : "bg-slate-500/15 border-slate-400/20"
-                        }`}
-                      >
-                        <Text
-                          className={`text-base font-bold ${
-                            budgetEngineMode === budgetEngineOptions[2].value
-                              ? "text-emerald-300"
-                              : "text-slate-400"
-                          }`}
-                        >
-                          {budgetEngineMode === budgetEngineOptions[2].value ? "•" : "○"}
-                        </Text>
-                      </View>
-                    </ListGroup.ItemPrefix>
-                    <ListGroup.ItemContent>
-                      <ListGroup.ItemTitle>{budgetEngineOptions[2].title}</ListGroup.ItemTitle>
-                      <ListGroup.ItemDescription>
-                        {budgetEngineOptions[2].description}
-                      </ListGroup.ItemDescription>
-                    </ListGroup.ItemContent>
-                    <ListGroup.ItemSuffix>
-                      {budgetEngineLoading && budgetEngineMode === budgetEngineOptions[2].value ? (
-                        <Text className="text-slate-400 text-sm">Updating…</Text>
-                      ) : null}
-                    </ListGroup.ItemSuffix>
-                  </ListGroup.Item>
-                </PressableFeedback>
-              </View>
+              <PressableFeedback
+                animation={false}
+                onPress={onItemPress(() => router.push("/feedback" as never))}
+              >
+                <PressableFeedback.Scale />
+                <PressableFeedback.Ripple />
+                <ListGroup.Item disabled>
+                  <ListGroup.ItemPrefix>
+                    <IconPrefix icon={MessageCircle} color="#A78BFA" />
+                  </ListGroup.ItemPrefix>
+                  <ListGroup.ItemContent>
+                    <ListGroup.ItemTitle>Send feedback</ListGroup.ItemTitle>
+                    <ListGroup.ItemDescription>
+                      Report a bug or share an idea
+                    </ListGroup.ItemDescription>
+                  </ListGroup.ItemContent>
+                  <ListGroup.ItemSuffix />
+                </ListGroup.Item>
+              </PressableFeedback>
             </ListGroup>
           </View>
 
@@ -828,9 +738,9 @@ export default function ProfileScreen() {
             </View>
           ) : null}
 
-          {/* Guides */}
+          {/* Tours */}
           <View>
-            <Text className={SECTION_LABEL_CLASS}>Guides</Text>
+            <Text className={SECTION_LABEL_CLASS}>Tours</Text>
             <ListGroup variant="tertiary" className={LIST_GROUP_CONTAINER_CLASS}>
               <PressableFeedback
                 animation={false}
@@ -878,9 +788,9 @@ export default function ProfileScreen() {
             </ListGroup>
           </View>
 
-          {/* Account Actions */}
+          {/* Account */}
           <View>
-            <Text className={SECTION_LABEL_CLASS}>Account actions</Text>
+            <Text className={SECTION_LABEL_CLASS}>Account</Text>
             <PressableFeedback animation={false} onPress={onItemPress(handleLogoutPress)}>
               <PressableFeedback.Scale />
               <PressableFeedback.Ripple />

@@ -1,8 +1,10 @@
 import { useRouter } from "expo-router";
-import { WifiOff } from "lucide-react-native";
-import { useCallback, useEffect } from "react";
+import { useAnnouncementInboxStore } from "@/stores/notificationsStore";
+import { Bell, WifiOff } from "lucide-react-native";
+import { useCallback, useEffect, useMemo } from "react";
 import {
   Platform,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -23,8 +25,8 @@ import {
 } from "@/components/CediWiseHeader";
 import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
 import { Avatar } from "heroui-native";
-import { Pressable } from "react-native";
 
+import { PeriodicFeedbackPromptModal } from "@/components/feedback/PeriodicFeedbackPromptModal";
 import { BudgetTransactionModal } from "@/components/BudgetTransactionModal";
 import { DiscoveryHeroCard } from "@/components/features/home/DiscoveryHeroCard";
 import { MonthlyActivitiesCard } from "@/components/features/home/MonthlyActivitiesCard";
@@ -34,7 +36,9 @@ import { VitalHeroSkeleton } from "@/components/features/home/VitalHeroSkeleton"
 import { useHomeScreenState } from "@/components/features/home/useHomeScreenState";
 import { useTourContext } from "@/contexts/TourContext";
 import { useUpdateCheckContext } from "@/contexts/UpdateCheckContext";
+import { useAppToast } from "@/hooks/useAppToast";
 import { useConnectivity } from "@/hooks/useConnectivity";
+import { usePeriodicFeedbackPrompt } from "@/hooks/usePeriodicFeedbackPrompt";
 import { TourZone, useTour } from "react-native-lumen";
 
 const styles = StyleSheet.create({
@@ -51,11 +55,43 @@ const styles = StyleSheet.create({
     alignItems: "center",
     overflow: "hidden",
   },
+  /** Same chrome as profile button but no overflow:hidden — badge sits outside the circle. */
+  bellIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  bellButtonWrap: {
+    position: "relative",
+    width: 36,
+    height: 36,
+    marginRight: 6,
+    overflow: "visible",
+  },
+  bellBadge: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 10,
+    backgroundColor: "#10b981",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#000000",
+    zIndex: 2,
+  },
 });
 
 export default function DashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { showError, showSuccess } = useAppToast();
   const { check: checkForUpdate } = useUpdateCheckContext();
   const { isConnected } = useConnectivity();
   const {
@@ -70,6 +106,8 @@ export default function DashboardScreen() {
   const scrollHandler = useAnimatedScrollHandler((event) => {
     scrollY.value = event.contentOffset.y;
   });
+
+  const inboxUnread = useAnnouncementInboxStore((s) => s.unreadCount);
 
   const {
     user,
@@ -93,6 +131,47 @@ export default function DashboardScreen() {
     setShowExpenseModal,
     overviewAnimStyle,
   } = useHomeScreenState();
+
+  const tourEligibleFirstRun = useMemo(() => {
+    if (!onboardingLoaded || !activeOnboardingState) return false;
+    const currentStatus =
+      activeOnboardingState === "state_1_unpersonalized"
+        ? state1Status
+        : state2Status;
+    return currentStatus === "never_seen";
+  }, [
+    onboardingLoaded,
+    activeOnboardingState,
+    state1Status,
+    state2Status,
+  ]);
+
+  const {
+    modalVisible: feedbackPromptVisible,
+    modalWorking: feedbackPromptWorking,
+    onLater: feedbackPromptLater,
+    onNeverAsk: feedbackPromptNeverAsk,
+    submitQuickRating,
+  } = usePeriodicFeedbackPrompt({
+    userId: user?.id,
+    userEmail: user?.email,
+    authLoading,
+    isHomeLoading,
+    setupCompleted,
+    onboardingLoaded,
+    tourEligibleFirstRun,
+  });
+
+  const submitQuickRatingWithThanks = useCallback(
+    async (rating: number, details?: string | null) => {
+      const result = await submitQuickRating(rating, details);
+      if (result.ok) {
+        showSuccess("Thanks!", "Your feedback helps us improve CediWise.");
+      }
+      return result;
+    },
+    [submitQuickRating, showSuccess],
+  );
 
   const handleRefreshWithUpdateCheck = useCallback(async () => {
     await handleRefresh();
@@ -129,8 +208,21 @@ export default function DashboardScreen() {
     router.push("/expenses");
   }, [router]);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    void useAnnouncementInboxStore.getState().refresh(user.id);
+  }, [user?.id]);
+
   return (
     <View style={styles.container} collapsable={false} className="flex-1 bg-background">
+      <PeriodicFeedbackPromptModal
+        visible={feedbackPromptVisible}
+        working={feedbackPromptWorking}
+        onLater={feedbackPromptLater}
+        onNeverAsk={feedbackPromptNeverAsk}
+        submitQuickRating={submitQuickRatingWithThanks}
+        onSubmitError={(title, message) => showError(title, message)}
+      />
       <ExpandedHeader
         scrollY={scrollY}
         title={headerTitle}
@@ -148,22 +240,47 @@ export default function DashboardScreen() {
             </View>
           ),
           !authLoading && (
-            <View collapsable={false} style={{ position: "relative", width: 36, height: 36 }}>
-              <Pressable
-                onPress={handleProfilePress}
-                style={({ pressed }) => [
-                  styles.profileButton,
-                  { opacity: pressed ? 0.7 : 1 },
-                ]}>
-                <Avatar alt={user?.name ?? "User"} size="sm">
-                  {user?.avatar && (
-                    <Avatar.Image source={{ uri: user.avatar }} />
-                  )}
-                  <Avatar.Fallback>
-                    {user?.name?.charAt(0) ?? "U"}
-                  </Avatar.Fallback>
-                </Avatar>
-              </Pressable>
+            <View className="flex-row items-center gap-1">
+              <View style={styles.bellButtonWrap} collapsable={false}>
+                <Pressable
+                  onPress={() => router.push("/notifications/inbox")}
+                  style={({ pressed }) => [
+                    styles.bellIconButton,
+                    { opacity: pressed ? 0.7 : 1 },
+                  ]}
+                  accessibilityLabel={
+                    inboxUnread > 0
+                      ? `Updates inbox, ${inboxUnread > 99 ? "more than 99" : inboxUnread} unread`
+                      : "Updates inbox"
+                  }
+                  accessibilityRole="button">
+                  <Bell size={20} color="#E2E8F0" />
+                </Pressable>
+                {inboxUnread > 0 ? (
+                  <View pointerEvents="none" style={styles.bellBadge} accessibilityElementsHidden>
+                    <Text className="text-white text-[10px] font-bold">
+                      {inboxUnread > 99 ? "99+" : inboxUnread}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+              <View collapsable={false} style={{ position: "relative", width: 36, height: 36 }}>
+                <Pressable
+                  onPress={handleProfilePress}
+                  style={({ pressed }) => [
+                    styles.profileButton,
+                    { opacity: pressed ? 0.7 : 1 },
+                  ]}>
+                  <Avatar alt={user?.name ?? "User"} size="sm">
+                    {user?.avatar && (
+                      <Avatar.Image source={{ uri: user.avatar }} />
+                    )}
+                    <Avatar.Fallback>
+                      {user?.name?.charAt(0) ?? "U"}
+                    </Avatar.Fallback>
+                  </Avatar>
+                </Pressable>
+              </View>
             </View>
           ),
         ].filter(Boolean)}

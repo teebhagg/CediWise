@@ -18,6 +18,8 @@
   <a href="#tech-stack">Tech Stack</a>
 </p>
 
+**Database & Edge (Supabase):** Migrations and shared Edge Functions live in [`supabase/`](supabase/README.md). See [`supabase/docs/database-change-workflow.md`](supabase/docs/database-change-workflow.md) for how we change production schema safely.
+
 ---
 
 ## About
@@ -64,12 +66,13 @@
 ```
 CediWise/
 ├── assets/                       # Shared images (banner, logo)
+├── supabase/                     # Canonical Supabase CLI root (migrations, Edge Functions, seeds)
+├── legacy/                       # Archived historical .sql (read-only; do not re-apply)
 ├── cediwise-mobile-app/          # Expo React Native app (Android, iOS)
 │   ├── app/                      # Expo Router screens
 │   ├── components/               # UI components
 │   ├── calculators/              # PAYE/SSNIT, T-Bill, savings, loan, cash flow
-│   ├── content/                  # Bundled lesson content
-│   └── supabase/                 # Schema, migrations (FLM, analytics)
+│   └── content/                  # Bundled lesson content
 ├── cediwise-dashboard/           # Next.js admin dashboard
 │   ├── app/(dashboard)/          # Users, learning-data, feedback, emails, announcements
 │   └── supabase-functions/       # Edge functions (e.g. send-email-campaign)

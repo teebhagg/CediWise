@@ -43,6 +43,8 @@ The app needs Supabase URL and anon key at build time. For EAS Build, set enviro
 
 If these are missing in a production APK, the app will open but redirect to the auth screen and show "App not configured" if you try to sign in. Set them so the built app can reach your Supabase project.
 
+**Schema migrations & Edge Functions** for the shared project are maintained at the **monorepo root** in [`../supabase/`](../supabase/README.md) (not under `cediwise-mobile-app/`). See [`../supabase/docs/database-change-workflow.md`](../supabase/docs/database-change-workflow.md) for the production change process.
+
 ## Get a fresh project
 
 When you're ready, run:

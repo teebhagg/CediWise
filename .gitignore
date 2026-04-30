@@ -4,7 +4,29 @@ cediwise-web-official/dist/
 cediwise-web-official/.vercel/
 # *.md
 *.example
-/supabase
 
 /docs
 .github/*.md
+
+*.md
+!README.md
+!CONTRIBUTING.md
+!LICENSE.md
+!CLA.md
+!COMMERCIAL-LICENSE.md
+!TRADEMARK.md
+!supabase/**/*.md
+!legacy/**/*.md
+!cediwise-mobile-app/docs/plans/**/*.md
+
+# SQL: ignore by default (noise in app trees); allow canonical DB artifacts
+*.sql
+!/legacy/**/*.sql
+!/supabase/**/*.sql
+
+# Local DB dumps (PII + auth hashes) — never commit; allow operator README
+backups/
+!backups/README.md
+
+# Supabase CLI ephemeral files
+supabase/.temp/

@@ -1,7 +1,7 @@
 /**
  * Upgrade Screen
- * Paystack in-app WebView for subscription payment.
- * Refactored to use heroui-native Card, StandardHeader, and PrimaryButton.
+ * Paystack in-app WebView (PaystackPop) for subscription payment.
+ * Card and Mobile Money both use the same SDK modal; channels are set via a nested PaystackProvider.
  */
 
 import { Card } from "heroui-native";
@@ -17,6 +17,7 @@ import { useRouter } from "expo-router";
 import {
   ArrowLeft,
   Check,
+  Clock,
   Crown,
   Shield,
   Zap,
@@ -26,9 +27,11 @@ import { ANALYTICS_EVENTS } from "@/constants/analyticsEvents";
 import { getPostHogOptional } from "@/utils/analytics/posthogClientRef";
 import { log } from "@/utils/logger";
 import { reportError } from "@/utils/telemetry";
-import React, { useCallback, useState } from "react";
+import { waitForSubscriptionAfterPayment } from "@/utils/subscriptionSync";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -36,11 +39,34 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { usePaystack } from "react-native-paystack-webview";
+import { PaystackProvider, usePaystack } from "react-native-paystack-webview";
 import { FlashList } from "@shopify/flash-list";
 
 type PlanKey = "free_tier" | "budget_monthly" | "budget_quarterly" | "sme_monthly" | "sme_quarterly";
 type BillingCycle = "monthly" | "quarterly";
+type PayMethod = "momo" | "card";
+
+/** Search tag for device logs when debugging Paystack + cadence issues */
+const CHECKOUT_DEBUG = "[upgrade-paystack]";
+
+type LastCheckoutDebug = {
+  attemptId: number;
+  billingCycle: BillingCycle;
+  serverCadence: BillingCycle;
+  planKey: PlanKey;
+  metaPlanKey: string;
+  amountGhs: number;
+  quoteKind?: string;
+  payMethod: PayMethod;
+  openedAt: number;
+  /** Unique per checkout — required because react-native-paystack-webview reuses one fallback ref for life of provider */
+  paystackReference?: string;
+};
+
+type UpgradeScreenContentProps = {
+  payMethod: PayMethod;
+  setPayMethod: (m: PayMethod) => void;
+};
 
 interface PlanOption {
   key: PlanKey;
@@ -102,19 +128,62 @@ const PLANS: PlanOption[] = [
   },
 ];
 
-export default function UpgradeScreen() {
+function UpgradeScreenContent({
+  payMethod,
+  setPayMethod,
+}: UpgradeScreenContentProps) {
   const { user } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { tier: currentTier, isOnTrial, trialEndsAt, pendingTier, pendingTierStartDate, refreshTier } = useTierContext();
+  const {
+    tier: currentTier,
+    isOnTrial,
+    trialEndsAt,
+    pendingTier,
+    pendingTierStartDate,
+    refreshTier,
+    isInGracePeriod,
+    gracePeriodEnd,
+    billingCycle: serverBillingCycle,
+    pendingBillingCycle,
+  } = useTierContext();
   const { showSuccess, showError, showInfo } = useAppToast();
 
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
+  /** Actual invoice cadence from the server (toggle must match for “Current plan”). */
+  const serverCadence: BillingCycle =
+    serverBillingCycle === "quarterly" || serverBillingCycle === "monthly"
+      ? serverBillingCycle
+      : "monthly";
+
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>(() =>
+    serverBillingCycle === "quarterly" || serverBillingCycle === "monthly"
+      ? serverBillingCycle
+      : "monthly"
+  );
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isWaitingForBillingSync, setIsWaitingForBillingSync] = useState(false);
   const paystack = usePaystack();
+  const lastCheckoutPlanKeyRef = useRef<PlanKey | null>(null);
+  const checkoutAttemptRef = useRef(0);
+  const lastCheckoutDebugRef = useRef<LastCheckoutDebug | null>(null);
+  /** After user taps Monthly/Quarterly, stop mirroring server (avoids refreshTier resetting the pill). */
+  const billingCycleTouchedRef = useRef(false);
+
+  useEffect(() => {
+    if (billingCycleTouchedRef.current) return;
+    if (serverBillingCycle === "monthly" || serverBillingCycle === "quarterly") {
+      setBillingCycle(serverBillingCycle);
+    }
+  }, [serverBillingCycle]);
 
   const toggleBilling = (cycle: BillingCycle) => {
     if (billingCycle !== cycle) {
+      billingCycleTouchedRef.current = true;
+      log.info(`${CHECKOUT_DEBUG} billing toggle`, {
+        from: billingCycle,
+        to: cycle,
+        serverCadence,
+      });
       setBillingCycle(cycle);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
@@ -139,95 +208,100 @@ export default function UpgradeScreen() {
     : 0;
   const showTrialButtons = !isOnTrial || trialDaysLeft <= 10;
 
-  const onPaymentSuccess = useCallback(async (res: any, planKey: PlanKey) => {
-    setIsProcessing(true);
-
-    // OPTIMISTIC WRITE: Update DB immediately while waiting for webhook
-    const isSme = planKey.includes("sme");
-    const targetTier = isSme ? "sme" : "budget";
-
-    const reconcilingMessage = {
-      title: "Payment received",
-      description:
-        "Your account is reconciling. Close and reopen the app if your plan doesn't update shortly.",
-    } as const;
-
-    let optimisticUpdateSucceeded = false;
-
-    try {
+  const onPaymentSuccess = useCallback(
+    async (_res: unknown, planKey: PlanKey) => {
+      const meta = lastCheckoutDebugRef.current;
+      log.info(`${CHECKOUT_DEBUG} onPaymentSuccess`, {
+        planKey,
+        lastAttempt: meta?.attemptId ?? null,
+        elapsedSinceOpenMs: meta ? Date.now() - meta.openedAt : null,
+      });
+      if (planKey === "free_tier") return;
       if (!supabase || !user?.id) {
-        showInfo(reconcilingMessage.title, reconcilingMessage.description);
+        showError("Session", "Sign in again to continue.");
         return;
       }
 
-      const now = new Date().toISOString();
-      const { error: updateError } = isOnTrial
-        ? await supabase
-            .from("subscriptions")
-            .update({
-              pending_tier: targetTier,
-              pending_tier_start_date: trialEndsAt,
-              updated_at: now,
-            })
-            .eq("user_id", user.id)
-        : await supabase
-            .from("subscriptions")
-            .update({
-              plan: targetTier,
-              status: "active",
-              pending_tier: null,
-              pending_tier_start_date: null,
-              updated_at: now,
-            })
-            .eq("user_id", user.id);
+      const targetTier = planKey.includes("sme") ? "sme" : "budget";
+      setIsProcessing(true);
+      setIsWaitingForBillingSync(true);
 
-      if (updateError) {
-        reportError(updateError, {
-          feature: "billing",
-          operation: "upgrade_optimistic_update",
-          extra: {
-            code: updateError.code,
-            isOnTrial,
-            planKey,
-          },
-        });
-        log.warn("Optimistic subscription update failed:", updateError.message);
-        showInfo(reconcilingMessage.title, reconcilingMessage.description);
-      } else {
-        optimisticUpdateSucceeded = true;
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        showSuccess(
-          "Success!",
-          isOnTrial
-            ? "Your sub is stacked! Paid plan starts after trial."
-            : "Plan upgraded!"
+      try {
+        const { ok } = await waitForSubscriptionAfterPayment(
+          supabase,
+          user.id,
+          targetTier,
+          { timeoutMs: 120_000, onTick: () => void refreshTier() }
         );
+        await refreshTier();
+        if (ok) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          showSuccess(
+            "Success!",
+            isOnTrial
+              ? "Your paid plan starts after your trial ends."
+              : "Plan upgraded!"
+          );
+          router.back();
+        } else {
+          showInfo(
+            "Still updating",
+            "If your plan does not change shortly, pull to refresh or reopen the app."
+          );
+        }
+      } catch (err) {
+        reportError(err, {
+          feature: "billing",
+          operation: "paystack_checkout_subscription_sync",
+          extra: { planKey },
+        });
+        log.warn("Subscription sync after Paystack checkout:", err);
+        showInfo(
+          "Payment received",
+          "Your account may still be updating. Check back shortly."
+        );
+      } finally {
+        setIsWaitingForBillingSync(false);
+        setIsProcessing(false);
       }
-    } catch (err) {
-      reportError(err, {
-        feature: "billing",
-        operation: "upgrade_optimistic_update_unexpected",
-        extra: { planKey },
-      });
-      log.warn("Optimistic update threw:", err);
-      showInfo(reconcilingMessage.title, reconcilingMessage.description);
-    } finally {
-      await refreshTier();
-      setIsProcessing(false);
-      if (optimisticUpdateSucceeded) {
-        router.back();
-      }
-    }
-  }, [user?.id, isOnTrial, trialEndsAt, refreshTier, showSuccess, showInfo, router]);
+    },
+    [
+      user?.id,
+      isOnTrial,
+      refreshTier,
+      showSuccess,
+      showInfo,
+      showError,
+      router,
+    ]
+  );
 
   const onPaymentCancel = useCallback(() => {
+    const meta = lastCheckoutDebugRef.current;
+    const elapsedMs = meta ? Date.now() - meta.openedAt : null;
+    log.warn(`${CHECKOUT_DEBUG} onPaymentCancel — Paystack UI dismissed without success`, {
+      elapsedMs,
+      ...meta,
+    });
     setIsProcessing(false);
     getPostHogOptional()?.capture(ANALYTICS_EVENTS.paystackCheckoutCancelled, {
       stage: "user_cancelled",
+      elapsedMs,
+      attemptId: meta?.attemptId ?? null,
     });
   }, []);
 
-  const handleSelectPlan = useCallback(
+  const resolvePaidPlanKey = useCallback(
+    (plan: PlanOption): PlanKey | null => {
+      if (plan.key === "free_tier") return null;
+      return billingCycle === "quarterly"
+        ? (plan.key.replace("monthly", "quarterly") as PlanKey)
+        : plan.key;
+    },
+    [billingCycle]
+  );
+
+  const handleCheckoutPlan = useCallback(
     async (plan: PlanOption) => {
       if (plan.key === "free_tier") {
         router.back();
@@ -235,28 +309,227 @@ export default function UpgradeScreen() {
       }
       if (!user?.id || !supabase) return;
 
-      const planKey = billingCycle === "quarterly"
-        ? (plan.key.replace("monthly", "quarterly") as PlanKey)
-        : plan.key;
+      const planKey = resolvePaidPlanKey(plan);
+      if (!planKey) return;
+
+      checkoutAttemptRef.current += 1;
+      const attemptId = checkoutAttemptRef.current;
+      log.info(`${CHECKOUT_DEBUG} handleCheckoutPlan start`, {
+        attemptId,
+        planRowKey: plan.key,
+        resolvedPlanKey: planKey,
+        billingCycle,
+        serverCadence,
+        payMethod,
+        billingCycleTouched: billingCycleTouchedRef.current,
+      });
 
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      
-      const amount = planKey.includes("budget") 
-        ? (planKey.includes("quarterly") ? 39 : 15)
-        : (planKey.includes("quarterly") ? 65 : 25);
+      setIsProcessing(true);
 
-      paystack.popup.checkout({
-        amount: amount, // Paystack uses kobo/pesewas
-        email: user?.email || `user-${user.id}@cediwise.app`,
-        metadata: {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) {
+          log.warn(`${CHECKOUT_DEBUG} abort: no session token`, { attemptId, planKey });
+          showError("Session expired", "Sign in again to pay.");
+          return;
+        }
+
+        const { data: quote, error: quoteErr } = await supabase.functions.invoke(
+          "billing-upgrade-quote",
+          {
+            body: { target_plan_key: planKey },
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (quoteErr) {
+          log.warn(`${CHECKOUT_DEBUG} quote invoke error`, {
+            attemptId,
+            planKey,
+            message: quoteErr.message,
+          });
+          reportError(quoteErr, {
+            feature: "billing",
+            operation: "billing_upgrade_quote",
+            extra: { planKey },
+          });
+          showError("Quote failed", quoteErr.message || "Could not load price.");
+          return;
+        }
+
+        const q = quote as {
+          ok?: boolean;
+          error?: string;
+          kind?: string;
+          amount_ghs?: number;
+          plan_key?: string;
+          period_end?: string;
+          message?: string;
+        };
+
+        log.info(`${CHECKOUT_DEBUG} quote response`, {
+          attemptId,
           planKey,
-          userId: user.id
-        },
-        onSuccess: (res: any) => onPaymentSuccess(res, planKey),
-        onCancel: onPaymentCancel,
-      });
+          ok: q?.ok,
+          error: q?.error,
+          kind: q?.kind,
+          amount_ghs: q?.amount_ghs,
+          plan_key: q?.plan_key,
+          has_period_end: !!q?.period_end,
+        });
+
+        if (!q?.ok) {
+          log.warn(`${CHECKOUT_DEBUG} abort: quote not ok`, {
+            attemptId,
+            planKey,
+            error: q?.error,
+          });
+          if (q.error === "already_on_plan") {
+            showInfo("Current plan", "You’re already on this plan and billing cadence.");
+          } else if (q.error === "use_downgrade_flow") {
+            showError("Downgrade", "Use the downgrade options below to switch to a lower tier.");
+          } else if (q.error === "grace_period_resolve_payment") {
+            showError(
+              "Payment pending",
+              "Resolve your grace period payment before changing plans."
+            );
+          } else {
+            showError("Unavailable", q.error || "Could not start checkout.");
+          }
+          return;
+        }
+
+        if (q.kind === "deferred_cadence") {
+          log.info(`${CHECKOUT_DEBUG} deferred_cadence — no Paystack; calling schedule function`, {
+            attemptId,
+            planKey,
+          });
+          const { error: schErr } = await supabase.functions.invoke(
+            "billing-schedule-cadence",
+            {
+              body: { target_plan_key: planKey },
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          if (schErr) {
+            log.warn(`${CHECKOUT_DEBUG} billing-schedule-cadence failed`, {
+              attemptId,
+              planKey,
+              message: schErr.message,
+            });
+            reportError(schErr, {
+              feature: "billing",
+              operation: "billing_schedule_cadence",
+              extra: { planKey },
+            });
+            showError("Could not schedule", schErr.message || "Try again.");
+            return;
+          }
+          await refreshTier();
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          showSuccess(
+            "Billing update scheduled",
+            q.message ||
+              "Your billing cadence will change after the current period ends. No charge today."
+          );
+          return;
+        }
+
+        const amountGhs = typeof q.amount_ghs === "number" ? q.amount_ghs : 0;
+        if (amountGhs <= 0) {
+          log.warn(`${CHECKOUT_DEBUG} abort: invalid amount_ghs`, {
+            attemptId,
+            planKey,
+            amountGhs,
+            kind: q.kind,
+          });
+          showError("Invalid amount", "Refresh and try again.");
+          return;
+        }
+
+        const metaPlanKey = (q.plan_key || planKey) as string;
+        lastCheckoutPlanKeyRef.current = metaPlanKey as PlanKey;
+
+        const metadata: Record<string, string> = {
+          planKey: metaPlanKey,
+          userId: user.id,
+        };
+        if (q.kind === "immediate_proration" && q.period_end) {
+          metadata.billingIntent = "prorated_upgrade";
+          metadata.periodEnd = q.period_end;
+        }
+
+        /**
+         * Paystack reference must be unique per charge. The WebView SDK uses a single
+         * `ref_${Date.now()}` for the whole PaystackProvider lifetime when `reference` is omitted,
+         * so a second checkout reuses the same ref and Paystack can error-close the modal
+         * without firing onCancel (see node_modules/.../PaystackProvider.js fallbackRef).
+         */
+        const paystackReference = `cw_${attemptId}_${Date.now()}_${user.id.replace(/-/g, "").slice(0, 16)}`;
+
+        lastCheckoutDebugRef.current = {
+          attemptId,
+          billingCycle,
+          serverCadence,
+          planKey,
+          metaPlanKey,
+          amountGhs,
+          quoteKind: q.kind,
+          payMethod,
+          openedAt: Date.now(),
+          paystackReference,
+        };
+
+        log.info(`${CHECKOUT_DEBUG} invoking paystack.popup.checkout`, {
+          attemptId,
+          amountGhs,
+          metaPlanKey,
+          billingCycle,
+          serverCadence,
+          payMethod,
+          paystackReference,
+          metadataKeys: Object.keys(metadata),
+          billingIntent: metadata.billingIntent ?? null,
+        });
+
+        paystack.popup.checkout({
+          email: user?.email || `user-${user.id}@cediwise.app`,
+          amount: amountGhs,
+          reference: paystackReference,
+          metadata,
+          onSuccess: (res: unknown) =>
+            void onPaymentSuccess(
+              res,
+              (lastCheckoutPlanKeyRef.current ?? planKey) as PlanKey
+            ),
+          onCancel: onPaymentCancel,
+        });
+      } catch (e) {
+        log.error(`${CHECKOUT_DEBUG} handleCheckoutPlan catch`, e);
+        reportError(e, { feature: "billing", operation: "checkout_plan" });
+        showError("Error", "Something went wrong. Try again.");
+      } finally {
+        setIsProcessing(false);
+      }
     },
-    [user, billingCycle, router, paystack, onPaymentSuccess, onPaymentCancel]
+    [
+      user,
+      supabase,
+      router,
+      paystack,
+      onPaymentSuccess,
+      onPaymentCancel,
+      resolvePaidPlanKey,
+      showError,
+      showInfo,
+      showSuccess,
+      refreshTier,
+      billingCycle,
+      serverCadence,
+      payMethod,
+    ]
   );
 
   // Downgrade handler — schedules change for end of current period
@@ -371,6 +644,17 @@ export default function UpgradeScreen() {
           </View>
         )}
 
+        {isInGracePeriod && (
+          <View style={styles.graceBanner}>
+            <Clock color="#F59E0B" size={18} />
+            <Text style={styles.graceBannerText}>
+              {gracePeriodEnd
+                ? `Payment pending — pay before ${new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(gracePeriodEnd.includes(" ") ? gracePeriodEnd.replace(" ", "T") : gracePeriodEnd))} to keep your plan.`
+                : "Payment pending — complete payment to keep your plan."}
+            </Text>
+          </View>
+        )}
+
         {/* Current Tier Context */}
         <View style={styles.currentTierBar}>
           <Text style={styles.currentTierLabel}>Currently on</Text>
@@ -420,6 +704,61 @@ export default function UpgradeScreen() {
             </View>
         </View>
 
+        <View style={styles.payMethodSection}>
+          <Text style={styles.payMethodLabel}>Payment method</Text>
+          <View style={styles.payMethodToggle}>
+            <Pressable
+              style={[
+                styles.payMethodPill,
+                payMethod === "momo" && styles.payMethodPillActive,
+              ]}
+              onPress={() => {
+                setPayMethod("momo");
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+            >
+              <Text
+                style={[
+                  styles.payMethodText,
+                  payMethod === "momo" && styles.payMethodTextActive,
+                ]}
+              >
+                Mobile Money
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[
+                styles.payMethodPill,
+                payMethod === "card" && styles.payMethodPillActive,
+              ]}
+              onPress={() => {
+                setPayMethod("card");
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+            >
+              <Text
+                style={[
+                  styles.payMethodText,
+                  payMethod === "card" && styles.payMethodTextActive,
+                ]}
+              >
+                Card
+              </Text>
+            </Pressable>
+          </View>
+          {payMethod === "momo" && (
+            <Text style={styles.payMethodHint}>
+              You&apos;ll complete Mobile Money in Paystack&apos;s secure screen — same as card checkout. Enter your number and approve on your phone (MTN, Telecel, AirtelTigo).
+            </Text>
+          )}
+          {pendingBillingCycle && (
+            <Text style={styles.payMethodHint}>
+              After this period ends, billing switches to{" "}
+              {pendingBillingCycle === "quarterly" ? "quarterly" : "monthly"}.
+            </Text>
+          )}
+        </View>
+
         {/* Plan Cards */}
         <FlashList
           data={PLANS}
@@ -430,11 +769,14 @@ export default function UpgradeScreen() {
           ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
           extraData={{
             billingCycle,
+            serverCadence,
             showTrialButtons,
             isProcessing,
             currentTier,
             pendingTier,
             isOnTrial,
+            payMethod,
+            pendingBillingCycle,
           }}
           renderItem={({ item: plan }) => {
             const Icon = plan.icon;
@@ -443,8 +785,12 @@ export default function UpgradeScreen() {
             const isSmePlan = plan.key.startsWith("sme_");
             const isCurrentPlan =
               (currentTier === "free" && isFree) ||
-              (currentTier === "budget" && isBudgetPlan) ||
-              (currentTier === "sme" && isSmePlan);
+              (currentTier === "budget" &&
+                isBudgetPlan &&
+                billingCycle === serverCadence) ||
+              (currentTier === "sme" &&
+                isSmePlan &&
+                billingCycle === serverCadence);
             const planPaidTier: "budget" | "sme" | null = isFree
               ? null
               : isSmePlan
@@ -490,7 +836,7 @@ export default function UpgradeScreen() {
 
                 {showTrialButtons ? (
                   <PrimaryButton
-                    onPress={() => handleSelectPlan(plan)}
+                    onPress={() => void handleCheckoutPlan(plan)}
                     loading={isProcessing && !isFree}
                     disabled={isCurrentPlan}
                     style={{ marginTop: 8 }}
@@ -567,7 +913,22 @@ export default function UpgradeScreen() {
         )}
       </ScrollView>
 
-      {/* Paystack integration handled via usePaystack hook */}
+      <Modal
+        visible={isWaitingForBillingSync}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+      >
+        <View style={styles.syncOverlay}>
+          <View style={styles.syncCard}>
+            <ActivityIndicator size="large" color="#10B981" />
+            <Text style={styles.syncTitle}>Updating your plan</Text>
+            <Text style={styles.syncSubtitle}>
+              Syncing your subscription. This usually takes a few seconds.
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -579,6 +940,35 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
+  },
+  syncOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.72)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  syncCard: {
+    backgroundColor: "#111827",
+    borderRadius: 20,
+    padding: 28,
+    alignItems: "center",
+    gap: 16,
+    maxWidth: 320,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.08)",
+  },
+  syncTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  syncSubtitle: {
+    color: "#9CA3AF",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
   },
   trialBanner: {
     flexDirection: "row",
@@ -595,6 +985,62 @@ const styles = StyleSheet.create({
     color: "#10B981",
     fontSize: 14,
     fontWeight: "600",
+  },
+  graceBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    padding: 14,
+    borderRadius: 24,
+    marginBottom: 20,
+    backgroundColor: "rgba(245,158,11,0.12)",
+    borderWidth: 1.5,
+    borderColor: "rgba(245,158,11,0.35)",
+  },
+  graceBannerText: {
+    color: "#FBBF24",
+    fontSize: 14,
+    fontWeight: "600",
+    flex: 1,
+  },
+  payMethodSection: {
+    marginBottom: 20,
+  },
+  payMethodLabel: {
+    color: "#9CA3AF",
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 10,
+  },
+  payMethodToggle: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 20,
+    padding: 4,
+    gap: 4,
+  },
+  payMethodPill: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 16,
+    alignItems: "center",
+  },
+  payMethodPillActive: {
+    backgroundColor: "rgba(255,255,255,0.12)",
+  },
+  payMethodText: {
+    color: "#6B7280",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  payMethodTextActive: {
+    color: "white",
+  },
+  payMethodHint: {
+    color: "#6B7280",
+    fontSize: 12,
+    marginTop: 14,
+    lineHeight: 17,
   },
   currentTierBar: {
     flexDirection: "row",
@@ -798,3 +1244,18 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 });
+
+export default function UpgradeScreen() {
+  const [payMethod, setPayMethod] = useState<PayMethod>("momo");
+  const publicKey = process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY || "";
+
+  return (
+    <PaystackProvider
+      publicKey={publicKey}
+      currency="GHS"
+      defaultChannels={payMethod === "momo" ? ["mobile_money"] : ["card"]}
+    >
+      <UpgradeScreenContent payMethod={payMethod} setPayMethod={setPayMethod} />
+    </PaystackProvider>
+  );
+}

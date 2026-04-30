@@ -252,6 +252,7 @@ function AppShell() {
             name="notifications"
             options={{ headerShown: false }}
           />
+          <Stack.Screen name="feedback" options={{ headerShown: false }} />
           <Stack.Screen name="literacy" options={{ headerShown: false }} />
           <Stack.Screen
             name="salary-calculator"

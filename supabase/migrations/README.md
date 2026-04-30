@@ -2,7 +2,7 @@
 
 ## Bootstrap order
 
-1. **Link** — `supabase login` then `supabase link --project-ref etilowirjbuyknsfdtpt`
+1. **Link** — `supabase login` then `supabase link --project-ref "$SUPABASE_PROJECT_REF"`
 2. **Baseline** — `supabase db pull`  
    Creates `YYYYMMDDHHMMSS_remote_schema.sql` and stamps `supabase_migrations.schema_migrations` on the remote. Commit that file.
 3. **Verify** — `supabase db diff --linked` must print nothing.

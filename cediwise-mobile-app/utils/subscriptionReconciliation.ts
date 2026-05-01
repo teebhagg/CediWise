@@ -10,26 +10,44 @@ export type SubscriptionReconcileRow = {
   plan: string | null;
   status: string | null;
   pending_tier: string | null;
+  billing_cycle: string | null;
+  pending_billing_cycle: string | null;
 };
 
 export type ReconcilePaymentOptions = {
   /** @deprecated not used; both active+plan and trial+pending are always checked */
   isOnTrial?: boolean;
   targetTier: "budget" | "sme";
+  /**
+   * When `billing-upgrade-quote` returned `pending_billing_cycle_after` (proration + deferred
+   * cadence), pass it so we keep waiting until `subscriptions.pending_billing_cycle` matches.
+   */
+  expectedPendingBillingCycleAfter?: "monthly" | "quarterly";
   /** Default 120s */
   timeoutMs?: number;
   /** Default 2500ms */
   pollIntervalMs?: number;
 };
 
+function normalizedPendingCadence(
+  v: string | null | undefined
+): "monthly" | "quarterly" | null {
+  if (v === "monthly" || v === "quarterly") return v;
+  return null;
+}
+
 export function subscriptionReflectsPayment(
   row: SubscriptionReconcileRow | null,
-  opts: Pick<ReconcilePaymentOptions, "targetTier">
+  opts: Pick<ReconcilePaymentOptions, "targetTier" | "expectedPendingBillingCycleAfter">
 ): boolean {
   if (!row) return false;
-  if (row.status === "active" && row.plan === opts.targetTier) return true;
-  if (row.status === "trial" && row.pending_tier === opts.targetTier) return true;
-  return false;
+  const tierOk =
+    (row.status === "active" && row.plan === opts.targetTier) ||
+    (row.status === "trial" && row.pending_tier === opts.targetTier);
+  if (!tierOk) return false;
+  const expected = opts.expectedPendingBillingCycleAfter;
+  if (expected === undefined) return true;
+  return normalizedPendingCadence(row.pending_billing_cycle) === expected;
 }
 
 async function fetchSubscriptionRow(
@@ -38,7 +56,7 @@ async function fetchSubscriptionRow(
 ): Promise<SubscriptionReconcileRow | null> {
   const { data, error } = await supabase
     .from("subscriptions")
-    .select("plan,status,pending_tier")
+    .select("plan,status,pending_tier,billing_cycle,pending_billing_cycle")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) {
@@ -63,45 +81,58 @@ export function waitForSubscriptionReconciliation(
     let settled = false;
     let pollId: ReturnType<typeof setInterval> | undefined;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    /** Assigned after initial fetch if sync continues; timeout covers stalled fetch before this exists. */
+    let channel: ReturnType<SupabaseClient["channel"]> | undefined;
 
-    const cleanup = (channel: ReturnType<SupabaseClient["channel"]>) => {
+    const cleanup = (ch: typeof channel) => {
       if (pollId !== undefined) clearInterval(pollId);
       if (timeoutId !== undefined) clearTimeout(timeoutId);
-      void supabase.removeChannel(channel);
+      if (ch !== undefined) void supabase.removeChannel(ch);
     };
 
     const finish = (
-      channel: ReturnType<SupabaseClient["channel"]>,
+      ch: typeof channel,
       ok: boolean,
       timedOut: boolean,
       row: SubscriptionReconcileRow | null
     ) => {
       if (settled) return;
       settled = true;
-      cleanup(channel);
+      cleanup(ch);
       resolve({ ok, timedOut, row });
     };
 
     const tryResolve = async (
-      channel: ReturnType<SupabaseClient["channel"]>,
+      ch: ReturnType<SupabaseClient["channel"]>,
       from: string
     ) => {
       if (settled) return;
       const row = await fetchSubscriptionRow(supabase, userId);
       if (subscriptionReflectsPayment(row, opts)) {
         log.info(`[subscriptionReconciliation] satisfied (${from})`);
-        finish(channel, true, false, row);
+        finish(ch, true, false, row);
       }
     };
 
+    timeoutId = setTimeout(() => {
+      void (async () => {
+        if (settled) return;
+        const row = await fetchSubscriptionRow(supabase, userId);
+        if (settled) return;
+        const ok = subscriptionReflectsPayment(row, opts);
+        finish(channel, ok, true, row);
+      })();
+    }, timeoutMs);
+
     void (async () => {
       const row0 = await fetchSubscriptionRow(supabase, userId);
+      if (settled) return;
       if (subscriptionReflectsPayment(row0, opts)) {
-        resolve({ ok: true, timedOut: false, row: row0 });
+        finish(channel, true, false, row0);
         return;
       }
 
-      const channel = supabase
+      channel = supabase
         .channel(`billing-sub:${userId}:${Date.now()}`)
         .on(
           "postgres_changes",
@@ -112,7 +143,7 @@ export function waitForSubscriptionReconciliation(
             filter: `user_id=eq.${userId}`,
           },
           () => {
-            void tryResolve(channel, "realtime");
+            void tryResolve(channel!, "realtime");
           }
         )
         .subscribe((status) => {
@@ -122,16 +153,8 @@ export function waitForSubscriptionReconciliation(
         });
 
       pollId = setInterval(() => {
-        void tryResolve(channel, "poll");
+        void tryResolve(channel!, "poll");
       }, pollIntervalMs);
-
-      timeoutId = setTimeout(() => {
-        void (async () => {
-          const row = await fetchSubscriptionRow(supabase, userId);
-          const ok = subscriptionReflectsPayment(row, opts);
-          finish(channel, ok, true, row);
-        })();
-      }, timeoutMs);
     })();
   });
 }

@@ -6,14 +6,17 @@ import {
 } from "@/components/CediWiseHeader";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
+import { useConnectivity } from "@/hooks/useConnectivity";
 import { getStandardHeaderBodyOffsetTop } from "@/utils/screenHeaderInsets";
+import { isOnline } from "@/utils/connectivity";
 import { supabase } from "@/utils/supabase";
-import { recordFullFeedbackScreenSubmitted } from "@/utils/feedbackPromptStorage";
+import { FEEDBACK_SOURCE_MOBILE_APP } from "@/constants/feedback";
 import Constants from "expo-constants";
 import { router } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Bug, Lightbulb, MessageCircle, Star } from "lucide-react-native";
-import { useCallback, useMemo, useState } from "react";
+import { recordFullFeedbackScreenSubmitted } from "@/utils/feedbackPromptStorage";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -41,11 +44,14 @@ const CATEGORIES: {
 export default function FeedbackScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { isConnected } = useConnectivity();
   const { showError, showSuccess } = useAppToast();
   const [category, setCategory] = useState<FeedbackCategory>("general_comment");
   const [rating, setRating] = useState<number | null>(null);
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  /** Same-tick guard — `submitting` state may not flip before a second tap. */
+  const submitInFlightRef = useRef(false);
 
   const appVersion = Constants.expoConfig?.version ?? "unknown";
   const deviceLabel = useMemo(
@@ -67,50 +73,104 @@ export default function FeedbackScreen() {
     trimmed.length <= 2000;
 
   const onSubmit = useCallback(async () => {
+    if (submitting || submitInFlightRef.current) return;
+
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+
     if (!user?.id || !supabase) {
+      void Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Error,
+      ).catch(() => {});
       showError("Sign in required", "Please sign in to send feedback.");
       return;
     }
     const email = (user.email ?? "").trim();
     if (!email) {
+      void Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Error,
+      ).catch(() => {});
       showError("Email missing", "We need an email on your account for follow-up.");
       return;
     }
     if (rating == null || rating < 1 || rating > 5) {
+      void Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Error,
+      ).catch(() => {});
       showError("Rate your experience", "Tap 1–5 stars before submitting.");
       return;
     }
     if (!valid) {
+      void Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Error,
+      ).catch(() => {});
       showError(
         "Check your message",
         "Feedback must be between 10 and 2000 characters.",
       );
       return;
     }
-    
-    const { error } = await supabase.from("feedback").insert({
-      category,
-      rating,
-      feedback_text: trimmed,
+
+    if (isConnected === false) {
+      void Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Error,
+      ).catch(() => {});
+      showError(
+        "No internet connection",
+        "You can’t send feedback until you have an active internet connection.",
+      );
+      return;
+    }
+
+    submitInFlightRef.current = true;
+    setSubmitting(true);
+    try {
+      if (isConnected !== true) {
+        const online = await isOnline();
+        if (!online) {
+          void Haptics.notificationAsync(
+            Haptics.NotificationFeedbackType.Error,
+          ).catch(() => {});
+          showError(
+            "No internet connection",
+            "You can’t send feedback until you have an active internet connection.",
+          );
+          return;
+        }
+      }
+
+      const { error } = await supabase.from("feedback").insert({
+        category,
+        rating,
+        feedback_text: trimmed,
         email: email.toLowerCase(),
         is_beta: false,
         version: `${appVersion} (${Platform.OS})`,
-        source: "mobile_app",
+        source: FEEDBACK_SOURCE_MOBILE_APP,
       });
-      
+
       if (error) {
+        void Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Error,
+        ).catch(() => {});
         showError("Couldn’t send", error.message);
-        setSubmitting(false);
         return;
       }
-      
-      await recordFullFeedbackScreenSubmitted(user.id);
-      
+
+      void recordFullFeedbackScreenSubmitted(user.id).catch((e) => {
+        console.warn("Failed to persist feedback prompt state:", e);
+      });
+
       showSuccess("Thanks!", "Your feedback helps us improve CediWise.");
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setSubmitting(false);
+      void Haptics.notificationAsync(
+        Haptics.NotificationFeedbackType.Success,
+      ).catch(() => {});
       router.back();
+    } finally {
+      submitInFlightRef.current = false;
+      setSubmitting(false);
+    }
   }, [
+    submitting,
     user?.id,
     user?.email,
     valid,
@@ -118,6 +178,7 @@ export default function FeedbackScreen() {
     category,
     rating,
     appVersion,
+    isConnected,
     showError,
     showSuccess,
   ]);
@@ -257,10 +318,25 @@ export default function FeedbackScreen() {
           {footerText}
         </Text>
 
+        {isConnected === false ? (
+          <View
+            className="mt-6 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3"
+            accessibilityRole="alert"
+          >
+            <Text
+              style={{ fontFamily: "Figtree-Medium" }}
+              className="text-amber-200 text-sm leading-5"
+            >
+              You can&apos;t send feedback until you have an active internet
+              connection. Please connect and try again.
+            </Text>
+          </View>
+        ) : null}
+
         <View className="mt-8">
           <PrimaryButton
             loading={submitting}
-            disabled={!valid || submitting}
+            disabled={!valid || submitting || isConnected === false}
             onPress={() => void onSubmit()}
             accessibilityLabel="Submit feedback"
           >

@@ -57,6 +57,8 @@ type LastCheckoutDebug = {
   metaPlanKey: string;
   amountGhs: number;
   quoteKind?: string;
+  /** From quote `pending_billing_cycle_after` when proration schedules a cadence switch */
+  expectedPendingBillingCycleAfter?: BillingCycle;
   payMethod: PayMethod;
   openedAt: number;
   /** Unique per checkout — required because react-native-paystack-webview reuses one fallback ref for life of provider */
@@ -231,7 +233,11 @@ function UpgradeScreenContent({
           supabase,
           user.id,
           targetTier,
-          { timeoutMs: 120_000, onTick: () => void refreshTier() }
+          {
+            timeoutMs: 120_000,
+            onTick: () => void refreshTier(),
+            expectedPendingBillingCycleAfter: meta?.expectedPendingBillingCycleAfter,
+          }
         );
         await refreshTier();
         if (ok) {
@@ -257,8 +263,8 @@ function UpgradeScreenContent({
         });
         log.warn("Subscription sync after Paystack checkout:", err);
         showInfo(
-          "Payment received",
-          "Your account may still be updating. Check back shortly."
+          "Couldn’t verify subscription",
+          "We couldn’t reach our servers to confirm your plan. If you were charged, pull to refresh or reopen the app.",
         );
       } finally {
         setIsWaitingForBillingSync(false);
@@ -367,6 +373,7 @@ function UpgradeScreenContent({
           plan_key?: string;
           period_end?: string;
           message?: string;
+          pending_billing_cycle_after?: string;
         };
 
         log.info(`${CHECKOUT_DEBUG} quote response`, {
@@ -469,6 +476,13 @@ function UpgradeScreenContent({
          */
         const paystackReference = `cw_${attemptId}_${Date.now()}_${user.id.replace(/-/g, "").slice(0, 16)}`;
 
+        const expectedPendingBillingCycleAfter =
+          q.kind === "immediate_proration" &&
+          (q.pending_billing_cycle_after === "monthly" ||
+            q.pending_billing_cycle_after === "quarterly")
+            ? q.pending_billing_cycle_after
+            : undefined;
+
         lastCheckoutDebugRef.current = {
           attemptId,
           billingCycle,
@@ -477,6 +491,7 @@ function UpgradeScreenContent({
           metaPlanKey,
           amountGhs,
           quoteKind: q.kind,
+          expectedPendingBillingCycleAfter,
           payMethod,
           openedAt: Date.now(),
           paystackReference,

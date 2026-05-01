@@ -9,10 +9,11 @@ import * as Sharing from "expo-sharing";
 
 function csvCell(value: string | number | boolean): string {
   const raw = String(value);
-  if (/[",\n\r]/.test(raw)) {
-    return `"${raw.replace(/"/g, '""')}"`;
+  const neutralized = /^[=+\-@]/.test(raw) ? `'${raw}` : raw;
+  if (/[",\n\r]/.test(neutralized)) {
+    return `"${neutralized.replace(/"/g, '""')}"`;
   }
-  return raw;
+  return neutralized;
 }
 
 function paymentLabel(m: PaymentMethod | null): string {

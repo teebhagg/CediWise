@@ -1,7 +1,7 @@
 import { useAppToast } from "@/hooks/useAppToast";
 import { log } from "@/utils/logger";
 import * as Haptics from "expo-haptics";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { ListGroup, PressableFeedback, Separator } from "heroui-native";
 
@@ -29,9 +29,10 @@ const OPTIONS = [
 ];
 
 export function BudgetEngineModeList() {
-  const { showError } = useAppToast();
+  const { showInfo } = useAppToast();
   const { derived, budget } = useBudgetScreenState();
   const [loading, setLoading] = useState(false);
+  const isUpdatingRef = useRef(false);
   const currentMode = derived.budgetEngineMode ?? "auto_apply_safe_rules";
 
   const onItemPress = useCallback((fn: () => void) => async () => {
@@ -45,18 +46,23 @@ export function BudgetEngineModeList() {
 
   const onSelect = useCallback(
     async (mode: (typeof OPTIONS)[number]["value"]) => {
-      if (loading || currentMode === mode) return;
+      if (loading || currentMode === mode || isUpdatingRef.current) return;
+      isUpdatingRef.current = true;
       setLoading(true);
       try {
         await budget.updateBudgetEngineMode(mode);
       } catch (e) {
         log.error("Budget engine mode update failed:", e);
-        showError("Error", "Could not update budget engine mode");
+        showInfo(
+          "Sync pending",
+          "Budget mode was saved locally and will retry syncing.",
+        );
       } finally {
+        isUpdatingRef.current = false;
         setLoading(false);
       }
     },
-    [budget, currentMode, loading, showError],
+    [budget, currentMode, loading, showInfo],
   );
 
   return (

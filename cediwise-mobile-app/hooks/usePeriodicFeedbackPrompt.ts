@@ -7,6 +7,7 @@ import {
   saveFeedbackPromptState,
   type FeedbackPromptPersisted,
 } from "@/utils/feedbackPromptStorage";
+import { FEEDBACK_SOURCE_MOBILE_APP } from "@/constants/feedback";
 import { supabase } from "@/utils/supabase";
 import Constants from "expo-constants";
 import { useFocusEffect } from "expo-router";
@@ -260,23 +261,29 @@ export function usePeriodicFeedbackPrompt({
           email: userEmail.trim().toLowerCase(),
           is_beta: false,
           version: appVersion,
-          source: "mobile_app_home_prompt",
+          source: FEEDBACK_SOURCE_MOBILE_APP,
         });
 
         if (error) {
           return { ok: false, message: error.message };
         }
 
-        if (!FORCE_PROMPT_EACH_FOCUS_DEV) {
-          const prev = await loadFeedbackPromptState(userId);
-          const submittedAt = new Date().toISOString();
-          await saveFeedbackPromptState(userId, {
-            ...prev,
-            lastQuickSubmitAt: submittedAt,
-            lastSubmittedAt: submittedAt,
-          });
-        }
         dismissUiOnly();
+
+        if (!FORCE_PROMPT_EACH_FOCUS_DEV) {
+          try {
+            const prev = await loadFeedbackPromptState(userId);
+            const submittedAt = new Date().toISOString();
+            await saveFeedbackPromptState(userId, {
+              ...prev,
+              lastQuickSubmitAt: submittedAt,
+              lastSubmittedAt: submittedAt,
+            });
+          } catch (e) {
+            console.warn("Failed to persist feedback prompt submit state:", e);
+          }
+        }
+
         return { ok: true };
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Something went wrong.";

@@ -30,6 +30,8 @@ import { Avatar, ListGroup } from "heroui-native";
 const LIST_GROUP_CONTAINER_CLASS =
   "rounded-xl overflow-hidden bg-[rgba(18,22,33,0.9)]";
 
+const MIN_NAME_LENGTH = 3;
+
 function IconPrefix({
   children,
   bgClass,
@@ -46,13 +48,19 @@ function IconPrefix({
   );
 }
 
-function getInitials(name?: string) {
-  if (!name) return "U";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    return `${parts[0]![0]}${parts[1]![0]}`.toUpperCase();
-  }
-  return parts[0]![0]!.toUpperCase();
+function getInitials(name?: string): string {
+  const trimmed = (name ?? "").trim();
+  if (trimmed.length === 0) return "U";
+
+  const parts = trimmed.split(/\s+/).filter((p) => p.length > 0);
+  const first = parts[0];
+  const second = parts[1];
+  const a = first?.[0];
+  const b = second?.[0];
+
+  if (a && b) return `${a}${b}`.toUpperCase();
+  if (a) return a.toUpperCase();
+  return "U";
 }
 
 function ProviderRow({ info }: { info: AuthProviderInfo }) {
@@ -150,8 +158,13 @@ export default function EditProfileScreen() {
   }, []);
 
   const trimmed = name.trim();
+  const nameTooShort =
+    trimmed.length > 0 && trimmed.length < MIN_NAME_LENGTH;
+  const nameMeetsMinLength = trimmed.length >= MIN_NAME_LENGTH;
   const canSave =
-    trimmed.length > 0 && trimmed !== initialName && !saving;
+    nameMeetsMinLength &&
+    trimmed !== initialName &&
+    !saving;
 
   const displayName = useMemo(
     () => (trimmed || user?.name || "User"),
@@ -160,6 +173,13 @@ export default function EditProfileScreen() {
 
   const onSave = useCallback(async () => {
     if (!canSave) return;
+    if (trimmed.length < MIN_NAME_LENGTH) {
+      showError(
+        "Name too short",
+        `Please enter at least ${MIN_NAME_LENGTH} characters.`,
+      );
+      return;
+    }
     setSaving(true);
     try {
       const result = await updateUserProfileName(trimmed);
@@ -240,17 +260,28 @@ export default function EditProfileScreen() {
           <Text className="mb-2.5 ml-1 text-xs font-medium uppercase tracking-wider text-slate-400">
             Name
           </Text>
-          <AppTextField
-            label="Your name"
-            value={name}
-            onChangeText={setName}
-            placeholder="e.g. Ama Osei"
-            autoCapitalize="words"
-            autoCorrect
-            maxLength={80}
-            containerClassName="mb-6"
-            accessibilityLabel="Your name"
-          />
+          <View className="mb-6">
+            <AppTextField
+              label="Your name"
+              value={name}
+              onChangeText={setName}
+              placeholder="e.g. Ama Osei"
+              autoCapitalize="words"
+              autoCorrect
+              maxLength={80}
+              error={
+                nameTooShort
+                  ? `Use at least ${MIN_NAME_LENGTH} characters.`
+                  : undefined
+              }
+              accessibilityLabel="Your name"
+            />
+            {!nameTooShort ? (
+              <Text className="mt-1.5 px-1 text-xs text-slate-500">
+                At least {MIN_NAME_LENGTH} characters required.
+              </Text>
+            ) : null}
+          </View>
         </Animated.View>
 
         <Animated.View entering={FadeInDown.duration(280).delay(100)}>

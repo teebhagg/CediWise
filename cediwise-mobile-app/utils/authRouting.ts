@@ -2,8 +2,8 @@ import { ANALYTICS_EVENTS } from "@/constants/analyticsEvents";
 import { getPostHogOptional } from "@/utils/analytics/posthogClientRef";
 import { router } from "expo-router";
 import {
-  hasNotificationGateCompleted,
   setPendingNotificationRoute,
+  shouldShowNotificationPermissionGate,
 } from "@/services/notifications";
 import { log } from "./logger";
 import { getPostAuthRoute } from "./profileVitals";
@@ -30,9 +30,9 @@ export function resetNavigationToAuth(): void {
  */
 export async function onLoginSuccess(userId: string): Promise<void> {
   const route = await getPostAuthRoute(userId);
-  const notificationGateCompleted = await hasNotificationGateCompleted();
+  const showNotificationGate = await shouldShowNotificationPermissionGate();
 
-  if (!notificationGateCompleted) {
+  if (showNotificationGate) {
     await setPendingNotificationRoute(route);
     router.replace("/notifications");
     getPostHogOptional()?.capture(ANALYTICS_EVENTS.authLoginCompleted, {

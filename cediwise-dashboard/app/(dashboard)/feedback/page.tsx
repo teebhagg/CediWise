@@ -24,6 +24,7 @@ function parseFilters(searchParams: Record<string, string | undefined>): Feedbac
     fromDate: searchParams.fromDate,
     toDate: searchParams.toDate,
     search: searchParams.search?.trim() || undefined,
+    source: searchParams.source?.trim() || undefined,
   };
 }
 

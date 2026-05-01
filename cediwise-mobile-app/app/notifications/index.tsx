@@ -17,7 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 const defaultNextRoute = "/(tabs)";
 
-export default function NotificationsScreen() {
+export default function NotificationsGateScreen() {
   const { user, isLoading } = useAuth();
   const { showError, showSuccess } = useAppToast();
   const [submitting, setSubmitting] = useState(false);
@@ -121,7 +121,7 @@ export default function NotificationsScreen() {
             </View>
 
             <Text
-              style={{ fontFamily: "Figtree-Bold",}}
+              style={{ fontFamily: "Figtree-Bold" }}
               className="max-w-[320px] text-center text-4xl text-emerald-500"
             >
               Stay on top of your money

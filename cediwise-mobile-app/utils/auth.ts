@@ -6,6 +6,7 @@ import * as SecureStore from "expo-secure-store";
 import * as WebBrowser from "expo-web-browser";
 import { Platform } from "react-native";
 import { log } from "./logger";
+import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import * as Sentry from "@sentry/react-native";
 
@@ -353,6 +354,128 @@ export async function updateUserProfileName(name: string): Promise<AuthResult> {
   } catch (e) {
     const message = e instanceof Error ? e.message : "Could not save name";
     return { success: false, error: message };
+  }
+}
+
+/** How the user signed in; used in profile UI (read-only). */
+export type AuthProviderKind =
+  | "google"
+  | "apple"
+  | "phone"
+  | "email"
+  | "unknown";
+
+export type AuthProviderInfo = {
+  kind: AuthProviderKind;
+  /** Short label, e.g. "Google", "Phone number" */
+  label: string;
+  /** Email or phone shown as secondary line */
+  displayValue: string;
+};
+
+/**
+ * Infer sign-in method from local user when the server user is unavailable.
+ */
+export function getAuthProviderInfoFromStoredUser(
+  user: StoredUserData | null | undefined,
+): AuthProviderInfo {
+  if (!user) {
+    return { kind: "unknown", label: "Account", displayValue: "" };
+  }
+  const contact = getDisplayContact(user);
+  if (contact.isPhone) {
+    return {
+      kind: "phone",
+      label: "Phone number",
+      displayValue: contact.value,
+    };
+  }
+  if (user.email) {
+    return { kind: "email", label: "Email", displayValue: user.email };
+  }
+  return { kind: "unknown", label: "Account", displayValue: user.phone || "" };
+}
+
+function getAuthProviderInfoFromApiUser(
+  user: SupabaseAuthUser,
+  stored: StoredUserData | null | undefined,
+): AuthProviderInfo {
+  const email = user.email ?? "";
+  const isCediwisePhone = email.includes("cediwise.phone");
+  const firstIdentity = user.identities?.[0];
+  const fromMeta = (user.app_metadata as { provider?: string } | null)?.provider;
+  const raw = (
+    firstIdentity?.provider ||
+    fromMeta ||
+    "unknown"
+  ).toLowerCase();
+  const phoneFromApi = user.phone;
+  const phoneStored = stored?.phone;
+
+  if (isCediwisePhone && (phoneFromApi || phoneStored)) {
+    return {
+      kind: "phone",
+      label: "Phone number",
+      displayValue: (phoneFromApi || phoneStored) as string,
+    };
+  }
+
+  if (raw === "google") {
+    return {
+      kind: "google",
+      label: "Google",
+      displayValue: email || stored?.email || "",
+    };
+  }
+  if (raw === "apple") {
+    return {
+      kind: "apple",
+      label: "Apple",
+      displayValue: email || stored?.email || "",
+    };
+  }
+  if (raw === "phone" || raw === "sms" || raw === "twilio") {
+    return {
+      kind: "phone",
+      label: "Phone number",
+      displayValue: phoneFromApi || phoneStored || "",
+    };
+  }
+  if (raw === "email" || firstIdentity?.provider === "email") {
+    return { kind: "email", label: "Email", displayValue: email || "" };
+  }
+  if (email && !isCediwisePhone) {
+    return { kind: "email", label: "Email", displayValue: email };
+  }
+  if (phoneFromApi || phoneStored) {
+    return {
+      kind: "phone",
+      label: "Phone number",
+      displayValue: phoneFromApi || phoneStored || "",
+    };
+  }
+  return getAuthProviderInfoFromStoredUser(stored);
+}
+
+/**
+ * Resolves the sign-in provider for the current session (Google, Apple, phone, or email).
+ * Falls back to stored user if `getUser` is unavailable.
+ */
+export async function getAuthProviderInfo(
+  options?: { storedUser?: StoredUserData | null },
+): Promise<AuthProviderInfo> {
+  const stored = options?.storedUser ?? (await getStoredAuthData())?.user;
+  if (!supabase) {
+    return getAuthProviderInfoFromStoredUser(stored);
+  }
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data?.user) {
+      return getAuthProviderInfoFromStoredUser(stored);
+    }
+    return getAuthProviderInfoFromApiUser(data.user, stored);
+  } catch {
+    return getAuthProviderInfoFromStoredUser(stored);
   }
 }
 

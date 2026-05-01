@@ -12,6 +12,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   payday_day int check (payday_day between 1 and 31),
   interests text[] default '{}'::text[],
+  budget_engine_mode text not null default 'auto_apply_safe_rules' check (budget_engine_mode in ('recommend_only', 'auto_apply_safe_rules', 'manual_off')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -141,4 +142,3 @@ begin
       for all using (user_id = auth.uid()) with check (user_id = auth.uid());
   end if;
 end $$;
-

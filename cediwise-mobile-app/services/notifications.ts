@@ -4,6 +4,7 @@ import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import { Platform } from "react-native";
 
+import { useAnnouncementInboxStore } from "@/stores/notificationsStore";
 import { supabase } from "@/utils/supabase";
 import { log } from "@/utils/logger";
 
@@ -22,6 +23,9 @@ const TOKEN_REFRESH_THROTTLE_MS = 24 * 60 * 60 * 1000; // 24h
 
 let responseListener: Notifications.EventSubscription | null = null;
 let receiveListener: Notifications.EventSubscription | null = null;
+
+/** Last authenticated user id passed to {@link initNotificationSystem} (for inbox refresh on push). */
+let notificationUserId: string | null = null;
 
 const NAV_DEBOUNCE_MS = 2000;
 let lastNavTime = 0;
@@ -60,7 +64,8 @@ async function ensureAndroidChannel() {
 
 function handleNotificationNavigation(data: Record<string, unknown> | undefined) {
   const deepLink = typeof data?.deep_link === "string" ? data.deep_link : null;
-  const target = deepLink && deepLink.startsWith("/") ? deepLink : "/";
+  const target =
+    deepLink && deepLink.startsWith("/") ? deepLink : "/notifications/inbox";
   const now = Date.now();
   if (target === lastNavLink && now - lastNavTime < NAV_DEBOUNCE_MS) {
     return;
@@ -83,6 +88,31 @@ export async function hasNotificationGateCompleted(): Promise<boolean> {
 
 export async function completeNotificationGate(): Promise<void> {
   await AsyncStorage.setItem(GATE_COMPLETED_KEY, "true");
+}
+
+/**
+ * When push is off (env), never show the gate. When the OS has already granted
+ * notification permission, skip the full-screen gate and persist completion so
+ * re-login (after storage clear) still skips, matching system settings.
+ * Otherwise the legacy AsyncStorage "Not now" / completed flag still applies.
+ */
+export async function shouldShowNotificationPermissionGate(): Promise<boolean> {
+  if (!isPushEnabled()) {
+    return false;
+  }
+  try {
+    const { granted } = await Notifications.getPermissionsAsync();
+    if (granted) {
+      await completeNotificationGate();
+      return false;
+    }
+  } catch {
+    return !(await hasNotificationGateCompleted());
+  }
+  if (await hasNotificationGateCompleted()) {
+    return false;
+  }
+  return true;
 }
 
 export async function setPendingNotificationRoute(route: string): Promise<void> {
@@ -287,7 +317,14 @@ export async function disablePushNotifications(userId: string): Promise<void> {
 }
 
 export async function initNotificationSystem(userId: string | null): Promise<void> {
-  if (!isPushEnabled()) return;
+  notificationUserId = userId;
+
+  if (!isPushEnabled()) {
+    if (userId) {
+      void useAnnouncementInboxStore.getState().refresh(userId);
+    }
+    return;
+  }
 
   await ensureAndroidChannel();
 
@@ -300,7 +337,9 @@ export async function initNotificationSystem(userId: string | null): Promise<voi
 
   if (!receiveListener) {
     receiveListener = Notifications.addNotificationReceivedListener(() => {
-      // Keep default foreground behavior from setNotificationHandler.
+      if (notificationUserId) {
+        void useAnnouncementInboxStore.getState().refresh(notificationUserId);
+      }
     });
   }
 
@@ -329,6 +368,8 @@ export async function initNotificationSystem(userId: string | null): Promise<voi
       // ignore
     }
   })();
+
+  void useAnnouncementInboxStore.getState().refresh(userId);
 }
 
 export async function enablePushNotifications(userId: string): Promise<boolean> {

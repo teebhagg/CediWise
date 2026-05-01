@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BackButton } from '@/components/BackButton';
 import { DEFAULT_STANDARD_HEIGHT, StandardHeader } from '@/components/CediWiseHeader';
+import { BudgetEngineModeList } from '@/components/features/budget/BudgetEngineModeList';
 import { BudgetModals } from '@/components/features/budget/BudgetModals';
 import { BudgetPersonalizationCard } from '@/components/features/budget/BudgetPersonalizationCard';
 import { DeleteAllBudgetDataModal } from '@/components/features/budget/DeleteAllBudgetDataModal';
@@ -74,7 +75,7 @@ export default function BudgetSettingsScreen() {
       <StandardHeader title="Budget Settings" leading={<BackButton />} centered />
       <View className="px-5 pt-2 pb-4" style={{ paddingTop: headerPadding }}>
         <Text className="text-slate-400 text-sm mt-1">
-          Personalization, cycle, and reset options.
+          How your budget behaves, your cycle, and data options.
         </Text>
       </View>
 
@@ -90,6 +91,16 @@ export default function BudgetSettingsScreen() {
             showSummary={!!derived.vitalsSummary}
             vitalsSummary={derived.vitalsSummary}
           />
+
+          <View>
+            <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2.5 ml-1">
+              Smart budget behavior
+            </Text>
+            <Text className="text-slate-500 text-sm mb-3 leading-5 px-0.5">
+              Choose how CediWise applies suggestions and moves unspent money to Savings.
+            </Text>
+            <BudgetEngineModeList />
+          </View>
 
           {derived.cycleIsSet && derived.activeCycle && (
             <Pressable

@@ -5,6 +5,8 @@ import type { AnnouncementCampaignRow } from "@/lib/actions/announcements";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { AnnouncementDeleteButton } from "./announcement-delete-button";
+
 interface AnnouncementsTableProps {
   data: AnnouncementCampaignRow[];
   total: number;
@@ -48,6 +50,7 @@ export function AnnouncementsTable({
                 <th className="h-10 px-4 text-left font-medium">Success</th>
                 <th className="h-10 px-4 text-left font-medium">Failed</th>
                 <th className="h-10 px-4 text-left font-medium">Sent</th>
+                <th className="h-10 px-4 text-right font-medium w-28">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -75,6 +78,9 @@ export function AnnouncementsTable({
                   <td className="px-4 py-3">{campaign.failure_count}</td>
                   <td className="px-4 py-3 text-muted-foreground">
                     {campaign.sent_at ? new Date(campaign.sent_at).toLocaleString() : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <AnnouncementDeleteButton campaignId={campaign.id} title={campaign.title} />
                   </td>
                 </tr>
               ))}

@@ -57,6 +57,11 @@ export function usePeriodicFeedbackPrompt({
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const openedThisFocusRef = useRef(false);
   const modalVisibleRef = useRef(false);
+  /** Incremented on each evaluate entry and on focus cleanup — aborts stale awaits / timers. */
+  const evaluationGenerationRef = useRef(0);
+  /** True while the home screen focus effect is mounted (cleanup ≈ real blur; deps kept stable). */
+  const focusActiveRef = useRef(false);
+  const submitInFlightRef = useRef(false);
 
   useEffect(() => {
     modalVisibleRef.current = modalVisible;
@@ -90,6 +95,9 @@ export function usePeriodicFeedbackPrompt({
   }, [clearShowTimer]);
 
   const evaluateAndMaybeSchedule = useCallback(async () => {
+    const myGeneration = ++evaluationGenerationRef.current;
+    const stale = () => evaluationGenerationRef.current !== myGeneration;
+
     clearShowTimer();
     openedThisFocusRef.current = false;
 
@@ -99,6 +107,7 @@ export function usePeriodicFeedbackPrompt({
       }
       showTimerRef.current = setTimeout(() => {
         showTimerRef.current = null;
+        if (stale()) return;
         if (openedThisFocusRef.current) return;
         openedThisFocusRef.current = true;
         setModalVisible(true);
@@ -118,14 +127,14 @@ export function usePeriodicFeedbackPrompt({
       return;
     }
 
-    const state = await loadFeedbackPromptState(userId);
-    // let state: FeedbackPromptPersisted;
+    let state: FeedbackPromptPersisted;
     try {
-      // state = await loadFeedbackPromptState(userId);
+      state = await loadFeedbackPromptState(userId);
     } catch (e) {
       console.warn("Failed to load feedback prompt state:", e);
       return;
     }
+    if (stale()) return;
     if (state.neverAskAgain) return;
 
     const nowIso = new Date().toISOString();
@@ -141,6 +150,7 @@ export function usePeriodicFeedbackPrompt({
       console.warn("Failed to save feedback prompt state:", e);
       return;
     }
+    if (stale()) return;
     if (bumped.homeFocusCount < MIN_HOME_FOCUS_COUNT) return;
 
     if (
@@ -171,8 +181,11 @@ export function usePeriodicFeedbackPrompt({
       return;
     }
 
+    if (stale()) return;
+
     showTimerRef.current = setTimeout(() => {
       showTimerRef.current = null;
+      if (stale()) return;
       if (openedThisFocusRef.current) return;
       openedThisFocusRef.current = true;
       setModalVisible(true);
@@ -188,18 +201,21 @@ export function usePeriodicFeedbackPrompt({
     clearShowTimer,
   ]);
 
+  const evaluateAndMaybeScheduleRef = useRef(evaluateAndMaybeSchedule);
+  evaluateAndMaybeScheduleRef.current = evaluateAndMaybeSchedule;
+
   useFocusEffect(
     useCallback(() => {
-      void evaluateAndMaybeSchedule();
+      focusActiveRef.current = true;
+      void evaluateAndMaybeScheduleRef.current();
       return () => {
+        focusActiveRef.current = false;
+        evaluationGenerationRef.current += 1;
         clearShowTimer();
         openedThisFocusRef.current = false;
-        if (modalVisibleRef.current && userId) {
-          void persistDismiss();
-        }
         setModalVisible(false);
       };
-    }, [evaluateAndMaybeSchedule, clearShowTimer, persistDismiss, userId]),
+    }, [clearShowTimer]),
   );
 
   useEffect(() => {
@@ -208,23 +224,24 @@ export function usePeriodicFeedbackPrompt({
 
   const onLater = useCallback(async () => {
     dismissUiOnly();
+    if (!userId) return;
     await persistDismiss();
-  }, [dismissUiOnly, persistDismiss]);
+  }, [dismissUiOnly, persistDismiss, userId]);
 
   const onNeverAsk = useCallback(async () => {
     dismissUiOnly();
     if (FORCE_PROMPT_EACH_FOCUS_DEV || !userId) return;
+    await persistDismiss();
     try {
       const prev = await loadFeedbackPromptState(userId);
       await saveFeedbackPromptState(userId, {
         ...prev,
         neverAskAgain: true,
-        lastDismissedAt: new Date().toISOString(),
       });
     } catch (e) {
       console.warn("Failed to persist 'never ask' preference:", e);
     }
-  }, [userId, dismissUiOnly]);
+  }, [userId, dismissUiOnly, persistDismiss]);
   const submitQuickRating = useCallback(
     async (
       rating: number,
@@ -251,6 +268,10 @@ export function usePeriodicFeedbackPrompt({
           ? trimmed
           : "[Home check-in] Quick rating from the home screen prompt (no extra message).";
 
+      if (submitInFlightRef.current) {
+        return { ok: false, message: "Already sending — hang tight." };
+      }
+      submitInFlightRef.current = true;
       setWorking(true);
       try {
         const appVersion = `${Constants.expoConfig?.version ?? "unknown"} (${Platform.OS})`;
@@ -289,6 +310,7 @@ export function usePeriodicFeedbackPrompt({
         const msg = e instanceof Error ? e.message : "Something went wrong.";
         return { ok: false, message: msg };
       } finally {
+        submitInFlightRef.current = false;
         setWorking(false);
       }
     },

@@ -60,14 +60,16 @@ async function fetchSubscriptionRow(
     .eq("user_id", userId)
     .maybeSingle();
   if (error) {
-    log.warn("[subscriptionReconciliation] fetch row:", error.message);
-    return null;
+    const msg = `[subscriptionReconciliation] subscriptions read failed (user_id=${userId}): ${error.message}`;
+    log.warn(msg);
+    throw new Error(msg);
   }
   return data as SubscriptionReconcileRow | null;
 }
 
 /**
  * Resolves when the row matches the paid state, or after timeout (poll + realtime).
+ * Rejects if a subscription row fetch fails with a Supabase error (distinct from no row).
  */
 export function waitForSubscriptionReconciliation(
   supabase: SupabaseClient,
@@ -77,7 +79,7 @@ export function waitForSubscriptionReconciliation(
   const timeoutMs = opts.timeoutMs ?? 120_000;
   const pollIntervalMs = opts.pollIntervalMs ?? 2500;
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let settled = false;
     let pollId: ReturnType<typeof setInterval> | undefined;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -102,59 +104,81 @@ export function waitForSubscriptionReconciliation(
       resolve({ ok, timedOut, row });
     };
 
+    const abortOnReadFailure = (ch: typeof channel, err: unknown) => {
+      if (settled) return;
+      settled = true;
+      cleanup(ch);
+      reject(err instanceof Error ? err : new Error(String(err)));
+    };
+
     const tryResolve = async (
       ch: ReturnType<SupabaseClient["channel"]>,
       from: string
     ) => {
       if (settled) return;
-      const row = await fetchSubscriptionRow(supabase, userId);
-      if (subscriptionReflectsPayment(row, opts)) {
-        log.info(`[subscriptionReconciliation] satisfied (${from})`);
-        finish(ch, true, false, row);
+      try {
+        const row = await fetchSubscriptionRow(supabase, userId);
+        if (subscriptionReflectsPayment(row, opts)) {
+          log.info(`[subscriptionReconciliation] satisfied (${from})`);
+          finish(ch, true, false, row);
+        }
+      } catch (e) {
+        log.warn(`[subscriptionReconciliation] read failure (${from})`, e);
+        abortOnReadFailure(ch, e);
       }
     };
 
     timeoutId = setTimeout(() => {
       void (async () => {
         if (settled) return;
-        const row = await fetchSubscriptionRow(supabase, userId);
-        if (settled) return;
-        const ok = subscriptionReflectsPayment(row, opts);
-        finish(channel, ok, true, row);
+        try {
+          const row = await fetchSubscriptionRow(supabase, userId);
+          if (settled) return;
+          const ok = subscriptionReflectsPayment(row, opts);
+          finish(channel, ok, true, row);
+        } catch (e) {
+          log.warn("[subscriptionReconciliation] read failure (timeout)", e);
+          abortOnReadFailure(channel, e);
+        }
       })();
     }, timeoutMs);
 
     void (async () => {
-      const row0 = await fetchSubscriptionRow(supabase, userId);
-      if (settled) return;
-      if (subscriptionReflectsPayment(row0, opts)) {
-        finish(channel, true, false, row0);
-        return;
+      try {
+        const row0 = await fetchSubscriptionRow(supabase, userId);
+        if (settled) return;
+        if (subscriptionReflectsPayment(row0, opts)) {
+          finish(channel, true, false, row0);
+          return;
+        }
+
+        channel = supabase
+          .channel(`billing-sub:${userId}:${Date.now()}`)
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "subscriptions",
+              filter: `user_id=eq.${userId}`,
+            },
+            () => {
+              void tryResolve(channel!, "realtime");
+            }
+          )
+          .subscribe((status) => {
+            if (status === "CHANNEL_ERROR") {
+              log.warn("[subscriptionReconciliation] realtime CHANNEL_ERROR; polling only");
+            }
+          });
+
+        pollId = setInterval(() => {
+          void tryResolve(channel!, "poll");
+        }, pollIntervalMs);
+      } catch (e) {
+        log.warn("[subscriptionReconciliation] read failure (initial)", e);
+        abortOnReadFailure(channel, e);
       }
-
-      channel = supabase
-        .channel(`billing-sub:${userId}:${Date.now()}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "*",
-            schema: "public",
-            table: "subscriptions",
-            filter: `user_id=eq.${userId}`,
-          },
-          () => {
-            void tryResolve(channel!, "realtime");
-          }
-        )
-        .subscribe((status) => {
-          if (status === "CHANNEL_ERROR") {
-            log.warn("[subscriptionReconciliation] realtime CHANNEL_ERROR; polling only");
-          }
-        });
-
-      pollId = setInterval(() => {
-        void tryResolve(channel!, "poll");
-      }, pollIntervalMs);
     })();
   });
 }

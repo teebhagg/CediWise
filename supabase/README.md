@@ -41,8 +41,11 @@ supabase/
 
 | Directory | Purpose |
 | --- | --- |
-| `paystack-initiate` | Hosted checkout / Paystack initialize |
-| `paystack-webhook` | Paystack event handler |
+| `paystack-initiate` | Hosted checkout / Paystack initialize (`SUPABASE_ANON_KEY` required for `getUser`) |
+| `paystack-momo-charge` | Ghana MoMo `POST /charge` + idempotency (`SUPABASE_ANON_KEY`) |
+| `paystack-momo-status` | Poll transaction by reference (`SUPABASE_ANON_KEY`) |
+| `paystack-webhook` | Paystack event handler (reference idempotency via `paystack_applied_charges`) |
+| `subscription-janitor` | Hourly (see `config.toml`): MoMo `next_billing_date` overdue → grace; expire finished grace when `ENABLE_AUTO_DOWNGRADE=true` |
 | `send-announcement` | Admin announcements |
 | `daily-cash-flow-check` | Scheduled / utility |
 | `delete-account` | User account deletion |

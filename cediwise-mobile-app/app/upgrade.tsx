@@ -780,7 +780,6 @@ function UpgradeScreenContent({
           keyExtractor={(p) => p.key}
           scrollEnabled={false}
           nestedScrollEnabled
-          estimatedItemSize={380}
           ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
           extraData={{
             billingCycle,

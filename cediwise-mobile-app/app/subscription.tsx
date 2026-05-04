@@ -466,7 +466,6 @@ export default function SubscriptionScreen() {
               scrollEnabled={false}
               nestedScrollEnabled
               keyExtractor={(item, index) => `${effectiveTier}-${index}-${item}`}
-              estimatedItemSize={44}
               extraData={effectiveTier}
               renderItem={renderFeatureRow}
             />

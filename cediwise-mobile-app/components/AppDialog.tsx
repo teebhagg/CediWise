@@ -34,6 +34,8 @@ export type AppDialogProps = {
   primaryButtonClassName?: string;
   /** Override primary label text class (e.g. text-white on red). */
   primaryLabelClassName?: string;
+  /** Disable the primary button. */
+  primaryDisabled?: boolean;
 };
 
 export function AppDialog({
@@ -51,6 +53,7 @@ export function AppDialog({
   children,
   primaryButtonClassName = 'bg-emerald-500',
   primaryLabelClassName = 'text-slate-950',
+  primaryDisabled = false,
 }: AppDialogProps) {
   // Track keyboard height so we can pass it into KeyboardCenteringScrollView.
   // AppDialog uses KeyboardAvoidingView which already resizes the layout, so the
@@ -96,7 +99,7 @@ export function AppDialog({
   };
 
   const handlePrimary = async () => {
-    if (loading) return;
+    if (loading || primaryDisabled) return;
     try {
       const ret = onPrimary();
       if (ret != null && typeof (ret as Promise<unknown>).then === "function") {
@@ -148,7 +151,7 @@ export function AppDialog({
           }}
         >
           <Dialog.Content
-            className="max-w-[360px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
+            className="max-w-[360px] min-w-[320px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
             style={[styles.contentShadow, isKeyboardVisible && { maxHeight: '100%' }]}
           >
             {!loading && (
@@ -190,11 +193,12 @@ export function AppDialog({
                     </View>
                   ) : (
                     <View style={styles.actions}>
-                      <Button
+                        <Button
                         variant="primary"
                         size="md"
                         onPress={handlePrimary}
-                        className={`w-full h-12 rounded-xl ${primaryButtonClassName}`}
+                        isDisabled={primaryDisabled || loading}
+                        className={`w-full h-12 rounded-xl ${primaryButtonClassName} ${(primaryDisabled || loading) ? 'opacity-50' : ''}`}
                       >
                         <Button.Label className={`font-semibold ${primaryLabelClassName}`}>
                           {primaryLabel}

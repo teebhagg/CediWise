@@ -1,11 +1,9 @@
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { Landmark } from "lucide-react-native";
-import type { StyleProp, ViewStyle } from "react-native";
-import { Pressable, Text, View } from "react-native";
+import { Pressable, Text, TextInput, View, type StyleProp, type ViewStyle } from "react-native";
 import { useEffect } from "react";
 import Animated, { FadeIn, SlideInUp, useSharedValue, useAnimatedProps, withTiming } from "react-native-reanimated";
-import { TextInput } from "react-native";
 
 import { Card } from "@/components/Card";
 import { VaultSparkline } from "@/components/features/vault/VaultSparkline";

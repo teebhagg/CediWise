@@ -329,7 +329,6 @@ export default function BudgetCategoriesScreen() {
         keyExtractor={(c) => c.id}
         ListHeaderComponent={categoryListHeader}
         ListEmptyComponent={categoryListEmpty}
-        estimatedItemSize={112}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         extraData={{ isManaging, selectedIds: [...selectedIds].sort().join(',') }}
         contentContainerStyle={{ paddingTop: headerPadding + 10, paddingBottom: 100 }}

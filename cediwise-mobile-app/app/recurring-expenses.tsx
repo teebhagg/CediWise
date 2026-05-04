@@ -439,7 +439,6 @@ export default function RecurringExpensesScreen() {
         getItemType={getItemType}
         ItemSeparatorComponent={RecurringListSeparator}
         ListHeaderComponent={listHeader}
-        estimatedItemSize={112}
         contentContainerStyle={[
           styles.scrollContent,
           { paddingTop: 64 + insets.top },

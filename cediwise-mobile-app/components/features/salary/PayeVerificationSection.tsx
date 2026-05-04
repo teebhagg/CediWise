@@ -166,9 +166,9 @@ export function PayeVerificationSection({
             Platform.OS === "ios"
               ? { url: uri }
               : {
-                message: casualMessage,
-                url: uri,
-              },
+                  message: casualMessage,
+                  url: uri,
+                },
           );
 
         let channel: "image" | "image_rn_share" | "text_fallback";
@@ -303,7 +303,8 @@ export function PayeVerificationSection({
                   Compared to GRA rates in CediWise (no amounts on this card)
                 </Text>
                 <Text className="text-slate-500 text-xs mt-3">
-                  Add employer PAYE and SSNIT to generate your shareable summary.
+                  Add employer PAYE and SSNIT to generate your shareable
+                  summary.
                 </Text>
               </View>
             )}
@@ -380,10 +381,11 @@ function VerificationLine({
   if (line.verdict === "overpaid") {
     const payeBody =
       label === "PAYE"
-        ? `Your employer deducted GHS ${formatCurrency(Math.abs(line.diff))} more PAYE than GRA requires.${annualOverflow != null
-          ? ` That's GHS ${formatCurrency(annualOverflow)}/year.`
-          : ""
-        }`
+        ? `Your employer deducted GHS ${formatCurrency(Math.abs(line.diff))} more PAYE than GRA requires.${
+            annualOverflow != null
+              ? ` That's GHS ${formatCurrency(annualOverflow)}/year.`
+              : ""
+          }`
         : `Your employer deducted GHS ${formatCurrency(Math.abs(line.diff))} more SSNIT than GRA requires for this salary.`;
     return (
       <Card>

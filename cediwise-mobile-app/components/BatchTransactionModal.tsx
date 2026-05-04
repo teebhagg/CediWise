@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { ChevronDown, ListPlus, Plus, X } from 'lucide-react-native';
+import { ChevronDown, Plus, X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Keyboard,
@@ -420,7 +420,7 @@ export function BatchTransactionModal({
         {draftItems.length === 0 && (
           <View style={styles.emptyHint}>
             <Text style={styles.emptyHintText}>
-              Add expenses above, then tap "Save All" to log them together.
+              Add expenses above, then tap &quot;Save All&quot; to log them together.
             </Text>
           </View>
         )}

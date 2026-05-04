@@ -5,6 +5,7 @@ import {
   readProfileVitalsCache,
 } from '@/utils/profileVitals';
 import { supabase } from '@/utils/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Mock supabase
 jest.mock('@/utils/supabase', () => ({
@@ -32,18 +33,18 @@ describe('ProfileVitals utils', () => {
 
   describe('fetchProfileVitalsRemote', () => {
     it('should return null when user not found', async () => {
-      (supabase.maybeSingle as jest.Mock).mockResolvedValue({ data: null, error: null });
+      (supabase as any).maybeSingle.mockResolvedValue({ data: null, error: null });
 
       const result = await fetchProfileVitalsRemote(mockUserId);
       expect(result).toBeNull();
-      expect(supabase.from).toHaveBeenCalledWith('profiles');
-      expect(supabase.select).toHaveBeenCalled();
-      expect(supabase.eq).toHaveBeenCalledWith('id', mockUserId);
+      expect((supabase as any).from).toHaveBeenCalledWith('profiles');
+      expect((supabase as any).select).toHaveBeenCalled();
+      expect((supabase as any).eq).toHaveBeenCalledWith('id', mockUserId);
     });
 
     it('should handle database errors', async () => {
       const error = new Error('Database error');
-      (supabase.maybeSingle as jest.Mock).mockResolvedValue({ data: null, error });
+      (supabase as any).maybeSingle.mockResolvedValue({ data: null, error });
 
       await expect(fetchProfileVitalsRemote(mockUserId)).rejects.toThrow('Database error');
     });
@@ -76,7 +77,7 @@ describe('ProfileVitals utils', () => {
         profile_version: 1,
       };
 
-      (supabase.maybeSingle as jest.Mock).mockResolvedValue({ data: mockData, error: null });
+      (supabase as any).maybeSingle.mockResolvedValue({ data: mockData, error: null });
 
       const result = await fetchProfileVitalsRemote(mockUserId);
 
@@ -136,7 +137,7 @@ describe('ProfileVitals utils', () => {
         profile_version: null,
       };
 
-      (supabase.maybeSingle as jest.Mock).mockResolvedValue({ data: mockData, error: null });
+      (supabase as any).maybeSingle.mockResolvedValue({ data: mockData, error: null });
 
       const result = await fetchProfileVitalsRemote(mockUserId);
 
@@ -196,16 +197,16 @@ describe('ProfileVitals utils', () => {
         profile_version: 2,
       };
 
-      (supabase.maybeSingle as jest.Mock).mockResolvedValue({ data: mockData, error: null });
+      (supabase as any).maybeSingle.mockResolvedValue({ data: mockData, error: null });
 
       const result = await fetchProfileVitalsRemote(mockUserId);
 
-      expect(result.life_stage).toBeNull();
-      expect(result.spending_style).toBeNull();
-      expect(result.financial_priority).toBeNull();
-      expect(result.income_frequency).toBe('monthly'); // fallback
-      expect(result.dependents_count).toBe(5);
-      expect(result.profile_version).toBe(2);
+      expect(result!.life_stage).toBeNull();
+      expect(result!.spending_style).toBeNull();
+      expect(result!.financial_priority).toBeNull();
+      expect(result!.income_frequency).toBe('monthly'); // fallback
+      expect(result!.dependents_count).toBe(5);
+      expect(result!.profile_version).toBe(2);
     });
   });
 
@@ -259,7 +260,7 @@ describe('ProfileVitals utils', () => {
       let result = await readProfileVitalsCache(mockUserId);
       expect(result).toBeNull();
 
-      (AsyncStorage.getItem as jest.Mock).mockResortedValue('invalid json');
+      (AsyncStorage.getItem as jest.Mock).mockResolvedValue('invalid json');
       result = await readProfileVitalsCache(mockUserId);
       expect(result).toBeNull();
 

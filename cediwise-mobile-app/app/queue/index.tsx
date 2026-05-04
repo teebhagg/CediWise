@@ -324,7 +324,6 @@ export default function BudgetQueueScreen() {
           extraData={`${retryingMutationId}-${pendingCount}`}
           ItemSeparatorComponent={QueueItemSeparator}
           contentContainerStyle={queueStyles.listContent}
-          estimatedItemSize={128}
         />
       </View>
 

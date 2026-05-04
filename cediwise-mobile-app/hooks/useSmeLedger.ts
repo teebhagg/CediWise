@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSMELedgerStore } from "@/stores/smeLedgerStore";
-import type { SMETotals, ThresholdInfo } from "@/types/sme";
+import type { DraftSMETransaction, SMETotals, ThresholdInfo } from "@/types/sme";
 import {
   computeTotals,
   computeAnnualTurnover,
@@ -33,6 +33,10 @@ export function useSmeLedger() {
     addCategory,
     deleteCategory,
     clearLocal,
+    addToDraftBatch,
+    removeFromDraftBatch,
+    clearDraftBatch,
+    getDraftBatchTransactions,
   } = useSMELedgerStore();
 
   // Computed values
@@ -173,6 +177,58 @@ export function useSmeLedger() {
     [userId, setupBusiness, refreshQueue]
   );
 
+  const submitBatchTransactions = useCallback(async (): Promise<{ success: boolean; count: number; mutationIds: string[] }> => {
+    const drafts = useSMELedgerStore.getState().getDraftBatchTransactions();
+    if (drafts.length === 0) return { success: true, count: 0, mutationIds: [] };
+
+    let successCount = 0;
+    const mutationIds: string[] = [];
+
+    for (const draft of drafts) {
+      try {
+        const { mutationId } = await addTransaction({
+          type: draft.type,
+          amount: draft.amount,
+          description: draft.description,
+          category: draft.category,
+          transactionDate: draft.transactionDate,
+          paymentMethod: draft.paymentMethod,
+          vatApplicable: draft.vatApplicable,
+          notes: draft.notes,
+        });
+        successCount++;
+        if (mutationId) mutationIds.push(mutationId);
+      } catch {
+        // Continue with remaining items
+      }
+    }
+
+    useSMELedgerStore.getState().clearDraftBatch();
+
+    return { 
+      success: successCount === drafts.length, 
+      count: successCount,
+      mutationIds 
+    };
+  }, [addTransaction]);
+
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const syncBatch = useCallback(async (mutationIds: string[]) => {
+    if (!userId || mutationIds.length === 0) return false;
+    setIsSyncing(true);
+    try {
+      const { flushSMEQueueUntilMutationIdsCleared } = await import("@/utils/smeSync");
+      const result = await flushSMEQueueUntilMutationIdsCleared(userId, mutationIds);
+      await refreshQueue();
+      return result.ok;
+    } catch {
+      return false;
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [userId, refreshQueue]);
+
   return {
     // State
     userId,
@@ -202,6 +258,12 @@ export function useSmeLedger() {
     addTransaction,
     updateTransaction,
     deleteTransaction,
+    submitBatchTransactions,
+    syncBatch,
+    isSyncing,
+    addToDraftBatch,
+    removeFromDraftBatch,
+    clearDraftBatch,
 
     // Categories
     addCategory,

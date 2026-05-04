@@ -1,6 +1,6 @@
 /**
  * SME Ledger — read-only transaction detail.
- * Edit flow lives on add-transaction so view vs change stays visually distinct.
+ * Edit flow lives on batch-transaction so view vs change stays visually distinct.
  */
 
 import { BackButton } from "@/components/BackButton";
@@ -117,7 +117,7 @@ export default function TransactionDetailScreen() {
               /* ignore */
             }
             router.push({
-              pathname: "/(sme)/add-transaction",
+              pathname: "/(sme)/batch-transaction",
               params: { editId: tx.id },
             });
           }}

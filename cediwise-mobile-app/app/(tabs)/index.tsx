@@ -27,7 +27,7 @@ import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
 import { Avatar } from "heroui-native";
 
 import { PeriodicFeedbackPromptModal } from "@/components/feedback/PeriodicFeedbackPromptModal";
-import { BudgetTransactionModal } from "@/components/BudgetTransactionModal";
+import { BatchTransactionModal } from "@/components/BatchTransactionModal";
 import { DiscoveryHeroCard } from "@/components/features/home/DiscoveryHeroCard";
 import { MonthlyActivitiesCard } from "@/components/features/home/MonthlyActivitiesCard";
 import { VaultHeroCard } from "@/components/features/home/VaultHeroCard";
@@ -39,6 +39,7 @@ import { useUpdateCheckContext } from "@/contexts/UpdateCheckContext";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useConnectivity } from "@/hooks/useConnectivity";
 import { usePeriodicFeedbackPrompt } from "@/hooks/usePeriodicFeedbackPrompt";
+import { useBudgetStore } from "@/stores/budgetStore";
 import { TourZone, useTour } from "react-native-lumen";
 
 const styles = StyleSheet.create({
@@ -124,6 +125,8 @@ export default function DashboardScreen() {
     cycleCategories,
     recentExpenses,
     addTransaction,
+    submitBatchTransactions,
+    reload,
     incomeTaxSummary,
     refreshing,
     handleRefresh,
@@ -359,12 +362,19 @@ export default function DashboardScreen() {
                   />
                 </View>
               </TourZone>
-              <BudgetTransactionModal
+              <BatchTransactionModal
                 visible={showExpenseModal}
                 categories={cycleCategories}
-                onClose={() => setShowExpenseModal(false)}
-                onSubmit={async ({ amount, note, bucket, categoryId }) => {
-                  await addTransaction({ amount, note, bucket, categoryId });
+                onClose={() => {
+                  setShowExpenseModal(false);
+                }}
+                onSubmitAll={async () => {
+                  const result = await submitBatchTransactions();
+                  if (result.count > 0) {
+                    await reload();
+                    setShowExpenseModal(false);
+                    showSuccess(`${result.count} expenses logged`);
+                  }
                 }}
               />
             </>

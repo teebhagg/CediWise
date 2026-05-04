@@ -545,6 +545,8 @@ export default function BudgetCategoriesScreen() {
         cycleCategories={derived.cycleCategories}
         needsOverLimitFor={derived.needsOverLimitFor}
         onAddTransaction={async () => { }}
+        onSubmitBatch={async () => ({ count: 0 })}
+        onReloadBudget={async () => { }}
         pendingConfirm={null}
         setPendingConfirm={() => { }}
         showNeedsOverModal={false}

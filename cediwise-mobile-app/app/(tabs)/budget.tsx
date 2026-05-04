@@ -51,6 +51,7 @@ import {
 } from "@/components/CediWiseHeader";
 import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
 import { BUDGET_TOUR_READY_TIMEOUT_MS } from "@/constants/tourTokens";
+import { useBudgetStore } from "@/stores/budgetStore";
 import { analytics } from "@/utils/analytics";
 import { computeNextCycleFromPrevious } from "@/utils/nextCycle";
 import {
@@ -582,6 +583,17 @@ export default function BudgetScreen() {
         needsOverLimitFor={derived.needsOverLimitFor}
         onAddTransaction={async (params) => {
           await budget.addTransaction(params);
+        }}
+        onSubmitBatch={async () => {
+          const result = await budget.submitBatchTransactions();
+          if (result.count > 0) {
+            showSuccess(`${result.count} expenses logged`);
+            modals.setShowTxModal(false);
+          }
+          return result;
+        }}
+        onReloadBudget={async () => {
+          await budget.reload();
         }}
         pendingConfirm={modals.pendingConfirm}
         setPendingConfirm={modals.setPendingConfirm}

@@ -6,6 +6,7 @@
 
 import type {
   BusinessType,
+  DraftSMETransaction,
   PaymentMethod,
   SMECategory,
   SMEProfile,
@@ -73,19 +74,31 @@ export type SMELedgerStoreState = {
   categories: SMECategory[];
   isLoading: boolean;
   error: string | null;
+  draftBatchTransactions: DraftSMETransaction[];
+  lastUsedType: TransactionType | null;
+  lastUsedCategory: string | null;
+  lastUsedPaymentMethod: PaymentMethod | null;
 };
 
 export type SMELedgerStoreActions = {
   initForUser: (userId: string | null) => Promise<void>;
   loadState: () => Promise<void>;
   setupBusiness: (params: SetupSMEParams) => Promise<void>;
-  addTransaction: (params: AddTransactionParams) => Promise<void>;
+  addTransaction: (params: AddTransactionParams) => Promise<{ mutationId: string }>;
   updateTransaction: (id: string, params: UpdateTransactionParams) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   addCategory: (params: AddCategoryParams) => Promise<void>;
   addCategories: (categories: AddCategoryParams[]) => Promise<void>;
   deleteCategory: (id: string) => Promise<void>;
   clearLocal: () => Promise<void>;
+  addToDraftBatch: (draft: Omit<DraftSMETransaction, "tempId">) => void;
+  removeFromDraftBatch: (tempId: string) => void;
+  clearDraftBatch: () => void;
+  getDraftBatchTransactions: () => DraftSMETransaction[];
+  setLastUsedType: (type: TransactionType) => void;
+  setLastUsedCategory: (category: string) => void;
+  setLastUsedPaymentMethod: (method: PaymentMethod) => void;
+  resetLastUsed: () => void;
 };
 
 export type SMELedgerStore = SMELedgerStoreState & SMELedgerStoreActions;
@@ -149,6 +162,10 @@ export const useSMELedgerStore = create<SMELedgerStore>((set, get) => ({
   categories: [],
   isLoading: true,
   error: null,
+  draftBatchTransactions: [],
+  lastUsedType: null,
+  lastUsedCategory: null,
+  lastUsedPaymentMethod: null,
 
   initForUser: async (userId: string | null) => {
     set({ userId, isLoading: true });
@@ -281,6 +298,8 @@ export const useSMELedgerStore = create<SMELedgerStore>((set, get) => ({
     });
 
     await trySyncSMEMutation(userId, mutation);
+
+    return { mutationId: mutation.id };
   },
 
   updateTransaction: async (id, params) => {
@@ -463,5 +482,47 @@ export const useSMELedgerStore = create<SMELedgerStore>((set, get) => ({
       await clearSMEState(userId);
     }
     set({ userId: null, profile: null, transactions: [], categories: [], error: null });
+  },
+
+  addToDraftBatch: (draft) => {
+    const { draftBatchTransactions } = get();
+    const newItem: DraftSMETransaction = {
+      ...draft,
+      tempId: uuidv4(),
+    };
+    set({ draftBatchTransactions: [...draftBatchTransactions, newItem] });
+  },
+
+  removeFromDraftBatch: (tempId) => {
+    const { draftBatchTransactions } = get();
+    set({
+      draftBatchTransactions: draftBatchTransactions.filter(
+        (item) => item.tempId !== tempId
+      ),
+    });
+  },
+
+  clearDraftBatch: () => {
+    set({ draftBatchTransactions: [], lastUsedType: null, lastUsedCategory: null, lastUsedPaymentMethod: null });
+  },
+
+  getDraftBatchTransactions: () => {
+    return get().draftBatchTransactions;
+  },
+
+  setLastUsedType: (type) => {
+    set({ lastUsedType: type });
+  },
+
+  setLastUsedCategory: (category) => {
+    set({ lastUsedCategory: category });
+  },
+
+  setLastUsedPaymentMethod: (method) => {
+    set({ lastUsedPaymentMethod: method });
+  },
+
+  resetLastUsed: () => {
+    set({ lastUsedType: null, lastUsedCategory: null, lastUsedPaymentMethod: null });
   },
 }));

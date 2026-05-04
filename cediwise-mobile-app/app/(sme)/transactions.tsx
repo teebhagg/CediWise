@@ -1220,7 +1220,7 @@ export default function TransactionsScreen() {
       >
         <Pressable
           style={[styles.fab]}
-          onPress={() => router.push("/(sme)/add-transaction")}
+          onPress={() => router.push("/(sme)/batch-transaction")}
         >
           <Plus color="white" size={28} />
         </Pressable>

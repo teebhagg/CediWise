@@ -379,14 +379,17 @@ export default function SMEDashboardScreen() {
              </Pressable>
              
              <Pressable className="flex-1 bg-rose-500/10 border border-rose-500/20 rounded-lg p-5 items-center justify-center gap-2"
-                onPress={() => router.push({ pathname: "/(sme)/add-transaction", params: { type: "expense" } })}>
+                onPress={() => router.push({ pathname: "/(sme)/batch-transaction", params: { type: "expense" } })}>
                 <View className="w-10 h-10 rounded-2xl bg-rose-500/20 items-center justify-center">
                   <Plus color="#EF4444" size={24} />
                 </View>
                 <Text className="text-rose-400 font-bold">Expense</Text>
              </Pressable>
           </View>
+
+
         </View>
+
       </Animated.ScrollView>
     </SafeAreaView>
   );

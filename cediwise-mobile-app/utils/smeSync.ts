@@ -312,3 +312,57 @@ export async function hydrateSMEFromRemote(
 
   await saveSMEState(state);
 }
+
+const FLUSH_UNTIL_MAX_ROUNDS = 80;
+const FLUSH_UNTIL_SLICE = 50;
+
+/**
+ * Runs `flushSMEQueue` in rounds until every listed mutation id is gone from the queue
+ * (success) or any of them records `lastError` (failure).
+ */
+export async function flushSMEQueueUntilMutationIdsCleared(
+  userId: string,
+  mutationIds: string[],
+  options?: { maxRounds?: number; slice?: number },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (mutationIds.length === 0) return { ok: true };
+  const maxRounds = options?.maxRounds ?? FLUSH_UNTIL_MAX_ROUNDS;
+  const slice = options?.slice ?? FLUSH_UNTIL_SLICE;
+
+  const pendingWithError = async (): Promise<string | null> => {
+    const queue = await loadSMEQueue(userId);
+    for (const mid of mutationIds) {
+      const item = queue.items.find((it) => it.id === mid);
+      if (item?.lastError) return item.lastError;
+    }
+    return null;
+  };
+
+  for (let round = 0; round < maxRounds; round++) {
+    const queue = await loadSMEQueue(userId);
+    const stillPending = mutationIds.filter((mid) =>
+      queue.items.some((it) => it.id === mid),
+    );
+    if (stillPending.length === 0) return { ok: true };
+
+    const errEarly = await pendingWithError();
+    if (errEarly) return { ok: false, error: errEarly };
+
+    await flushSMEQueue(userId, slice);
+  }
+
+  const queue = await loadSMEQueue(userId);
+  const stillPending = mutationIds.filter((mid) =>
+    queue.items.some((it) => it.id === mid),
+  );
+  if (stillPending.length === 0) return { ok: true };
+
+  const errMsg = await pendingWithError();
+  if (errMsg) return { ok: false, error: errMsg };
+
+  return {
+    ok: false,
+    error: "Could not sync yet. Check your connection and try again.",
+  };
+}
+

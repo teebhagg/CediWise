@@ -4,7 +4,7 @@ import type { SpendingInsight } from '../../../utils/spendingPatterns';
 import { computeSuggestedLimit } from '../../../utils/spendingPatternsLogic';
 import { AddCustomCategoryBottomSheet } from './AddCustomCategoryBottomSheet';
 import { AllocationExceededModal } from '../../AllocationExceededModal';
-import { BudgetTransactionModal } from '../../BudgetTransactionModal';
+import { BatchTransactionModal } from '../../BatchTransactionModal';
 import { ConfirmModal } from '../../ConfirmModal';
 import { EditCategoryLimitModal } from '../../EditCategoryLimitModal';
 import { EditCycleDayModal } from '../../EditCycleDayModal';
@@ -40,7 +40,7 @@ interface BudgetModalsProps {
 
   showTxModal: boolean;
   setShowTxModal: (v: boolean) => void;
-  cycleCategories: BudgetCategory[]; // from types/budget (full shape for BudgetTransactionModal)
+  cycleCategories: BudgetCategory[];
   needsOverLimitFor: (categoryId: string | null | undefined, amount: number) => boolean;
   onAddTransaction: (params: {
     amount: number;
@@ -48,6 +48,8 @@ interface BudgetModalsProps {
     bucket: BudgetBucket;
     categoryId?: string | null;
   }) => Promise<void>;
+  onSubmitBatch: () => Promise<{ count: number }>;
+  onReloadBudget: () => Promise<void>;
   pendingConfirm: PendingConfirm | null;
   setPendingConfirm: (v: PendingConfirm | null) => void;
   showNeedsOverModal: boolean;
@@ -103,6 +105,8 @@ export function BudgetModals({
   cycleCategories,
   needsOverLimitFor,
   onAddTransaction,
+  onSubmitBatch,
+  onReloadBudget,
   pendingConfirm,
   setPendingConfirm,
   showNeedsOverModal,
@@ -152,17 +156,15 @@ export function BudgetModals({
         }}
       />
 
-      <BudgetTransactionModal
+      <BatchTransactionModal
         visible={showTxModal}
         categories={cycleCategories}
         onClose={() => setShowTxModal(false)}
-        onSubmit={async ({ amount, note, bucket, categoryId }) => {
-          if (bucket === 'needs' && needsOverLimitFor(categoryId, amount)) {
-            setPendingConfirm({ amount, note, bucket, categoryId });
-            setShowNeedsOverModal(true);
-            return;
+        onSubmitAll={async () => {
+          const result = await onSubmitBatch();
+          if (result.count > 0) {
+            await onReloadBudget();
           }
-          await onAddTransaction({ amount, note, bucket, categoryId });
         }}
       />
 

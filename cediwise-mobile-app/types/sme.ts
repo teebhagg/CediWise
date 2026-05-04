@@ -179,3 +179,16 @@ export const BUSINESS_CATEGORIES = BUSINESS_CATEGORIES_DATA.map(
 
 export type BusinessCategoryValue =
   (typeof BUSINESS_CATEGORIES_DATA)[number]["name"];
+
+export interface DraftSMETransaction {
+  tempId: string;
+  type: TransactionType;
+  amount: number;
+  description: string;
+  category: string;
+  transactionDate: string;
+  paymentMethod: PaymentMethod | null;
+  vatApplicable: boolean;
+  vatAmount: number;
+  notes: string | null;
+}

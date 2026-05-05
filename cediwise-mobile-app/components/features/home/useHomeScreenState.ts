@@ -61,6 +61,12 @@ export interface UseHomeScreenStateReturn {
     bucket: "needs" | "wants" | "savings";
     categoryId?: string | null;
   }) => Promise<{ wouldExceedNeeds?: boolean }>;
+  submitBatchTransactions: () => Promise<{
+    count: number;
+    success: boolean;
+    mutationIds: string[];
+  }>;
+  reload: () => Promise<void>;
 
   // Income / salary
   incomeTaxSummary: IncomeTaxSummary;
@@ -98,6 +104,7 @@ export function useHomeScreenState(): UseHomeScreenStateReturn {
     state: budgetState,
     totals: budgetTotals,
     addTransaction,
+    submitBatchTransactions,
     syncNow,
     hydrateFromRemote,
     reload,
@@ -349,6 +356,8 @@ export function useHomeScreenState(): UseHomeScreenStateReturn {
     cycleCategories,
     recentExpenses,
     addTransaction,
+    submitBatchTransactions,
+    reload,
     incomeTaxSummary,
     salary,
     setSalary,

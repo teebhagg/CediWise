@@ -1,13 +1,15 @@
 import * as Haptics from "expo-haptics";
 import { Stack } from "expo-router";
-import { Calendar, Pencil, Plus, Trash2 } from "lucide-react-native";
+import { Menu } from "heroui-native";
+import { Calendar, ListPlus, Pencil, Plus, Trash2 } from "lucide-react-native";
 import moment, { type Moment } from "moment";
-import CalendarPicker from "react-native-calendar-datepicker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, SectionList, StyleSheet, Text, View } from "react-native";
+import CalendarPicker from "react-native-calendar-datepicker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BackButton } from "@/components/BackButton";
+import { BatchTransactionModal } from "@/components/BatchTransactionModal";
 import { BudgetTransactionModal } from "@/components/BudgetTransactionModal";
 import { Card } from "@/components/Card";
 import {
@@ -16,9 +18,10 @@ import {
 } from "@/components/CediCalendarPickerModal";
 import { StandardHeader } from "@/components/CediWiseHeader";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
 import { useBudget } from "@/hooks/useBudget";
-import { useAppToast } from "@/hooks/useAppToast";
+import { useBudgetStore } from "@/stores/budgetStore";
 import type { BudgetBucket, BudgetTransaction } from "@/types/budget";
 import { bucketLabel } from "@/utils/budgetHelpers";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -63,10 +66,13 @@ export default function ExpensesScreen() {
     addTransaction,
     updateTransaction,
     deleteTransaction,
+    submitBatchTransactions,
+    syncBatch,
   } = useBudget(user?.id);
 
   const [filter, setFilter] = useState<"all" | BudgetBucket>("all");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showBatchModal, setShowBatchModal] = useState(false);
   const [editingTx, setEditingTx] = useState<BudgetTransaction | null>(null);
   const [txToDelete, setTxToDelete] = useState<BudgetTransaction | null>(null);
   const [selectedMonthAndYear, setSelectedMonthAndYear] = useState<
@@ -78,7 +84,7 @@ export default function ExpensesScreen() {
   const [monthAndYearOptions, setMonthAndYearOptions] = useState<string[]>([]);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const insets = useSafeAreaInsets();
-  const { showInfo } = useAppToast();
+  const { showError, showInfo, showSuccess } = useAppToast();
 
   const activeCycleId = activeCycle?.id ?? null;
   const cycleCategories = useMemo(() => {
@@ -375,11 +381,10 @@ export default function ExpensesScreen() {
           <Pressable
             key={f}
             onPress={() => setFilter(f)}
-            className={`px-3 py-2 rounded-full border ${
-              filter === f
+            className={`px-3 py-2 rounded-full border ${filter === f
                 ? "bg-emerald-500/20 border-emerald-500/45"
                 : "bg-slate-400/15 border-slate-400/25"
-            }`}>
+              }`}>
             <Text
               className={`text-sm ${filter === f ? "text-slate-50 font-medium" : "text-slate-300"}`}>
               {f === "all" ? "All" : bucketLabel(f)}
@@ -439,22 +444,63 @@ export default function ExpensesScreen() {
                 }
               />
             </Pressable>,
-            <Pressable
-              key="add-btn"
-              onPress={() => {
-                try {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                } catch {
-                  /* ignore */
+            <Menu
+              key="add-menu"
+              onOpenChange={(isOpen) => {
+                if (isOpen) {
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }
-                setShowAddModal(true);
               }}
-              style={expensesHeaderStyles.actionTrigger}
-              className="rounded-full bg-emerald-500"
-              accessibilityLabel="Add expense"
-              accessibilityRole="button">
-              <Plus size={22} color="#020617" />
-            </Pressable>,
+            >
+              <Menu.Trigger asChild>
+                <Pressable
+                  style={expensesHeaderStyles.actionTrigger}
+                  className="rounded-full bg-emerald-500"
+                  accessibilityLabel="Add expense"
+                  accessibilityRole="button"
+                >
+                  <Plus size={22} color="#020617" />
+                </Pressable>
+              </Menu.Trigger>
+              <Menu.Portal>
+                <Menu.Overlay />
+                <Menu.Content
+                  presentation="popover"
+                  placement="bottom"
+                  align="center"
+                  className="bg-[rgba(18,22,33,0.98)] rounded-lg min-w-[200px]"
+                >
+                  <Menu.Group>
+                    <Menu.Item
+                      id="batch-add"
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        setShowBatchModal(true);
+                      }}
+                      style={expensesHeaderStyles.menuItem}
+                    >
+                      <ListPlus size={18} color="#f8fafc" />
+                      <Menu.ItemTitle className="font-semibold text-slate-50">
+                        Batch Add
+                      </Menu.ItemTitle>
+                    </Menu.Item>
+                    <Menu.Item
+                      id="single-expense"
+                      onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        setShowAddModal(true);
+                      }}
+                      style={expensesHeaderStyles.menuItem}
+                    >
+                      <Plus size={18} color="#f8fafc" />
+                      <Menu.ItemTitle className="font-semibold text-slate-50">
+                        Single Expense
+                      </Menu.ItemTitle>
+                    </Menu.Item>
+                  </Menu.Group>
+                </Menu.Content>
+              </Menu.Portal>
+            </Menu>,
           ]}
           bottom={categoryFilter}
         />
@@ -512,6 +558,62 @@ export default function ExpensesScreen() {
         onClose={handleCloseTxModal}
         onSubmit={handleAddSubmit}
         onUpdate={handleUpdateSubmit}
+      />
+
+      <BatchTransactionModal
+        visible={showBatchModal}
+        categories={cycleCategories}
+        onClose={() => {
+          setShowBatchModal(false);
+        }}
+        onSubmitAll={async () => {
+          const attempted =
+            useBudgetStore.getState().getDraftBatchTransactions().length;
+          const result = await submitBatchTransactions();
+          const failedRemainder =
+            useBudgetStore.getState().getDraftBatchTransactions().length;
+
+          if (result.success) {
+            setShowBatchModal(false);
+            if (result.count > 0) {
+              showSuccess(`${result.count} expenses added to queue`);
+            }
+            if (result.mutationIds.length > 0) {
+              const synced = await syncBatch(result.mutationIds);
+              if (synced) {
+                showSuccess("Data synchronized now");
+              }
+            }
+            return;
+          }
+
+          if (result.count > 0) {
+            showSuccess(
+              "Partial save",
+              `${result.count} expense${result.count === 1 ? "" : "s"} queued.`,
+            );
+            showError(
+              "Some drafts not saved",
+              failedRemainder > 0
+                ? `${failedRemainder} draft${failedRemainder === 1 ? "" : "s"} still need attention.`
+                : "Fix remaining items and try again.",
+            );
+            if (result.mutationIds.length > 0) {
+              const synced = await syncBatch(result.mutationIds);
+              if (!synced) {
+                showError("Sync failed", "Queued items will retry when you're online.");
+              }
+            }
+            return;
+          }
+
+          showError(
+            "No expenses submitted",
+            attempted > 0
+              ? "Please fix drafts and try again."
+              : "Nothing to submit.",
+          );
+        }}
       />
 
       <CediCalendarPickerModal
@@ -602,6 +704,12 @@ const expensesHeaderStyles = StyleSheet.create({
     minHeight: 44,
     alignItems: "center",
     justifyContent: "center",
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 32,
   },
 });
 

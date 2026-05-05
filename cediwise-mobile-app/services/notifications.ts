@@ -210,7 +210,7 @@ export async function scheduleDailyExpenseReminder(): Promise<void> {
         const t: { type: "weekly"; weekday: number; hour: number; minute: number; channelId?: string } = {
           type: "weekly",
           weekday,
-          hour: 18,
+          hour: 20,
           minute: 0,
         };
         if (Platform.OS === "android") t.channelId = DEFAULT_CHANNEL_ID;
@@ -218,7 +218,7 @@ export async function scheduleDailyExpenseReminder(): Promise<void> {
       }
       const t: { type: "daily"; hour: number; minute: number; channelId?: string } = {
         type: "daily",
-        hour: 18,
+        hour: 20,
         minute: 0,
       };
       if (Platform.OS === "android") t.channelId = DEFAULT_CHANNEL_ID;

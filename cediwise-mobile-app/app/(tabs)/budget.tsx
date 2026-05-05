@@ -583,6 +583,24 @@ export default function BudgetScreen() {
         onAddTransaction={async (params) => {
           await budget.addTransaction(params);
         }}
+        onSubmitBatch={async () => {
+          const result = await budget.submitBatchTransactions();
+          if (result.success && result.count > 0) {
+            showSuccess(
+              "Expenses logged",
+              `${result.count} expense${result.count === 1 ? "" : "s"} logged`,
+            );
+          } else if (!result.success && result.count > 0) {
+            showError(
+              "Partial save",
+              `${result.count} expense${result.count === 1 ? "" : "s"} queued; fix remaining drafts or try again.`,
+            );
+          }
+          return result;
+        }}
+        onReloadBudget={async () => {
+          await budget.reload();
+        }}
         pendingConfirm={modals.pendingConfirm}
         setPendingConfirm={modals.setPendingConfirm}
         showNeedsOverModal={modals.showNeedsOverModal}

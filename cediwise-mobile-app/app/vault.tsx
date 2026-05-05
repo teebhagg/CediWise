@@ -217,7 +217,6 @@ function VaultScreenInner() {
           ListEmptyComponent={listEmpty}
           ItemSeparatorComponent={itemSeparator}
           renderItem={renderItem}
-          estimatedItemSize={96}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

@@ -51,8 +51,6 @@ export const supabase: SupabaseClient | null =
           persistSession: false,
           storage: AsyncStorage,
           lock: authLock,
-          /** Softer than default 10s when multiple callers queue (web tabs + mutex depth). */
-          lockAcquireTimeout: 60_000,
         },
         global: {
           fetch: fetch.bind(globalThis),

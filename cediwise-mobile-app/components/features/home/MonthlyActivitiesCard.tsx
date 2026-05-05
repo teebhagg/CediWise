@@ -2,13 +2,12 @@ import * as Haptics from 'expo-haptics';
 import { ChevronRight, Plus } from 'lucide-react-native';
 import { memo, useCallback } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import type { BudgetState, BudgetTransaction } from '../../../types/budget';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { Card } from '../../Card';
-import { PrimaryButton } from '../../PrimaryButton';
 import { Button } from 'heroui-native';
 
 export interface MonthlyActivitiesCardProps {

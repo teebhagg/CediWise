@@ -17,7 +17,7 @@ import {
 import { SpendingInsightsChart } from '@/components/features/budget/insights/SpendingInsightsCharts';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/utils/formatCurrency';
-import { FlashList } from '@shopify/flash-list';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Receipt } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
@@ -43,7 +43,7 @@ export default function BudgetInsightsScreen() {
   const [chartType, setChartType] = useState<'bar' | 'line' | 'donut'>('bar');
   const [range, setRange] = useState<InsightsRangeKey>('6M');
 
-  const flashListRef = useRef<FlashList>(null);
+  const flashListRef = useRef<FlashListRef<any>>(null);
 
   useEffect(() => {
     flashListRef.current?.scrollToOffset({
@@ -108,7 +108,7 @@ export default function BudgetInsightsScreen() {
         <CategoryBreakdownRow item={item} />
       </View>
     ),
-    [insightsData.categoryBreakdown],
+    [insightsData],
   );
 
   useEffect(() => {
@@ -183,7 +183,6 @@ export default function BudgetInsightsScreen() {
         ]}
         snapToEnd={false}
         decelerationRate="fast"
-        estimatedItemSize={76}
         contentContainerStyle={{
           paddingBottom: 120,
           paddingTop: getExpandedHeaderScrollPaddingTop(insets.top, {
@@ -241,7 +240,6 @@ export default function BudgetInsightsScreen() {
                   scrollEnabled={false}
                   nestedScrollEnabled
                   keyExtractor={(ins) => ins.id}
-                  estimatedItemSize={92}
                   ItemSeparatorComponent={recurringInsightSeparator}
                   renderItem={renderRecurringInsight}
                 />
@@ -280,6 +278,8 @@ export default function BudgetInsightsScreen() {
         cycleCategories={derived.cycleCategories}
         needsOverLimitFor={derived.needsOverLimitFor}
         onAddTransaction={async () => {}}
+        onSubmitBatch={async () => ({ count: 0, success: true })}
+        onReloadBudget={async () => {}}
         pendingConfirm={null}
         setPendingConfirm={() => {}}
         showNeedsOverModal={false}

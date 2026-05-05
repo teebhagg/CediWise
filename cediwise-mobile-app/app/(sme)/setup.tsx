@@ -23,7 +23,6 @@ import {
 import { useCallback, useState } from "react";
 import {
   KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,

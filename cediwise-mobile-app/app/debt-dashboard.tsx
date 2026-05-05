@@ -378,7 +378,6 @@ export default function DebtDashboardScreen() {
           />
         }
         ListFooterComponent={<View style={styles.listFooter} />}
-        estimatedItemSize={168}
       />
 
       {/* Add Button */}

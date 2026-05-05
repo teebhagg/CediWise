@@ -72,7 +72,7 @@ function AnimatedHealthSummary({ text }: { text: string }) {
   useEffect(() => {
     sizeObj.value = withTiming(12, { duration: 400 });
     opacityObj.value = withDelay(400, withTiming(1, { duration: 500 }));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- mount-only Reanimated intro (shared values)
 
   const animatedStyle = useAnimatedStyle(() => {
     return {

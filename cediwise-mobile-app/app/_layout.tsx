@@ -295,29 +295,31 @@ export default Sentry.wrap(function RootLayout() {
       void syncTaxConfig();
     });
 
-    // Only configure native Google Sign-In when not in Expo Go (dynamic require avoids loading native module in Expo Go).
-    const isExpoGo = (Constants.appOwnership ?? "") === "expo";
-    if (
-      (Platform.OS === "ios" || Platform.OS === "android") &&
-      !isExpoGo
-    ) {
-      try {
-        const { GoogleSignin } = require("@react-native-google-signin/google-signin");
-        GoogleSignin.configure({
-          webClientId:
-            process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
-            "758685762731-vh9reoikjerbsu8pbcigndi29tdb7fp9.apps.googleusercontent.com",
-        });
-      } catch (e) {
-        console.warn("GoogleSignin.configure failed", e);
-      }
-    }
-
     return () => {
       const cancel = (taxTask as { cancel?: () => void }).cancel;
       if (typeof cancel === "function") cancel();
     };
   }, [fontsLoaded]);
+
+  useEffect(() => {
+    const isExpoGo = (Constants.appOwnership ?? "") === "expo";
+    if (
+      (Platform.OS === "ios" || Platform.OS === "android") &&
+      !isExpoGo
+    ) {
+      void import("@react-native-google-signin/google-signin")
+        .then(({ GoogleSignin }) => {
+          GoogleSignin.configure({
+            webClientId:
+              process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
+              "758685762731-vh9reoikjerbsu8pbcigndi29tdb7fp9.apps.googleusercontent.com",
+          });
+        })
+        .catch((e) => {
+          console.warn("GoogleSignin.configure failed", e);
+        });
+    }
+  }, []);
 
   if (!appIsReady) {
     return null;

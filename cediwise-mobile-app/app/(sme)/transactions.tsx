@@ -506,15 +506,7 @@ export default function TransactionsScreen() {
     }
 
     return pills;
-  }, [
-    filters.sortBy,
-    filters.filterType,
-    filters.datePreset,
-    filters.dateFrom,
-    filters.dateTo,
-    filters.selectedCategory,
-    filters.selectedPaymentMethod,
-  ]);
+  }, [filters]);
 
   const renderTransaction = useCallback(
     ({ item, index }: { item: SMETransaction; index: number }) => (
@@ -532,8 +524,8 @@ export default function TransactionsScreen() {
           <Card style={styles.txCard} className="flex-row items-center gap-3">
             <View
               className={`w-11 h-11 rounded-2xl items-center justify-center ${item.type === "income"
-                  ? "bg-emerald-500/10"
-                  : "bg-rose-500/10"
+                ? "bg-emerald-500/10"
+                : "bg-rose-500/10"
                 }`}
             >
               {item.type === "income" ? (
@@ -1220,7 +1212,7 @@ export default function TransactionsScreen() {
       >
         <Pressable
           style={[styles.fab]}
-          onPress={() => router.push("/(sme)/add-transaction")}
+          onPress={() => router.push("/(sme)/batch-transaction")}
         >
           <Plus color="white" size={28} />
         </Pressable>

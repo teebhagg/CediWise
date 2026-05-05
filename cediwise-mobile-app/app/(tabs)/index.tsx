@@ -27,7 +27,7 @@ import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
 import { Avatar } from "heroui-native";
 
 import { PeriodicFeedbackPromptModal } from "@/components/feedback/PeriodicFeedbackPromptModal";
-import { BudgetTransactionModal } from "@/components/BudgetTransactionModal";
+import { BatchTransactionModal } from "@/components/BatchTransactionModal";
 import { DiscoveryHeroCard } from "@/components/features/home/DiscoveryHeroCard";
 import { MonthlyActivitiesCard } from "@/components/features/home/MonthlyActivitiesCard";
 import { VaultHeroCard } from "@/components/features/home/VaultHeroCard";
@@ -123,7 +123,8 @@ export default function DashboardScreen() {
     activeCycleId,
     cycleCategories,
     recentExpenses,
-    addTransaction,
+    submitBatchTransactions,
+    reload,
     incomeTaxSummary,
     refreshing,
     handleRefresh,
@@ -359,12 +360,30 @@ export default function DashboardScreen() {
                   />
                 </View>
               </TourZone>
-              <BudgetTransactionModal
+              <BatchTransactionModal
                 visible={showExpenseModal}
                 categories={cycleCategories}
-                onClose={() => setShowExpenseModal(false)}
-                onSubmit={async ({ amount, note, bucket, categoryId }) => {
-                  await addTransaction({ amount, note, bucket, categoryId });
+                onClose={() => {
+                  setShowExpenseModal(false);
+                }}
+                onSubmitAll={async () => {
+                  const result = await submitBatchTransactions();
+                  if (result.success) {
+                    await reload();
+                    setShowExpenseModal(false);
+                    if (result.count > 0) {
+                      showSuccess(
+                        "Expenses logged",
+                        `${result.count} expense${result.count === 1 ? "" : "s"} logged`,
+                      );
+                    }
+                  } else if (result.count > 0) {
+                    await reload();
+                    showError(
+                      "Partial save",
+                      `${result.count} expense${result.count === 1 ? "" : "s"} queued; fix remaining drafts in the modal.`,
+                    );
+                  }
                 }}
               />
             </>

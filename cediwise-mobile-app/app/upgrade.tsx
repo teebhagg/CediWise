@@ -15,13 +15,11 @@ import { supabase } from "@/utils/supabase";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import {
-  ArrowLeft,
   Check,
   Clock,
   Crown,
   Shield,
   Zap,
-  X
 } from "lucide-react-native";
 import { ANALYTICS_EVENTS } from "@/constants/analyticsEvents";
 import { getPostHogOptional } from "@/utils/analytics/posthogClientRef";
@@ -531,7 +529,6 @@ function UpgradeScreenContent({
     },
     [
       user,
-      supabase,
       router,
       paystack,
       onPaymentSuccess,
@@ -780,7 +777,6 @@ function UpgradeScreenContent({
           keyExtractor={(p) => p.key}
           scrollEnabled={false}
           nestedScrollEnabled
-          estimatedItemSize={380}
           ItemSeparatorComponent={() => <View style={{ height: 16 }} />}
           extraData={{
             billingCycle,

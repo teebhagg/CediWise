@@ -96,6 +96,11 @@ export interface SMEState {
   profile: SMEProfile | null;
   transactions: SMETransaction[];
   categories: SMECategory[];
+  /** Batch-entry drafts (persisted so they survive app restart). */
+  draftBatchTransactions: DraftSMETransaction[];
+  lastUsedType: TransactionType | null;
+  lastUsedCategory: string | null;
+  lastUsedPaymentMethod: PaymentMethod | null;
   updatedAt: string;
 }
 
@@ -179,3 +184,16 @@ export const BUSINESS_CATEGORIES = BUSINESS_CATEGORIES_DATA.map(
 
 export type BusinessCategoryValue =
   (typeof BUSINESS_CATEGORIES_DATA)[number]["name"];
+
+export interface DraftSMETransaction {
+  tempId: string;
+  type: TransactionType;
+  amount: number;
+  description: string;
+  category: string;
+  transactionDate: string;
+  paymentMethod: PaymentMethod | null;
+  vatApplicable: boolean;
+  vatAmount: number;
+  notes: string | null;
+}

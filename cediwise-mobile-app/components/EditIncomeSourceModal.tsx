@@ -2,7 +2,6 @@ import * as Haptics from 'expo-haptics';
 import { Banknote } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import {
-  Platform,
   Pressable,
   StyleSheet,
   Text,

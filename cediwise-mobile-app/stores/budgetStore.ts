@@ -1,6 +1,6 @@
 import { DeviceEventEmitter } from "react-native";
 import { create } from "zustand";
-import type { BudgetQueue, BudgetState } from "../types/budget";
+import type { BudgetQueue, BudgetState, DraftBudgetTransaction } from "../types/budget";
 import {
   BUDGET_CHANGED_EVENT,
   createEmptyBudgetState,
@@ -9,6 +9,7 @@ import {
   loadBudgetState,
   saveBudgetState,
 } from "../utils/budgetStorage";
+import { uuidv4 } from "../utils/uuid";
 
 export type BudgetStoreState = {
   userId: string | null;
@@ -18,6 +19,9 @@ export type BudgetStoreState = {
   isSyncing: boolean;
   lastSyncRunEndedAt: number | null;
   retryIn: number | null;
+  draftBatchTransactions: DraftBudgetTransaction[];
+  lastUsedBucket: "needs" | "wants" | "savings" | null;
+  lastUsedCategoryId: string | null;
 };
 
 export type BudgetInitOptions = {
@@ -38,6 +42,14 @@ export type BudgetStoreActions = {
   setLastSyncRunEndedAt: (at: number | null) => void;
   setRetryIn: (seconds: number | null) => void;
   clearSyncRunResult: () => void;
+  addToDraftBatch: (draft: Omit<DraftBudgetTransaction, "tempId">) => void;
+  updateDraftBatchItem: (tempId: string, draft: Omit<DraftBudgetTransaction, "tempId">) => void;
+  removeFromDraftBatch: (tempId: string) => void;
+  clearDraftBatch: () => void;
+  setLastUsedBucket: (bucket: "needs" | "wants" | "savings") => void;
+  setLastUsedCategory: (categoryId: string) => void;
+  getDraftBatchTransactions: () => DraftBudgetTransaction[];
+  resetLastUsed: () => void;
 };
 
 export type BudgetStore = BudgetStoreState & BudgetStoreActions;
@@ -50,6 +62,9 @@ const initialState: BudgetStoreState = {
   isSyncing: false,
   lastSyncRunEndedAt: null,
   retryIn: null,
+  draftBatchTransactions: [],
+  lastUsedBucket: null,
+  lastUsedCategoryId: null,
 };
 
 export const useBudgetStore = create<BudgetStore>((set, get) => ({
@@ -58,7 +73,18 @@ export const useBudgetStore = create<BudgetStore>((set, get) => ({
   initForUser: async (userId: string | null, options?: BudgetInitOptions) => {
     const force = options?.force ?? false;
     if (!userId) {
-      set({ userId: null, state: null, queue: null, isLoading: false });
+      set({
+        userId: null,
+        state: null,
+        queue: null,
+        isLoading: false,
+        isSyncing: false,
+        lastSyncRunEndedAt: null,
+        retryIn: null,
+        draftBatchTransactions: [],
+        lastUsedBucket: null,
+        lastUsedCategoryId: null,
+      });
       return;
     }
 
@@ -68,6 +94,17 @@ export const useBudgetStore = create<BudgetStore>((set, get) => ({
     }
     if (!force && userId === currentId && state !== null && !isLoading) {
       return;
+    }
+
+    if (currentId !== null && currentId !== userId) {
+      set({
+        isSyncing: false,
+        lastSyncRunEndedAt: null,
+        retryIn: null,
+        draftBatchTransactions: [],
+        lastUsedBucket: null,
+        lastUsedCategoryId: null,
+      });
     }
 
     set({ userId, isLoading: true });
@@ -92,7 +129,17 @@ export const useBudgetStore = create<BudgetStore>((set, get) => ({
   reload: async () => {
     const { userId, state: existingState } = get();
     if (!userId) {
-      set({ state: null, queue: null, isLoading: false });
+      set({
+        state: null,
+        queue: null,
+        isLoading: false,
+        isSyncing: false,
+        lastSyncRunEndedAt: null,
+        retryIn: null,
+        draftBatchTransactions: [],
+        lastUsedBucket: null,
+        lastUsedCategoryId: null,
+      });
       return;
     }
     const startUserId = userId;
@@ -134,6 +181,53 @@ export const useBudgetStore = create<BudgetStore>((set, get) => ({
   setLastSyncRunEndedAt: (at) => set({ lastSyncRunEndedAt: at }),
   setRetryIn: (seconds) => set({ retryIn: seconds }),
   clearSyncRunResult: () => set({ lastSyncRunEndedAt: null }),
+
+  addToDraftBatch: (draft) => {
+    const { draftBatchTransactions } = get();
+    const newItem: DraftBudgetTransaction = {
+      ...draft,
+      tempId: uuidv4(),
+    };
+    set({ draftBatchTransactions: [...draftBatchTransactions, newItem] });
+  },
+
+  updateDraftBatchItem: (tempId, draft) => {
+    const { draftBatchTransactions } = get();
+    set({
+      draftBatchTransactions: draftBatchTransactions.map((item) =>
+        item.tempId === tempId ? { ...item, ...draft } : item
+      ),
+    });
+  },
+
+  removeFromDraftBatch: (tempId) => {
+    const { draftBatchTransactions } = get();
+    set({
+      draftBatchTransactions: draftBatchTransactions.filter(
+        (item) => item.tempId !== tempId
+      ),
+    });
+  },
+
+  clearDraftBatch: () => {
+    set({ draftBatchTransactions: [], lastUsedBucket: null, lastUsedCategoryId: null });
+  },
+
+  setLastUsedBucket: (bucket) => {
+    set({ lastUsedBucket: bucket });
+  },
+
+  setLastUsedCategory: (categoryId) => {
+    set({ lastUsedCategoryId: categoryId });
+  },
+
+  getDraftBatchTransactions: () => {
+    return get().draftBatchTransactions;
+  },
+
+  resetLastUsed: () => {
+    set({ lastUsedBucket: null, lastUsedCategoryId: null });
+  },
 }));
 
 // Single listener for BUDGET_CHANGED_EVENT; reloads store when external code (vitals, budget-templates) emits.

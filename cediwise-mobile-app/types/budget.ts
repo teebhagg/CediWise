@@ -312,3 +312,12 @@ export type ExtendedBudgetState = BudgetState & {
   spendingPatterns: SpendingPattern[];
   adjustments: BudgetAdjustment[];
 };
+
+export type DraftBudgetTransaction = {
+  tempId: string;
+  bucket: BudgetBucket;
+  categoryId?: string | null;
+  amount: number;
+  note?: string | null;
+  occurredAt?: string;
+};

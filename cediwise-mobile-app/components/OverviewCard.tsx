@@ -2,7 +2,6 @@ import { ReactNode } from 'react';
 import { View } from 'react-native';
 import { Badge } from './Badge';
 import { Card } from './Card';
-import { Surface } from 'heroui-native';
 import { Typography } from './typography';
 
 type OverviewCardProps = {

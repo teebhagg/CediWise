@@ -1,5 +1,5 @@
 import React from 'react'
-import { Text, Platform, View } from 'react-native'
+import { Text, View } from 'react-native'
 import { FieldError, InputGroup, TextField } from 'heroui-native'
 
 interface PhonenNumberInputProps {

@@ -308,7 +308,6 @@ export default function ModuleCompleteScreen() {
             keyExtractor={(item, index) =>
               `${module.id}-objective-${index}-${item.slice(0, 48)}`
             }
-            estimatedItemSize={52}
             renderItem={({ item: obj }) => (
               <View style={styles.takeawayRow}>
                 <CheckCircle2 size={16} color="#2D9B5A" />

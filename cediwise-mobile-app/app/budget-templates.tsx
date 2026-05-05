@@ -232,7 +232,6 @@ export default function BudgetTemplatesScreen() {
       <FlashList
         data={filteredTemplates}
         keyExtractor={(t) => t.id}
-        estimatedItemSize={240}
         renderItem={renderTemplateRow}
         contentContainerStyle={{
           paddingHorizontal: 20,

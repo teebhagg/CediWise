@@ -71,4 +71,4 @@ export const phoneFieldPalettes = {
   },
 } as const;
 
-export type PhoneFieldPalette = (typeof phoneFieldPalettes)["dark"];
+export type PhoneFieldPalette = Record<keyof typeof phoneFieldPalettes.dark, string>;

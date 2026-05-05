@@ -5,8 +5,14 @@
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { DeviceEventEmitter } from "react-native";
-import type { SMEState, SMETransaction, SMECategory, SMEProfile } from "../types/sme";
+import type {
+  DraftSMETransaction,
+  PaymentMethod,
+  SMEState,
+  TransactionType,
+} from "../types/sme";
 import type { BudgetMutation, BudgetQueue } from "../types/budget";
+import { calculateVAT } from "./vatEngine";
 
 const SME_STATE_KEY_PREFIX = "@cediwise_sme_state:";
 const SME_QUEUE_KEY_PREFIX = "@cediwise_sme_queue:";
@@ -29,6 +35,79 @@ function queueKey(userId: string) {
   return `${SME_QUEUE_KEY_PREFIX}${userId}`;
 }
 
+const PAYMENT_METHOD_VALUES: readonly PaymentMethod[] = [
+  "cash",
+  "momo",
+  "bank",
+  "card",
+  "cheque",
+  "other",
+];
+
+function isPaymentMethod(v: unknown): v is PaymentMethod {
+  return typeof v === "string" && PAYMENT_METHOD_VALUES.includes(v as PaymentMethod);
+}
+
+function normalizeLastUsedType(v: unknown): TransactionType | null {
+  return v === "income" || v === "expense" ? v : null;
+}
+
+function parseFiniteNumber(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim() !== "") {
+    const n = parseFloat(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+/** Defensive restore of batch drafts from persisted JSON. */
+export function normalizeDraftBatchTransactions(raw: unknown): DraftSMETransaction[] {
+  if (!Array.isArray(raw)) return [];
+  const out: DraftSMETransaction[] = [];
+  for (const item of raw) {
+    if (!item || typeof item !== "object") continue;
+    const o = item as Record<string, unknown>;
+    const tempId =
+      typeof o.tempId === "string" && o.tempId.length > 0 ? o.tempId : makeQueueId();
+    const type = o.type === "income" || o.type === "expense" ? o.type : null;
+    if (!type) continue;
+    const amount = parseFiniteNumber(o.amount);
+    if (amount === null || amount < 0) continue;
+    const description = typeof o.description === "string" ? o.description : "";
+    const category = typeof o.category === "string" ? o.category : "";
+    const transactionDate =
+      typeof o.transactionDate === "string" && o.transactionDate.length > 0
+        ? o.transactionDate
+        : new Date().toISOString().split("T")[0];
+    const paymentMethod = isPaymentMethod(o.paymentMethod) ? o.paymentMethod : null;
+    const vatApplicable = Boolean(o.vatApplicable);
+    let vatAmount = parseFiniteNumber(o.vatAmount);
+    if (vatAmount === null) {
+      vatAmount = calculateVAT(amount, vatApplicable);
+    }
+    const notes =
+      o.notes === null || o.notes === undefined
+        ? null
+        : typeof o.notes === "string"
+          ? o.notes
+          : null;
+    out.push({
+      tempId,
+      type,
+      amount,
+      description,
+      category,
+      transactionDate,
+      paymentMethod,
+      vatApplicable,
+      vatAmount,
+      notes,
+    });
+  }
+  return out;
+}
+
 // ─── State ──────────────────────────────────────────
 
 export function createEmptySMEState(userId: string): SMEState {
@@ -38,6 +117,10 @@ export function createEmptySMEState(userId: string): SMEState {
     profile: null,
     transactions: [],
     categories: [],
+    draftBatchTransactions: [],
+    lastUsedType: null,
+    lastUsedCategory: null,
+    lastUsedPaymentMethod: null,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -46,15 +129,26 @@ export async function loadSMEState(userId: string): Promise<SMEState> {
   const raw = await AsyncStorage.getItem(stateKey(userId));
   if (!raw) return createEmptySMEState(userId);
   try {
-    const parsed = JSON.parse(raw) as SMEState;
+    const parsed = JSON.parse(raw) as Partial<SMEState>;
     if (parsed?.userId !== userId || parsed?.version !== 1) {
       return createEmptySMEState(userId);
     }
     return {
-      ...parsed,
+      version: 1,
+      userId,
       profile: parsed.profile ?? null,
       transactions: parsed.transactions ?? [],
       categories: parsed.categories ?? [],
+      draftBatchTransactions: normalizeDraftBatchTransactions(parsed.draftBatchTransactions),
+      lastUsedType: normalizeLastUsedType(parsed.lastUsedType),
+      lastUsedCategory:
+        typeof parsed.lastUsedCategory === "string" && parsed.lastUsedCategory.length > 0
+          ? parsed.lastUsedCategory
+          : null,
+      lastUsedPaymentMethod: isPaymentMethod(parsed.lastUsedPaymentMethod)
+        ? parsed.lastUsedPaymentMethod
+        : null,
+      updatedAt: parsed.updatedAt ?? new Date().toISOString(),
     };
   } catch {
     return createEmptySMEState(userId);

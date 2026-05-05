@@ -183,6 +183,8 @@ export default function BudgetSettingsScreen() {
         cycleCategories={derived.cycleCategories}
         needsOverLimitFor={derived.needsOverLimitFor}
         onAddTransaction={async () => { }}
+        onSubmitBatch={async () => ({ count: 0, success: true })}
+        onReloadBudget={async () => { }}
         pendingConfirm={null}
         setPendingConfirm={() => { }}
         showNeedsOverModal={false}

@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { History, ReceiptText } from 'lucide-react-native';
 import { useEffect, useMemo, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 
 import type { BudgetBucket, BudgetCategory, BudgetTransaction } from '../types/budget';
@@ -223,17 +223,3 @@ export function BudgetTransactionModal({
     </AppDialog>
   );
 }
-
-const styles = StyleSheet.create({
-  contentShadow: {
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOpacity: 0.35,
-        shadowRadius: 28,
-        shadowOffset: { width: 0, height: 12 },
-      },
-      android: { elevation: 18 },
-    }),
-  },
-});

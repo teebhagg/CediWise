@@ -9,11 +9,11 @@ import { useTierContext } from "@/contexts/TierContext";
 import { useRouter } from "expo-router";
 import { Card } from "heroui-native";
 import { Crown, Lock, ArrowRight } from "lucide-react-native";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function SMETabScreen() {
-  const { canAccessSME, isOnTrial } = useTierContext();
+  const { canAccessSME } = useTierContext();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 

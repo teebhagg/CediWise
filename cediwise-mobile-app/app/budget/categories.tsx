@@ -329,7 +329,6 @@ export default function BudgetCategoriesScreen() {
         keyExtractor={(c) => c.id}
         ListHeaderComponent={categoryListHeader}
         ListEmptyComponent={categoryListEmpty}
-        estimatedItemSize={112}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         extraData={{ isManaging, selectedIds: [...selectedIds].sort().join(',') }}
         contentContainerStyle={{ paddingTop: headerPadding + 10, paddingBottom: 100 }}
@@ -545,6 +544,8 @@ export default function BudgetCategoriesScreen() {
         cycleCategories={derived.cycleCategories}
         needsOverLimitFor={derived.needsOverLimitFor}
         onAddTransaction={async () => { }}
+        onSubmitBatch={async () => ({ count: 0, success: true })}
+        onReloadBudget={async () => { }}
         pendingConfirm={null}
         setPendingConfirm={() => { }}
         showNeedsOverModal={false}

@@ -3,7 +3,6 @@
  * Shows revenue, expenses, profit, VAT summary, and threshold status.
  */
 
-import { GlassView } from "@/components/GlassView";
 import { useSmeLedger } from "@/hooks/useSmeLedger";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "expo-router";
@@ -46,7 +45,7 @@ import { log } from "@/utils/logger";
 import { Card } from "heroui-native";
 
 export default function SMEDashboardScreen() {
-  const { user } = useAuth();
+  useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const sme = useSmeLedger();
@@ -63,7 +62,7 @@ export default function SMEDashboardScreen() {
       initialHydrationAttempted.current = true;
       void sme.hydrate();
     }
-  }, [sme.profile, sme.isLoading, isConnected]);
+  }, [sme, isConnected]);
 
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((event) => {
@@ -379,14 +378,17 @@ export default function SMEDashboardScreen() {
              </Pressable>
              
              <Pressable className="flex-1 bg-rose-500/10 border border-rose-500/20 rounded-lg p-5 items-center justify-center gap-2"
-                onPress={() => router.push({ pathname: "/(sme)/add-transaction", params: { type: "expense" } })}>
+                onPress={() => router.push({ pathname: "/(sme)/batch-transaction", params: { type: "expense" } })}>
                 <View className="w-10 h-10 rounded-2xl bg-rose-500/20 items-center justify-center">
                   <Plus color="#EF4444" size={24} />
                 </View>
                 <Text className="text-rose-400 font-bold">Expense</Text>
              </Pressable>
           </View>
+
+
         </View>
+
       </Animated.ScrollView>
     </SafeAreaView>
   );

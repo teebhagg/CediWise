@@ -61,7 +61,11 @@ export interface UseHomeScreenStateReturn {
     bucket: "needs" | "wants" | "savings";
     categoryId?: string | null;
   }) => Promise<{ wouldExceedNeeds?: boolean }>;
-  submitBatchTransactions: () => Promise<{ count: number }>;
+  submitBatchTransactions: () => Promise<{
+    count: number;
+    success: boolean;
+    mutationIds: string[];
+  }>;
   reload: () => Promise<void>;
 
   // Income / salary

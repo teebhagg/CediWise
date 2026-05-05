@@ -87,17 +87,37 @@ export default function SMEBatchTransactionScreen() {
       .map((c) => c.name);
   }, [sme.categories, txType]);
 
+  const lastEditHydrateKeyRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (didPrefillLastUsedRef.current) return;
+    if (params.editId) return;
     didPrefillLastUsedRef.current = true;
-    if (editTransaction) return;
     const { lastUsedType, lastUsedCategory, lastUsedPaymentMethod } =
       useSMELedgerStore.getState();
     if (lastUsedType) setTxType(lastUsedType);
     if (lastUsedCategory) setCategory(lastUsedCategory);
     if (lastUsedPaymentMethod) setPaymentMethod(lastUsedPaymentMethod);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-time prefill from store; avoid overwriting in-session edits when lastUsed* updates
-  }, []);
+  }, [params.editId]);
+
+  useEffect(() => {
+    if (!params.editId) {
+      lastEditHydrateKeyRef.current = null;
+      return;
+    }
+    if (!editTransaction) return;
+    const key = `${editTransaction.id}:${editTransaction.updatedAt}`;
+    if (lastEditHydrateKeyRef.current === key) return;
+    lastEditHydrateKeyRef.current = key;
+    setTxType(editTransaction.type);
+    setAmount(String(editTransaction.amount));
+    setDescription(editTransaction.description);
+    setCategory(editTransaction.category);
+    setTransactionDate(editTransaction.transactionDate);
+    setPaymentMethod(editTransaction.paymentMethod ?? null);
+    setVatApplicable(editTransaction.vatApplicable);
+    setNotes(editTransaction.notes ?? "");
+  }, [params.editId, editTransaction]);
 
   useEffect(() => {
     if (!category && availableCategories.length > 0) {
@@ -296,13 +316,27 @@ export default function SMEBatchTransactionScreen() {
       }
 
       const result = await sme.submitBatchTransactions();
-      if (result.count > 0) {
+      if (result.success) {
         showInfo("Saved Locally", `${result.count} transactions added to sync queue`);
         setIsSaving(false);
         router.back();
         if (result.mutationIds.length > 0) {
           const synced = await sme.syncBatch(result.mutationIds);
           if (synced) showInfo("Sync Complete", "Transactions are now on the server.");
+        }
+      } else if (result.count > 0) {
+        setIsSaving(false);
+        showInfo(
+          "Partial save",
+          `${result.count} transaction(s) queued; remaining drafts are still in your list.`,
+        );
+        if (result.mutationIds.length > 0) {
+          const synced = await sme.syncBatch(result.mutationIds);
+          if (!synced) {
+            showError("Sync pending", "Queued items will retry when sync is available.");
+          } else {
+            showInfo("Sync Complete", "Queued transactions are on the server.");
+          }
         }
       } else {
         setIsSaving(false);

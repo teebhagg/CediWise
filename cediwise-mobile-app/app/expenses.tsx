@@ -21,6 +21,7 @@ import { ConfirmModal } from "@/components/ConfirmModal";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
 import { useBudget } from "@/hooks/useBudget";
+import { useBudgetStore } from "@/stores/budgetStore";
 import type { BudgetBucket, BudgetTransaction } from "@/types/budget";
 import { bucketLabel } from "@/utils/budgetHelpers";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -566,23 +567,52 @@ export default function ExpensesScreen() {
           setShowBatchModal(false);
         }}
         onSubmitAll={async () => {
+          const attempted =
+            useBudgetStore.getState().getDraftBatchTransactions().length;
           const result = await submitBatchTransactions();
-          if (result.count > 0) {
-            setShowBatchModal(false);
-            showSuccess(`${result.count} expenses added to queue`);
+          const failedRemainder =
+            useBudgetStore.getState().getDraftBatchTransactions().length;
 
-            // Sync in background and notify when done
+          if (result.success) {
+            setShowBatchModal(false);
+            if (result.count > 0) {
+              showSuccess(`${result.count} expenses added to queue`);
+            }
             if (result.mutationIds.length > 0) {
               const synced = await syncBatch(result.mutationIds);
               if (synced) {
                 showSuccess("Data synchronized now");
               }
             }
-          } else {
-            showError(
-              "No expenses submitted — please fix drafts and try again",
-            );
+            return;
           }
+
+          if (result.count > 0) {
+            showSuccess(
+              "Partial save",
+              `${result.count} expense${result.count === 1 ? "" : "s"} queued.`,
+            );
+            showError(
+              "Some drafts not saved",
+              failedRemainder > 0
+                ? `${failedRemainder} draft${failedRemainder === 1 ? "" : "s"} still need attention.`
+                : "Fix remaining items and try again.",
+            );
+            if (result.mutationIds.length > 0) {
+              const synced = await syncBatch(result.mutationIds);
+              if (!synced) {
+                showError("Sync failed", "Queued items will retry when you're online.");
+              }
+            }
+            return;
+          }
+
+          showError(
+            "No expenses submitted",
+            attempted > 0
+              ? "Please fix drafts and try again."
+              : "Nothing to submit.",
+          );
         }}
       />
 

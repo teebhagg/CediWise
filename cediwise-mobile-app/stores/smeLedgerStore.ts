@@ -345,10 +345,6 @@ export const useSMELedgerStore = create<SMELedgerStore>((set, get) => {
         updatedAt: now,
       };
 
-      const nextTxs = [tx, ...get().transactions];
-      set({ transactions: nextTxs });
-      await saveSMEState(buildSMEStateForPersist(get()));
-
       const mutation = await enqueueSMEMutation(userId, {
         id: makeQueueId(),
         userId,
@@ -356,6 +352,10 @@ export const useSMELedgerStore = create<SMELedgerStore>((set, get) => {
         kind: "sme_insert_transaction",
         payload: toSMETransactionRow(tx),
       });
+
+      const nextTxs = [tx, ...get().transactions];
+      set({ transactions: nextTxs });
+      await saveSMEState(buildSMEStateForPersist(get()));
 
       return { mutationId: mutation.id, mutation };
     },

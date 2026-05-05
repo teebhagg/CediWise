@@ -78,6 +78,9 @@ export const useBudgetStore = create<BudgetStore>((set, get) => ({
         state: null,
         queue: null,
         isLoading: false,
+        isSyncing: false,
+        lastSyncRunEndedAt: null,
+        retryIn: null,
         draftBatchTransactions: [],
         lastUsedBucket: null,
         lastUsedCategoryId: null,
@@ -95,6 +98,9 @@ export const useBudgetStore = create<BudgetStore>((set, get) => ({
 
     if (currentId !== null && currentId !== userId) {
       set({
+        isSyncing: false,
+        lastSyncRunEndedAt: null,
+        retryIn: null,
         draftBatchTransactions: [],
         lastUsedBucket: null,
         lastUsedCategoryId: null,
@@ -127,6 +133,9 @@ export const useBudgetStore = create<BudgetStore>((set, get) => ({
         state: null,
         queue: null,
         isLoading: false,
+        isSyncing: false,
+        lastSyncRunEndedAt: null,
+        retryIn: null,
         draftBatchTransactions: [],
         lastUsedBucket: null,
         lastUsedCategoryId: null,

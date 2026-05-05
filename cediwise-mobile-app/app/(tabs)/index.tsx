@@ -368,12 +368,20 @@ export default function DashboardScreen() {
                 }}
                 onSubmitAll={async () => {
                   const result = await submitBatchTransactions();
-                  if (result.count > 0) {
+                  if (result.success) {
                     await reload();
                     setShowExpenseModal(false);
-                    showSuccess(
-                      "Expenses logged",
-                      `${result.count} expense${result.count === 1 ? "" : "s"} logged`,
+                    if (result.count > 0) {
+                      showSuccess(
+                        "Expenses logged",
+                        `${result.count} expense${result.count === 1 ? "" : "s"} logged`,
+                      );
+                    }
+                  } else if (result.count > 0) {
+                    await reload();
+                    showError(
+                      "Partial save",
+                      `${result.count} expense${result.count === 1 ? "" : "s"} queued; fix remaining drafts in the modal.`,
                     );
                   }
                 }}

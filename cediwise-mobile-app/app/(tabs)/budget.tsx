@@ -585,12 +585,16 @@ export default function BudgetScreen() {
         }}
         onSubmitBatch={async () => {
           const result = await budget.submitBatchTransactions();
-          if (result.count > 0) {
+          if (result.success && result.count > 0) {
             showSuccess(
               "Expenses logged",
               `${result.count} expense${result.count === 1 ? "" : "s"} logged`,
             );
-            modals.setShowTxModal(false);
+          } else if (!result.success && result.count > 0) {
+            showError(
+              "Partial save",
+              `${result.count} expense${result.count === 1 ? "" : "s"} queued; fix remaining drafts or try again.`,
+            );
           }
           return result;
         }}

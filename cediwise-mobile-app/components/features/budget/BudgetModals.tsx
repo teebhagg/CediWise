@@ -2,6 +2,7 @@ import type { BudgetBucket, BudgetCategory, IncomeSource } from '../../../types/
 import type { AllocationExceededResult } from '../../../utils/allocationExceeded';
 import type { SpendingInsight } from '../../../utils/spendingPatterns';
 import { computeSuggestedLimit } from '../../../utils/spendingPatternsLogic';
+import { reportError } from '@/utils/telemetry';
 import { AllocationExceededModal } from '../../AllocationExceededModal';
 import { BatchTransactionModal } from '../../BatchTransactionModal';
 import { ConfirmModal } from '../../ConfirmModal';
@@ -48,7 +49,7 @@ interface BudgetModalsProps {
     bucket: BudgetBucket;
     categoryId?: string | null;
   }) => Promise<void>;
-  onSubmitBatch: () => Promise<{ count: number }>;
+  onSubmitBatch: () => Promise<{ count: number; success: boolean }>;
   onReloadBudget: () => Promise<void>;
   pendingConfirm: PendingConfirm | null;
   setPendingConfirm: (v: PendingConfirm | null) => void;
@@ -161,16 +162,16 @@ export function BudgetModals({
         categories={cycleCategories}
         onClose={() => setShowTxModal(false)}
         onSubmitAll={async () => {
+          let result: { count: number; success: boolean } | undefined;
           try {
-            const result = await onSubmitBatch();
-            if (result.count > 0) {
+            result = await onSubmitBatch();
+            if (result.success && result.count > 0) {
               await onReloadBudget();
             }
-            setShowTxModal(false);
+            if (result.success) {
+              setShowTxModal(false);
+            }
           } catch (error) {
-            // Error should be handled (e.g., show toast) - 
-            // consider propagating to parent or using an error callback
-            // Log in Sentry
             reportError(error, {
               feature: 'budget',
               operation: 'submit_batch',

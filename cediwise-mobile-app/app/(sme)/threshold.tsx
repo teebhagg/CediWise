@@ -32,6 +32,7 @@ import { RefreshControl, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ThresholdScreen() {
+  // Subscribes to auth/session (see `(sme)/index.tsx`); keeps tier and user context warm for ledger screens.
   useAuth();
   const insets = useSafeAreaInsets();
   const sme = useSmeLedger();

@@ -295,7 +295,13 @@ export default Sentry.wrap(function RootLayout() {
       void syncTaxConfig();
     });
 
-    // Only configure native Google Sign-In when not in Expo Go (dynamic require avoids loading native module in Expo Go).
+    return () => {
+      const cancel = (taxTask as { cancel?: () => void }).cancel;
+      if (typeof cancel === "function") cancel();
+    };
+  }, [fontsLoaded]);
+
+  useEffect(() => {
     const isExpoGo = (Constants.appOwnership ?? "") === "expo";
     if (
       (Platform.OS === "ios" || Platform.OS === "android") &&
@@ -313,12 +319,7 @@ export default Sentry.wrap(function RootLayout() {
           console.warn("GoogleSignin.configure failed", e);
         });
     }
-
-    return () => {
-      const cancel = (taxTask as { cancel?: () => void }).cancel;
-      if (typeof cancel === "function") cancel();
-    };
-  }, [fontsLoaded]);
+  }, []);
 
   if (!appIsReady) {
     return null;

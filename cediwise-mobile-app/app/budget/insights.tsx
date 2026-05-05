@@ -278,7 +278,7 @@ export default function BudgetInsightsScreen() {
         cycleCategories={derived.cycleCategories}
         needsOverLimitFor={derived.needsOverLimitFor}
         onAddTransaction={async () => {}}
-        onSubmitBatch={async () => ({ count: 0 })}
+        onSubmitBatch={async () => ({ count: 0, success: true })}
         onReloadBudget={async () => {}}
         pendingConfirm={null}
         setPendingConfirm={() => {}}

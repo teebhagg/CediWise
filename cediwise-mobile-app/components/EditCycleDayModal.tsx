@@ -1,7 +1,7 @@
 import { AppDialog } from '@/components/AppDialog';
 import { Calendar } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Platform, View } from 'react-native';
+import { View } from 'react-native';
 
 import { AppTextField } from './AppTextField';
 

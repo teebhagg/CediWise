@@ -61,7 +61,7 @@ export const useKeyboardCentering = () => useContext(KeyboardCenteringContext);
 export const KeyboardCenteringScrollView = React.forwardRef<
   ScrollView,
   KeyboardCenteringScrollViewProps
->(({ keyboardHeight = 0, ...props }, forwardedRef) => {
+>(({ keyboardHeight = 0, onLayout, ...props }, forwardedRef) => {
   const scrollViewRef = useRef<ScrollView>(null);
 
   // Merge the internal ref with the forwarded ref so parents can also access it.
@@ -86,9 +86,9 @@ export const KeyboardCenteringScrollView = React.forwardRef<
   const handleLayout = useCallback(
     (e: LayoutChangeEvent) => {
       scrollViewHeight.current = e.nativeEvent.layout.height;
-      props.onLayout?.(e);
+      onLayout?.(e);
     },
-    [props.onLayout],
+    [onLayout],
   );
 
   // Stores the last field that called scrollToCenter.

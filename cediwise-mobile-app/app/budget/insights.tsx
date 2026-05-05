@@ -108,7 +108,7 @@ export default function BudgetInsightsScreen() {
         <CategoryBreakdownRow item={item} />
       </View>
     ),
-    [insightsData.categoryBreakdown],
+    [insightsData],
   );
 
   useEffect(() => {

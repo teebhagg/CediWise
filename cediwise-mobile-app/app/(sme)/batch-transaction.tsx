@@ -1,16 +1,21 @@
-import { AppTextField } from "@/components/AppTextField";
-import { PrimaryButton } from "@/components/PrimaryButton";
-import { StandardHeader, DEFAULT_STANDARD_HEIGHT } from "@/components/CediWiseHeader";
-import { BackButton } from "@/components/BackButton";
 import { AppDialog } from "@/components/AppDialog";
+import { AppTextField } from "@/components/AppTextField";
+import { BackButton } from "@/components/BackButton";
+import {
+  CediCalendarPickerModal, cediCalendarPickerStyles,
+} from "@/components/CediCalendarPickerModal";
+import { DEFAULT_STANDARD_HEIGHT, StandardHeader } from "@/components/CediWiseHeader";
+import { KeyboardCenteringScrollView } from "@/components/common/KeyboardCenteringScrollView";
+import { PrimaryButton } from "@/components/PrimaryButton";
+import { useAppToast } from "@/hooks/useAppToast";
 import { useSmeLedger } from "@/hooks/useSmeLedger";
 import { useSMELedgerStore } from "@/stores/smeLedgerStore";
-import { extractVAT, calculateVAT } from "@/utils/vatEngine";
+import type { DraftSMETransaction, PaymentMethod, TransactionType } from "@/types/sme";
 import { PAYMENT_METHOD_LABELS } from "@/types/sme";
-import type { PaymentMethod, TransactionType, DraftSMETransaction } from "@/types/sme";
-import { useAppToast } from "@/hooks/useAppToast";
+import { formatCurrency } from "@/utils/formatCurrency";
+import { calculateVAT, extractVAT } from "@/utils/vatEngine";
 import * as Haptics from "expo-haptics";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -19,28 +24,21 @@ import {
   Plus,
   X,
 } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import moment, { type Moment } from "moment";
-import {
-  CediCalendarPickerModal, cediCalendarPickerStyles,
-} from "@/components/CediCalendarPickerModal";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Switch,
   Text,
   TextInput,
   View,
 } from "react-native";
-import { KeyboardCenteringScrollView } from "@/components/common/KeyboardCenteringScrollView";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { formatCurrency } from "@/utils/formatCurrency";
 import Calendar from "react-native-calendar-datepicker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const PAYMENT_METHODS: PaymentMethod[] = ["cash", "momo", "bank", "card", "cheque", "other"];
 
@@ -79,11 +77,9 @@ export default function SMEBatchTransactionScreen() {
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
   const amountInputRef = useRef<TextInput>(null);
+  const didPrefillLastUsedRef = useRef(false);
 
   const draftItems = useSMELedgerStore((s) => s.draftBatchTransactions);
-  const lastUsedType = useSMELedgerStore((s) => s.lastUsedType);
-  const lastUsedCategory = useSMELedgerStore((s) => s.lastUsedCategory);
-  const lastUsedPaymentMethod = useSMELedgerStore((s) => s.lastUsedPaymentMethod);
 
   const availableCategories = useMemo(() => {
     return sme.categories
@@ -92,10 +88,16 @@ export default function SMEBatchTransactionScreen() {
   }, [sme.categories, txType]);
 
   useEffect(() => {
+    if (didPrefillLastUsedRef.current) return;
+    didPrefillLastUsedRef.current = true;
+    if (editTransaction) return;
+    const { lastUsedType, lastUsedCategory, lastUsedPaymentMethod } =
+      useSMELedgerStore.getState();
     if (lastUsedType) setTxType(lastUsedType);
     if (lastUsedCategory) setCategory(lastUsedCategory);
     if (lastUsedPaymentMethod) setPaymentMethod(lastUsedPaymentMethod);
-  }, [lastUsedType, lastUsedCategory, lastUsedPaymentMethod]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-time prefill from store; avoid overwriting in-session edits when lastUsed* updates
+  }, []);
 
   useEffect(() => {
     if (!category && availableCategories.length > 0) {
@@ -171,7 +173,7 @@ export default function SMEBatchTransactionScreen() {
 
     try {
       Haptics.selectionAsync();
-    } catch {}
+    } catch { }
 
     const vatAmount = calculateVAT(numAmount, vatApplicable);
 
@@ -198,12 +200,12 @@ export default function SMEBatchTransactionScreen() {
     setTimeout(() => amountInputRef.current?.focus(), 100);
   };
 
-  const handleRemoveItem = (tempId: string) => {
+  const handleRemoveItem = useCallback((tempId: string) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch {}
+    } catch { }
     useSMELedgerStore.getState().removeFromDraftBatch(tempId);
-  };
+  }, []);
 
   const handleSaveAll = async () => {
     // If editing a single existing transaction
@@ -223,10 +225,10 @@ export default function SMEBatchTransactionScreen() {
           notes: notes.trim() || null,
         });
         showInfo("Updated", "Transaction updated successfully");
+        setIsSaving(false);
         router.back();
       } catch {
         showError("Error", "Failed to update transaction");
-      } finally {
         setIsSaving(false);
       }
       return;
@@ -249,35 +251,64 @@ export default function SMEBatchTransactionScreen() {
           notes: notes.trim() || null,
         });
         showInfo("Saved Locally", "Transaction added to sync queue");
-        router.back();
-        
+        setIsSaving(false);
         if (mutationId) {
           const synced = await sme.syncBatch([mutationId]);
           if (synced) showInfo("Sync Complete", "Transaction is now on the server.");
         }
+        router.back();
       } catch {
         showError("Error", "Failed to save transaction");
-      } finally {
         setIsSaving(false);
       }
       return;
     }
 
-    // Batch Save
+    // Batch Save — include current row when it is complete so count matches "Save All" label
     setIsSaving(true);
     try {
+      const numAmount = parseFloat(amount);
+      const formComplete =
+        !Number.isNaN(numAmount) &&
+        numAmount > 0 &&
+        description.trim().length > 0 &&
+        category.length > 0;
+      if (formComplete) {
+        const vatAmount = calculateVAT(numAmount, vatApplicable);
+        const item: Omit<DraftSMETransaction, "tempId"> = {
+          type: txType,
+          amount: numAmount,
+          description: description.trim(),
+          category,
+          transactionDate,
+          paymentMethod,
+          vatApplicable,
+          vatAmount,
+          notes: notes.trim() || null,
+        };
+        useSMELedgerStore.getState().addToDraftBatch(item);
+        useSMELedgerStore.getState().setLastUsedType(txType);
+        if (category) useSMELedgerStore.getState().setLastUsedCategory(category);
+        if (paymentMethod) useSMELedgerStore.getState().setLastUsedPaymentMethod(paymentMethod);
+        setAmount("");
+        setDescription("");
+        setNotes("");
+      }
+
       const result = await sme.submitBatchTransactions();
       if (result.count > 0) {
         showInfo("Saved Locally", `${result.count} transactions added to sync queue`);
+        setIsSaving(false);
         router.back();
         if (result.mutationIds.length > 0) {
           const synced = await sme.syncBatch(result.mutationIds);
           if (synced) showInfo("Sync Complete", "Transactions are now on the server.");
         }
+      } else {
+        setIsSaving(false);
       }
     } catch {
       showError("Error", "Failed to save transactions");
-    } finally {
       setIsSaving(false);
     }
   };
@@ -337,13 +368,15 @@ export default function SMEBatchTransactionScreen() {
             onPress={() => handleRemoveItem(item.tempId)}
             style={styles.removeBtn}
             hitSlop={8}
+            accessibilityLabel={`Remove ${item.description}`}
+            accessibilityRole="button"
           >
             <X size={14} color="#94a3b8" />
           </Pressable>
         </View>
       </View>
     ),
-    []
+    [handleRemoveItem]
   );
 
   return (
@@ -353,10 +386,10 @@ export default function SMEBatchTransactionScreen() {
     >
       <StandardHeader
         title={
-          editTransaction 
-            ? "Edit Transaction" 
-            : draftItems.length > 0 
-              ? `Batch · ${draftItems.length} items` 
+          editTransaction
+            ? "Edit Transaction"
+            : draftItems.length > 0
+              ? `Batch · ${draftItems.length} items`
               : "New Transaction"
         }
         centered
@@ -618,10 +651,10 @@ export default function SMEBatchTransactionScreen() {
             onPress={handleSaveAll}
           >
             <Text className="text-slate-900 font-bold text-base">
-              {editTransaction 
-                ? "Update Transaction" 
-                : draftItems.length > 0 
-                  ? `Save All (${draftItems.length + (amount && description && category ? 1 : 0)})` 
+              {editTransaction
+                ? "Update Transaction"
+                : draftItems.length > 0
+                  ? `Save All (${draftItems.length + (amount && description && category ? 1 : 0)})`
                   : "Save Transaction"}
             </Text>
           </PrimaryButton>

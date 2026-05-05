@@ -39,7 +39,6 @@ import { useUpdateCheckContext } from "@/contexts/UpdateCheckContext";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useConnectivity } from "@/hooks/useConnectivity";
 import { usePeriodicFeedbackPrompt } from "@/hooks/usePeriodicFeedbackPrompt";
-import { useBudgetStore } from "@/stores/budgetStore";
 import { TourZone, useTour } from "react-native-lumen";
 
 const styles = StyleSheet.create({
@@ -124,7 +123,6 @@ export default function DashboardScreen() {
     activeCycleId,
     cycleCategories,
     recentExpenses,
-    addTransaction,
     submitBatchTransactions,
     reload,
     incomeTaxSummary,
@@ -373,7 +371,10 @@ export default function DashboardScreen() {
                   if (result.count > 0) {
                     await reload();
                     setShowExpenseModal(false);
-                    showSuccess(`${result.count} expenses logged`);
+                    showSuccess(
+                      "Expenses logged",
+                      `${result.count} expense${result.count === 1 ? "" : "s"} logged`,
+                    );
                   }
                 }}
               />

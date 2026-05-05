@@ -1,11 +1,11 @@
 import * as Haptics from "expo-haptics";
 import { Stack } from "expo-router";
-import { Button, Menu, SubMenu } from "heroui-native";
+import { Menu } from "heroui-native";
 import { Calendar, ListPlus, Pencil, Plus, Trash2 } from "lucide-react-native";
 import moment, { type Moment } from "moment";
-import CalendarPicker from "react-native-calendar-datepicker";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, SectionList, StyleSheet, Text, View } from "react-native";
+import CalendarPicker from "react-native-calendar-datepicker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BackButton } from "@/components/BackButton";
@@ -18,10 +18,9 @@ import {
 } from "@/components/CediCalendarPickerModal";
 import { StandardHeader } from "@/components/CediWiseHeader";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
 import { useBudget } from "@/hooks/useBudget";
-import { useAppToast } from "@/hooks/useAppToast";
-import { useBudgetStore } from "@/stores/budgetStore";
 import type { BudgetBucket, BudgetTransaction } from "@/types/budget";
 import { bucketLabel } from "@/utils/budgetHelpers";
 import { formatCurrency } from "@/utils/formatCurrency";
@@ -68,7 +67,6 @@ export default function ExpensesScreen() {
     deleteTransaction,
     submitBatchTransactions,
     syncBatch,
-    reload,
   } = useBudget(user?.id);
 
   const [filter, setFilter] = useState<"all" | BudgetBucket>("all");
@@ -85,7 +83,7 @@ export default function ExpensesScreen() {
   const [monthAndYearOptions, setMonthAndYearOptions] = useState<string[]>([]);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const insets = useSafeAreaInsets();
-  const { showInfo, showSuccess } = useAppToast();
+  const { showError, showInfo, showSuccess } = useAppToast();
 
   const activeCycleId = activeCycle?.id ?? null;
   const cycleCategories = useMemo(() => {
@@ -382,11 +380,10 @@ export default function ExpensesScreen() {
           <Pressable
             key={f}
             onPress={() => setFilter(f)}
-            className={`px-3 py-2 rounded-full border ${
-              filter === f
+            className={`px-3 py-2 rounded-full border ${filter === f
                 ? "bg-emerald-500/20 border-emerald-500/45"
                 : "bg-slate-400/15 border-slate-400/25"
-            }`}>
+              }`}>
             <Text
               className={`text-sm ${filter === f ? "text-slate-50 font-medium" : "text-slate-300"}`}>
               {f === "all" ? "All" : bucketLabel(f)}
@@ -450,7 +447,7 @@ export default function ExpensesScreen() {
               key="add-menu"
               onOpenChange={(isOpen) => {
                 if (isOpen) {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }
               }}
             >
@@ -473,7 +470,7 @@ export default function ExpensesScreen() {
                   className="bg-[rgba(18,22,33,0.98)] rounded-lg min-w-[200px]"
                 >
                   <Menu.Group>
-                    <Menu.Item 
+                    <Menu.Item
                       id="batch-add"
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -486,7 +483,7 @@ export default function ExpensesScreen() {
                         Batch Add
                       </Menu.ItemTitle>
                     </Menu.Item>
-                    <Menu.Item 
+                    <Menu.Item
                       id="single-expense"
                       onPress={() => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -573,7 +570,7 @@ export default function ExpensesScreen() {
           if (result.count > 0) {
             setShowBatchModal(false);
             showSuccess(`${result.count} expenses added to queue`);
-            
+
             // Sync in background and notify when done
             if (result.mutationIds.length > 0) {
               const synced = await syncBatch(result.mutationIds);
@@ -581,6 +578,10 @@ export default function ExpensesScreen() {
                 showSuccess("Data synchronized now");
               }
             }
+          } else {
+            showError(
+              "No expenses submitted — please fix drafts and try again",
+            );
           }
         }}
       />

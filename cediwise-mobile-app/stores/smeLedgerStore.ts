@@ -4,26 +4,27 @@
  * Uses the separate SME queue (smeStorage.ts + smeSync.ts) instead of budget queue.
  */
 
+import type { BudgetMutation } from "@/types/budget";
 import type {
   BusinessType,
   DraftSMETransaction,
   PaymentMethod,
   SMECategory,
   SMEProfile,
+  SMEState,
   SMETransaction,
   TransactionType,
 } from "@/types/sme";
-import { calculateVAT } from "@/utils/vatEngine";
+import { log } from "@/utils/logger";
 import {
   enqueueSMEMutation,
   loadSMEState,
   makeQueueId,
   saveSMEState,
-  createEmptySMEState,
 } from "@/utils/smeStorage";
 import { trySyncSMEMutation } from "@/utils/smeSync";
-import { log } from "@/utils/logger";
 import { uuidv4 } from "@/utils/uuid";
+import { calculateVAT } from "@/utils/vatEngine";
 import { create } from "zustand";
 
 // ─── Params ─────────────────────────────────────────
@@ -84,8 +85,16 @@ export type SMELedgerStoreActions = {
   initForUser: (userId: string | null) => Promise<void>;
   loadState: () => Promise<void>;
   setupBusiness: (params: SetupSMEParams) => Promise<void>;
-  addTransaction: (params: AddTransactionParams) => Promise<{ mutationId: string }>;
-  updateTransaction: (id: string, params: UpdateTransactionParams) => Promise<void>;
+  addTransaction: (
+    params: AddTransactionParams,
+  ) => Promise<{ mutationId: string }>;
+  addTransactionLocal: (
+    params: AddTransactionParams,
+  ) => Promise<{ mutationId: string; mutation: BudgetMutation }>;
+  updateTransaction: (
+    id: string,
+    params: UpdateTransactionParams,
+  ) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   addCategory: (params: AddCategoryParams) => Promise<void>;
   addCategories: (categories: AddCategoryParams[]) => Promise<void>;
@@ -102,6 +111,34 @@ export type SMELedgerStoreActions = {
 };
 
 export type SMELedgerStore = SMELedgerStoreState & SMELedgerStoreActions;
+
+function buildSMEStateForPersist(store: SMELedgerStore): SMEState {
+  const {
+    userId,
+    profile,
+    transactions,
+    categories,
+    draftBatchTransactions,
+    lastUsedType,
+    lastUsedCategory,
+    lastUsedPaymentMethod,
+  } = store;
+  if (!userId) {
+    throw new Error("Cannot persist SME state without userId");
+  }
+  return {
+    version: 1,
+    userId,
+    profile,
+    transactions,
+    categories,
+    draftBatchTransactions,
+    lastUsedType,
+    lastUsedCategory,
+    lastUsedPaymentMethod,
+    updatedAt: new Date().toISOString(),
+  };
+}
 
 // ─── Helpers ─────────────────────────────────────────
 
@@ -155,288 +192,263 @@ function toSMECategoryRow(cat: SMECategory): Record<string, unknown> {
 
 // ─── Store ───────────────────────────────────────────
 
-export const useSMELedgerStore = create<SMELedgerStore>((set, get) => ({
-  userId: null,
-  profile: null,
-  transactions: [],
-  categories: [],
-  isLoading: true,
-  error: null,
-  draftBatchTransactions: [],
-  lastUsedType: null,
-  lastUsedCategory: null,
-  lastUsedPaymentMethod: null,
-
-  initForUser: async (userId: string | null) => {
-    set({ userId, isLoading: true });
-    if (!userId) {
-      set({ profile: null, transactions: [], categories: [], isLoading: false });
-      return;
-    }
-    await get().loadState();
-  },
-
-  loadState: async () => {
-    const { userId } = get();
-    if (!userId) {
-      set({ profile: null, transactions: [], categories: [], isLoading: false });
-      return;
-    }
-
-    const startUserId = userId;
-    const isInitialLoad = !get().profile && get().transactions.length === 0;
-    
-    if (isInitialLoad) {
-      set({ isLoading: true, error: null });
-    } else {
-      set({ error: null });
-    }
-
+export const useSMELedgerStore = create<SMELedgerStore>((set, get) => {
+  const persistSMEState = async () => {
+    const s = get();
+    if (!s.userId) return;
     try {
-      const state = await loadSMEState(startUserId);
-      if (get().userId !== startUserId) return;
-
-      set({
-        profile: state.profile,
-        transactions: state.transactions,
-        categories: state.categories,
-        isLoading: false,
-      });
+      await saveSMEState(buildSMEStateForPersist(s));
     } catch (err) {
-      if (get().userId !== startUserId) return;
-      log.error("Failed to load SME state:", err);
-      set({
-        error: err instanceof Error ? err.message : "Failed to load SME data",
-        isLoading: false,
-      });
+      log.error("Failed to persist SME state:", err);
     }
-  },
+  };
 
-  setupBusiness: async (params) => {
-    const { userId } = get();
-    if (!userId) throw new Error("User not authenticated");
+  return {
+    userId: null,
+    profile: null,
+    transactions: [],
+    categories: [],
+    isLoading: true,
+    error: null,
+    draftBatchTransactions: [],
+    lastUsedType: null,
+    lastUsedCategory: null,
+    lastUsedPaymentMethod: null,
 
-    const id = uuidv4();
-    const now = new Date().toISOString();
+    initForUser: async (userId: string | null) => {
+      set({ userId, isLoading: true });
+      if (!userId) {
+        set({
+          profile: null,
+          transactions: [],
+          categories: [],
+          draftBatchTransactions: [],
+          lastUsedType: null,
+          lastUsedCategory: null,
+          lastUsedPaymentMethod: null,
+          isLoading: false,
+        });
+        return;
+      }
+      await get().loadState();
+    },
 
-    const profile: SMEProfile = {
-      id,
-      userId,
-      businessName: params.businessName,
-      businessType: params.businessType,
-      businessCategory: params.businessCategory ?? null,
-      currency: "GHS",
-      vatRegistered: params.vatRegistered ?? false,
-      tin: params.tin ?? null,
-      fiscalYearStartMonth: 1,
-      createdAt: now,
-      updatedAt: now,
-    };
+    loadState: async () => {
+      const { userId } = get();
+      if (!userId) {
+        set({
+          profile: null,
+          transactions: [],
+          categories: [],
+          draftBatchTransactions: [],
+          lastUsedType: null,
+          lastUsedCategory: null,
+          lastUsedPaymentMethod: null,
+          isLoading: false,
+        });
+        return;
+      }
 
-    // Optimistic local update
-    set({ profile });
+      const startUserId = userId;
+      const isInitialLoad = !get().profile && get().transactions.length === 0;
 
-    const state = await loadSMEState(userId);
-    state.profile = profile;
-    await saveSMEState(state);
+      if (isInitialLoad) {
+        set({ isLoading: true, error: null });
+      } else {
+        set({ error: null });
+      }
 
-    // Enqueue + sync
-    const mutation = await enqueueSMEMutation(userId, {
-      id: makeQueueId(),
-      userId,
-      createdAt: now,
-      kind: "sme_upsert_profile",
-      payload: toSMEProfileRow(profile),
-    });
+      try {
+        const state = await loadSMEState(startUserId);
+        if (get().userId !== startUserId) return;
 
-    await trySyncSMEMutation(userId, mutation);
-  },
+        set({
+          profile: state.profile,
+          transactions: state.transactions,
+          categories: state.categories,
+          draftBatchTransactions: state.draftBatchTransactions ?? [],
+          lastUsedType: state.lastUsedType ?? null,
+          lastUsedCategory: state.lastUsedCategory ?? null,
+          lastUsedPaymentMethod: state.lastUsedPaymentMethod ?? null,
+          isLoading: false,
+        });
+      } catch (err) {
+        if (get().userId !== startUserId) return;
+        log.error("Failed to load SME state:", err);
+        set({
+          error: err instanceof Error ? err.message : "Failed to load SME data",
+          isLoading: false,
+        });
+      }
+    },
 
-  addTransaction: async (params) => {
-    const { userId } = get();
-    if (!userId) throw new Error("User not authenticated");
+    setupBusiness: async (params) => {
+      const { userId } = get();
+      if (!userId) throw new Error("User not authenticated");
 
-    const id = uuidv4();
-    const now = new Date().toISOString();
-    const vatAmount = calculateVAT(params.amount, params.vatApplicable ?? true);
+      const id = uuidv4();
+      const now = new Date().toISOString();
 
-    const tx: SMETransaction = {
-      id,
-      userId,
-      type: params.type,
-      amount: params.amount,
-      description: params.description,
-      category: params.category,
-      transactionDate: params.transactionDate,
-      paymentMethod: params.paymentMethod ?? null,
-      vatApplicable: params.vatApplicable ?? true,
-      vatAmount,
-      notes: params.notes ?? null,
-      createdAt: now,
-      updatedAt: now,
-    };
+      const profile: SMEProfile = {
+        id,
+        userId,
+        businessName: params.businessName,
+        businessType: params.businessType,
+        businessCategory: params.businessCategory ?? null,
+        currency: "GHS",
+        vatRegistered: params.vatRegistered ?? false,
+        tin: params.tin ?? null,
+        fiscalYearStartMonth: 1,
+        createdAt: now,
+        updatedAt: now,
+      };
 
-    // Optimistic local update
-    const nextTxs = [tx, ...get().transactions];
-    set({ transactions: nextTxs });
-    await saveSMEState({
-      version: 1,
-      userId,
-      profile: get().profile,
-      transactions: nextTxs,
-      categories: get().categories,
-      updatedAt: new Date().toISOString(),
-    });
+      set({ profile });
+      await saveSMEState(buildSMEStateForPersist(get()));
 
-    // Enqueue + sync
-    const mutation = await enqueueSMEMutation(userId, {
-      id: makeQueueId(),
-      userId,
-      createdAt: now,
-      kind: "sme_insert_transaction",
-      payload: toSMETransactionRow(tx),
-    });
+      // Enqueue + sync
+      const mutation = await enqueueSMEMutation(userId, {
+        id: makeQueueId(),
+        userId,
+        createdAt: now,
+        kind: "sme_upsert_profile",
+        payload: toSMEProfileRow(profile),
+      });
 
-    await trySyncSMEMutation(userId, mutation);
+      await trySyncSMEMutation(userId, mutation);
+    },
 
-    return { mutationId: mutation.id };
-  },
+    addTransactionLocal: async (params) => {
+      const { userId } = get();
+      if (!userId) throw new Error("User not authenticated");
 
-  updateTransaction: async (id, params) => {
-    const { userId, transactions } = get();
-    if (!userId) throw new Error("User not authenticated");
+      const id = uuidv4();
+      const now = new Date().toISOString();
+      const vatAmount = calculateVAT(
+        params.amount,
+        params.vatApplicable ?? true,
+      );
 
-    const existing = transactions.find((t) => t.id === id);
-    if (!existing) throw new Error("Transaction not found");
+      const tx: SMETransaction = {
+        id,
+        userId,
+        type: params.type,
+        amount: params.amount,
+        description: params.description,
+        category: params.category,
+        transactionDate: params.transactionDate,
+        paymentMethod: params.paymentMethod ?? null,
+        vatApplicable: params.vatApplicable ?? true,
+        vatAmount,
+        notes: params.notes ?? null,
+        createdAt: now,
+        updatedAt: now,
+      };
 
-    const now = new Date().toISOString();
-    const updated: SMETransaction = {
-      ...existing,
-      ...params,
-      vatAmount: params.amount !== undefined || params.vatApplicable !== undefined
-        ? calculateVAT(params.amount ?? existing.amount, params.vatApplicable ?? existing.vatApplicable)
-        : existing.vatAmount,
-      updatedAt: now,
-    };
+      const nextTxs = [tx, ...get().transactions];
+      set({ transactions: nextTxs });
+      await saveSMEState(buildSMEStateForPersist(get()));
 
-    const nextTxs = get().transactions.map((t) => (t.id === id ? updated : t));
-    set({ transactions: nextTxs });
-    await saveSMEState({
-      version: 1,
-      userId,
-      profile: get().profile,
-      transactions: nextTxs,
-      categories: get().categories,
-      updatedAt: new Date().toISOString(),
-    });
+      const mutation = await enqueueSMEMutation(userId, {
+        id: makeQueueId(),
+        userId,
+        createdAt: now,
+        kind: "sme_insert_transaction",
+        payload: toSMETransactionRow(tx),
+      });
 
-    const mutation = await enqueueSMEMutation(userId, {
-      id: makeQueueId(),
-      userId,
-      createdAt: now,
-      kind: "sme_update_transaction",
-      payload: toSMETransactionRow(updated),
-    });
+      return { mutationId: mutation.id, mutation };
+    },
 
-    await trySyncSMEMutation(userId, mutation);
-  },
+    addTransaction: async (params) => {
+      const { userId } = get();
+      if (!userId) throw new Error("User not authenticated");
 
-  deleteTransaction: async (id) => {
-    const { userId } = get();
-    if (!userId) throw new Error("User not authenticated");
+      const { mutationId, mutation } = await get().addTransactionLocal(params);
+      await trySyncSMEMutation(userId, mutation);
+      return { mutationId };
+    },
 
-    const nextTxs = get().transactions.filter((t) => t.id !== id);
-    set({ transactions: nextTxs });
-    await saveSMEState({
-      version: 1,
-      userId,
-      profile: get().profile,
-      transactions: nextTxs,
-      categories: get().categories,
-      updatedAt: new Date().toISOString(),
-    });
+    updateTransaction: async (id, params) => {
+      const { userId, transactions } = get();
+      if (!userId) throw new Error("User not authenticated");
 
-    const mutation = await enqueueSMEMutation(userId, {
-      id: makeQueueId(),
-      userId,
-      createdAt: new Date().toISOString(),
-      kind: "sme_delete_transaction",
-      payload: { id, user_id: userId },
-    });
+      const existing = transactions.find((t) => t.id === id);
+      if (!existing) throw new Error("Transaction not found");
 
-    await trySyncSMEMutation(userId, mutation);
-  },
+      const now = new Date().toISOString();
+      const updated: SMETransaction = {
+        ...existing,
+        ...params,
+        vatAmount:
+          params.amount !== undefined || params.vatApplicable !== undefined
+            ? calculateVAT(
+                params.amount ?? existing.amount,
+                params.vatApplicable ?? existing.vatApplicable,
+              )
+            : existing.vatAmount,
+        updatedAt: now,
+      };
 
-  addCategory: async (params) => {
-    const { userId } = get();
-    if (!userId) throw new Error("User not authenticated");
+      const nextTxs = get().transactions.map((t) =>
+        t.id === id ? updated : t,
+      );
+      set({ transactions: nextTxs });
+      await saveSMEState(buildSMEStateForPersist(get()));
 
-    const id = uuidv4();
-    const now = new Date().toISOString();
+      const mutation = await enqueueSMEMutation(userId, {
+        id: makeQueueId(),
+        userId,
+        createdAt: now,
+        kind: "sme_update_transaction",
+        payload: toSMETransactionRow(updated),
+      });
 
-    const cat: SMECategory = {
-      id,
-      userId,
-      name: params.name,
-      type: params.type,
-      icon: params.icon ?? null,
-      color: params.color ?? null,
-      isDefault: false,
-      createdAt: now,
-      updatedAt: now,
-    };
+      await trySyncSMEMutation(userId, mutation);
+    },
 
-    const nextCats = [...get().categories, cat];
-    set({ categories: nextCats });
-    await saveSMEState({
-      version: 1,
-      userId,
-      profile: get().profile,
-      transactions: get().transactions,
-      categories: nextCats,
-      updatedAt: new Date().toISOString(),
-    });
+    deleteTransaction: async (id) => {
+      const { userId } = get();
+      if (!userId) throw new Error("User not authenticated");
 
-    const mutation = await enqueueSMEMutation(userId, {
-      id: makeQueueId(),
-      userId,
-      createdAt: now,
-      kind: "sme_upsert_category",
-      payload: toSMECategoryRow(cat),
-    });
+      const nextTxs = get().transactions.filter((t) => t.id !== id);
+      set({ transactions: nextTxs });
+      await saveSMEState(buildSMEStateForPersist(get()));
 
-    await trySyncSMEMutation(userId, mutation);
-  },
+      const mutation = await enqueueSMEMutation(userId, {
+        id: makeQueueId(),
+        userId,
+        createdAt: new Date().toISOString(),
+        kind: "sme_delete_transaction",
+        payload: { id, user_id: userId },
+      });
 
-  addCategories: async (categories) => {
-    const { userId } = get();
-    if (!userId) throw new Error("User not authenticated");
+      await trySyncSMEMutation(userId, mutation);
+    },
 
-    const now = new Date().toISOString();
-    const newCats: SMECategory[] = categories.map((params) => ({
-      id: uuidv4(),
-      userId,
-      name: params.name,
-      type: params.type,
-      icon: params.icon ?? null,
-      color: params.color ?? null,
-      isDefault: false,
-      createdAt: now,
-      updatedAt: now,
-    }));
+    addCategory: async (params) => {
+      const { userId } = get();
+      if (!userId) throw new Error("User not authenticated");
 
-    const nextAllCats = [...get().categories, ...newCats];
-    set({ categories: nextAllCats });
-    await saveSMEState({
-      version: 1,
-      userId,
-      profile: get().profile,
-      transactions: get().transactions,
-      categories: nextAllCats,
-      updatedAt: new Date().toISOString(),
-    });
+      const id = uuidv4();
+      const now = new Date().toISOString();
 
-    for (const cat of newCats) {
+      const cat: SMECategory = {
+        id,
+        userId,
+        name: params.name,
+        type: params.type,
+        icon: params.icon ?? null,
+        color: params.color ?? null,
+        isDefault: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const nextCats = [...get().categories, cat];
+      set({ categories: nextCats });
+      await saveSMEState(buildSMEStateForPersist(get()));
+
       const mutation = await enqueueSMEMutation(userId, {
         id: makeQueueId(),
         userId,
@@ -444,85 +456,133 @@ export const useSMELedgerStore = create<SMELedgerStore>((set, get) => ({
         kind: "sme_upsert_category",
         payload: toSMECategoryRow(cat),
       });
-      // Fire and forget sync so it doesn't block UI for 14 sequential network requests
-      trySyncSMEMutation(userId, mutation).catch(() => {});
-    }
-  },
 
-  deleteCategory: async (id) => {
-    const { userId } = get();
-    if (!userId) throw new Error("User not authenticated");
+      await trySyncSMEMutation(userId, mutation);
+    },
 
-    const nextCats = get().categories.filter((c) => c.id !== id);
-    set({ categories: nextCats });
-    await saveSMEState({
-      version: 1,
-      userId,
-      profile: get().profile,
-      transactions: get().transactions,
-      categories: nextCats,
-      updatedAt: new Date().toISOString(),
-    });
+    addCategories: async (categories) => {
+      const { userId } = get();
+      if (!userId) throw new Error("User not authenticated");
 
-    const mutation = await enqueueSMEMutation(userId, {
-      id: makeQueueId(),
-      userId,
-      createdAt: new Date().toISOString(),
-      kind: "sme_delete_category",
-      payload: { id, user_id: userId },
-    });
+      const now = new Date().toISOString();
+      const newCats: SMECategory[] = categories.map((params) => ({
+        id: uuidv4(),
+        userId,
+        name: params.name,
+        type: params.type,
+        icon: params.icon ?? null,
+        color: params.color ?? null,
+        isDefault: false,
+        createdAt: now,
+        updatedAt: now,
+      }));
 
-    await trySyncSMEMutation(userId, mutation);
-  },
+      const nextAllCats = [...get().categories, ...newCats];
+      set({ categories: nextAllCats });
+      await saveSMEState(buildSMEStateForPersist(get()));
 
-  clearLocal: async () => {
-    const { userId } = get();
-    if (userId) {
-      const { clearSMEState } = await import("@/utils/smeStorage");
-      await clearSMEState(userId);
-    }
-    set({ userId: null, profile: null, transactions: [], categories: [], error: null });
-  },
+      for (const cat of newCats) {
+        const mutation = await enqueueSMEMutation(userId, {
+          id: makeQueueId(),
+          userId,
+          createdAt: now,
+          kind: "sme_upsert_category",
+          payload: toSMECategoryRow(cat),
+        });
+        // Fire and forget sync so it doesn't block UI for 14 sequential network requests
+        trySyncSMEMutation(userId, mutation).catch(() => {});
+      }
+    },
 
-  addToDraftBatch: (draft) => {
-    const { draftBatchTransactions } = get();
-    const newItem: DraftSMETransaction = {
-      ...draft,
-      tempId: uuidv4(),
-    };
-    set({ draftBatchTransactions: [...draftBatchTransactions, newItem] });
-  },
+    deleteCategory: async (id) => {
+      const { userId } = get();
+      if (!userId) throw new Error("User not authenticated");
 
-  removeFromDraftBatch: (tempId) => {
-    const { draftBatchTransactions } = get();
-    set({
-      draftBatchTransactions: draftBatchTransactions.filter(
-        (item) => item.tempId !== tempId
-      ),
-    });
-  },
+      const nextCats = get().categories.filter((c) => c.id !== id);
+      set({ categories: nextCats });
+      await saveSMEState(buildSMEStateForPersist(get()));
 
-  clearDraftBatch: () => {
-    set({ draftBatchTransactions: [], lastUsedType: null, lastUsedCategory: null, lastUsedPaymentMethod: null });
-  },
+      const mutation = await enqueueSMEMutation(userId, {
+        id: makeQueueId(),
+        userId,
+        createdAt: new Date().toISOString(),
+        kind: "sme_delete_category",
+        payload: { id, user_id: userId },
+      });
 
-  getDraftBatchTransactions: () => {
-    return get().draftBatchTransactions;
-  },
+      await trySyncSMEMutation(userId, mutation);
+    },
 
-  setLastUsedType: (type) => {
-    set({ lastUsedType: type });
-  },
+    clearLocal: async () => {
+      const { userId } = get();
+      if (userId) {
+        const { clearSMEState } = await import("@/utils/smeStorage");
+        await clearSMEState(userId);
+      }
+      set({
+        userId: null,
+        profile: null,
+        transactions: [],
+        categories: [],
+        error: null,
+        draftBatchTransactions: [],
+        lastUsedType: null,
+        lastUsedCategory: null,
+        lastUsedPaymentMethod: null,
+      });
+    },
 
-  setLastUsedCategory: (category) => {
-    set({ lastUsedCategory: category });
-  },
+    addToDraftBatch: (draft) => {
+      const { draftBatchTransactions } = get();
+      const newItem: DraftSMETransaction = {
+        ...draft,
+        tempId: uuidv4(),
+      };
+      set({ draftBatchTransactions: [...draftBatchTransactions, newItem] });
+      void persistSMEState();
+    },
 
-  setLastUsedPaymentMethod: (method) => {
-    set({ lastUsedPaymentMethod: method });
-  },
+    removeFromDraftBatch: (tempId) => {
+      const { draftBatchTransactions } = get();
+      set({
+        draftBatchTransactions: draftBatchTransactions.filter(
+          (item) => item.tempId !== tempId,
+        ),
+      });
+      void persistSMEState();
+    },
 
-  resetLastUsed: () => {
-    set({ lastUsedType: null, lastUsedCategory: null, lastUsedPaymentMethod: null });
-  },
-}));
+    clearDraftBatch: () => {
+      set({ draftBatchTransactions: [] });
+      void persistSMEState();
+    },
+
+    getDraftBatchTransactions: () => {
+      return get().draftBatchTransactions;
+    },
+
+    setLastUsedType: (type) => {
+      set({ lastUsedType: type });
+      void persistSMEState();
+    },
+
+    setLastUsedCategory: (category) => {
+      set({ lastUsedCategory: category });
+      void persistSMEState();
+    },
+
+    setLastUsedPaymentMethod: (method) => {
+      set({ lastUsedPaymentMethod: method });
+      void persistSMEState();
+    },
+
+    resetLastUsed: () => {
+      set({
+        lastUsedType: null,
+        lastUsedCategory: null,
+        lastUsedPaymentMethod: null,
+      });
+      void persistSMEState();
+    },
+  };
+});

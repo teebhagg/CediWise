@@ -301,16 +301,17 @@ export default Sentry.wrap(function RootLayout() {
       (Platform.OS === "ios" || Platform.OS === "android") &&
       !isExpoGo
     ) {
-      try {
-        const { GoogleSignin } = require("@react-native-google-signin/google-signin");
-        GoogleSignin.configure({
-          webClientId:
-            process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
-            "758685762731-vh9reoikjerbsu8pbcigndi29tdb7fp9.apps.googleusercontent.com",
+      void import("@react-native-google-signin/google-signin")
+        .then(({ GoogleSignin }) => {
+          GoogleSignin.configure({
+            webClientId:
+              process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
+              "758685762731-vh9reoikjerbsu8pbcigndi29tdb7fp9.apps.googleusercontent.com",
+          });
+        })
+        .catch((e) => {
+          console.warn("GoogleSignin.configure failed", e);
         });
-      } catch (e) {
-        console.warn("GoogleSignin.configure failed", e);
-      }
     }
 
     return () => {

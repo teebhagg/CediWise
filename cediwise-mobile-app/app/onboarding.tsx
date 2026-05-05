@@ -2,7 +2,7 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useEffect } from "react";
-import { Dimensions, PixelRatio, StatusBar, Text, View } from "react-native";
+import { Dimensions, PixelRatio, Text, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -37,7 +37,7 @@ export default function OnboardingScreen() {
   useEffect(() => {
     opacity.value = withDelay(100, withTiming(1, { duration: 600 }));
     translateY.value = withDelay(100, withTiming(0, { duration: 600 }));
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- mount-only entrance; Reanimated shared values
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

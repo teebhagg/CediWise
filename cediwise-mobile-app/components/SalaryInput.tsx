@@ -1,13 +1,7 @@
 import { Pencil, X } from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, Text, TextInput, TextInputProps, View } from 'react-native';
-import Animated, {
-    Extrapolate,
-    interpolate,
-    useAnimatedStyle,
-    useSharedValue,
-    withTiming,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { formatCurrency } from '../utils/formatCurrency';
 import { Card } from './Card';
 
@@ -52,33 +46,6 @@ export function SalaryInput({ label = 'Monthly Salary', value, onChangeText, onF
         setDisplayValue(formatDisplayValue(value));
     };
 
-    const labelAnimatedStyle = useAnimatedStyle(() => ({
-        transform: [
-            {
-                translateY: interpolate(
-                    focusAnim.value,
-                    [0, 1],
-                    [0, -12],
-                    Extrapolate.CLAMP
-                ),
-            },
-            {
-                scale: interpolate(
-                    focusAnim.value,
-                    [0, 1],
-                    [1, 0.85],
-                    Extrapolate.CLAMP
-                ),
-            },
-        ],
-        opacity: interpolate(
-            focusAnim.value,
-            [0, 1],
-            [1, 0.8],
-            Extrapolate.CLAMP
-        ),
-    }));
-
     const cardAnimatedStyle = useAnimatedStyle(() => ({
         transform: [{ scale: scaleAnim.value }],
     }));
@@ -89,10 +56,7 @@ export function SalaryInput({ label = 'Monthly Salary', value, onChangeText, onF
                 blurred={true}
                 className="relative bg-[rgba(18,22,33,0.9)] rounded-lg border border-white/10 pt-10 pb-5 px-5"
             >
-                <AnimatedText
-                    // style={labelAnimatedStyle}
-                    className="absolute top-3 left-5 text-slate-400 text-sm z-10"
-                >
+                <AnimatedText className="absolute top-3 left-5 text-slate-400 text-sm z-10">
                     {label}
                 </AnimatedText>
                 <View className="flex-row items-center">

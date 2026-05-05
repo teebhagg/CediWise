@@ -96,6 +96,11 @@ export interface SMEState {
   profile: SMEProfile | null;
   transactions: SMETransaction[];
   categories: SMECategory[];
+  /** Batch-entry drafts (persisted so they survive app restart). */
+  draftBatchTransactions: DraftSMETransaction[];
+  lastUsedType: TransactionType | null;
+  lastUsedCategory: string | null;
+  lastUsedPaymentMethod: PaymentMethod | null;
   updatedAt: string;
 }
 

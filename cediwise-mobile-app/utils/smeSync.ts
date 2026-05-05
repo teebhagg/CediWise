@@ -259,8 +259,13 @@ export async function hydrateSMEFromRemote(
      }
      return;
   }
-  
+
+  const preserved = await loadSMEState(userId);
   const state = createEmptySMEState(userId);
+  state.draftBatchTransactions = preserved.draftBatchTransactions;
+  state.lastUsedType = preserved.lastUsedType;
+  state.lastUsedCategory = preserved.lastUsedCategory;
+  state.lastUsedPaymentMethod = preserved.lastUsedPaymentMethod;
 
   if (profileRow) {
     state.profile = {

@@ -2119,19 +2119,20 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           note: draft.note ?? undefined,
           occurredAt: draft.occurredAt ? new Date(draft.occurredAt) : new Date(),
         });
-        successCount++;
-        if (mutationId) mutationIds.push(mutationId);
+        if (mutationId) {
+          successCount++;
+          mutationIds.push(mutationId);
+          useBudgetStore.getState().removeFromDraftBatch(draft.tempId);
+        }
       } catch {
         // Continue with remaining items; queue will retry failed ones
       }
     }
 
-    useBudgetStore.getState().clearDraftBatch();
-
-    return { 
-      success: successCount === drafts.length, 
+    return {
+      success: successCount === drafts.length,
       count: successCount,
-      mutationIds 
+      mutationIds,
     };
   }, [addTransaction, userId]);
 

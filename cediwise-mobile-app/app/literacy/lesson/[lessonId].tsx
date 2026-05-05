@@ -199,6 +199,7 @@ export default function LessonScreen() {
     saveProgress,
     trackLessonComplete,
     showSuccess,
+    showError,
     checkModuleComplete,
   ]);
 

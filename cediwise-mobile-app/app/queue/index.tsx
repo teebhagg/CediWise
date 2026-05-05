@@ -1,6 +1,5 @@
 import { FlashList } from '@shopify/flash-list';
 import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
 import { RefreshCcw, Trash2 } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
@@ -134,7 +133,6 @@ function DangerPillButton({
 }
 
 export default function BudgetQueueScreen() {
-  const router = useRouter();
   const { user } = useAuth();
   const { showSuccess, showError } = useAppToast();
   const {
@@ -220,7 +218,7 @@ export default function BudgetQueueScreen() {
         </Card>
       </View>
     ),
-    [pendingCount, isLoading, isSyncing, showError],
+    [pendingCount, isLoading, isSyncing, showError, syncNow, reload],
   );
 
   const listEmpty = useCallback(

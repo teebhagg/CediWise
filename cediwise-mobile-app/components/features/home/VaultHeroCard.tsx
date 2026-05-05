@@ -41,7 +41,7 @@ function AnimatedMoney({ value }: { value: number }) {
   // Update animated value whenever the prop changes
   useEffect(() => {
     animatedValue.value = withTiming(value, { duration: 800 });
-  }, [value]);
+  }, [value, animatedValue]);
 
   const animatedProps = useAnimatedProps(() => {
     const [intRaw, frac] = animatedValue.value.toFixed(2).split(".");

@@ -2,13 +2,13 @@ import type { BudgetBucket, BudgetCategory, IncomeSource } from '../../../types/
 import type { AllocationExceededResult } from '../../../utils/allocationExceeded';
 import type { SpendingInsight } from '../../../utils/spendingPatterns';
 import { computeSuggestedLimit } from '../../../utils/spendingPatternsLogic';
-import { AddCustomCategoryBottomSheet } from './AddCustomCategoryBottomSheet';
 import { AllocationExceededModal } from '../../AllocationExceededModal';
 import { BatchTransactionModal } from '../../BatchTransactionModal';
 import { ConfirmModal } from '../../ConfirmModal';
 import { EditCategoryLimitModal } from '../../EditCategoryLimitModal';
 import { EditCycleDayModal } from '../../EditCycleDayModal';
 import { EditIncomeSourceModal } from '../../EditIncomeSourceModal';
+import { AddCustomCategoryBottomSheet } from './AddCustomCategoryBottomSheet';
 
 interface PendingConfirm {
   bucket: BudgetBucket;
@@ -161,9 +161,21 @@ export function BudgetModals({
         categories={cycleCategories}
         onClose={() => setShowTxModal(false)}
         onSubmitAll={async () => {
-          const result = await onSubmitBatch();
-          if (result.count > 0) {
-            await onReloadBudget();
+          try {
+            const result = await onSubmitBatch();
+            if (result.count > 0) {
+              await onReloadBudget();
+            }
+            setShowTxModal(false);
+          } catch (error) {
+            // Error should be handled (e.g., show toast) - 
+            // consider propagating to parent or using an error callback
+            // Log in Sentry
+            reportError(error, {
+              feature: 'budget',
+              operation: 'submit_batch',
+              extra: { result },
+            });
           }
         }}
       />

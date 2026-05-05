@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { Button } from 'heroui-native';
 import { ReactNode } from 'react';
-import { ActivityIndicator, Text } from 'react-native';
+import { ActivityIndicator } from 'react-native';
 
 type Props = {
   children: ReactNode;

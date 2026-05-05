@@ -1,0 +1,3 @@
+• Business money-in and money-out: enter many lines at once, then save in a single step—great after a busy week. Totals stay aligned with your budget as everything syncs in the background.
+• Onboarding text scales better on different phone sizes, so first-time setup is easier to read.
+• Gentler polish on pop-up dialogs, the vault summary card, and salary checks—fewer rough edges in day-to-day use.

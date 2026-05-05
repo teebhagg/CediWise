@@ -31,10 +31,8 @@ export function GlassView({
           ? "#FFFFFF"
           : "#1f2937";
     
-    const opacity = 0.65;
-
     return (
-      <View style={[style, { backgroundColor, elevation: 0 }]} {...rest}>
+      <View style={[style, { backgroundColor, opacity: 0.65, elevation: 0 }]} {...rest}>
         {children}
       </View>
     );

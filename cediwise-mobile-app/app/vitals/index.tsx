@@ -251,8 +251,6 @@ export default function VitalsWizard() {
   }, [draft]);
 
   const canContinue = Object.keys(stepErrors).length === 0;
-  // On Screen 2 the Complete button is always available (income was validated on Screen 0)
-  const canFinish = draft.step === totalSteps - 1;
 
   const netPreview = useMemo(
     () => getNetPreview(draft.stableSalary, draft.incomeFrequency),
@@ -676,7 +674,7 @@ export default function VitalsWizard() {
         setLoading(false);
       }
     },
-    [allStepsErrors, budget, completeSetupProgress, draft, user?.id],
+    [allStepsErrors, budget, completeSetupProgress, draft, user?.id, editMode],
   );
 
   const handleFinish = useCallback(() => doFinish(), [doFinish]);

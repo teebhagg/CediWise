@@ -121,7 +121,7 @@ export default function AuthCallback() {
     } finally {
       sub?.remove?.();
     }
-  }, [processUrl, finishWithStored]);
+  }, [processUrl, finishWithStored, router]);
 
   const onRetry = useCallback(() => {
     setRetrying(true);

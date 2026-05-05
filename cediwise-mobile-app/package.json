@@ -1,7 +1,7 @@
 {
   "name": "cediwise-mobile-app",
   "main": "expo-router/entry",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "scripts": {
     "postinstall": "patch-package",
     "start": "expo start",

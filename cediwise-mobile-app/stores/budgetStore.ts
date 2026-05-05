@@ -73,7 +73,15 @@ export const useBudgetStore = create<BudgetStore>((set, get) => ({
   initForUser: async (userId: string | null, options?: BudgetInitOptions) => {
     const force = options?.force ?? false;
     if (!userId) {
-      set({ userId: null, state: null, queue: null, isLoading: false });
+      set({
+        userId: null,
+        state: null,
+        queue: null,
+        isLoading: false,
+        draftBatchTransactions: [],
+        lastUsedBucket: null,
+        lastUsedCategoryId: null,
+      });
       return;
     }
 
@@ -83,6 +91,14 @@ export const useBudgetStore = create<BudgetStore>((set, get) => ({
     }
     if (!force && userId === currentId && state !== null && !isLoading) {
       return;
+    }
+
+    if (currentId !== null && currentId !== userId) {
+      set({
+        draftBatchTransactions: [],
+        lastUsedBucket: null,
+        lastUsedCategoryId: null,
+      });
     }
 
     set({ userId, isLoading: true });
@@ -107,7 +123,14 @@ export const useBudgetStore = create<BudgetStore>((set, get) => ({
   reload: async () => {
     const { userId, state: existingState } = get();
     if (!userId) {
-      set({ state: null, queue: null, isLoading: false });
+      set({
+        state: null,
+        queue: null,
+        isLoading: false,
+        draftBatchTransactions: [],
+        lastUsedBucket: null,
+        lastUsedCategoryId: null,
+      });
       return;
     }
     const startUserId = userId;

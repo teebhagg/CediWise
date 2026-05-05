@@ -144,6 +144,7 @@ export function CustomBottomSheet({
     } else if (modalVisible) {
       closeSheet();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open/close one-shot RN Animated; adding closeSheet/modalVisible/opacity/panY risks feedback loops
   }, [isOpen]);
 
   useEffect(() => {
@@ -179,7 +180,7 @@ export function CustomBottomSheet({
       showSub.remove();
       hideSub.remove();
     };
-  }, [isClosing]);
+  }, [isClosing, animatedKeyboardHeight]);
 
   const renderTrigger = () => {
     if (!triggerComponent) return null;

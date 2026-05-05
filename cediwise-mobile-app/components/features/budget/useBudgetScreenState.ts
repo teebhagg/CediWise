@@ -367,7 +367,7 @@ export function useBudgetScreenState() {
     );
     const ratio = netIncome > 0 ? fixedCosts / netIncome : null;
     return { v, netIncome, fixedCosts, ratio };
-  }, [profileVitals.vitals]);
+  }, [profileVitals.vitals, taxConfig]);
 
   const allocationTitle = useMemo(() => {
     if (!activeCycle) return "Allocation";

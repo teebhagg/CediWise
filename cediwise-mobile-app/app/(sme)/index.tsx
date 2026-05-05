@@ -3,7 +3,6 @@
  * Shows revenue, expenses, profit, VAT summary, and threshold status.
  */
 
-import { GlassView } from "@/components/GlassView";
 import { useSmeLedger } from "@/hooks/useSmeLedger";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "expo-router";
@@ -46,7 +45,7 @@ import { log } from "@/utils/logger";
 import { Card } from "heroui-native";
 
 export default function SMEDashboardScreen() {
-  const { user } = useAuth();
+  useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const sme = useSmeLedger();
@@ -63,7 +62,7 @@ export default function SMEDashboardScreen() {
       initialHydrationAttempted.current = true;
       void sme.hydrate();
     }
-  }, [sme.profile, sme.isLoading, isConnected]);
+  }, [sme, isConnected]);
 
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((event) => {

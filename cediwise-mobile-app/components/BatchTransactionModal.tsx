@@ -1,4 +1,5 @@
 import * as Haptics from 'expo-haptics';
+import { Button, Card } from 'heroui-native';
 import { ChevronDown, Plus, X } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -14,7 +15,6 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import { Button, Card } from 'heroui-native';
 
 import { CustomBottomSheet } from '@/components/common/CustomBottomSheet';
 import { PrimaryButton } from '@/components/PrimaryButton';
@@ -94,8 +94,8 @@ export function BatchTransactionModal({
   const toggleCategoryPicker = useCallback(() => {
     try {
       Haptics.selectionAsync();
-    } catch {}
-    
+    } catch { }
+
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowCategoryPicker(prev => !prev);
   }, []);
@@ -107,7 +107,7 @@ export function BatchTransactionModal({
     }
     // If picker is open, shrink draft list to give room
     if (showCategoryPicker) return 120;
-    return 240; 
+    return 240;
   }, [isKeyboardVisible, windowHeight, showCategoryPicker]);
 
   const bucketCategories = useMemo(
@@ -121,6 +121,7 @@ export function BatchTransactionModal({
   );
 
   useEffect(() => {
+    // Only reset form when modal first opens, not when store values change
     if (visible) {
       setFormError(undefined);
       setAmount('');
@@ -140,25 +141,29 @@ export function BatchTransactionModal({
 
   useEffect(() => {
     if (!visible) return;
-    if (bucketCategories.length > 0 && !categoryId) {
-      setCategoryId(bucketCategories[0].id);
-    } else if (bucketCategories.length === 0) {
+    if (bucketCategories.length === 0) {
       setCategoryId(null);
+      return;
+    }
+    const inBucket =
+      categoryId != null && bucketCategories.some((c) => c.id === categoryId);
+    if (!inBucket) {
+      setCategoryId(bucketCategories[0].id);
     }
   }, [bucketCategories, categoryId, visible]);
 
   const handleBucketPress = async (next: BudgetBucket) => {
     try {
       await Haptics.selectionAsync();
-    } catch {}
-    
+    } catch { }
+
     // Problem 6: Save current category for current bucket before switching
     setCategoryByBucket(prev => ({ ...prev, [bucket]: categoryId }));
-    
+
     setBucket(next);
     // Restore previous selection for this bucket if exists
     setCategoryId(categoryByBucket[next]);
-    
+
     // Auto-close picker on bucket change for cleanliness
     if (showCategoryPicker) {
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -169,7 +174,7 @@ export function BatchTransactionModal({
   const handleCategorySelect = async (id: string) => {
     try {
       await Haptics.selectionAsync();
-    } catch {}
+    } catch { }
     setCategoryId(id);
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowCategoryPicker(false);
@@ -181,15 +186,19 @@ export function BatchTransactionModal({
       setFormError('Enter a valid amount');
       return;
     }
-    if (bucketCategories.length > 0 && !categoryId) {
-      setFormError('Pick a category');
-      return;
+    if (bucketCategories.length > 0) {
+      const inBucket =
+        categoryId != null && bucketCategories.some((c) => c.id === categoryId);
+      if (!inBucket) {
+        setFormError('Pick a category');
+        return;
+      }
     }
     setFormError(undefined);
 
     try {
       await Haptics.selectionAsync();
-    } catch {}
+    } catch { }
 
     const item: Omit<DraftBudgetTransaction, 'tempId'> = {
       bucket,
@@ -198,14 +207,14 @@ export function BatchTransactionModal({
       note: note.trim() ? note.trim() : null,
       occurredAt: new Date().toISOString(),
     };
-    
+
     if (editingItemId) {
       useBudgetStore.getState().updateDraftBatchItem(editingItemId, item);
       setEditingItemId(null);
     } else {
       useBudgetStore.getState().addToDraftBatch(item);
     }
-    
+
     useBudgetStore.getState().setLastUsedBucket(bucket);
     if (categoryId) {
       useBudgetStore.getState().setLastUsedCategory(categoryId);
@@ -224,7 +233,12 @@ export function BatchTransactionModal({
   const handleRemoveItem = (tempId: string) => {
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } catch {}
+    } catch { }
+    if (tempId === editingItemId) {
+      setEditingItemId(null);
+      setAmount('');
+      setNote('');
+    }
     useBudgetStore.getState().removeFromDraftBatch(tempId);
   };
 
@@ -291,6 +305,7 @@ export function BatchTransactionModal({
                 hitSlop={8}
                 accessibilityLabel={`${bucketLabel(b)} bucket`}
                 accessibilityRole="button"
+                accessibilityState={{ selected: bucket === b }}
               >
                 <Text
                   style={[
@@ -301,8 +316,8 @@ export function BatchTransactionModal({
                   {bucketLabel(b)}
                 </Text>
               </Pressable>
-               ))}
-            </View>
+            ))}
+          </View>
 
           {/* Inline Category Picker (Accordion) */}
           <Pressable
@@ -325,17 +340,17 @@ export function BatchTransactionModal({
             >
               {selectedCategory?.name ?? (bucketCategories.length === 0 ? 'No categories' : 'Select category')}
             </Text>
-            <ChevronDown 
-              size={18} 
-              color="#64748b" 
+            <ChevronDown
+              size={18}
+              color="#64748b"
               style={{ transform: [{ rotate: showCategoryPicker ? '180deg' : '0deg' }] }}
             />
           </Pressable>
 
           {showCategoryPicker && (
             <View style={[styles.inlinePicker, { shadowColor: '#000', shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.3, shadowRadius: 10 }]}>
-              <ScrollView 
-                style={styles.inlinePickerScroll} 
+              <ScrollView
+                style={styles.inlinePickerScroll}
                 showsVerticalScrollIndicator={true}
                 indicatorStyle="white"
                 nestedScrollEnabled
@@ -432,14 +447,14 @@ export function BatchTransactionModal({
               <Text style={styles.listHeaderTitle}>Added ({draftItems.length})</Text>
             </View>
 
-            <ScrollView 
-              style={[styles.draftList, { maxHeight: draftListMaxHeight }]} 
+            <ScrollView
+              style={[styles.draftList, { maxHeight: draftListMaxHeight }]}
               showsVerticalScrollIndicator={false}
               nestedScrollEnabled
             >
               {draftItems.map((item) => (
-                <Pressable 
-                  key={item.tempId} 
+                <Pressable
+                  key={item.tempId}
                   onPress={() => handleEditDraftItem(item)}
                   style={{ marginBottom: 8 }}
                 >
@@ -497,7 +512,7 @@ export function BatchTransactionModal({
           className={`mt-2 ${draftItems.length === 0 || isSaving ? 'bg-emerald-500/50' : 'bg-emerald-500'}`}
         >
           <Text>
-          Save All ({draftItems.length})
+            Save All ({draftItems.length})
           </Text>
         </PrimaryButton>
       </View>

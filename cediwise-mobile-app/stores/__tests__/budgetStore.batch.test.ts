@@ -3,6 +3,7 @@ import { useBudgetStore } from "../budgetStore";
 describe("budgetStore batch transactions", () => {
   beforeEach(() => {
     useBudgetStore.getState().clearDraftBatch();
+    useBudgetStore.getState().resetLastUsed();
   });
 
   it("should add a transaction to the draft batch", () => {

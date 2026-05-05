@@ -1,5 +1,5 @@
 # Run mobile app lint and typecheck on every PR; comment result on the PR.
-# ESLint: only errors fail the job (--max-warnings -1). Warnings are reported in the PR comment only.
+# ESLint: only errors fail the job (--max-warnings=-1). Warnings are reported in the PR comment only.
 name: Mobile app PR check
 
 permissions:
@@ -41,7 +41,7 @@ jobs:
         working-directory: ${{ env.MOBILE_APP_DIR }}
         run: |
           set +e
-          npm run lint -- --max-warnings -1 2>&1 | tee eslint.log
+          npm run lint -- --max-warnings=-1 2>&1 | tee eslint.log
           lint_exit=$?
           set -e
           node <<'NODE' >> "$GITHUB_OUTPUT"

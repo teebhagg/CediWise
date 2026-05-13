@@ -10,7 +10,7 @@ type CardProps = ViewProps & {
 
 const cardBaseClass = 'rounded bg-[rgba(18,22,33,0.9)] p-5';
 
-export function Card({ children, style, className, blurred = true, ...rest }: CardProps) {
+export function Card({ children, style, className, blurred = false, ...rest }: CardProps) {
   const content = (
     <Surface variant='tertiary' {...rest} className={className ? `${cardBaseClass} ${className}` : cardBaseClass} style={style}>
       {children}

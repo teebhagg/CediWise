@@ -1,6 +1,7 @@
 import { Button, Dialog, ScrollShadow } from "heroui-native";
 import { AlertTriangle } from "lucide-react-native";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View, Platform } from "react-native";
+import { GlassView } from "./GlassView";
 import { LinearGradient } from "expo-linear-gradient";
 
 type MandatoryUpdateModalProps = {
@@ -17,10 +18,21 @@ export function MandatoryUpdateModal({
   return (
     <Dialog isOpen={visible} onOpenChange={() => {}}>
       <Dialog.Portal>
-        <Dialog.Overlay className="bg-black/75" />
+        <Dialog.Overlay className="bg-transparent" />
+        {Platform.OS === "ios" ? (
+          <GlassView
+            intensity={40}
+            tint="dark"
+            className="absolute inset-0"
+          />
+        ) : (
+          <View
+            style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.8)" }]}
+          />
+        )}
         <View style={styles.container}>
-          <Dialog.Content className="max-w-[360px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0">
-            <ScrollShadow color="#121621" LinearGradientComponent={LinearGradient}>
+          <Dialog.Content className="max-w-[360px] w-full rounded-2xl overflow-hidden bg-[#151518] p-0">
+            <ScrollShadow color="#151518" LinearGradientComponent={LinearGradient}>
               <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
                 <View style={styles.content}>
                   <View style={styles.header}>

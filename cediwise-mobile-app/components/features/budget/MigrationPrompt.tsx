@@ -4,10 +4,13 @@ import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
+  Platform,
   Pressable,
+  StyleSheet,
   Text,
   View,
 } from "react-native";
+import { GlassView } from "@/components/GlassView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export type BudgetAllocationPercents = BudgetPreferencePercents;
@@ -68,8 +71,23 @@ export function MigrationPrompt({
       transparent
       onRequestClose={handleCancel}>
       <View
-        className="flex-1 justify-end bg-black/70 px-4"
+        className="flex-1 justify-end px-4"
         style={{ paddingBottom: Math.max(insets.bottom, 16) }}>
+        {Platform.OS === "ios" ? (
+          <GlassView intensity={40} style={StyleSheet.absoluteFill} />
+        ) : (
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: "rgba(0,0,0,0.8)" },
+            ]}
+          />
+        )}
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={handleCancel}
+          accessibilityLabel="Close dialog"
+        />
         <View className="rounded-2xl border border-white/10 bg-neutral-900 p-5">
           <Text className="text-lg font-semibold text-white">
             Update your budget?

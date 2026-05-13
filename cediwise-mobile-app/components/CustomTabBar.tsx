@@ -30,7 +30,8 @@ const INDICATOR_RADIUS = 20;
 const INDICATOR_MAX_WIDTH = 85;
 const INDICATOR_MIN_WIDTH = 30;
 const BG = "#0f172a";
-const BORDER = "rgba(255,255,255,0.14)";
+const BORDER = "rgba(255,255,255,0.12)";
+const BORDER_IOS = "rgba(255,255,255,0.14)";
 const ACTIVE = "#22C55E";
 const INACTIVE = "#94A3B8";
 
@@ -78,6 +79,86 @@ export function CustomTabBar(props: BottomTabBarProps) {
     };
   });
 
+  const barChrome = (
+    <>
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.indicator,
+          indicatorStyle,
+          {
+            width: Math.max(INDICATOR_MIN_WIDTH, indicatorWidth),
+            height: INDICATOR_HEIGHT,
+            borderRadius: INDICATOR_RADIUS,
+          },
+        ]}
+      />
+
+      <View style={styles.row}>
+        {visibleRoutes.map((route) => {
+          const focused = state.routes[state.index]?.key === route.key;
+          const { options } = descriptors[route.key];
+
+          const label =
+            options.tabBarLabel ??
+            options.title ??
+            route.name;
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: "tabPress",
+              target: route.key,
+              canPreventDefault: true,
+            });
+
+            if (!focused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+              void Haptics.selectionAsync();
+            }
+          };
+
+          const onLongPress = () => {
+            navigation.emit({
+              type: "tabLongPress",
+              target: route.key,
+            });
+          };
+
+          const icon = options.tabBarIcon?.({
+            focused,
+            color: focused ? BG : INACTIVE,
+            size: 22,
+          });
+
+          const iconWithTour =
+            route.name === "budget" ? (
+              <TourZone
+                stepKey="state1-home-budget-tab"
+                name="Budget lives here"
+                description="This tab is where CediWise turns your payday into a working budget and helps you manage it over time."
+                shape="circle"
+                zoneStyle={{ padding: 16 }}>
+                <View collapsable={false}>{icon}</View>
+              </TourZone>
+            ) : (
+              icon
+            );
+
+          return (
+            <TabButton
+              key={route.key}
+              label={String(label)}
+              focused={focused}
+              onPress={onPress}
+              onLongPress={onLongPress}>
+              {iconWithTour}
+            </TabButton>
+          );
+        })}
+      </View>
+    </>
+  );
+
   return (
     <View
       pointerEvents="box-none"
@@ -94,88 +175,21 @@ export function CustomTabBar(props: BottomTabBarProps) {
         description="Switch between Home, Budget, Learn, and Business anytime."
         shape="rounded-rect"
         borderRadius={28}>
-        <View collapsable={false}>
-          <GlassView intensity={30} tint="dark" style={styles.blur}>
-            <View style={styles.border} />
-
-            <Animated.View
-              pointerEvents="none"
-              style={[
-                styles.indicator,
-                indicatorStyle,
-                {
-                  width: Math.max(INDICATOR_MIN_WIDTH, indicatorWidth),
-                  height: INDICATOR_HEIGHT,
-                  borderRadius: INDICATOR_RADIUS,
-                },
-              ]}
-            />
-
-            <View style={styles.row}>
-              {visibleRoutes.map((route) => {
-                const focused = state.routes[state.index]?.key === route.key;
-                const { options } = descriptors[route.key];
-
-                const label =
-                  options.tabBarLabel ??
-                  options.title ??
-                  // expo-router route name as fallback
-                  route.name;
-
-                const onPress = () => {
-                  const event = navigation.emit({
-                    type: "tabPress",
-                    target: route.key,
-                    canPreventDefault: true,
-                  });
-
-                  if (!focused && !event.defaultPrevented) {
-                    navigation.navigate(route.name);
-                    void Haptics.selectionAsync();
-                  }
-                };
-
-                const onLongPress = () => {
-                  navigation.emit({
-                    type: "tabLongPress",
-                    target: route.key,
-                  });
-                };
-
-                const icon = options.tabBarIcon?.({
-                  focused,
-                  color: focused ? BG : INACTIVE,
-                  size: 22,
-                });
-
-                const iconWithTour =
-                  route.name === "budget" ? (
-                    <TourZone
-                      stepKey="state1-home-budget-tab"
-                      name="Budget lives here"
-                      description="This tab is where CediWise turns your payday into a working budget and helps you manage it over time."
-                      shape="circle"
-                      zoneStyle={{ padding: 16 }}>
-                      <View collapsable={false}>{icon}</View>
-                    </TourZone>
-                  ) : (
-                    icon
-                  );
-
-                return (
-                  <TabButton
-                    key={route.key}
-                    label={String(label)}
-                    focused={focused}
-                    onPress={onPress}
-                    onLongPress={onLongPress}>
-                    {iconWithTour}
-                  </TabButton>
-                );
-              })}
+        {Platform.OS === "ios" ? (
+          <View collapsable={false}>
+            <GlassView intensity={30} tint="dark" style={styles.blurIos}>
+              <View style={styles.borderIos} />
+              {barChrome}
+            </GlassView>
+          </View>
+        ) : (
+          <View collapsable={false} style={styles.shadowContainer}>
+            <View style={styles.background}>
+              <View style={styles.border} />
+              {barChrome}
             </View>
-          </GlassView>
-        </View>
+          </View>
+        )}
       </TourZone>
     </View>
   );
@@ -238,31 +252,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: H_MARGIN,
     paddingBottom: 10,
     paddingTop: 0,
-    elevation: 0
+    elevation: 0,
   },
-  blur: {
+  background: {
     height: BAR_HEIGHT,
     borderRadius: BAR_RADIUS,
     padding: PADDING,
-    backgroundColor: Platform.OS === "android" ? BG : "transparent",
+    backgroundColor: "#151518",
     overflow: "hidden",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.35,
-        shadowRadius: 18,
-        shadowOffset: { width: 0, height: 10 },
-      },
-      android: {
-        elevation: 18,
-      },
-      default: {},
-    }),
+  },
+  blurIos: {
+    height: BAR_HEIGHT,
+    borderRadius: BAR_RADIUS,
+    padding: PADDING,
+    backgroundColor: "transparent",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.35,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+  },
+  borderIos: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: BAR_RADIUS,
+    borderWidth: 1,
+    borderColor: BORDER_IOS,
+  },
+  shadowContainer: {
+    borderRadius: BAR_RADIUS,
+    // Premium Shadow for floating effect
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
   },
   border: {
     ...StyleSheet.absoluteFillObject,
     borderRadius: BAR_RADIUS,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: BORDER,
   },
   row: {

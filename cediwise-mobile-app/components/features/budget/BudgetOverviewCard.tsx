@@ -1,7 +1,11 @@
 import { useEffect } from 'react';
-import { Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { Lock } from 'lucide-react-native';
+import { Image } from 'expo-image';
 import Animated, { FadeIn, LinearTransition, useSharedValue, useAnimatedStyle, withTiming, withDelay } from 'react-native-reanimated';
+
+const FAB_AVATAR = require("@/assets/images/my-notion-face-transparent.png");
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { Card } from '../../Card';
 import { ProgressBar } from './ProgressBar';
@@ -63,6 +67,9 @@ export interface BudgetOverviewCardProps {
   healthLabel?: string;
   healthSummary?: string | null;
   canAccessBudget?: boolean;
+  aiSummary?: string | null;
+  aiSummaryLoading?: boolean;
+  onOpenAIChat?: (initialMessage?: string) => void;
 }
 
 function AnimatedHealthSummary({ text }: { text: string }) {
@@ -104,6 +111,9 @@ export function BudgetOverviewCard({
   healthLabel,
   healthSummary,
   canAccessBudget = true,
+  aiSummary,
+  aiSummaryLoading = false,
+  onOpenAIChat,
 }: BudgetOverviewCardProps) {
   if (!visible || !totals) return null;
 
@@ -191,7 +201,7 @@ export function BudgetOverviewCard({
           {healthDisplay != null && (
             <Animated.View
               entering={FadeIn.delay(400).duration(800)}
-              className={`px-3 py-2 rounded-full ${healthDisplay.bgColor} border border-slate-400/20`}
+              className={`px-3 py-2 rounded-[18px] ${healthDisplay.bgColor} border border-slate-400/20`}
             >
               <Text className={`${healthDisplay.color} font-bold text-base`}>
                 {Math.round(healthScore ?? 0)}
@@ -208,7 +218,36 @@ export function BudgetOverviewCard({
           <AnimatedHealthSummary text={healthSummary} />
         ) : null}
 
-        <View className="gap-3">
+        {aiSummaryLoading && !aiSummary ? (
+          <View className="mt-2 pt-2 border-t border-slate-400/10 flex-row items-center gap-2">
+            <View className="mt-0.5 w-5 h-5 rounded-full bg-emerald-500/20 items-center justify-center">
+              <Image source={FAB_AVATAR} style={{ width: 14, height: 14 }} contentFit="contain" />
+            </View>
+            <ActivityIndicator color="#34D399" size="small" />
+            <Text className="text-slate-400 text-xs flex-1">Updating AI summary…</Text>
+          </View>
+        ) : null}
+
+        {aiSummary ? (
+          <View className="mt-2 pt-2 border-t border-slate-400/10 flex-row items-start gap-2">
+            <View className="mt-0.5 w-5 h-5 rounded-full bg-emerald-500/20 items-center justify-center">
+              <Image source={FAB_AVATAR} style={{ width: 14, height: 14 }} contentFit="contain" />
+            </View>
+            <Text className="text-slate-300 text-xs flex-1 leading-5">{aiSummary}</Text>
+            {onOpenAIChat ? (
+              <Pressable
+                onPress={() => {
+                  void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                  onOpenAIChat();
+                }}
+                hitSlop={8}>
+                <Text className="text-emerald-400 text-xs font-medium">Chat →</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+
+        <View className="gap-3 mt-4 pt-4 border-t border-slate-400/10">
           <View>
             <View className="flex-row justify-between">
               <Text className="text-slate-200 font-medium text-sm">Needs</Text>

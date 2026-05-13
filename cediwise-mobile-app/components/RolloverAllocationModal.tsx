@@ -5,7 +5,7 @@ import { Button, Dialog, ScrollShadow } from "heroui-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { CheckIcon, ChevronDown, Repeat } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Platform, Pressable, ScrollView, Text, useWindowDimensions, View } from "react-native";
+import { Platform, Pressable, ScrollView, Text, useWindowDimensions, View, StyleSheet } from "react-native";
 import Animated, {
   Easing,
   FadeInDown,
@@ -282,24 +282,31 @@ export function RolloverAllocationModal({
   return (
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="bg-black/65" />
-        {Platform.OS === 'ios' && <GlassView
-          intensity={7}
-          tint="dark"
-          className="absolute inset-0"
-          onTouchEnd={handleClose}
-        />}
+        <Dialog.Overlay className="bg-transparent" />
+        {Platform.OS === "ios" ? (
+          <GlassView
+            intensity={40}
+            tint="dark"
+            className="absolute inset-0"
+            onTouchEnd={handleClose}
+          />
+        ) : (
+          <View
+            style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.8)" }]}
+            onTouchEnd={handleClose}
+          />
+        )}
         <Dialog.Content
-          className="max-w-[360px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
+          className="max-w-[360px] w-full rounded-2xl overflow-hidden bg-[#151518] p-0"
           style={{ maxHeight: maxModalHeight }}
         >
           <Dialog.Close
             variant="ghost"
-            className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-slate-600/60 border border-slate-500/50"
+            className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-white/5 border border-white/10"
             iconProps={{ size: 20, color: "#e2e8f0" }}
             onPress={handleClose}
           />
-          <ScrollShadow color="#121621" LinearGradientComponent={LinearGradient} className="flex-1">
+          <ScrollShadow color="#151518" LinearGradientComponent={LinearGradient} className="flex-1">
             <ScrollView
               style={{ maxHeight: maxModalHeight - 60, paddingTop: 40 }}
               contentContainerStyle={{ padding: 20, paddingBottom: 24 }}

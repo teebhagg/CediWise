@@ -192,7 +192,11 @@ export const StandardHeader: React.FC<HeaderProps> = ({
 
   return (
     <View style={[styles.container, { height: totalHeight }]}>
-      <GlassView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+      {Platform.OS === "android" ? (
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: "#151518" }]} />
+      ) : (
+        <GlassView intensity={80} tint="dark" style={StyleSheet.absoluteFill} />
+      )}
       <View style={[styles.border, { top: totalHeight - 1 }]} />
 
       <View
@@ -341,14 +345,18 @@ export const ExpandedHeader: React.FC<ExpandedHeaderProps> = ({
      */
     <View pointerEvents="box-none" style={[styles.container, { height: totalExpandedH }]}>
 
-      {/* ── Compact glassmorphic band (top portion only) ─────────────────── */}
+      {/* ── Compact opaque band (top portion only) ─────────────────── */}
       <Animated.View
         style={[
           styles.compactBand,
           { height: totalStandardH },
           compactBgStyle,
         ]}>
-        <GlassView intensity={70} tint="dark" style={StyleSheet.absoluteFill} />
+        {Platform.OS === "android" ? (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: "#151518" }]} />
+        ) : (
+          <GlassView intensity={70} tint="dark" style={StyleSheet.absoluteFill} />
+        )}
         <View style={[styles.border, { top: totalStandardH - 1 }]} />
       </Animated.View>
 

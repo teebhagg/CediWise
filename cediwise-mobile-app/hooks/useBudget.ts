@@ -325,7 +325,11 @@ export type UseBudgetReturn = {
   retryMutation: (id: string) => Promise<void>;
   clearLocal: () => Promise<void>;
   reload: () => Promise<void>;
-  submitBatchTransactions: () => Promise<{ success: boolean; count: number; mutationIds: string[] }>;
+  submitBatchTransactions: () => Promise<{
+    success: boolean;
+    count: number;
+    mutationIds: string[];
+  }>;
   syncBatch: (mutationIds: string[]) => Promise<boolean>;
 };
 
@@ -388,7 +392,9 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     };
   }, []);
 
-  const recurringSnapshot = useRecurringExpensesStore((s) => s.recurringExpenses);
+  const recurringSnapshot = useRecurringExpensesStore(
+    (s) => s.recurringExpenses,
+  );
 
   const budgetRecalcOptions = useCallback(
     (tc: TaxConfig | null | undefined) => ({
@@ -430,7 +436,10 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         recurringSnapshot,
         taxConfig ?? undefined,
       );
-    const recurringByBucket = recurringTotalsByBucket(recurringSnapshot, new Date());
+    const recurringByBucket = recurringTotalsByBucket(
+      recurringSnapshot,
+      new Date(),
+    );
 
     // Bucket limits are shares of disposable income only when it is positive;
     // non-positive disposable must not produce negative limits for consumers.
@@ -523,25 +532,41 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     }) => {
       if (!userId) return;
       const latestState = await loadBudgetState(userId);
-      const current = latestState ?? useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const current =
+        latestState ??
+        useBudgetStore.getState().state ??
+        createEmptyBudgetState(userId);
       const now = new Date();
       const { start, end } = computePaydayCycle(now, paydayDay);
 
-      const cycleId = uuidv4();
-      const createdAt = new Date().toISOString();
+      const startDateStr = toISODate(start);
+      const endDateStr = toISODate(end);
+      const existingCycle = current.cycles.find(
+        (c) => c.startDate === startDateStr && c.endDate === endDateStr,
+      );
+
+      const cycleId = existingCycle ? existingCycle.id : uuidv4();
+      const createdAt = existingCycle
+        ? existingCycle.createdAt
+        : new Date().toISOString();
+
       const cycle: BudgetCycle = {
         id: cycleId,
         userId,
-        startDate: toISODate(start),
-        endDate: toISODate(end),
+        startDate: startDateStr,
+        endDate: endDateStr,
         paydayDay,
         needsPct,
         wantsPct,
         savingsPct,
-        rolloverFromPrevious: { needs: 0, wants: 0, savings: 0 },
-        reallocationApplied: false,
+        rolloverFromPrevious: existingCycle?.rolloverFromPrevious ?? {
+          needs: 0,
+          wants: 0,
+          savings: 0,
+        },
+        reallocationApplied: existingCycle?.reallocationApplied ?? false,
         createdAt,
-        updatedAt: createdAt,
+        updatedAt: new Date().toISOString(),
       };
 
       let allNames: { bucket: BudgetBucket; name: string }[] = [];
@@ -734,7 +759,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     paydayDay: number;
   } | null => {
     if (!userId) return null;
-    const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+    const current =
+      useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
     const prevCycle = activeCycle ?? current.cycles[0];
     if (!prevCycle) return null;
 
@@ -830,7 +856,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       },
     ): Promise<{ newCycleId: string } | null> => {
       if (!userId) return null;
-      const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const current =
+        useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
       const prevCycle = activeCycle ?? current.cycles[0];
       if (!prevCycle) return null;
 
@@ -965,7 +992,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
    */
   const createNewCycleImmediate = useCallback(async () => {
     if (!userId) return null;
-    const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+    const current =
+      useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
     const prevCycle = activeCycle ?? current.cycles[0];
     if (!prevCycle) return null;
 
@@ -1097,7 +1125,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       applyDeductions: boolean;
     }) => {
       if (!userId) return;
-      const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const current =
+        useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
       const now = new Date().toISOString();
       const source: IncomeSource = {
         id: uuidv4(),
@@ -1170,7 +1199,15 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         return { syncError: syncResult.error };
       }
     },
-    [activeCycle, budgetRecalcOptions, enqueueAndTry, persistState, state, taxConfig, userId],
+    [
+      activeCycle,
+      budgetRecalcOptions,
+      enqueueAndTry,
+      persistState,
+      state,
+      taxConfig,
+      userId,
+    ],
   );
 
   const updateIncomeSource = useCallback(
@@ -1184,7 +1221,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       },
     ) => {
       if (!userId) return;
-      const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const current =
+        useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
       const now = new Date().toISOString();
 
       const updatedIncome = current.incomeSources.map((s) => {
@@ -1263,13 +1301,22 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       }
       if (syncError) return { syncError };
     },
-    [activeCycle, budgetRecalcOptions, enqueueAndTry, persistState, state, taxConfig, userId],
+    [
+      activeCycle,
+      budgetRecalcOptions,
+      enqueueAndTry,
+      persistState,
+      state,
+      taxConfig,
+      userId,
+    ],
   );
 
   const deleteIncomeSource = useCallback(
     async (incomeSourceId: string) => {
       if (!userId) return;
-      const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const current =
+        useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
       const activeCycleId = activeCycle?.id ?? current.cycles[0]?.id;
 
       const nextIncome = current.incomeSources.filter(
@@ -1328,7 +1375,15 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         return { syncError: syncResult.error };
       }
     },
-    [activeCycle, budgetRecalcOptions, enqueueAndTry, persistState, state, taxConfig, userId],
+    [
+      activeCycle,
+      budgetRecalcOptions,
+      enqueueAndTry,
+      persistState,
+      state,
+      taxConfig,
+      userId,
+    ],
   );
 
   const addTransaction = useCallback(
@@ -1348,7 +1403,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       debtId?: string | null;
     }) => {
       if (!userId) return { mutationId: null };
-      const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const current =
+        useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
       const cycleId = activeCycle?.id ?? current.cycles[0]?.id;
       if (!cycleId) {
         return { mutationId: null };
@@ -1448,7 +1504,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       },
     ) => {
       if (!userId) return;
-      const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const current =
+        useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
       const existing = current.transactions.find((t) => t.id === id);
       if (!existing) return;
 
@@ -1492,7 +1549,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
   const deleteTransaction = useCallback(
     async (id: string) => {
       if (!userId) return;
-      const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const current =
+        useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
       const existing = current.transactions.find((t) => t.id === id);
       if (!existing) return;
 
@@ -1527,7 +1585,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       icon?: import("../constants/categoryIcons").CategoryIconName;
     }) => {
       if (!userId) return;
-      const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const current =
+        useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
       const activeCycleId = activeCycle?.id ?? current.cycles[0]?.id;
       if (!activeCycleId) return;
 
@@ -1593,7 +1652,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
   const deleteCategory = useCallback(
     async (categoryId: string) => {
       if (!userId) return;
-      const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const current =
+        useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
 
       // Remove category locally + null out any tx categoryId
       const next: BudgetState = {
@@ -1620,7 +1680,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     async (categoryIds: string[]) => {
       if (!userId || categoryIds.length === 0) return;
       const idsSet = new Set(categoryIds);
-      const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const current =
+        useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
 
       const next: BudgetState = {
         ...current,
@@ -1654,7 +1715,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       icon?: import("../constants/categoryIcons").CategoryIconName,
     ) => {
       if (!userId) return;
-      const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const current =
+        useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
       const now = new Date().toISOString();
       const category = current.categories.find((c) => c.id === categoryId);
       const isEmergencyCategory =
@@ -1703,7 +1765,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
   const updateCycleDay = useCallback(
     async (nextPaydayDay: number) => {
       if (!userId) return;
-      const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const current =
+        useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
       const currentCycle = activeCycle ?? current.cycles[0];
       if (!currentCycle) return;
 
@@ -1775,7 +1838,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       options?: { reallocationReason?: string },
     ): Promise<BudgetState | void> => {
       if (!userId) return;
-      const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const current =
+        useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
       const cycle = current.cycles.find((c) => c.id === cycleId);
       if (!cycle) return;
       const now = new Date().toISOString();
@@ -1831,7 +1895,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
   const updateBudgetEngineMode = useCallback(
     async (mode: BudgetEngineMode) => {
       if (!userId) return;
-      const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const current =
+        useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
       const normalized = normalizeBudgetEngineMode(mode);
       const now = new Date().toISOString();
       const next: BudgetState = {
@@ -1996,8 +2061,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
   const recalculateBudget = useCallback(
     async (overrideState?: BudgetState) => {
       if (!userId) return;
-      const current =
-        overrideState ?? (await loadBudgetState(userId)) ?? state;
+      const current = overrideState ?? (await loadBudgetState(userId)) ?? state;
       const next = recalculateBudgetFromAllocations(
         current,
         budgetRecalcOptions(taxConfig),
@@ -2020,7 +2084,15 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         });
       }
     },
-    [activeCycle?.id, budgetRecalcOptions, enqueueAndTry, persistState, state, taxConfig, userId],
+    [
+      activeCycle?.id,
+      budgetRecalcOptions,
+      enqueueAndTry,
+      persistState,
+      state,
+      taxConfig,
+      userId,
+    ],
   );
 
   const applyTemplate = useCallback(
@@ -2029,7 +2101,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       allocation: { needsPct: number; wantsPct: number; savingsPct: number },
     ) => {
       if (!userId) return;
-      const current = useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const current =
+        useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
       const cycle = current.cycles.find((c) => c.id === cycleId);
       if (!cycle) return;
       const now = new Date().toISOString();
@@ -2102,10 +2175,15 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     await reload();
   }, [reload, userId]);
 
-  const submitBatchTransactions = useCallback(async (): Promise<{ success: boolean; count: number; mutationIds: string[] }> => {
+  const submitBatchTransactions = useCallback(async (): Promise<{
+    success: boolean;
+    count: number;
+    mutationIds: string[];
+  }> => {
     if (!userId) return { success: false, count: 0, mutationIds: [] };
     const drafts = useBudgetStore.getState().getDraftBatchTransactions();
-    if (drafts.length === 0) return { success: true, count: 0, mutationIds: [] };
+    if (drafts.length === 0)
+      return { success: true, count: 0, mutationIds: [] };
 
     let successCount = 0;
     const mutationIds: string[] = [];
@@ -2117,7 +2195,9 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           categoryId: draft.categoryId,
           amount: draft.amount,
           note: draft.note ?? undefined,
-          occurredAt: draft.occurredAt ? new Date(draft.occurredAt) : new Date(),
+          occurredAt: draft.occurredAt
+            ? new Date(draft.occurredAt)
+            : new Date(),
         });
         if (mutationId) {
           successCount++;
@@ -2136,20 +2216,26 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     };
   }, [addTransaction, userId]);
 
-  const syncBatch = useCallback(async (mutationIds: string[]) => {
-    if (!userId || mutationIds.length === 0) return false;
-    const { setSyncing } = useBudgetStore.getState();
-    setSyncing(true);
-    try {
-      const result = await flushBudgetQueueUntilMutationIdsCleared(userId, mutationIds);
-      await refreshQueue();
-      return result.ok;
-    } catch {
-      return false;
-    } finally {
-      setSyncing(false);
-    }
-  }, [userId, refreshQueue]);
+  const syncBatch = useCallback(
+    async (mutationIds: string[]) => {
+      if (!userId || mutationIds.length === 0) return false;
+      const { setSyncing } = useBudgetStore.getState();
+      setSyncing(true);
+      try {
+        const result = await flushBudgetQueueUntilMutationIdsCleared(
+          userId,
+          mutationIds,
+        );
+        await refreshQueue();
+        return result.ok;
+      } catch {
+        return false;
+      } finally {
+        setSyncing(false);
+      }
+    },
+    [userId, refreshQueue],
+  );
 
   return {
     state,

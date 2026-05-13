@@ -29,6 +29,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { AppDialog } from "@/components/AppDialog";
 import Animated, { FadeInDown, useReducedMotion } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -258,117 +259,67 @@ export default function AnnouncementInboxScreen() {
         />
       )}
 
-      <Dialog isOpen={detailItem != null} onOpenChange={handleDialogOpenChange}>
-        <Dialog.Portal>
-          <Dialog.Overlay className="bg-black/65" />
-          {Platform.OS === "ios" && (
-            <GlassView
-              intensity={7}
-              tint="dark"
-              className="absolute inset-0"
-              onTouchEnd={() => void closeDetail()}
-            />
-          )}
-          {/*
-           * Same shell as AppDialog / EditCategoryLimitModal: KeyboardAvoidingView + horizontal
-           * padding so the sheet never sits flush to the display edges (portal p-5 alone is not
-           * always enough with FullWindowOverlay on iOS).
-           */}
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-            style={{
-              flex: 1,
-              width: "100%",
-              justifyContent: "center",
-              alignItems: "center",
-              paddingTop: insets.top + 16,
-              paddingBottom: insets.bottom + 16,
-              paddingHorizontal: 16,
-            }}
+      <AppDialog
+        visible={detailItem != null}
+        onOpenChange={handleDialogOpenChange}
+        onClose={() => void closeDetail()}
+        backdropIntensity={7}
+      >
+        <View style={styles.dialogHeader}>
+          <View style={styles.dialogIconWrap}>
+            <Megaphone size={22} color="#34d399" />
+          </View>
+          <Text
+            accessibilityRole="header"
+            className="text-[20px] font-bold text-slate-100 leading-6 pr-10 flex-1"
+            style={{ fontFamily: "Figtree-Bold" }}
           >
-            <Dialog.Content
-              className="max-w-[360px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
-              style={[styles.contentShadow, styles.dialogContentWidth]}
+            {detailItem?.title ?? ""}
+          </Text>
+        </View>
+
+        {detailItem?.sent_at ? (
+          <Text
+            style={{ fontFamily: "Figtree-Regular" }}
+            className="text-slate-500 text-xs mb-3"
+          >
+            {new Date(detailItem.sent_at).toLocaleString(undefined, {
+              dateStyle: "medium",
+              timeStyle: "short",
+            })}
+          </Text>
+        ) : null}
+
+        <Text
+          style={{ fontFamily: "Figtree-Regular" }}
+          className="text-slate-300 text-[15px] leading-[22px] mb-4"
+        >
+          {detailItem?.body ?? ""}
+        </Text>
+
+        <View className="gap-3">
+          {hasDeepLink ? (
+            <Button
+              variant="primary"
+              onPress={handleOpenDeepLink}
+              className="h-12 rounded-xl bg-emerald-500"
             >
-              <Dialog.Close
-                variant="ghost"
-                className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-slate-600/60 border border-slate-500/50"
-                iconProps={{ size: 20, color: "#e2e8f0" }}
-                onPress={() => void closeDetail()}
-                accessibilityLabel="Close"
-                accessibilityRole="button"
-              />
-              <ScrollShadow
-                color="#121621"
-                LinearGradientComponent={LinearGradient}
-              >
-                <ScrollView
-                  showsVerticalScrollIndicator
-                  bounces={false}
-                  keyboardShouldPersistTaps="handled"
-                  style={{ maxHeight: dialogScrollMaxHeight }}
-                  contentContainerStyle={styles.dialogScrollContent}
-                >
-                  <View style={styles.dialogHeader}>
-                    <View style={styles.dialogIconWrap}>
-                      <Megaphone size={22} color="#34d399" />
-                    </View>
-                    <Dialog.Title
-                      accessibilityRole="header"
-                      className="text-[20px] font-bold text-slate-100 leading-6 pr-10 flex-1"
-                      style={{ fontFamily: "Figtree-Bold" }}
-                    >
-                      {detailItem?.title ?? ""}
-                    </Dialog.Title>
-                  </View>
-
-                  {detailItem?.sent_at ? (
-                    <Text
-                      style={{ fontFamily: "Figtree-Regular" }}
-                      className="text-slate-500 text-xs mb-3"
-                    >
-                      {new Date(detailItem.sent_at).toLocaleString(undefined, {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
-                    </Text>
-                  ) : null}
-
-                  <Text
-                    style={{ fontFamily: "Figtree-Regular" }}
-                    className="text-slate-300 text-[15px] leading-[22px] mb-4"
-                  >
-                    {detailItem?.body ?? ""}
-                  </Text>
-
-                  <View className="gap-3">
-                    {hasDeepLink ? (
-                      <Button
-                        variant="primary"
-                        onPress={handleOpenDeepLink}
-                        className="h-12 rounded-xl bg-emerald-500"
-                      >
-                        <Button.Label className="text-slate-900 font-semibold">
-                          Open in app
-                        </Button.Label>
-                      </Button>
-                    ) : null}
-                    <Button
-                      variant="outline"
-                      onPress={() => void closeDetail()}
-                      className="h-12 rounded-xl border-slate-600"
-                    >
-                      <Button.Label className="text-slate-200 font-semibold">
-                        Done
-                      </Button.Label>
-                    </Button>
-                  </View>
-                </ScrollView>
-              </ScrollShadow>
-            </Dialog.Content>
-          </KeyboardAvoidingView>
-        </Dialog.Portal>
-      </Dialog>
+              <Button.Label className="text-slate-900 font-semibold">
+                Open in app
+              </Button.Label>
+            </Button>
+          ) : null}
+          <Button
+            variant="outline"
+            onPress={() => void closeDetail()}
+            className="h-12 rounded-xl border-slate-600"
+          >
+            <Button.Label className="text-slate-200 font-semibold">
+              Done
+            </Button.Label>
+          </Button>
+        </View>
+      </AppDialog>
     </View>
   );
 }

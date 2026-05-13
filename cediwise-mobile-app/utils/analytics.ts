@@ -65,4 +65,30 @@ export const analytics = {
   tourSkippedCoreBudget: (payload?: EventPayload) => {
     emit("TourSkipped_CoreBudget", payload);
   },
+  aiAnalysisRequested: (payload?: EventPayload) =>
+    emit("ai_analysis_requested", payload),
+  aiAnalysisReceived: (payload?: EventPayload) =>
+    emit("ai_analysis_received", payload),
+  aiAnalysisError: (payload?: EventPayload) =>
+    emit("ai_analysis_error", payload),
+  aiSummaryTapped: (payload?: EventPayload) =>
+    emit("ai_summary_tapped", payload),
+  aiChatSessionOpened: (payload?: EventPayload) =>
+    emit("ai_chat_session_opened", payload),
+  aiChatMessageSent: (payload?: EventPayload) =>
+    emit("ai_chat_message_sent", payload),
+  aiChatMessageReceived: (payload?: EventPayload) =>
+    emit("ai_chat_message_received", payload),
+  aiChatLimitReached: (payload?: EventPayload) =>
+    emit("ai_chat_limit_reached", payload),
+  aiQuickPromptTapped: (payload?: EventPayload) =>
+    emit("ai_quick_prompt_tapped", payload),
+  aiSuggestionChipTapped: (payload?: EventPayload) =>
+    emit("ai_suggestion_chip_tapped", payload),
+  aiActionConfirmed: (payload?: EventPayload) =>
+    emit("ai_action_confirmed", payload),
+  aiActionCancelled: (payload?: EventPayload) =>
+    emit("ai_action_cancelled", payload),
+  track: (eventName: string, payload?: EventPayload) =>
+    emit(eventName, payload),
 } as const;

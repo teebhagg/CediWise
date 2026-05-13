@@ -285,5 +285,6 @@ export function vitalsToInitialDraft(
     goalType: vitals.primary_goal ?? null,
     goalAmount: "",
     goalTimeline: "",
+    aiSuggestionsApplied: false,
   };
 }

@@ -18,11 +18,11 @@ export type AppDialogProps = {
   onOpenChange: (open: boolean) => void;
   /** Optional icon shown to the left of the title in the header */
   icon?: React.ReactNode;
-  title: string;
-  description: string;
+  title?: string;
+  description?: string;
   /** Primary action (top button): emerald bg, dark text */
-  primaryLabel: string;
-  onPrimary: () => void | Promise<void>;
+  primaryLabel?: string;
+  onPrimary?: () => void | Promise<void>;
   /** Secondary action (bottom button): dark grey bg, white text */
   secondaryLabel?: string;
   onSecondary?: () => void;
@@ -36,6 +36,12 @@ export type AppDialogProps = {
   primaryLabelClassName?: string;
   /** Disable the primary button. */
   primaryDisabled?: boolean;
+  /** Override the glass backdrop intensity on iOS */
+  backdropIntensity?: number;
+  /** Custom header component to replace the default icon + title row */
+  customHeader?: React.ReactNode;
+  /** Optional style for the icon container */
+  iconContainerStyle?: any;
 };
 
 export function AppDialog({
@@ -54,13 +60,10 @@ export function AppDialog({
   primaryButtonClassName = 'bg-emerald-500',
   primaryLabelClassName = 'text-slate-950',
   primaryDisabled = false,
+  backdropIntensity = 7,
+  customHeader,
+  iconContainerStyle,
 }: AppDialogProps) {
-  // Track keyboard height so we can pass it into KeyboardCenteringScrollView.
-  // AppDialog uses KeyboardAvoidingView which already resizes the layout, so the
-  // scroll view's onLayout height will reflect the reduced available space.
-  // We do NOT need to pass keyboardHeight to KeyboardCenteringScrollView here —
-  // KAV handles the offset, and measureLayout will compute positions within the
-  // already-shrunk view.
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
@@ -99,7 +102,7 @@ export function AppDialog({
   };
 
   const handlePrimary = async () => {
-    if (loading || primaryDisabled) return;
+    if (loading || primaryDisabled || !onPrimary) return;
     try {
       const ret = onPrimary();
       if (ret != null && typeof (ret as Promise<unknown>).then === "function") {
@@ -111,7 +114,7 @@ export function AppDialog({
         // ignore
       }
     } catch {
-      // Caller failed (e.g. async validation/submit); no success haptic
+      // Caller failed
     }
   };
 
@@ -122,23 +125,14 @@ export function AppDialog({
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="bg-black/65" />
-        {Platform.OS === "ios" && (
+        {Platform.OS === "ios" ? (
           <GlassView
-            intensity={7}
+            intensity={backdropIntensity}
             tint="dark"
             className="absolute inset-0"
             onTouchEnd={handleSecondary}
           />
-        )}
-        {/*
-         * KeyboardAvoidingView shrinks the available space when the keyboard appears.
-         * We keep `justifyContent: 'center'` always — the dialog stays centered in
-         * the remaining space. This avoids the layout jump that occurred when switching
-         * between 'center' and 'flex-end'.
-         *
-         * KeyboardCenteringScrollView inside the dialog handles scrolling the focused
-         * field into view within that shrunk space.
-         */}
+        ) : null}
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{
@@ -163,47 +157,51 @@ export function AppDialog({
               />
             )}
             <ScrollShadow color="#121621" LinearGradientComponent={LinearGradient}>
-              {/*
-               * keyboardHeight is NOT passed here. AppDialog's parent KeyboardAvoidingView
-               * already shrinks the layout, so KeyboardCenteringScrollView's onLayout
-               * height is already the reduced visible height — no need to subtract keyboard
-               * height a second time.
-               */}
               <KeyboardCenteringScrollView
                 showsVerticalScrollIndicator={false}
                 bounces={false}
               >
                 <View style={[styles.content, isKeyboardVisible && { paddingVertical: 20 }]}>
-                  {/* Header: icon + title */}
-                  <View style={styles.header}>
-                    {icon ? <View style={styles.iconWrap}>{icon}</View> : null}
-                    <Text numberOfLines={2} style={styles.title}>
-                      {title}
-                    </Text>
-                  </View>
+                  {/* Header */}
+                  {customHeader ? (
+                    <View style={styles.header}>{customHeader}</View>
+                  ) : (title || icon) ? (
+                    <View style={styles.header}>
+                      {icon ? <View style={[styles.iconWrap, iconContainerStyle]}>{icon}</View> : null}
+                      {title ? (
+                        <Text numberOfLines={2} style={styles.title}>
+                          {title}
+                        </Text>
+                      ) : null}
+                    </View>
+                  ) : null}
 
-                  <Text style={styles.description}>{description}</Text>
+                  {description ? (
+                    <Text style={styles.description}>{description}</Text>
+                  ) : null}
 
                   {children ? <View style={styles.extra}>{children}</View> : null}
 
-                  {/* Actions: vertical stack, primary on top, secondary below */}
+                  {/* Actions */}
                   {loading ? (
                     <View style={styles.loaderWrap}>
                       <ActivityIndicator size="large" color="#10b981" />
                     </View>
-                  ) : (
+                  ) : (primaryLabel || secondaryLabel) ? (
                     <View style={styles.actions}>
+                      {primaryLabel && (
                         <Button
-                        variant="primary"
-                        size="md"
-                        onPress={handlePrimary}
-                        isDisabled={primaryDisabled || loading}
-                        className={`w-full h-12 rounded-xl ${primaryButtonClassName} ${(primaryDisabled || loading) ? 'opacity-50' : ''}`}
-                      >
-                        <Button.Label className={`font-semibold ${primaryLabelClassName}`}>
-                          {primaryLabel}
-                        </Button.Label>
-                      </Button>
+                          variant="primary"
+                          size="md"
+                          onPress={handlePrimary}
+                          isDisabled={primaryDisabled || loading}
+                          className={`w-full h-12 rounded-xl ${primaryButtonClassName} ${(primaryDisabled || loading) ? 'opacity-50' : ''}`}
+                        >
+                          <Button.Label className={`font-semibold ${primaryLabelClassName}`}>
+                            {primaryLabel}
+                          </Button.Label>
+                        </Button>
+                      )}
                       {secondaryLabel && (
                         <Button
                           variant="ghost"
@@ -217,7 +215,7 @@ export function AppDialog({
                         </Button>
                       )}
                     </View>
-                  )}
+                  ) : null}
                 </View>
               </KeyboardCenteringScrollView>
             </ScrollShadow>

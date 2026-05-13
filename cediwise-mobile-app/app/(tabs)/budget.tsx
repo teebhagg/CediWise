@@ -1,13 +1,12 @@
+import { AddDebtModal } from "@/components/AddDebtModal";
 import {
   BudgetLoadingSkeleton,
   InlineSyncPill,
 } from "@/components/BudgetLoading";
-import { AddDebtModal } from "@/components/AddDebtModal";
-import { CashFlowWidget } from "@/components/features/budget/CashFlowWidget";
-import { SURVIVE_THE_MONTH_CASH_FLOW_UI_ENABLED } from "@/constants/featureFlags";
 import { Card } from "@/components/Card";
 import { DeficitResolutionModal } from "@/components/DeficitResolutionModal";
 import { RolloverAllocationModal } from "@/components/RolloverAllocationModal";
+import { AIChatFAB } from "@/components/features/ai/AIChatFAB";
 import { BudgetExpensesCard } from "@/components/features/budget/BudgetExpensesCard";
 import { BudgetModals } from "@/components/features/budget/BudgetModals";
 import { BudgetOverviewCard } from "@/components/features/budget/BudgetOverviewCard";
@@ -16,15 +15,22 @@ import { BudgetPersonalizationCard } from "@/components/features/budget/BudgetPe
 import { BudgetQuickActions } from "@/components/features/budget/BudgetQuickActions";
 import { BudgetReallocationBanner } from "@/components/features/budget/BudgetReallocationBanner";
 import { BudgetSetupCycleCard } from "@/components/features/budget/BudgetSetupCycleCard";
+
 import { BudgetToolsCard } from "@/components/features/budget/BudgetToolsCard";
+import { CashFlowWidget } from "@/components/features/budget/CashFlowWidget";
 import { MigrationPrompt } from "@/components/features/budget/MigrationPrompt";
 import { StartNewCycleCard } from "@/components/features/budget/StartNewCycleCard";
 import { useBudgetScreenState } from "@/components/features/budget/useBudgetScreenState";
+import { SURVIVE_THE_MONTH_CASH_FLOW_UI_ENABLED } from "@/constants/featureFlags";
 import { useTierContext } from "@/contexts/TierContext";
 import { useTourContext } from "@/contexts/TourContext";
+import { useAIBudgetAnalysis } from "@/hooks/useAIBudgetAnalysis";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useConnectivity } from "@/hooks/useConnectivity";
 import { useRecurringExpenses } from "@/hooks/useRecurringExpenses";
+import { useAIChatFabTransitionStore } from "@/stores/aiChatFabTransitionStore";
+import { useAIChatShellStore } from "@/stores/aiChatShellStore";
+import { analytics } from "@/utils/analytics";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Plus, Settings, WifiOff } from "lucide-react-native";
@@ -51,7 +57,6 @@ import {
 } from "@/components/CediWiseHeader";
 import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
 import { BUDGET_TOUR_READY_TIMEOUT_MS } from "@/constants/tourTokens";
-import { analytics } from "@/utils/analytics";
 import { computeNextCycleFromPrevious } from "@/utils/nextCycle";
 import {
   filterEffectiveRecurringExpenses,
@@ -72,6 +77,7 @@ export default function BudgetScreen() {
     ui,
     modals,
   } = useBudgetScreenState();
+  const { canAccessBudget } = useTierContext();
   const { recurringExpenses } = useRecurringExpenses();
 
   const nextCycleDate = useMemo(() => {
@@ -85,7 +91,7 @@ export default function BudgetScreen() {
     const durationDays =
       Math.round(
         (new Date(ac.endDate).getTime() - new Date(ac.startDate).getTime()) /
-          86400000,
+        86400000,
       ) + 1;
     const useMonths = durationDays > 14;
     return computeNextCycleFromPrevious(
@@ -110,7 +116,16 @@ export default function BudgetScreen() {
     const totalMonthly = items.reduce((s, x) => s + x.monthlyAmount, 0);
     return { totalMonthly, items };
   }, [recurringExpenses, nextCycleDate]);
-  const { canAccessBudget } = useTierContext();
+
+  const aiBudget = useAIBudgetAnalysis({
+    userId: user?.id,
+    activeCycleId: derived.activeCycleId,
+    budgetState: budget.state,
+    enabled: !!user && canAccessBudget && derived.cycleIsSet,
+  });
+
+  const chatRemaining = useAIChatShellStore((s) => s.remainingChats);
+
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((event) => {
@@ -319,9 +334,9 @@ export default function BudgetScreen() {
           <View className="gap-4">
             {/* Onboarding: Personalize first (new users who haven't done vitals) */}
             {!!user &&
-            !personalization.isLoading &&
-            !personalization.setupCompleted &&
-            !personalization.hasProfile ? (
+              !personalization.isLoading &&
+              !personalization.setupCompleted &&
+              !personalization.hasProfile ? (
               <TourZone
                 stepKey="state1-budget-personalization"
                 name="Set up your budget foundation"
@@ -359,8 +374,8 @@ export default function BudgetScreen() {
                 cycleTransactions={
                   derived.activeCycleId
                     ? (budget.state?.transactions ?? []).filter(
-                        (t) => t.cycleId === derived.activeCycleId
-                      )
+                      (t) => t.cycleId === derived.activeCycleId
+                    )
                     : []
                 }
                 cycleStartDate={derived.activeCycle?.startDate ?? null}
@@ -511,6 +526,16 @@ export default function BudgetScreen() {
                       }
                       healthSummary={ui.budgetHealthScore?.summary}
                       canAccessBudget={canAccessBudget}
+                      aiSummary={aiBudget.analysis?.summary ?? null}
+                      aiSummaryLoading={aiBudget.isLoading}
+                      onOpenAIChat={(initialMessage) => {
+                        analytics.aiSummaryTapped({ source: "overview" });
+                        useAIChatFabTransitionStore.getState().markOpenedFromNonFab();
+                        router.navigate({
+                          pathname: "/budget/ai-chat",
+                          params: { initialMessage },
+                        });
+                      }}
                     />
                   </View>
                 </TourZone>
@@ -566,10 +591,18 @@ export default function BudgetScreen() {
                 </TourZone>
 
                 <BudgetToolsCard visible={!!user && derived.cycleIsSet} />
+
               </>
             )}
           </View>
         </Animated.ScrollView>
+
+        {user && canAccessBudget && derived.cycleIsSet ? (
+          <AIChatFAB
+            remaining={chatRemaining}
+            disabled={!derived.activeCycleId}
+          />
+        ) : null}
       </KeyboardAvoidingView>
 
       <BudgetModals
@@ -687,11 +720,11 @@ export default function BudgetScreen() {
         initialValues={
           modals.pendingAddDebtFromDeficit
             ? {
-                name: `Cycle overrun – ${modals.pendingAddDebtFromDeficit.cycleLabel}`,
-                totalAmount: modals.pendingAddDebtFromDeficit.deficitAmount,
-                remainingAmount: modals.pendingAddDebtFromDeficit.deficitAmount,
-                monthlyPayment: modals.pendingAddDebtFromDeficit.deficitAmount,
-              }
+              name: `Cycle overrun – ${modals.pendingAddDebtFromDeficit.cycleLabel}`,
+              totalAmount: modals.pendingAddDebtFromDeficit.deficitAmount,
+              remainingAmount: modals.pendingAddDebtFromDeficit.deficitAmount,
+              monthlyPayment: modals.pendingAddDebtFromDeficit.deficitAmount,
+            }
             : null
         }
         sourceCycleId={modals.pendingAddDebtFromDeficit?.cycleId ?? null}
@@ -715,7 +748,7 @@ export default function BudgetScreen() {
         paydayDay={ui.pendingRollover?.paydayDay ?? 1}
         nextCycleRecurring={
           nextCycleRecurringSummary.totalMonthly > 0 &&
-          nextCycleRecurringSummary.items.length > 0
+            nextCycleRecurringSummary.items.length > 0
             ? nextCycleRecurringSummary
             : null
         }

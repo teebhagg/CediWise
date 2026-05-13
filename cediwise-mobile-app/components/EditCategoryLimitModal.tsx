@@ -86,8 +86,20 @@ export function EditCategoryLimitModal({
   return (
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="bg-black/65" />
-        {Platform.OS === 'ios' && <GlassView intensity={7} tint="dark" className="absolute inset-0" onTouchEnd={handleClose} />}
+        <Dialog.Overlay className="bg-transparent" />
+        {Platform.OS === "ios" ? (
+          <GlassView
+            intensity={40}
+            tint="dark"
+            className="absolute inset-0"
+            onTouchEnd={handleClose}
+          />
+        ) : (
+          <View
+            style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.8)" }]}
+            onTouchEnd={handleClose}
+          />
+        )}
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ 
@@ -100,18 +112,18 @@ export function EditCategoryLimitModal({
           }}
         >
           <Dialog.Content
-            className="max-w-[400px] w-full rounded-2xl overflow-hidden bg-[rgba(18,22,33,0.98)] p-0"
+            className="max-w-[400px] w-full rounded-2xl overflow-hidden bg-[#151518] p-0"
             style={[styles.contentShadow, isKeyboardVisible && { maxHeight: '100%' }]}
           >
             <Dialog.Close
               variant="ghost"
-              className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-slate-600/60 border border-slate-500/50"
+              className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-white/5 border border-white/10"
               iconProps={{ size: 20, color: "#e2e8f0" }}
               onPress={handleClose}
               accessibilityLabel="Close"
               accessibilityRole="button"
             />
-            <ScrollShadow color="#121621" LinearGradientComponent={LinearGradient} className="flex-1">
+            <ScrollShadow color="#151518" LinearGradientComponent={LinearGradient} className="flex-1">
               <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
                 <View style={[styles.content, isKeyboardVisible && { paddingVertical: 16 }]}>
                   <Dialog.Title className="text-[22px] font-bold text-slate-200 text-center mb-0.5">

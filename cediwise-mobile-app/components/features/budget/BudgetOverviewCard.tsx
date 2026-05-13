@@ -4,11 +4,11 @@ import * as Haptics from 'expo-haptics';
 import { Lock } from 'lucide-react-native';
 import { Image } from 'expo-image';
 import Animated, { FadeIn, LinearTransition, useSharedValue, useAnimatedStyle, withTiming, withDelay } from 'react-native-reanimated';
-
-const FAB_AVATAR = require("@/assets/images/my-notion-face-transparent.png");
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { Card } from '../../Card';
 import { ProgressBar } from './ProgressBar';
+
+const FAB_AVATAR = require("@/assets/images/my-notion-face-transparent.png");
 
 interface BudgetCycle {
   paydayDay: number;

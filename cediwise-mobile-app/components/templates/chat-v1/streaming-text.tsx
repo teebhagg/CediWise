@@ -30,7 +30,7 @@ function FadeChar({ char, delay }: { char: string; delay: number }) {
       delay,
       withTiming(0, { duration: FADE_DURATION, easing: Easing.out(Easing.ease) })
     );
-  }, [delay]);
+  }, [delay, opacity, translateY]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

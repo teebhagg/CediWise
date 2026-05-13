@@ -460,7 +460,7 @@ export default function VitalsWizard() {
       log.error("Error fetching AI suggestions", e);
       setError(e instanceof Error ? e.message : "Failed to generate suggestions. Please try again.");
     }
-  }, [ai, canContinue, draft, router, updateRawSuggestions]);
+  }, [ai, canContinue, draft, updateRawSuggestions]);
 
   useEffect(() => {
     const showBack = editMode || draft.step > 0;

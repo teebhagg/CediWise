@@ -1,8 +1,11 @@
-# Build Android AAB via EAS (local) and deploy to Google Play Store.
-# Uses EAS --local to avoid cloud build credits. Creates GitHub Release with notes from distributions/{version}.txt (max 500 chars).
+# Build Android AAB via EAS (cloud) and submit to Google Play Store (--auto-submit).
+# Mirrors the iOS workflow pattern: single `eas build ... --auto-submit` after injecting env into eas.json.
 # Required secrets: EXPO_TOKEN, GOOGLE_SERVICE_KEY, EXPO_PUBLIC_SUPABASE_URL,
 #   EXPO_PUBLIC_SUPABASE_KEY, EXPO_PUBLIC_SUPABASE_ANON_KEY, FIREBASE_PROJECT_ID
 # Trigger: push to main, push tag v*, or manual workflow_dispatch.
+#
+# Local EAS build path (npm run build:android:aab + eas submit --path dist/...) is commented below
+# for when you want to avoid cloud build credits.
 name: Build Android & Deploy to Play Store
 
 permissions:
@@ -117,7 +120,7 @@ jobs:
               f.write(f"requires_update={'true' if requires_update else 'false'}\n")
           PY
 
-  build:
+  build-and-submit:
     needs: check-version
     if: needs.check-version.outputs.should_build == 'true'
     runs-on: ubuntu-latest
@@ -155,11 +158,13 @@ jobs:
           EXPO_PUBLIC_POSTHOG_API_KEY: ${{ secrets.EXPO_PUBLIC_POSTHOG_API_KEY }}
           EXPO_PUBLIC_POSTHOG_HOST: ${{ secrets.EXPO_PUBLIC_POSTHOG_HOST }}
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          
+
         run: |
           node -e "
           const fs = require('fs');
           const eas = JSON.parse(fs.readFileSync('eas.json', 'utf8'));
+          eas.build = eas.build || {};
+          eas.build.production = eas.build.production || {};
           eas.build.production.env = {
             EXPO_PUBLIC_SUPABASE_URL: process.env.EXPO_PUBLIC_SUPABASE_URL,
             EXPO_PUBLIC_SUPABASE_KEY: process.env.EXPO_PUBLIC_SUPABASE_KEY,
@@ -176,21 +181,29 @@ jobs:
           fs.writeFileSync('eas.json', JSON.stringify(eas, null, 2));
           "
 
-      - name: Build Android AAB (Play Store)
+      # Expo cloud build + Play submission (same pattern as build-ios-release.yml).
+      - name: Build and auto-submit Android
         working-directory: ${{ env.MOBILE_APP_DIR }}
-        run: npm run build:android:aab
+        run: eas build --platform android --profile production --auto-submit --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
-          EXPO_PUBLIC_SUPABASE_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_KEY }}
-          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
-          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
 
-      - name: Submit to Google Play Store
-        working-directory: ${{ env.MOBILE_APP_DIR }}
-        run: eas submit --path "dist/CediWise-${{ needs.check-version.outputs.version }}.aab" --platform android --profile production --non-interactive
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      # --- Local EAS build + submit (no cloud credits; requires Docker on runner) ---
+      # - name: Build Android AAB (Play Store, local)
+      #   working-directory: ${{ env.MOBILE_APP_DIR }}
+      #   run: npm run build:android:aab
+      #   env:
+      #     EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      #     EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+      #     EXPO_PUBLIC_SUPABASE_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_KEY }}
+      #     EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+      #     FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+      #
+      # - name: Submit to Google Play Store (local artifact)
+      #   working-directory: ${{ env.MOBILE_APP_DIR }}
+      #   run: eas submit --path "dist/CediWise-${{ needs.check-version.outputs.version }}.aab" --platform android --profile production --non-interactive
+      #   env:
+      #     EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
       # - name: Create GitHub Release
       #   run: |

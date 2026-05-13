@@ -3,8 +3,6 @@ import { formatCurrency } from "@/utils/formatCurrency";
 import { ChevronDown, ChevronUp } from "lucide-react-native";
 import { Image } from "expo-image";
 import { useMemo, useState } from "react";
-
-const FAB_AVATAR = require("@/assets/images/my-notion-face-transparent.png");
 import {
   LayoutAnimation,
   Platform,
@@ -14,6 +12,8 @@ import {
   UIManager,
   View,
 } from "react-native";
+
+const FAB_AVATAR = require("@/assets/images/my-notion-face-transparent.png");
 
 if (
   Platform.OS === "android" &&

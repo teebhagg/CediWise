@@ -65,16 +65,6 @@ const userBubbleShadow = Platform.select<ViewStyle>({
   android: { elevation: 8 },
 });
 
-const assistantBubbleShadow = Platform.select<ViewStyle>({
-  ios: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-  },
-  android: { elevation: 4 },
-});
-
 function parseOccurredAt(iso?: string): Date {
   const t = Date.parse(String(iso ?? ""));
   return Number.isFinite(t) ? new Date(t) : new Date();
@@ -125,7 +115,6 @@ export function AIUnifiedChatPanel(props: AIUnifiedChatPanelProps) {
     addCategory,
     updateCycleAllocation,
     recordDebtPayment,
-    createDebt,
     debts,
     debtToIncomeRatio,
     onClose,
@@ -195,7 +184,7 @@ export function AIUnifiedChatPanel(props: AIUnifiedChatPanelProps) {
       return () => {
         abortRef.current?.abort();
       };
-    }, [userId, sessionId, contextType]),
+    }, [userId, sessionId, contextType, remainingChats, setUsageMeta]),
   );
 
   const giftedUser = useMemo(

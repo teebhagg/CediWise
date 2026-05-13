@@ -122,28 +122,28 @@ export function BudgetChatV1({
   const offsetY = useRef(0);
   const layoutHeight = useRef(0);
 
-  const isUserMsg = (uid: unknown) =>
-    String(uid) === String(giftedUser._id);
+  const isUserMsg = (uid: unknown) => String(uid) === String(giftedUser._id);
 
-  const renderChatEmpty = useCallback(() => (
-    <View style={{ flex: 1, transform: [{ scaleY: -1 }] }}>
-      <View
-        style={{
-          justifyContent: "center",
-          alignItems: "center",
-          height: screen.rv({
-            compact: screen.height - topChromeHeight - 250,
-            nano: screen.height - topChromeHeight - 250,
-            medium: screen.height - topChromeHeight - 250,
-            expanded: screen.height * 0.20,
-          }),
-        }}>
-        <View style={{ alignItems: "center", gap: 12 }}>
-          <LinearGradient
-            colors={[...chatTheme.welcomeRing]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.welcomeIconRing}>
+  const renderChatEmpty = useCallback(
+    () => (
+      <View style={{ flex: 1, transform: [{ scaleY: -1 }] }}>
+        <View
+          style={{
+            justifyContent: "center",
+            alignItems: "center",
+            height: screen.rv({
+              compact: screen.height - topChromeHeight - 250,
+              nano: screen.height - topChromeHeight - 250,
+              medium: screen.height - topChromeHeight - 250,
+              expanded: screen.height * 0.2,
+            }),
+          }}>
+          <View style={{ alignItems: "center", gap: 12 }}>
+            <LinearGradient
+              colors={[...chatTheme.welcomeRing]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.welcomeIconRing}>
               <LinearGradient
                 colors={[...chatTheme.welcomeInner]}
                 style={[
@@ -162,60 +162,73 @@ export function BudgetChatV1({
                   cachePolicy="memory"
                 />
               </LinearGradient>
-          </LinearGradient>
-          <Text
+            </LinearGradient>
+            <Text
+              style={{
+                fontSize: screen.rf(28),
+                color: "#f8fafc",
+                fontFamily: fontLoaded ? "Figtree-Medium" : undefined,
+                textAlign: "center",
+                letterSpacing: -0.5,
+              }}>
+              {welcomeTitle}
+            </Text>
+            <Text
+              style={{
+                fontSize: screen.rf(16),
+                color: "#94a3b8",
+                fontFamily: fontLoaded ? "Figtree-Regular" : undefined,
+                textAlign: "center",
+                paddingHorizontal: 28,
+                lineHeight: screen.rf(24),
+              }}>
+              {welcomeSubtitle}
+            </Text>
+            {welcomeLoading && (
+              <View style={{ marginTop: 16 }}>
+                <ActivityIndicator
+                  size="small"
+                  color={chatTheme.accentEmerald}
+                />
+              </View>
+            )}
+          </View>
+          <View
             style={{
-              fontSize: screen.rf(28),
-              color: "#f8fafc",
-              fontFamily: fontLoaded ? "Figtree-Medium" : undefined,
-              textAlign: "center",
-              letterSpacing: -0.5,
+              marginTop: screen.rf(24),
+              width: "100%",
+              paddingHorizontal: screen.rf(12),
             }}>
-            {welcomeTitle}
-          </Text>
-          <Text
-            style={{
-              fontSize: screen.rf(16),
-              color: "#94a3b8",
-              fontFamily: fontLoaded ? "Figtree-Regular" : undefined,
-              textAlign: "center",
-              paddingHorizontal: 28,
-              lineHeight: screen.rf(24),
-            }}>
-            {welcomeSubtitle}
-          </Text>
-          {welcomeLoading && (
-            <View style={{ marginTop: 16 }}>
-              <ActivityIndicator size="small" color={chatTheme.accentEmerald} />
-            </View>
-          )}
-        </View>
-        <View
-          style={{
-            marginTop: screen.rf(24),
-            width: "100%",
-            paddingHorizontal: screen.rf(12),
-          }}>
-          <EmptyChipGrid
-            options={chipOptions}
-            columns={2}
-            containerStyle={{
-              paddingHorizontal: screen.rf(16),
-            }}
-            labelStyle={{
-              fontFamily: fontLoaded ? "Figtree-Regular" : undefined,
-              fontSize: screen.rv({
-                compact: 13,
-                medium: 15,
-                expanded: 16,
-                nano: 12,
-              }),
-            }}
-          />
+            <EmptyChipGrid
+              options={chipOptions}
+              columns={2}
+              containerStyle={{
+                paddingHorizontal: screen.rf(16),
+              }}
+              labelStyle={{
+                fontFamily: fontLoaded ? "Figtree-Regular" : undefined,
+                fontSize: screen.rv({
+                  compact: 13,
+                  medium: 15,
+                  expanded: 16,
+                  nano: 12,
+                }),
+              }}
+            />
+          </View>
         </View>
       </View>
-    </View>
-  ), [screen, topChromeHeight, welcomeTitle, welcomeSubtitle, welcomeLoading, fontLoaded, chipOptions]);
+    ),
+    [
+      screen,
+      topChromeHeight,
+      welcomeTitle,
+      welcomeSubtitle,
+      welcomeLoading,
+      fontLoaded,
+      chipOptions,
+    ],
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: surfaceColor }]}>
@@ -272,49 +285,52 @@ export function BudgetChatV1({
                   <TypingDots />
                 </View>
               ) : (
-                  <Markdown
-                    style={{
-                      body: {
-                        color: chatTheme.assistantBubbleText,
-                        fontSize: 15,
-                        lineHeight: 22,
-                        fontFamily: fontLoaded ? "Figtree-Regular" : undefined,
-                      },
-                      link: { color: chatTheme.accentEmerald },
-                      strong: { fontWeight: "bold", color: chatTheme.accentEmerald },
-                      heading2: {
-                        fontSize: 18,
-                        fontFamily: fontLoaded ? "Figtree-Medium" : undefined,
-                        color: "#ffffff",
-                        marginTop: 12,
-                        marginBottom: 6,
-                      },
-                      heading3: {
-                        fontSize: 16,
-                        fontFamily: fontLoaded ? "Figtree-Medium" : undefined,
-                        color: "#f8fafc",
-                        marginTop: 10,
-                        marginBottom: 4,
-                      },
-                      paragraph: {
-                        marginVertical: 6,
-                      },
-                      hr: {
-                        backgroundColor: chatTheme.headerDivider,
-                        height: 1,
-                        marginVertical: 12,
-                      },
-                      blockquote: {
-                        borderLeftWidth: 3,
-                        borderLeftColor: chatTheme.accentEmerald,
-                        paddingLeft: 12,
-                        opacity: 0.8,
-                        marginVertical: 6,
-                      },
-                      bullet_list: { marginVertical: 6, width: width - 72 },
-                      ordered_list: { marginVertical: 6, width: width - 72 },
-                      list_item: { marginBottom: 6 },
-                    }}>
+                <Markdown
+                  style={{
+                    body: {
+                      color: chatTheme.assistantBubbleText,
+                      fontSize: 15,
+                      lineHeight: 22,
+                      fontFamily: fontLoaded ? "Figtree-Regular" : undefined,
+                    },
+                    link: { color: chatTheme.accentEmerald },
+                    strong: {
+                      fontWeight: "bold",
+                      color: chatTheme.accentEmerald,
+                    },
+                    heading2: {
+                      fontSize: 18,
+                      fontFamily: fontLoaded ? "Figtree-Medium" : undefined,
+                      color: "#ffffff",
+                      marginTop: 12,
+                      marginBottom: 6,
+                    },
+                    heading3: {
+                      fontSize: 16,
+                      fontFamily: fontLoaded ? "Figtree-Medium" : undefined,
+                      color: "#f8fafc",
+                      marginTop: 10,
+                      marginBottom: 4,
+                    },
+                    paragraph: {
+                      marginVertical: 6,
+                    },
+                    hr: {
+                      backgroundColor: chatTheme.headerDivider,
+                      height: 1,
+                      marginVertical: 12,
+                    },
+                    blockquote: {
+                      borderLeftWidth: 3,
+                      borderLeftColor: chatTheme.accentEmerald,
+                      paddingLeft: 12,
+                      opacity: 0.8,
+                      marginVertical: 6,
+                    },
+                    bullet_list: { marginVertical: 6, width: width - 72 },
+                    ordered_list: { marginVertical: 6, width: width - 72 },
+                    list_item: { marginBottom: 6 },
+                  }}>
                   {msg?.text || ""}
                 </Markdown>
               )}
@@ -360,10 +376,12 @@ export function BudgetChatV1({
         listViewProps={{
           ref: flatListRef,
           onScroll: ({ nativeEvent }) => {
-            const { contentOffset, contentSize, layoutMeasurement } = nativeEvent;
+            const { contentOffset, contentSize, layoutMeasurement } =
+              nativeEvent;
             offsetY.current = contentOffset.y;
             layoutHeight.current = layoutMeasurement.height;
-            const distanceFromBottom = contentSize.height - layoutMeasurement.height - contentOffset.y;
+            const distanceFromBottom =
+              contentSize.height - layoutMeasurement.height - contentOffset.y;
             setShowScrollBtn(distanceFromBottom > 120);
           },
           onLayout: ({ nativeEvent }) => {
@@ -371,7 +389,8 @@ export function BudgetChatV1({
           },
           onContentSizeChange: (contentWidth, contentHeight) => {
             if (layoutHeight.current > 0) {
-              const distanceFromBottom = contentHeight - layoutHeight.current - offsetY.current;
+              const distanceFromBottom =
+                contentHeight - layoutHeight.current - offsetY.current;
               setShowScrollBtn(distanceFromBottom > 120);
             }
           },
@@ -465,26 +484,80 @@ function TypingDots() {
       Animated.loop(
         Animated.sequence([
           Animated.stagger(150, [
-            Animated.timing(dot1, { toValue: 1, duration: 200, useNativeDriver: true }),
-            Animated.timing(dot2, { toValue: 1, duration: 200, useNativeDriver: true }),
-            Animated.timing(dot3, { toValue: 1, duration: 200, useNativeDriver: true }),
+            Animated.timing(dot1, {
+              toValue: 1,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(dot2, {
+              toValue: 1,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(dot3, {
+              toValue: 1,
+              duration: 200,
+              useNativeDriver: true,
+            }),
           ]),
           Animated.stagger(150, [
-            Animated.timing(dot1, { toValue: 0.3, duration: 200, useNativeDriver: true }),
-            Animated.timing(dot2, { toValue: 0.3, duration: 200, useNativeDriver: true }),
-            Animated.timing(dot3, { toValue: 0.3, duration: 200, useNativeDriver: true }),
+            Animated.timing(dot1, {
+              toValue: 0.3,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(dot2, {
+              toValue: 0.3,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(dot3, {
+              toValue: 0.3,
+              duration: 200,
+              useNativeDriver: true,
+            }),
           ]),
-        ])
+        ]),
       ).start();
     };
     animate();
   }, [dot1, dot2, dot3]);
 
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 4 }}>
-      <Animated.View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: chatTheme.accentEmerald, opacity: dot1 }} />
-      <Animated.View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: chatTheme.accentEmerald, opacity: dot2 }} />
-      <Animated.View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: chatTheme.accentEmerald, opacity: dot3 }} />
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 4,
+        paddingVertical: 4,
+      }}>
+      <Animated.View
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 3,
+          backgroundColor: chatTheme.accentEmerald,
+          opacity: dot1,
+        }}
+      />
+      <Animated.View
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 3,
+          backgroundColor: chatTheme.accentEmerald,
+          opacity: dot2,
+        }}
+      />
+      <Animated.View
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 3,
+          backgroundColor: chatTheme.accentEmerald,
+          opacity: dot3,
+        }}
+      />
     </View>
   );
 }

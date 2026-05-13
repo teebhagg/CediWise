@@ -1,8 +1,6 @@
 import React from 'react';
 import { Platform, View, StyleSheet } from 'react-native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
-import { useState } from 'react';
-import { Host, DatePicker } from '@expo/ui/swift-ui';
 
 interface NativeDateSelectionProps {
   value: Date;

@@ -44,9 +44,6 @@ import {
   BUDGET_TEMPLATE_LIST,
   recommendBudgetTemplate,
 } from "./budgetTemplates";
-import { AISuggestionsBanner } from "./AISuggestionsBanner";
-import { SuggestionReviewSheet } from "./SuggestionReviewSheet";
-import type { useAISuggestions } from "@/hooks/useAISuggestions";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -448,8 +445,6 @@ type StepStyleProps = {
 };
 
 export const StepStyle = memo(function StepStyle({ draft, toggleInterest, updateDraft }: StepStyleProps) {
-  const isProfileIncomplete = !draft.lifeStage || !draft.spendingStyle || !draft.financialPriority;
-
   return (
     <View>
       <StepHeading title="Your Style" subtitle="Personalizes your budget split and spending categories. All optional." />

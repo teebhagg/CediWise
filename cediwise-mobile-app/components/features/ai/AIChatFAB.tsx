@@ -1,9 +1,9 @@
-import { Image } from "expo-image";
-import { Pressable, Text, View, type LayoutChangeEvent } from "react-native";
-import { useCallback, useRef } from "react";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
+import { useRouter } from "expo-router";
+import { useCallback, useRef } from "react";
+import { Pressable, Text, View, type LayoutChangeEvent } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const FAB_AVATAR = require("@/assets/images/my-notion-face-transparent.png");
 
@@ -36,7 +36,7 @@ export function AIChatFAB({
   const triggerExpand = useCallback(() => {
     if (disabled) return;
     onBeforeExpand?.();
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { });
     router.navigate(targetRoute as any);
   }, [disabled, onBeforeExpand, router, targetRoute]);
 
@@ -55,9 +55,8 @@ export function AIChatFAB({
           accessibilityRole="button"
           accessibilityLabel="Open AI budget assistant"
           onPress={triggerExpand}
-          className={`flex-1 rounded-full bg-emerald-500 items-center justify-center shadow-lg shadow-black/50 border border-emerald-400/25 ${
-            disabled ? "opacity-40" : "active:opacity-95"
-          }`}>
+          className={`flex-1 rounded-full bg-emerald-500 items-center justify-center shadow-lg shadow-black/50 border border-emerald-400/25 ${disabled ? "opacity-40" : "active:opacity-95"
+            }`}>
           <Image
             source={FAB_AVATAR}
             style={{ width: 40, height: 40 }}

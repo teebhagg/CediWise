@@ -18,7 +18,6 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
   withTiming,
 } from "react-native-reanimated";
 
@@ -33,15 +32,6 @@ const EASING_COLLAPSE = Easing.bezier(0.4, 0, 0.2, 1);
 
 const DURATION_EXPAND_MS = Platform.OS === "ios" ? 450 : 400;
 const DURATION_COLLAPSE_MS = Platform.OS === "ios" ? 350 : 300;
-
-const SPRING_CONFIG_EXPAND = {
-  damping: 20,
-  stiffness: 90,
-  mass: 1,
-  overshootClamping: true,
-  restDisplacementThreshold: 0.01,
-  restSpeedThreshold: 2,
-};
 
 function coverDiameter(rect: FabWindowRect): {
   cx: number;
@@ -189,7 +179,7 @@ export function AIChatFabTransitionOverlay() {
       cancelled = true;
       cancelAnimation(progress);
     };
-  }, [phase, anchor, applyGeometry, navigateToChatJS, progress]);
+  }, [phase, anchor, applyGeometry, navigateToChatJS, progress, backdropOpacity]);
 
   useEffect(() => {
     if (phase !== "collapsing" || !anchor) {
@@ -236,7 +226,7 @@ export function AIChatFabTransitionOverlay() {
       cancelled = true;
       cancelAnimation(progress);
     };
-  }, [phase, anchor, applyGeometry, finishCollapse, progress]);
+  }, [phase, anchor, applyGeometry, finishCollapse, progress, backdropOpacity]);
 
   const active = phase === "expanding" || phase === "collapsing";
 

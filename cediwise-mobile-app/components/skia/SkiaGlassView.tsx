@@ -42,10 +42,11 @@ export function SkiaGlassView({
   // Dynamically check and require Skia components to prevent crashes on startup
   const Skia = useMemo(() => {
     try {
-      // Accessing these at render time ensures the module is only checked when needed
+      // Dynamic require: optional native Skia module may be unavailable in some builds.
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- intentional runtime probe
       const { Canvas, BackdropBlur, Fill } = require("@shopify/react-native-skia");
       return { Canvas, BackdropBlur, Fill };
-    } catch (e) {
+    } catch {
       return null;
     }
   }, []);

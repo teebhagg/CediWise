@@ -2,7 +2,6 @@ import { BackButton } from "@/components/BackButton";
 import { Card } from "@/components/Card";
 import { StandardHeader } from "@/components/CediWiseHeader";
 import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
-import { GlassView } from "@/components/GlassView";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppToast } from "@/hooks/useAppToast";
 import {
@@ -11,22 +10,18 @@ import {
 } from "@/stores/notificationsStore";
 import { getStandardHeaderBodyOffsetTop } from "@/utils/screenHeaderInsets";
 import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
-import { Button, Dialog, ScrollShadow } from "heroui-native";
+import { Button } from "heroui-native";
 import { ChevronRight, Inbox, Megaphone } from "lucide-react-native";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
-  useWindowDimensions,
   View,
 } from "react-native";
 import { AppDialog } from "@/components/AppDialog";
@@ -58,7 +53,6 @@ function previewLine(item: AnnouncementInboxItem): string {
 
 export default function AnnouncementInboxScreen() {
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
   const reducedMotion = useReducedMotion();
   const { user } = useAuth();
   const { showError } = useAppToast();
@@ -73,7 +67,6 @@ export default function AnnouncementInboxScreen() {
   const [detailItem, setDetailItem] = useState<AnnouncementInboxItem | null>(null);
 
   const userId = user?.id;
-  const dialogScrollMaxHeight = Math.round(Math.min(windowHeight * 0.72, 560));
 
   const load = useCallback(async () => {
     if (!userId) return;

@@ -15,6 +15,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { GlassView } from "@/components/GlassView";
 import Animated, {
   Easing,
   runOnJS,
@@ -43,6 +44,9 @@ import {
   BUDGET_TEMPLATE_LIST,
   recommendBudgetTemplate,
 } from "./budgetTemplates";
+import { AISuggestionsBanner } from "./AISuggestionsBanner";
+import { SuggestionReviewSheet } from "./SuggestionReviewSheet";
+import type { useAISuggestions } from "@/hooks/useAISuggestions";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -444,6 +448,8 @@ type StepStyleProps = {
 };
 
 export const StepStyle = memo(function StepStyle({ draft, toggleInterest, updateDraft }: StepStyleProps) {
+  const isProfileIncomplete = !draft.lifeStage || !draft.spendingStyle || !draft.financialPriority;
+
   return (
     <View>
       <StepHeading title="Your Style" subtitle="Personalizes your budget split and spending categories. All optional." />
@@ -672,6 +678,17 @@ function ExpenseDialog({ visible, expenses, onAdd, onRemove, onClose }: ExpenseD
       statusBarTranslucent
       onRequestClose={handleClose}>
       <View style={styles.modalOverlay}>
+        {Platform.OS === 'ios' ? (
+          <GlassView
+            intensity={15}
+            tint="dark"
+            style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.2)' }]}
+          />
+        ) : (
+          <View
+            style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.8)' }]}
+          />
+        )}
         {/* Tap-to-dismiss backdrop */}
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose} />
 

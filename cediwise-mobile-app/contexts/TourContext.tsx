@@ -92,9 +92,11 @@ const NO_OP_TOUR_CONTEXT: TourContextType = {
 
 export function TourProviderFallback({ children }: { children: ReactNode }) {
   return (
-    <TourContext.Provider value={NO_OP_TOUR_CONTEXT}>
-      {children}
-    </TourContext.Provider>
+    <LumenTourProvider stepsOrder={[]} config={{ renderCard: () => null }}>
+      <TourContext.Provider value={NO_OP_TOUR_CONTEXT}>
+        {children}
+      </TourContext.Provider>
+    </LumenTourProvider>
   );
 }
 

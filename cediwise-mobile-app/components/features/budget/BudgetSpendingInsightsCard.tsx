@@ -1,5 +1,6 @@
 import { CheckCircle2, InfoIcon, XCircleIcon } from 'lucide-react-native';
 import { Pressable, Text, View } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { formatCurrency } from '../../../utils/formatCurrency';
 import { Card } from '../../Card';
 
@@ -39,6 +40,7 @@ interface BudgetSpendingInsightsCardProps {
   maxRecommendations?: number;
   /** Max insights to show (default 5). Omit or pass Infinity for all. */
   maxInsights?: number;
+  onAskAI?: (message: string) => void;
 }
 
 export function BudgetSpendingInsightsCard({
@@ -49,6 +51,7 @@ export function BudgetSpendingInsightsCard({
   onApplyLimitAdjustment,
   maxRecommendations = 2,
   maxInsights = 5,
+  onAskAI,
 }: BudgetSpendingInsightsCardProps) {
   if (!visible) return null;
 
@@ -87,6 +90,16 @@ export function BudgetSpendingInsightsCard({
                   >
                     <Text className="text-emerald-300 text-xs font-medium">{rec.actionLabel}</Text>
                   </Pressable>
+                ) : onAskAI ? (
+                  <Pressable
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                      onAskAI(`Tell me more about this recommendation: "${rec.title}". ${rec.message}`);
+                    }}
+                    className="px-3 py-1.5 rounded-md bg-violet-500/10 border border-violet-500/20 active:opacity-80"
+                  >
+                    <Text className="text-violet-300 text-xs font-medium">Ask AI</Text>
+                  </Pressable>
                 ) : null}
               </View>
             </View>
@@ -111,6 +124,17 @@ export function BudgetSpendingInsightsCard({
                 <Text className="text-slate-200 font-medium text-sm">{insight.categoryName}</Text>
                 {insight.suggestion ? (
                   <Text className="text-slate-400 text-xs mt-0.5">{insight.suggestion}</Text>
+                ) : null}
+                {onAskAI && (insight.status === 'over' || insight.status === 'near') ? (
+                  <Pressable
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+                      onAskAI(`I'm ${insight.status === 'over' ? 'over budget' : 'nearing my limit'} for ${insight.categoryName}. What should I do?`);
+                    }}
+                    className="mt-1"
+                  >
+                    <Text className="text-violet-400 text-[11px] font-medium">Ask AI →</Text>
+                  </Pressable>
                 ) : null}
               </View>
               <View className="items-end">

@@ -17,11 +17,13 @@ import {
 import { KeyboardAwareScrollView } from "@/components/KeyboardAwareScrollView";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
+import { useAISuggestions } from "@/hooks/useAISuggestions";
 import { useAuth } from "@/hooks/useAuth";
 import { useBudget } from "@/hooks/useBudget";
 import { usePersonalizationStore } from "@/stores/personalizationStore";
 import { useProfileVitalsStore } from "@/stores/profileVitalsStore";
 import { useRecurringExpensesStore } from "@/stores/recurringExpensesStore";
+import { usePendingAISelections } from "@/utils/aiSelections";
 import { analytics } from "@/utils/analytics";
 import { enqueueMutation } from "@/utils/budgetStorage";
 import { trySyncProfileWithRetries } from "@/utils/budgetSync";
@@ -34,7 +36,7 @@ import {
 import { readTourSeen } from "@/utils/tourStorage";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Separator } from "heroui-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -89,6 +91,7 @@ function makeDefaultDraft(): Draft {
     goalType: null,
     goalAmount: "",
     goalTimeline: "",
+    aiSuggestionsApplied: false,
   };
 }
 
@@ -118,6 +121,10 @@ export default function VitalsWizard() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const ai = useAISuggestions();
+  const { current: pendingAiSelections, updateCurrent, updateRawSuggestions } =
+    usePendingAISelections();
 
   const transition = useSharedValue(1);
   const direction = useSharedValue<1 | -1>(1);
@@ -376,6 +383,84 @@ export default function VitalsWizard() {
   const updateDraft = useCallback((patch: Partial<Draft>) => {
     setDraft((prev) => ({ ...prev, ...patch }));
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (pendingAiSelections) {
+        const selections = pendingAiSelections;
+        updateCurrent(null);
+
+        const newRecurring =
+          selections.recurringExpenses.length > 0 ? selections.recurringExpenses : null;
+
+        const firstGoal = selections.goals[0];
+
+        setDraft((prev) => ({
+          ...prev,
+          aiSuggestionsApplied: true,
+          selectedTemplate: selections.templateKey || "smart",
+          recurringExpenses: newRecurring ?? prev.recurringExpenses,
+          goalType: firstGoal ? firstGoal.type : prev.goalType,
+          goalAmount: firstGoal ? firstGoal.goalAmount : prev.goalAmount,
+          goalTimeline: firstGoal ? firstGoal.goalTimeline : prev.goalTimeline,
+        }));
+
+        const nextStep = 2;
+        updateDraft({ step: nextStep });
+        animateStepChange(nextStep, "forward");
+      }
+    }, [
+      animateStepChange,
+      updateDraft,
+      pendingAiSelections,
+      updateCurrent,
+    ])
+  );
+
+  const handleGetSuggestions = useCallback(async () => {
+    Keyboard.dismiss();
+    setError(null);
+    setShowValidationHint(false);
+
+    if (!canContinue) {
+      setShowValidationHint(true);
+      scrollViewRef.current?.scrollTo({ y: 120, animated: true });
+      try { await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning); } catch { }
+      return;
+    }
+
+    try {
+      const results = await ai.fetchSuggestions({
+        salary: draft.stableSalary,
+        autoTax: draft.autoTax,
+        incomeFrequency: draft.incomeFrequency,
+        lifeStage: draft.lifeStage,
+        spendingStyle: draft.spendingStyle,
+        financialPriority: draft.financialPriority,
+        interests: draft.interests,
+        existingRecurring: draft.recurringExpenses.map((r) => r.name),
+        country: "GH",
+      });
+
+      if (results) {
+        updateRawSuggestions(results);
+        const monthlyIncomeStr = toMonthlySalary(
+          toMoney(draft.stableSalary),
+          draft.incomeFrequency,
+        ).toString();
+
+        router.push({
+          pathname: "/vitals/ai-suggestions",
+          params: { monthlyIncomeStr },
+        });
+      } else {
+        setError("No suggestions available. Please try again or continue manually.");
+      }
+    } catch (e) {
+      log.error("Error fetching AI suggestions", e);
+      setError(e instanceof Error ? e.message : "Failed to generate suggestions. Please try again.");
+    }
+  }, [ai, canContinue, draft, router, updateRawSuggestions]);
 
   useEffect(() => {
     const showBack = editMode || draft.step > 0;
@@ -990,7 +1075,7 @@ export default function VitalsWizard() {
             borderTopColor: "rgba(255,255,255,0.06)",
           }}>
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <AnimatedView style={[{ flex: 1 }, backBtnStyle]}>
+            <AnimatedView style={[{ flex: draft.step === 1 ? 0.4 : 1 }, backBtnStyle]}>
               <SecondaryButton onPress={goBack}>
                 Back
               </SecondaryButton>
@@ -998,13 +1083,16 @@ export default function VitalsWizard() {
 
             {draft.step < totalSteps - 1 ? (
               <PrimaryButton
-                onPress={goNext}
-                disabled={!canContinue}
+                onPress={draft.step === 1 ? handleGetSuggestions : goNext}
+                disabled={draft.step === 1 ? (!canContinue || ai.isLoading) : !canContinue}
+                loading={draft.step === 1 && ai.isLoading}
                 style={{
                   flex: 1,
                   opacity: canContinue ? 1 : 0.5,
                 }}>
-                Continue
+                {draft.step === 1
+                  ? (ai.isLoading ? "Researching..." : "Get Budget Suggestions")
+                  : "Continue"}
               </PrimaryButton>
             ) : (
               <PrimaryButton

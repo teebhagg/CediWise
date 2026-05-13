@@ -30,6 +30,8 @@ import { BackButton } from "@/components/BackButton";
 import { Card } from "@/components/Card";
 import { StandardHeader } from "@/components/CediWiseHeader";
 import { getStandardHeaderBodyOffsetTop } from "@/utils/screenHeaderInsets";
+import { AIChatFAB } from "@/components/features/ai/AIChatFAB";
+import { useAIChatShellStore } from "@/stores/aiChatShellStore";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useAuth } from "@/hooks/useAuth";
 import { useBudget } from "@/hooks/useBudget";
@@ -50,6 +52,7 @@ export default function DebtDashboardScreen() {
   const { showSuccess, showError, showInfo } = useAppToast();
   const budget = useBudget(user?.id);
   const monthlyIncome = budget.totals?.monthlyNetIncome || 0;
+  const chatRemaining = useAIChatShellStore((s) => s.remainingChats);
 
   const {
     isLoading,
@@ -445,6 +448,13 @@ export default function DebtDashboardScreen() {
           <Text style={styles.paymentErrorText}>{paymentError}</Text>
         ) : null}
       </AppDialog>
+
+      {user && canAccessBudget && (
+        <AIChatFAB
+          remaining={chatRemaining}
+          targetRoute="/debt/ai-chat"
+        />
+      )}
     </View>
   );
 }

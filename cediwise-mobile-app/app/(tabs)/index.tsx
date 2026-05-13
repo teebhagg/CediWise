@@ -26,7 +26,6 @@ import {
 import { PULL_REFRESH_EMERALD } from "@/constants/pullToRefresh";
 import { Avatar } from "heroui-native";
 
-import { PeriodicFeedbackPromptModal } from "@/components/feedback/PeriodicFeedbackPromptModal";
 import { BatchTransactionModal } from "@/components/BatchTransactionModal";
 import { DiscoveryHeroCard } from "@/components/features/home/DiscoveryHeroCard";
 import { MonthlyActivitiesCard } from "@/components/features/home/MonthlyActivitiesCard";
@@ -34,6 +33,7 @@ import { VaultHeroCard } from "@/components/features/home/VaultHeroCard";
 import { VitalHeroCard } from "@/components/features/home/VitalHeroCard";
 import { VitalHeroSkeleton } from "@/components/features/home/VitalHeroSkeleton";
 import { useHomeScreenState } from "@/components/features/home/useHomeScreenState";
+import { PeriodicFeedbackPromptModal } from "@/components/feedback/PeriodicFeedbackPromptModal";
 import { useTourContext } from "@/contexts/TourContext";
 import { useUpdateCheckContext } from "@/contexts/UpdateCheckContext";
 import { useAppToast } from "@/hooks/useAppToast";

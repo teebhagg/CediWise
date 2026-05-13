@@ -1,13 +1,13 @@
 import Constants from "expo-constants";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
+import * as Sentry from "@sentry/react-native";
 import * as SplashScreen from "expo-splash-screen";
 // import { StatusBar } from 'expo-status-bar';
 import { TriggerProvider } from "@/contexts/TriggerContext";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import * as WebBrowser from "expo-web-browser";
 import { HeroUINativeProvider } from "heroui-native";
-import { PostHogProvider } from 'posthog-react-native';
 import { useEffect, useState } from "react";
 import {
   AppState,
@@ -24,13 +24,17 @@ import {
 } from "react-native-safe-area-context";
 import { Uniwind } from "uniwind";
 
-import * as Sentry from "@sentry/react-native";
 import { PaystackProvider } from "react-native-paystack-webview";
 import { AnalyticsIdentitySync } from "../components/AnalyticsIdentitySync";
 import { AnalyticsRouteObserver } from "../components/AnalyticsRouteObserver";
 import { RootErrorBoundary } from "../components/RootErrorBoundary";
 import { TourErrorBoundary } from "../components/tour/TourErrorBoundary";
 import { AuthProvider } from "../contexts/AuthContext";
+import { PendingAISelectionsProvider } from "@/utils/aiSelections";
+import {
+  IS_PRODUCTION_PUSH_BUILD,
+  initProductionPushServices,
+} from "@/utils/productionPush";
 import { TierProvider } from "../contexts/TierContext";
 import {
   TourProvider,
@@ -42,8 +46,10 @@ import { useBudget } from "../hooks/useBudget";
 import { useBudgetPreferenceBootstrap } from "../hooks/useBudgetPreferenceBootstrap";
 import { initNotificationSystem } from "../services/notifications";
 import { useCashFlowStore } from "../stores/cashFlowStore";
+import { useDebtStore } from "../stores/debtStore";
 import { usePersonalizationStore } from "../stores/personalizationStore";
 import { useProfileVitalsStore } from "../stores/profileVitalsStore";
+import { useRecurringExpensesStore } from "../stores/recurringExpensesStore";
 import { useSMELedgerStore } from "../stores/smeLedgerStore";
 import {
   hasHydratedThisSession,
@@ -51,113 +57,9 @@ import {
 } from "../utils/budgetHydrateSession";
 import { syncTaxConfig } from "../utils/taxSync";
 import "./globals.css";
+import { PostHogProvider } from "posthog-react-native";
 
-const SENSITIVE = /(token|password|secret|authorization|cookie|api[_-]?key)/i;
-const REDACTED = "[redacted]";
-
-function isSensitiveKey(key: string): boolean {
-  return SENSITIVE.test(key);
-}
-
-/** Recursively redacts values for keys matching {@link SENSITIVE}. Mutates plain objects and arrays in place. */
-function redact(target: unknown): void {
-  if (target === null || target === undefined) return;
-  if (typeof target !== "object") return;
-
-  if (Array.isArray(target)) {
-    for (const item of target) {
-      redact(item);
-    }
-    return;
-  }
-
-  const obj = target as Record<string, unknown>;
-  for (const key of Object.keys(obj)) {
-    if (isSensitiveKey(key)) {
-      obj[key] = REDACTED;
-    } else {
-      redact(obj[key]);
-    }
-  }
-}
-
-/** Best-effort scrub of `name=value` pairs in a Cookie header string. */
-function redactCookieHeader(cookieHeader: string): string {
-  return cookieHeader.replace(
-    /([^;=\s]+)\s*=\s*([^;]*)/g,
-    (full, name: string) =>
-      isSensitiveKey(name.trim()) ? `${name.trim()}=${REDACTED}` : full,
-  );
-}
-
-Sentry.init({
-  dsn: "https://e80f09f6a8433bd0fe6d1f0643d1eee4@o4511124714094592.ingest.de.sentry.io/4511124717043792",
-
-  /**
-   * L3 / privacy: `sendDefaultPii` adds IP and similar defaults per Sentry docs.
-   * Revisit with legal/compliance before strict jurisdictions; pair with `beforeSend` scrubbing.
-   */
-  sendDefaultPii: true,
-
-  enableLogs: true,
-
-  replaysSessionSampleRate: 0.1,
-  replaysOnErrorSampleRate: 1,
-  integrations: [Sentry.mobileReplayIntegration(), Sentry.feedbackIntegration()],
-
-  /** Performance monitoring sample rate (tunable if volume is high). */
-  tracesSampleRate: 0.1,
-
-  beforeSend(event) {
-    if (event.extra && typeof event.extra === "object") {
-      redact(event.extra);
-    }
-    if (event.tags && typeof event.tags === "object") {
-      redact(event.tags);
-    }
-    if (event.contexts && typeof event.contexts === "object") {
-      redact(event.contexts);
-    }
-
-    const req = event.request;
-    if (req?.headers && typeof req.headers === "object") {
-      redact(req.headers);
-    }
-    if (req?.cookies != null) {
-      const cookies = req.cookies as string | Record<string, string>;
-      if (typeof cookies === "string") {
-        (req as { cookies: string | Record<string, string> }).cookies =
-          redactCookieHeader(cookies);
-      } else {
-        redact(cookies);
-      }
-    }
-
-    if (event.breadcrumbs?.length) {
-      for (const bc of event.breadcrumbs) {
-        if (bc.data && typeof bc.data === "object") {
-          redact(bc.data);
-        }
-      }
-    }
-
-    const exceptions = event.exception?.values;
-    if (exceptions?.length) {
-      for (const ex of exceptions) {
-        const frames = ex.stacktrace?.frames;
-        if (frames?.length) {
-          for (const frame of frames) {
-            if (frame.vars && typeof frame.vars === "object") {
-              redact(frame.vars);
-            }
-          }
-        }
-      }
-    }
-
-    return event;
-  },
-});
+initProductionPushServices();
 
 // M7: Single-theme product — `Uniwind.setTheme("dark")` matches `app.json` `userInterfaceStyle: "dark"`.
 Uniwind.setTheme("dark");
@@ -197,6 +99,8 @@ function AppShell() {
     void useProfileVitalsStore.getState().initForUser(user.id);
     void useSMELedgerStore.getState().initForUser(user.id);
     void useCashFlowStore.getState().initForUser(user.id);
+    void useRecurringExpensesStore.getState().initForUser(user.id);
+    void useDebtStore.getState().initForUser(user.id);
 
     // 2. Budget Hydration (Once per session)
     if (!hasHydratedThisSession()) {
@@ -235,6 +139,7 @@ function AppShell() {
             name="debt-dashboard"
             options={{ headerShown: false }}
           />
+          <Stack.Screen name="debt" options={{ headerShown: false }} />
           <Stack.Screen
             name="recurring-expenses"
             options={{ headerShown: false }}
@@ -270,7 +175,7 @@ function AppShell() {
   );
 }
 
-export default Sentry.wrap(function RootLayout() {
+function RootLayout() {
   const [appIsReady, setAppIsReady] = useState(false);
 
   // Keeps tokens fresh while app is in foreground/resumed.
@@ -325,30 +230,25 @@ export default Sentry.wrap(function RootLayout() {
     return null;
   }
 
-  return (
-    <PostHogProvider
-      apiKey={process.env.EXPO_PUBLIC_POSTHOG_API_KEY || ""}
-      autocapture={{ captureScreens: false }}
-      options={{
-        host: process.env.EXPO_PUBLIC_POSTHOG_HOST || "",
-      }}>
-      <RootErrorBoundary>
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <BottomSheetModalProvider>
-            <HeroUINativeProvider
-              config={{
-                devInfo: { stylingPrinciples: false },
-                toast: {
-                  defaultProps: {
-                    variant: "accent",
-                    placement: "top",
-                    animation: true,
-                  },
+  const appTree = (
+    <RootErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <BottomSheetModalProvider>
+          <HeroUINativeProvider
+            config={{
+              devInfo: { stylingPrinciples: false },
+              toast: {
+                defaultProps: {
+                  variant: "accent",
+                  placement: "top",
+                  animation: true,
                 },
-              }}>
-              <SafeAreaProvider>
-                <PaystackProvider publicKey={process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY || ""}>
-                  <AuthProvider>
+              },
+            }}>
+            <SafeAreaProvider>
+              <PaystackProvider publicKey={process.env.EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY || ""}>
+                <AuthProvider>
+                  <PendingAISelectionsProvider>
                     <AnalyticsIdentitySync />
                     <TierProvider>
                       <TourErrorBoundary
@@ -366,13 +266,34 @@ export default Sentry.wrap(function RootLayout() {
                         </TourProvider>
                       </TourErrorBoundary>
                     </TierProvider>
-                  </AuthProvider>
-                </PaystackProvider>
-              </SafeAreaProvider>
-            </HeroUINativeProvider>
-          </BottomSheetModalProvider>
-        </GestureHandlerRootView>
-      </RootErrorBoundary>
-    </PostHogProvider>
+                  </PendingAISelectionsProvider>
+                </AuthProvider>
+              </PaystackProvider>
+            </SafeAreaProvider>
+          </HeroUINativeProvider>
+        </BottomSheetModalProvider>
+      </GestureHandlerRootView>
+    </RootErrorBoundary>
   );
-});
+
+  if (IS_PRODUCTION_PUSH_BUILD) {
+    const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_API_KEY!;
+    const posthogHost =
+      process.env.EXPO_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com";
+    return (
+      <PostHogProvider
+        apiKey={posthogKey}
+        options={{
+          host: posthogHost,
+          captureAppLifecycleEvents: true,
+        }}
+        autocapture={false}>
+        {appTree}
+      </PostHogProvider>
+    );
+  }
+
+  return appTree;
+}
+
+export default Sentry.wrap(RootLayout);

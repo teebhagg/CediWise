@@ -24,6 +24,9 @@ import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedScrollHandler, useSharedValue } from 'react-native-reanimated';
 import { useTierContext } from '@/contexts/TierContext';
+import { AIInsightsCollapsible } from "@/components/features/ai/AIInsightsCollapsible";
+import { useAIBudgetAnalysis } from "@/hooks/useAIBudgetAnalysis";
+import { useAIChatFabTransitionStore } from "@/stores/aiChatFabTransitionStore";
 import {
   getExpandedHeaderScrollPaddingTop,
   INSIGHTS_EXPANDED_HEADER_HEIGHT,
@@ -34,6 +37,13 @@ export default function BudgetInsightsScreen() {
   const insets = useSafeAreaInsets();
   const { canAccessBudget } = useTierContext();
   const { derived, budget, modals, ui, router } = useBudgetScreenState();
+
+  const aiAnalysis = useAIBudgetAnalysis({
+    userId: user?.id,
+    activeCycleId: derived.activeCycleId,
+    budgetState: budget.state,
+    enabled: canAccessBudget && !!user?.id,
+  });
 
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler((event) => {
@@ -85,7 +95,7 @@ export default function BudgetInsightsScreen() {
   const renderRecurringInsight = useCallback(
     ({ item: ins }: { item: RecurringCommitmentInsight }) => (
       <View
-        className={`rounded-2xl border px-4 py-3 ${
+        className={`rounded-md border px-5 py-5 ${
           ins.variant === 'warning'
             ? 'border-amber-500/40 bg-amber-500/10'
             : 'border-white/10 bg-white/5'
@@ -116,6 +126,14 @@ export default function BudgetInsightsScreen() {
       router.replace("/(tabs)/budget");
     }
   }, [canAccessBudget, router]);
+
+  const handleAskAI = useCallback((message: string) => {
+    useAIChatFabTransitionStore.getState().markOpenedFromNonFab();
+    router.navigate({
+      pathname: "/budget/ai-chat",
+      params: { draftMessage: message },
+    } as any);
+  }, [router]);
 
   if (!canAccessBudget) {
     return null;
@@ -245,6 +263,12 @@ export default function BudgetInsightsScreen() {
                 />
               </View>
             ) : null}
+
+            <AIInsightsCollapsible
+              analysis={aiAnalysis.analysis}
+              isLoading={aiAnalysis.isLoading}
+              onAskAI={handleAskAI}
+            />
 
             <View className="mt-8 flex-row items-center justify-between">
               <Text className="text-white text-base font-semibold">Categories</Text>

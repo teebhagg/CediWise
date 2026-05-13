@@ -53,8 +53,24 @@ export type Draft = {
   goalType: GoalType | null;
   goalAmount: string;
   goalTimeline: string;
+  // AI Suggestions
+  aiSuggestionsApplied: boolean;
 };
 
 export type UpdateDraft = (patch: Partial<Draft>) => void;
 
 export type StepErrors = Record<string, string>;
+
+/** Goal rows applied from AI suggestions — string fields match `Draft` (`goalAmount`, `goalTimeline`). */
+export type AppliedAIGoalSelection = {
+  type: GoalType;
+  goalAmount: string;
+  goalTimeline: string;
+};
+
+export interface AppliedAISelections {
+  categories: { name: string; bucket: "needs" | "wants" | "savings"; limit: number }[];
+  recurringExpenses: RecurringExpense[];
+  goals: AppliedAIGoalSelection[];
+  templateKey: BudgetTemplateKey;
+}

@@ -1,14 +1,6 @@
 import type { ReactNode } from "react";
-import {
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { BlurView } from "expo-blur";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { StyleSheet, View } from "react-native";
+import { AppDialog } from "./AppDialog";
 
 type CediCalendarPickerModalProps = {
   visible: boolean;
@@ -17,13 +9,19 @@ type CediCalendarPickerModalProps = {
   subtitle?: string;
   /** Calendar or custom body */
   children: ReactNode;
-  /** Replace default single Cancel row (e.g. All time + Cancel) */
-  footer?: ReactNode;
+  /** Primary action label (e.g. "Select") */
+  primaryLabel?: string;
+  /** Primary action callback */
+  onPrimary?: () => void;
+  /** Secondary action label (e.g. "Cancel") */
+  secondaryLabel?: string;
+  /** Secondary action callback */
+  onSecondary?: () => void;
 };
 
 /**
- * Shared shell for react-native-calendar-datepicker: matches Card / Expenses dark UI
- * (rounded surface, slate typography, spacing).
+ * Standardized Date Picker Modal that uses AppDialog as its shell.
+ * Matches the application's premium dark UI and glassmorphism patterns.
  */
 export function CediCalendarPickerModal({
   visible,
@@ -31,70 +29,38 @@ export function CediCalendarPickerModal({
   title,
   subtitle,
   children,
-  footer,
+  primaryLabel = "Done",
+  onPrimary,
+  secondaryLabel,
+  onSecondary,
 }: CediCalendarPickerModalProps) {
-  const insets = useSafeAreaInsets();
-  const bottomPad = Math.max(insets.bottom, 20);
-
   return (
-    <Modal
+    <AppDialog
       visible={visible}
-      animationType="fade"
-      transparent
-      onRequestClose={onRequestClose}
-      statusBarTranslucent
+      onOpenChange={(open) => !open && onRequestClose()}
+      title={title}
+      description={subtitle ?? ""}
+      primaryLabel={primaryLabel}
+      onPrimary={onPrimary ?? onRequestClose}
+      secondaryLabel={secondaryLabel}
+      onSecondary={onSecondary ?? onRequestClose}
     >
-      <View style={[styles.root, { paddingBottom: bottomPad }]}>
-        {Platform.OS === "ios" ? (
-          <BlurView
-            style={StyleSheet.absoluteFillObject}
-            intensity={20}
-            tint="dark"
-          />
-        ) : null}
-        <Pressable
-          style={[styles.backdrop, Platform.OS === "ios" ? { backgroundColor: "rgba(0,0,0,0.5)" } : { backgroundColor: "rgba(0,0,0,0.85)" }]}
-          onPress={onRequestClose}
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss"
-        />
-        <View style={styles.card} pointerEvents="box-none">
-          <Pressable
-            style={styles.closeIcon}
-            onPress={onRequestClose}
-            accessibilityRole="button"
-            accessibilityLabel="Close"
-          >
-            <Text style={{ color: "#94A3B8", fontSize: 20, fontWeight: "600" }}>✕</Text>
-          </Pressable>
-          <Text style={styles.title}>{title}</Text>
-          {subtitle ? (
-            <Text style={styles.subtitle}>{subtitle}</Text>
-          ) : null}
-          <View style={styles.body}>{children}</View>
-          {footer ?? (
-            <Pressable
-              style={styles.footerSingle}
-              onPress={onRequestClose}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel"
-            >
-              <Text style={styles.footerSingleText}>Cancel</Text>
-            </Pressable>
-          )}
-        </View>
-      </View>
-    </Modal>
+      <View style={styles.body}>{children}</View>
+    </AppDialog>
   );
 }
 
-/** Pass-through props for `react-native-calendar-datepicker` for visual consistency. */
+/** 
+ * Legacy styles for `react-native-calendar-datepicker`.
+ * Keeping these for now to avoid breaking existing manual styling in consumers,
+ * though they should be phased out in favor of NativeDateSelection.
+ */
 export const cediCalendarPickerStyles = StyleSheet.create({
   calendarWrap: {
     alignSelf: "stretch",
     minWidth: 300,
     marginTop: 4,
-    borderRadius: 90
+    borderRadius: 16,
   },
   calendarBar: {
     backgroundColor: "rgba(148, 163, 184, 0.12)",
@@ -170,72 +136,9 @@ export const cediCalendarPickerStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 22,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.8)",
-  },
-  card: {
-    zIndex: 1,
-    backgroundColor: "rgba(18, 22, 33, 0.98)",
-    borderRadius: 28,
-    paddingTop: 26,
-    paddingHorizontal: 20,
-    paddingBottom: 18,
-    borderWidth: 1,
-    borderColor: "rgba(148, 163, 184, 0.18)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
-    elevation: 14,
-    position: "relative",
-  },
-  closeIcon: {
-    position: "absolute",
-    top: 16,
-    right: 20,
-    zIndex: 2,
-    width: 32,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  title: {
-    color: "#F8FAFC",
-    fontSize: 20,
-    fontWeight: "700",
-    textAlign: "center",
-    letterSpacing: -0.35,
-    marginBottom: 6,
-  },
-  subtitle: {
-    color: "#94A3B8",
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: "center",
-    marginBottom: 16,
-    paddingHorizontal: 4,
-  },
   body: {
     marginTop: 8,
     marginBottom: 6,
-  },
-  footerSingle: {
-    alignSelf: "center",
-    marginTop: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 28,
-    minHeight: 48,
-    justifyContent: "center",
-  },
-  footerSingleText: {
-    color: "#94A3B8",
-    fontSize: 16,
-    fontWeight: "600",
+    alignItems: "center",
   },
 });

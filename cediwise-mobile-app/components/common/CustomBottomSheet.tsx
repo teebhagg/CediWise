@@ -213,14 +213,15 @@ export function CustomBottomSheet({
         animationType="none"
       >
         <AnimatedGlassView
-          intensity={Platform.OS === 'ios' ? 10 : 0}
+          intensity={Platform.OS === "ios" ? 10 : 0}
           tint="dark"
           style={[
             StyleSheet.absoluteFill,
             {
-              backgroundColor: Platform.OS === 'ios' ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.65)',
-              opacity: Animated.multiply(opacity, backdropOpacity)
-            }
+              backgroundColor:
+                Platform.OS === "ios" ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.65)",
+              opacity: Animated.multiply(opacity, backdropOpacity),
+            },
           ]}
         >
           <Pressable style={StyleSheet.absoluteFill} onPress={() => handleOpenChange(false)} />

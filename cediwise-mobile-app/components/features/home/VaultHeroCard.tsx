@@ -97,7 +97,7 @@ export function VaultHeroCard({ animatedStyle }: VaultHeroCardProps) {
     <Animated.View entering={FadeIn.duration(400)} style={animatedStyle}>
       <Animated.View entering={SlideInUp.duration(420).delay(80)}>
         <Pressable onPress={onPress}>
-          <Card className="border border-emerald-500/20 bg-emerald-500/5">
+          <Card blurred={true} className="border border-emerald-500/20 bg-emerald-500/5">
             <View className="flex-row items-center gap-2 mb-2">
               <Landmark size={18} color="rgba(52, 211, 153, 0.95)" />
               <Text className="text-emerald-200/90 text-sm font-semibold tracking-wide">

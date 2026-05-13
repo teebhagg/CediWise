@@ -177,7 +177,7 @@ async function sendSmsViaAgoo(
     body: JSON.stringify({
       to: phone,
       message,
-      // senderId: "CEDIWISE",
+      senderId: "CEDIWISE",
     }),
   });
 

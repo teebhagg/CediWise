@@ -1,0 +1,4 @@
+• Budget AI: chat in plain English—ask what numbers mean, what to trim, or how to improve your plan; answers use your real budget data.
+• Start from Budget overview or Spending insights so the assistant sees what you’re looking at.
+• One conversation: follow up until it makes sense—no app-hopping.
+• Debt-aware when you track loans, so tips aren’t blind to what you owe.

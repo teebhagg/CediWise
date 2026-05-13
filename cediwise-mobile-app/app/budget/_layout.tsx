@@ -20,6 +20,14 @@ export default function BudgetLayout() {
         <Stack.Screen name="insights" />
         <Stack.Screen name="cash-flow" />
         <Stack.Screen name="settings" />
+        <Stack.Screen
+          name="ai-chat"
+          options={{
+            animation: "default",
+            gestureEnabled: true,
+            contentStyle: { backgroundColor: "#020617" },
+          }}
+        />
       </Stack>
     </FeatureErrorBoundary>
   );

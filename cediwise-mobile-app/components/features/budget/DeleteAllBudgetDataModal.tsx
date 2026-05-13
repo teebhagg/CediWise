@@ -97,15 +97,22 @@ export function DeleteAllBudgetDataModal({
   return (
     <Dialog isOpen={visible} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="bg-black/65" style={{ opacity: 0 }} />
-        {Platform.OS === 'ios' && <GlassView
-          intensity={7}
-          tint="dark"
-          className="absolute inset-0"
-          onTouchEnd={isDeleting ? undefined : handleClose}
-        />}
+        <Dialog.Overlay className="bg-transparent" />
+        {Platform.OS === "ios" ? (
+          <GlassView
+            intensity={40}
+            tint="dark"
+            className="absolute inset-0"
+            onTouchEnd={isDeleting ? undefined : handleClose}
+          />
+        ) : (
+          <View
+            style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.8)" }]}
+            onTouchEnd={isDeleting ? undefined : handleClose}
+          />
+        )}
         <Dialog.Content
-          className="max-w-[360px] w-full rounded-xl bg-[rgba(18,22,33,0.98)] p-0"
+          className="max-w-[360px] w-full rounded-xl bg-[#151518] p-0"
           style={styles.contentShadow}
         >
           {!isDeleting && (

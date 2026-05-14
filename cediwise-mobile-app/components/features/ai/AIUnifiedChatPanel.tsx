@@ -40,13 +40,13 @@ import React, {
 } from "react";
 import {
   Alert,
-  KeyboardAvoidingView,
   LayoutAnimation,
   Platform,
   Share,
   View,
   type ViewStyle,
 } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Bubble, GiftedChat, type IMessage } from "react-native-gifted-chat";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -655,7 +655,8 @@ export function AIUnifiedChatPanel(props: AIUnifiedChatPanelProps) {
       }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        behavior="padding"
+        keyboardVerticalOffset={0}>
         <BudgetChatV1
           messages={messages}
           giftedUser={giftedUser as IMessage["user"]}

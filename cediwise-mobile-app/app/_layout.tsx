@@ -19,6 +19,9 @@ import {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import {
+  KeyboardProvider,
+} from "react-native-keyboard-controller";
+import {
   SafeAreaListener,
   SafeAreaProvider,
 } from "react-native-safe-area-context";
@@ -158,6 +161,7 @@ function AppShell() {
             options={{ headerShown: false }}
           />
           <Stack.Screen name="feedback" options={{ headerShown: false }} />
+          <Stack.Screen name="ai-chat" options={{ headerShown: false }} />
           <Stack.Screen name="literacy" options={{ headerShown: false }} />
           <Stack.Screen
             name="salary-calculator"
@@ -233,8 +237,9 @@ function RootLayout() {
   const appTree = (
     <RootErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <BottomSheetModalProvider>
-          <HeroUINativeProvider
+        <KeyboardProvider statusBarTranslucent>
+          <BottomSheetModalProvider>
+            <HeroUINativeProvider
             config={{
               devInfo: { stylingPrinciples: false },
               toast: {
@@ -272,6 +277,7 @@ function RootLayout() {
             </SafeAreaProvider>
           </HeroUINativeProvider>
         </BottomSheetModalProvider>
+        </KeyboardProvider>
       </GestureHandlerRootView>
     </RootErrorBoundary>
   );

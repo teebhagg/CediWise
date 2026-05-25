@@ -3,8 +3,8 @@
 import {
   ArrowRight01Icon,
   InstagramIcon,
-  Linkedin01Icon,
-  TwitterIcon,
+  NewTwitterIcon,
+  TiktokIcon,
 } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Link } from '@tanstack/react-router'
@@ -34,9 +34,9 @@ const footerLinks = [
 ]
 
 const socialLinks = [
-  { icon: TwitterIcon, href: '#', label: 'Twitter' },
+  { icon: NewTwitterIcon, href: 'https://x.com/cediwiseapp', label: 'X' },
   { icon: InstagramIcon, href: 'https://www.instagram.com/cediwiseapp/', label: 'Instagram' },
-  { icon: Linkedin01Icon, href: '#', label: 'LinkedIn' },
+  { icon: TiktokIcon, href: 'https://www.tiktok.com/@cediwiseapp', label: 'TikTok' },
 ]
 
 export function Footer() {

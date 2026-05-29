@@ -78,7 +78,7 @@ Pure TypeScript module with typed fetch functions calling the PostHog API.
 | `getActiveUsers(period)` | `/api/projects/:id/insights/trend/` | `{ dau: StatCard; wau: StatCard; mau: StatCard; series: { dau: SeriesPoint[]; wau: SeriesPoint[]; mau: SeriesPoint[] } }` | DAU/WAU/MAU trends + current period stats with week-over-week deltas |
 | `getTopEvents(period)` | `/api/projects/:id/insights/trend/` (event volume, top 10) | `EventBreakdownItem[]` | Most frequent events ranked by count |
 | `getEventBreakdown(period)` | `/api/projects/:id/insights/trend/` (breakdown by event) | `EventBreakdownItem[]` | Event type distribution (budget_viewed, expense_added, etc.) |
-| `getTotalUsers(period)` | `/api/projects/:id/insights/trend/` (trend with `"new_users"` insight or persons count with `created_after` filter) | `StatCard` | **New users created within** the period (not cumulative total). Delta compares to previous period. |
+| `getTotalUsers(period)` | `/api/projects/:id/insights/trend/` (trend with `"new_users"` insight) | `StatCard` | **New users created within** the period (not cumulative total). Delta compares to previous period. |
 
 **Authentication:** PostHog Personal API key (`phx_...`). The existing `phc_` key in mobile app env is write-only — a personal key is needed for read access at https://app.posthog.com/settings/user-api-keys.
 
@@ -95,7 +95,7 @@ Pure TypeScript module with typed fetch functions calling the Sentry API.
 | `getUnresolvedIssues(period)` | `/api/0/projects/:org/:project/issues/` | `{ total: StatCard; issues: SentryIssue[] }` | Issues **created within period** that remain unresolved. `total` has delta vs previous period. |
 | `getErrorStats(period)` | `/api/0/projects/:org/:project/stats/` | `{ fatal: SeriesPoint[]; error: SeriesPoint[]; warning: SeriesPoint[] }` | Error volume over time, grouped by level. |
 | `getPerformanceData(period)` | `/api/0/organizations/:org/events/` | `{ transactions: { name: string; p95: number; p50: number }[]; overallP95: StatCard }` | p95/p50 per transaction name. `overallP95` is the max p95 across all transactions for the period (displayed in stat card). |
-| `getAffectedUsers(period)` | `/api/0/projects/:org/:project/issues/` (unique users across issues) | `StatCard` | Unique users affected by issues created within period. Delta vs previous period. |
+| `getAffectedUsers(period)` | `/api/0/projects/:org/:project/issues/` (same response as `getUnresolvedIssues` — share the fetch, extract unique user count) | `StatCard` | Unique users affected by issues created within period. Delta vs previous period. |
 
 **Types:**
 

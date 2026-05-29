@@ -52,7 +52,7 @@ type StatCard = {
   label: string;
   value: number | string;
   delta: number | null;  // null if no previous period to compare
-  deltaLabel: string;     // e.g. "+12% wk"
+  deltaLabel: string;     // e.g. "+12% wk" (suffix adapts to period: "dy", "wk", "mo", "yr")
 };
 
 // PostHog event breakdown item
@@ -78,7 +78,7 @@ Pure TypeScript module with typed fetch functions calling the PostHog API.
 | `getActiveUsers(period)` | `/api/projects/:id/insights/trend/` | `{ dau: StatCard; wau: StatCard; mau: StatCard; series: { dau: SeriesPoint[]; wau: SeriesPoint[]; mau: SeriesPoint[] } }` | DAU/WAU/MAU trends + current period stats with week-over-week deltas |
 | `getTopEvents(period)` | `/api/projects/:id/insights/trend/` (event volume, top 10) | `EventBreakdownItem[]` | Most frequent events ranked by count |
 | `getEventBreakdown(period)` | `/api/projects/:id/insights/trend/` (breakdown by event) | `EventBreakdownItem[]` | Event type distribution (budget_viewed, expense_added, etc.) |
-| `getTotalUsers(period)` | `/api/projects/:id/persons/` | `StatCard` | **New users created within** the period (not cumulative total). Delta compares to previous period. |
+| `getTotalUsers(period)` | `/api/projects/:id/insights/trend/` (trend with `"new_users"` insight or persons count with `created_after` filter) | `StatCard` | **New users created within** the period (not cumulative total). Delta compares to previous period. |
 
 **Authentication:** PostHog Personal API key (`phx_...`). The existing `phc_` key in mobile app env is write-only — a personal key is needed for read access at https://app.posthog.com/settings/user-api-keys.
 
@@ -86,7 +86,7 @@ Pure TypeScript module with typed fetch functions calling the PostHog API.
 
 Pure TypeScript module with typed fetch functions calling the Sentry API.
 
-**Shared client:** Base URL `https://sentry.io/api/0/`. Auth from `SENTRY_AUTH_TOKEN` + `SENTRY_ORG_SLUG` + `SENTRY_PROJECT_SLUG` env vars.
+**Shared client:** Base URL `https://sentry.io/api/0/` (US region). If the `SENTRY_AUTH_TOKEN` prefix indicates a DE region (sntrys_de...), use `https://de.sentry.io/api/0/` instead. Auth from `SENTRY_AUTH_TOKEN` + `SENTRY_ORG_SLUG` + `SENTRY_PROJECT_SLUG` env vars.
 
 **Functions:**
 
@@ -94,7 +94,7 @@ Pure TypeScript module with typed fetch functions calling the Sentry API.
 |----------|---------------------|---------|-----------|
 | `getUnresolvedIssues(period)` | `/api/0/projects/:org/:project/issues/` | `{ total: StatCard; issues: SentryIssue[] }` | Issues **created within period** that remain unresolved. `total` has delta vs previous period. |
 | `getErrorStats(period)` | `/api/0/projects/:org/:project/stats/` | `{ fatal: SeriesPoint[]; error: SeriesPoint[]; warning: SeriesPoint[] }` | Error volume over time, grouped by level. |
-| `getPerformanceData(period)` | `/api/0/organizations/:org/events/` | `{ transactions: { name: string; p95: number; p50: number }[] }` | p95/p50 load times per transaction name. |
+| `getPerformanceData(period)` | `/api/0/organizations/:org/events/` | `{ transactions: { name: string; p95: number; p50: number }[]; overallP95: StatCard }` | p95/p50 per transaction name. `overallP95` is the max p95 across all transactions for the period (displayed in stat card). |
 | `getAffectedUsers(period)` | `/api/0/projects/:org/:project/issues/` (unique users across issues) | `StatCard` | Unique users affected by issues created within period. Delta vs previous period. |
 
 **Types:**
@@ -218,10 +218,22 @@ Before implementation, you need to:
 ## Testing
 
 - `lib/posthog.ts` and `lib/sentry.ts`: Unit test with mocked fetch responses (Vitest)
+  - **Happy path**: Valid API response returns typed data
+  - **Empty data**: API returns empty series — returns empty arrays, not null
+  - **API error**: Non-2xx status — throws typed `ApiError` with status code + message
+  - **Missing env var**: No key configured — throws `ConfigError` (caught by page, shows warning badge)
 - Pages: Verify Server Component rendering with test data
 - Charts: Already covered by existing patterns (recharts)
 - Auth: Pages inherit dashboard auth guard — no additional auth needed
 - Error state: Each chart handles API errors gracefully (empty state + error message)
+
+### Loading Strategy
+
+Each dashboard page gets its own `loading.tsx` (same pattern as existing pages):
+- `app/(dashboard)/analytics/loading.tsx` — skeleton grid of 4 stat card placeholders + chart area placeholders
+- `app/(dashboard)/monitoring/loading.tsx` — skeleton grid of 3 stat card placeholders + chart area placeholders
+
+No page-level Suspense boundaries needed — individual sections load together (all-or-nothing per page, matching existing convention).
 
 ---
 

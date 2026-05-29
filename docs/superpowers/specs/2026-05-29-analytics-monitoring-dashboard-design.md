@@ -33,26 +33,52 @@ No API routes. No new architectural patterns. Identical to how Users, Subscripti
 
 ---
 
+## Shared Types
+
+A `types/analytics.ts` file defines the contracts shared across lib modules, pages, and chart components:
+
+```typescript
+// Possible time range values
+type Period = "day" | "week" | "month" | "year";
+
+// Standardized trend series point (used by both PostHog and Sentry)
+type SeriesPoint = {
+  date: string;  // ISO date string
+  value: number;
+};
+
+// Stat card data
+type StatCard = {
+  label: string;
+  value: number | string;
+  delta: number | null;  // null if no previous period to compare
+  deltaLabel: string;     // e.g. "+12% wk"
+};
+
+// PostHog event breakdown item
+type EventBreakdownItem = {
+  label: string;
+  value: number;
+  color: string;  // chart color token
+};
+```
+
 ## Files to Create
 
 ### `lib/posthog.ts`
 
 Pure TypeScript module with typed fetch functions calling the PostHog API.
 
+**Shared client:** Base URL `https://eu.posthog.com` (EU region, matching `EXPO_PUBLIC_POSTHOG_HOST`). Auth from `POSTHOG_PERSONAL_API_KEY` + `POSTHOG_PROJECT_ID` env vars.
+
 **Functions:**
 
-| Function | PostHog API Endpoint | Returns |
-|----------|---------------------|---------|
-| `getActiveUsers(period)` | `/api/projects/:id/insights/trend/` (DAU/WAU/MAU) | `{ dau, wau, mau, series[] }` |
-| `getTopEvents(period)` | `/api/projects/:id/insights/trend/` (event volume) | `{ events: { name, count }[] }` |
-| `getEventBreakdown(period)` | `/api/projects/:id/insights/trend/` (breakdown) | `{ breakdown: { label, value }[] }` |
-| `getTotalUsers(period)` | `/api/projects/:id/persons/` (count) | `{ total: number, delta: number }` |
-| `getOverview()` | Multiple calls aggregated | Combined stat card data |
-
-**Design:**
-- All functions are `async`, throw on error, typed inputs/outputs
-- API client configured from `POSTHOG_PERSONAL_API_KEY` + `POSTHOG_PROJECT_ID` env vars
-- PostHog base URL: `https://eu.posthog.com` (EU region, matching `EXPO_PUBLIC_POSTHOG_HOST`)
+| Function | PostHog API Endpoint | Returns | Semantics |
+|----------|---------------------|---------|-----------|
+| `getActiveUsers(period)` | `/api/projects/:id/insights/trend/` | `{ dau: StatCard; wau: StatCard; mau: StatCard; series: { dau: SeriesPoint[]; wau: SeriesPoint[]; mau: SeriesPoint[] } }` | DAU/WAU/MAU trends + current period stats with week-over-week deltas |
+| `getTopEvents(period)` | `/api/projects/:id/insights/trend/` (event volume, top 10) | `EventBreakdownItem[]` | Most frequent events ranked by count |
+| `getEventBreakdown(period)` | `/api/projects/:id/insights/trend/` (breakdown by event) | `EventBreakdownItem[]` | Event type distribution (budget_viewed, expense_added, etc.) |
+| `getTotalUsers(period)` | `/api/projects/:id/persons/` | `StatCard` | **New users created within** the period (not cumulative total). Delta compares to previous period. |
 
 **Authentication:** PostHog Personal API key (`phx_...`). The existing `phc_` key in mobile app env is write-only — a personal key is needed for read access at https://app.posthog.com/settings/user-api-keys.
 
@@ -60,20 +86,31 @@ Pure TypeScript module with typed fetch functions calling the PostHog API.
 
 Pure TypeScript module with typed fetch functions calling the Sentry API.
 
+**Shared client:** Base URL `https://sentry.io/api/0/`. Auth from `SENTRY_AUTH_TOKEN` + `SENTRY_ORG_SLUG` + `SENTRY_PROJECT_SLUG` env vars.
+
 **Functions:**
 
-| Function | Sentry API Endpoint | Returns |
-|----------|---------------------|---------|
-| `getUnresolvedIssues(period)` | `/api/0/projects/:org/:project/issues/` | `{ issues: Issue[], total: number }` |
-| `getErrorStats(period)` | `/api/0/projects/:org/:project/stats/` | `{ series: { date, count }[] }` |
-| `getPerformanceData(period)` | `/api/0/organizations/:org/events/` (transaction stats) | `{ transactions: { name, p95, p50 }[] }` |
-| `getAffectedUsers(period)` | `/api/0/projects/:org/:project/issues/` (aggregated) | `{ count: number }` |
-| `getOverview()` | Multiple calls aggregated | Combined stat card data |
+| Function | Sentry API Endpoint | Returns | Semantics |
+|----------|---------------------|---------|-----------|
+| `getUnresolvedIssues(period)` | `/api/0/projects/:org/:project/issues/` | `{ total: StatCard; issues: SentryIssue[] }` | Issues **created within period** that remain unresolved. `total` has delta vs previous period. |
+| `getErrorStats(period)` | `/api/0/projects/:org/:project/stats/` | `{ fatal: SeriesPoint[]; error: SeriesPoint[]; warning: SeriesPoint[] }` | Error volume over time, grouped by level. |
+| `getPerformanceData(period)` | `/api/0/organizations/:org/events/` | `{ transactions: { name: string; p95: number; p50: number }[] }` | p95/p50 load times per transaction name. |
+| `getAffectedUsers(period)` | `/api/0/projects/:org/:project/issues/` (unique users across issues) | `StatCard` | Unique users affected by issues created within period. Delta vs previous period. |
 
-**Design:**
-- All functions are `async`, throw on error, typed inputs/outputs
-- API client configured from `SENTRY_AUTH_TOKEN` + `SENTRY_ORG_SLUG` + `SENTRY_PROJECT_SLUG` env vars
-- Sentry base URL: `https://sentry.io/api/0/` or `https://de.sentry.io/api/0/` (region determined by token)
+**Types:**
+
+```typescript
+type SentryIssue = {
+  id: string;
+  title: string;
+  level: "fatal" | "error" | "warning" | "info";
+  count: number;            // event count
+  userCount: number;        // affected users
+  firstSeen: string;        // ISO date
+  lastSeen: string;         // ISO date
+  permalink: string;        // link to Sentry
+};
+```
 
 **Authentication:** Uses existing `SENTRY_AUTH_TOKEN` from mobile app env (sntrys_...). Also needs org slug and project slug visible in Sentry dashboard URL.
 
@@ -118,7 +155,7 @@ Server Component fetching Sentry data and rendering charts.
 │ Errors Over Time — AreaChart (stacked)                │
 ├────────────────────────────────┬──────────────────────┤
 │ Top Errors — BarChart          │ Performance by       │
-│ (clickable, expand details)    │ Transaction — BarChart│
+│ (click opens Sentry permalink) │ Transaction — BarChart│
 ├────────────────────────────────┴──────────────────────┤
 │ Recent Errors — Table (title, count, first/last seen)  │
 └──────────────────────────────────────────────────────┘

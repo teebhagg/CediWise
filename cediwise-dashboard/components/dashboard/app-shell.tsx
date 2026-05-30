@@ -27,6 +27,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import {
+  Analytics01Icon,
   BookOpen01Icon,
   DashboardSquare01Icon,
   Logout01Icon,
@@ -37,6 +38,7 @@ import {
   Mail01Icon,
   UserGroupIcon,
   Invoice01Icon,
+  AlertCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
@@ -45,6 +47,8 @@ import { useState } from "react";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: DashboardSquare01Icon },
+  { href: "/analytics", label: "Analytics", icon: Analytics01Icon },
+  { href: "/monitoring", label: "Monitoring", icon: AlertCircleIcon },
   { href: "/users", label: "Users", icon: UserGroupIcon },
   { href: "/subscriptions", label: "Subscriptions", icon: Invoice01Icon },
   { href: "/learning-data", label: "Learning Data", icon: BookOpen01Icon },

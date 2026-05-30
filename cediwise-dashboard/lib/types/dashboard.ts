@@ -76,3 +76,86 @@ export type UserSubscription = {
   pendingTier: string | null;
   monthlyPrice: number;
 } | null;
+
+// ─── Analytics (PostHog) types ────────────────────────────────────────────
+
+export type Period = "day" | "week" | "month" | "year";
+
+export type SeriesPoint = {
+  date: string;
+  value: number;
+};
+
+export type StatCardData = {
+  label: string;
+  value: number | string;
+  delta: number | null;
+  deltaLabel: string;
+};
+
+export type EventBreakdownItem = {
+  label: string;
+  value: number;
+  color: string;
+};
+
+export type ActiveUsersData = {
+  dau: StatCardData;
+  wau: StatCardData;
+  mau: StatCardData;
+  series: {
+    dau: SeriesPoint[];
+    wau: SeriesPoint[];
+    mau: SeriesPoint[];
+  };
+};
+
+export type TopEventsData = EventBreakdownItem[];
+
+export type EventBreakdownData = EventBreakdownItem[];
+
+export type PageviewTrendData = SeriesPoint[];
+
+// ─── Monitoring (Sentry) types ────────────────────────────────────────────
+
+export type SentryIssue = {
+  id: string;
+  title: string;
+  level: "fatal" | "error" | "warning" | "info";
+  count: number;
+  userCount: number;
+  firstSeen: string;
+  lastSeen: string;
+  permalink: string;
+  culprit: string;
+  metadata: {
+    type: string;
+    value: string;
+    filename: string;
+    function: string;
+  };
+};
+
+export type UnresolvedIssuesData = {
+  total: StatCardData;
+  issues: SentryIssue[];
+};
+
+export type ErrorStatsData = {
+  fatal: SeriesPoint[];
+  error: SeriesPoint[];
+  warning: SeriesPoint[];
+};
+
+export type TransactionPerformance = {
+  name: string;
+  p95: number;
+  p50: number;
+};
+
+export type PerformanceData = {
+  transactions: TransactionPerformance[];
+  overallP95: StatCardData;
+};
+
+export type AffectedUsersData = StatCardData;

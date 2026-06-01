@@ -169,6 +169,50 @@ export const MODULES: ModuleInfo[] = [
       "Know your rights as a financial consumer",
       "Protect your financial data and privacy",
     ],
+    next_module_id: "MOD-08",
+  },
+  {
+    id: "MOD-08",
+    title: "Credit & Debt Management",
+    description:
+      "Understand loans, interest rates, credit scores, and manage debt responsibly.",
+    icon: "credit-card",
+    color: "#0EA5E9",
+    level: "intermediate",
+    estimated_minutes: 55,
+    lessonIds: [
+      "mod08-credit-01",
+      "mod08-credit-02",
+      "mod08-credit-03",
+      "mod08-credit-04",
+    ],
+    learning_objectives: [
+      "Understand different types of credit and how loans work",
+      "Compare interest rates and total borrowing costs",
+      "Build and maintain a good credit history",
+      "Manage debt repayment and avoid over-indebtedness",
+    ],
+    next_module_id: "MOD-09",
+  },
+  {
+    id: "MOD-09",
+    title: "International Finance & Remittances",
+    description:
+      "Navigate forex, send and receive money abroad, and engage with Ghana's diaspora economy.",
+    icon: "globe",
+    color: "#D946EF",
+    level: "intermediate",
+    estimated_minutes: 40,
+    lessonIds: [
+      "mod09-intl-01",
+      "mod09-intl-02",
+      "mod09-intl-03",
+    ],
+    learning_objectives: [
+      "Understand how exchange rates work and what affects the cedi",
+      "Send and receive money across borders safely and cheaply",
+      "Explore diaspora investment opportunities in Ghana",
+    ],
     next_module_id: undefined,
   },
 ];
@@ -181,6 +225,8 @@ export const MODULE_IDS: LessonModule[] = [
   "MOD-05",
   "MOD-06",
   "MOD-07",
+  "MOD-08",
+  "MOD-09",
 ];
 
 /** Difficulty badge colours per FRD §24.2 */

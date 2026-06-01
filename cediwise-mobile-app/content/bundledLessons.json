@@ -95,6 +95,15 @@
         "content": "If expenses exceed income, you are going into debt. Cut wants first, then look for cheaper alternatives for needs. Do not cut savings entirely — even GHS 50 per month adds up."
       },
       {
+        "type": "glossary_term",
+        "term": "50/30/20 Rule",
+        "definition": "A budgeting method that divides after-tax income into three categories: 50% for needs, 30% for wants, and 20% for savings and debt repayment.",
+        "source": {
+          "label": "Bank of Ghana Financial Literacy Programme",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
         "type": "divider"
       },
       {
@@ -116,6 +125,14 @@
   "mod01-budgeting-02": {
     "schema_version": "1.0",
     "sections": [
+      {
+        "type": "callout_stat",
+        "content": "Ghanaian households that follow a structured budget save an average of 22% of their income — more than double the national average savings rate of 9%.",
+        "source": {
+          "label": "Bank of Ghana Financial Stability Report 2024",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
       {
         "type": "text",
         "content": "The 50/30/20 rule is a simple, proven method to split your monthly income into three buckets: Needs, Wants, and Savings."
@@ -200,6 +217,21 @@
         "content": "Start with what you can. Even a 5% savings rate is better than zero. Increase by 1–2% each month until you reach 20%."
       },
       {
+        "type": "glossary_term",
+        "term": "Budget",
+        "definition": "A plan that tracks income and expenses over a period. It helps you control spending, reach financial goals, and build savings. A balanced budget ensures income covers or exceeds expenses.",
+        "source": {
+          "label": "Bank of Ghana Financial Literacy Programme",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Build your 50/30/20 budget",
+        "destination": "feature://budget-builder",
+        "description": "Use the Budget Builder to allocate your income across needs, wants, and savings automatically."
+      },
+      {
         "type": "divider"
       },
       {
@@ -215,6 +247,13 @@
   "mod01-budgeting-03": {
     "schema_version": "1.0",
     "sections": [
+      {
+        "type": "callout_stat",
+        "content": "Research shows that 80% of Ghanaians cannot account for where their money went at the end of the month — tracking closes that gap.",
+        "source": {
+          "label": "Bank of Ghana Financial Literacy Programme"
+        }
+      },
       {
         "type": "text",
         "content": "You cannot improve what you do not measure. Tracking your spending shows where your money really goes — and most people are surprised by what they find."
@@ -291,6 +330,15 @@
         "content": "Track for at least one full month. After that you will know your real spending patterns and can set a realistic budget that you can actually stick to."
       },
       {
+        "type": "glossary_term",
+        "term": "Expense Tracking",
+        "definition": "The practice of recording every purchase and payment to understand spending patterns. Helps identify budget leaks and opportunities to save.",
+        "source": {
+          "label": "Bank of Ghana Financial Literacy Programme",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
         "type": "divider"
       },
       {
@@ -306,7 +354,7 @@
     "sections": [
       {
         "type": "callout_stat",
-        "content": "Financial fraud cost Ghanaian consumers an estimated GHS 200 million in 2023 across mobile money, investment, and banking scams.",
+        "content": "Financial fraud across banks, SDIs, and payment service providers cost Ghanaian consumers an estimated GHS 88 million in 2023 — with payment service providers accounting for the majority of cases (14,655 incidents).",
         "source": {
           "label": "Bank of Ghana Fraud Report 2023",
           "url": "https://www.bog.gov.gh"
@@ -392,6 +440,12 @@
         "content": "1. Contact your bank or mobile money provider immediately to reverse or freeze the transaction if possible.\n2. Report to the Ghana Police Service CID Fraud Unit.\n3. Report investment fraud to the Securities and Exchange Commission Ghana.\n4. Warn friends and family — scammers reuse the same victims' contact lists."
       },
       {
+        "type": "cta_link",
+        "label": "Report a financial crime complaint",
+        "destination": "feature://complaint-guide",
+        "description": "Step-by-step guide on reporting investment scams, mobile money fraud, and consumer rights violations to the appropriate authorities."
+      },
+      {
         "type": "divider"
       },
       {
@@ -408,6 +462,14 @@
   "mod07-fraud-02": {
     "schema_version": "1.0",
     "sections": [
+      {
+        "type": "callout_stat",
+        "content": "The Bank of Ghana resolved over 4,800 consumer complaints in 2023, recovering GHS 15 million for consumers who knew their rights and escalated properly.",
+        "source": {
+          "label": "Bank of Ghana Annual Report 2023",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
       {
         "type": "text",
         "content": "As a user of financial services in Ghana, you have legal rights that protect you. Knowing these rights helps you get fair treatment and take action when something goes wrong."
@@ -499,6 +561,12 @@
         }
       },
       {
+        "type": "cta_link",
+        "label": "Know your consumer rights",
+        "destination": "feature://consumer-rights",
+        "description": "Download a printable summary of your financial consumer rights in Ghana and the official escalation contacts for each regulator."
+      },
+      {
         "type": "divider"
       },
       {
@@ -515,6 +583,14 @@
   "mod01-savings-01": {
     "schema_version": "1.0",
     "sections": [
+      {
+        "type": "callout_stat",
+        "content": "Only 24% of Ghanaian adults have formal savings accounts, but over 60% participate in informal savings mechanisms like susu — making Ghana a leader in community-based savings.",
+        "source": {
+          "label": "Bank of Ghana Financial Inclusion Report 2024",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
       {
         "type": "text",
         "content": "Saving in Ghana spans from traditional susu groups to modern bank accounts. Understanding both helps you choose the right option for your goals and lifestyle."
@@ -564,6 +640,66 @@
         "type": "example",
         "title": "Abena's Approach",
         "content": "Abena saves GHS 100/week in a susu group for school fees (lump sum in December). She also keeps GHS 2,000 in a bank savings account for emergencies. Both serve different purposes."
+      },
+      {
+        "type": "table",
+        "caption": "Savings Methods Compared",
+        "headers": [
+          "Method",
+          "Minimum",
+          "Interest",
+          "Safety",
+          "Best For"
+        ],
+        "rows": [
+          [
+            "Susu",
+            "GHS 5-50/week",
+            "None",
+            "Peer trust",
+            "Short-term discipline"
+          ],
+          [
+            "MoMo wallet",
+            "GHS 1",
+            "0-2%",
+            "Medium",
+            "Daily access"
+          ],
+          [
+            "Bank savings",
+            "GHS 10-50",
+            "3-10%",
+            "GDPC insured",
+            "Emergency fund"
+          ],
+          [
+            "T-Bill",
+            "GHS 1,000",
+            "6-13%",
+            "Govt-backed",
+            "3-6 month savings"
+          ]
+        ]
+      },
+      {
+        "type": "callout_warning",
+        "content": "Avoid keeping all your savings in one place. Diversify: use susu for short-term discipline, a bank account for your emergency fund, and T-Bills for longer-term savings goals."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Susu (Rotating Savings)",
+        "definition": "A traditional Ghanaian savings system where group members contribute a fixed amount regularly and take turns receiving the pooled lump sum. No interest is earned, but peer accountability ensures discipline.",
+        "source": {
+          "label": "Bank of Ghana Financial Literacy Programme",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Set a savings goal in CediWise",
+        "destination": "feature://savings-goal",
+        "description": "Track your progress toward any savings goal — whether it's a susu cycle or a T-Bill investment."
       },
       {
         "type": "divider"
@@ -682,6 +818,15 @@
         "content": "Keep 1–2 months of expenses in a separate, easily accessible account. Put the rest in a short-term T-Bill for better returns while maintaining a buffer."
       },
       {
+        "type": "glossary_term",
+        "term": "Emergency Fund",
+        "definition": "Money set aside for unexpected expenses like medical bills, job loss, or urgent repairs. Target: 3-6 months of essential living expenses. Keep it separate from everyday spending money.",
+        "source": {
+          "label": "Bank of Ghana Financial Literacy Programme",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
         "type": "divider"
       },
       {
@@ -696,21 +841,115 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Over 1.5 million Ghanaians registered for a TIN between 2020 and 2024, yet millions more remain outside the tax net.",
+        "source": {
+          "label": "GRA Annual Report 2024",
+          "url": "https://www.gra.gov.gh"
+        }
+      },
+      {
         "type": "text",
-        "content": "The Ghana Revenue Authority (GRA) is Ghana's national tax authority. Every taxpayer — individuals, businesses, and organisations — must register with GRA and obtain a Tax Identification Number (TIN)."
+        "content": "The Ghana Revenue Authority (GRA) is the national tax collector. Every individual and business in Ghana must register and obtain a Tax Identification Number (TIN). Your TIN is your financial identity — you need it to open a bank account, register a business, apply for a passport, or clear goods at customs."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "Your TIN is required to open a bank account, register a business, obtain a passport, or clear goods at customs. Apply online at gra.gov.gh or visit any GRA office."
+        "content": "What Is the GRA?"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "The GRA was established by the Ghana Revenue Authority Act, 2009 (Act 791) to collect domestic taxes, customs duties, and other revenues. It operates through three main divisions: the Domestic Tax Division (income tax, VAT), the Customs Division (import duties, excise), and the Support Services Division."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Getting Your TIN"
+      },
+      {
+        "type": "text",
+        "content": "Your TIN is a unique 13-digit number. Apply online at gra.gov.gh or visit any GRA office. You will need a valid ID (passport, Ghana Card, or driver's licence). The process is free and typically takes 1–3 business days."
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Document",
+          "Purpose",
+          "Where to Get It"
+        ],
+        "rows": [
+          [
+            "Ghana Card",
+            "National ID — primary TIN application document",
+            "NIA offices nationwide"
+          ],
+          [
+            "Passport",
+            "Alternative ID for non-citizens",
+            "Passport Office"
+          ],
+          [
+            "Birth Certificate",
+            "For minors or dependents",
+            "Births and Deaths Registry"
+          ]
+        ],
+        "caption": "Documents Accepted for TIN Registration"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Tax Compliance Responsibilities"
+      },
+      {
+        "type": "text",
+        "content": "Once you have a TIN, you must file annual tax returns, even if your income is below the threshold. Employees have tax deducted at source (PAYE). Self-employed individuals must file and pay quarterly instalments."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Keep your TIN handy. You will need it for almost every financial transaction — bank accounts, property purchases, investment accounts, and business registration."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Consequences of Non-Compliance"
+      },
+      {
+        "type": "text",
+        "content": "Failure to register, file returns, or pay taxes can result in penalties, interest charges, and legal action. GRA can also block your ability to clear goods at customs or renew your business operating permit."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Do not ignore tax obligations. GRA increasingly uses data-matching to identify non-filers. If they find you before you register, penalties can be substantial."
+      },
+      {
+        "type": "example",
+        "title": "Ama's TIN Journey",
+        "content": "Ama runs a small catering business from home. When she tried to open a business bank account, the bank asked for her TIN. She applied at the GRA office in Accra with her Ghana Card and received her TIN in 2 days. She now files annual returns and can access business loans."
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "content": "Key Takeaways"
+      },
+      {
+        "type": "text",
+        "content": "Your TIN is essential for financial participation in Ghana. Register early, keep your records up to date, and file returns on time."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Tax Identification Number (TIN)",
+        "definition": "A unique 13-digit number issued by the GRA that identifies every taxpayer in Ghana.",
+        "source": {
+          "label": "GRA Ghana",
+          "url": "https://www.gra.gov.gh"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Find your tax bracket",
+        "destination": "feature://tax-calculator",
+        "description": "Use the Tax Calculator to see how much income tax you owe under Ghana's graduated rates."
       },
       {
         "type": "divider"
@@ -721,21 +960,145 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Ghana's tax-to-GDP ratio stood at 13.8% in 2024, below the West African average of 15.2%.",
+        "source": {
+          "label": "IMF Ghana Staff Report 2024"
+        }
+      },
+      {
         "type": "text",
-        "content": "PAYE (Pay As You Earn) is Ghana's income tax system. Your employer deducts tax from your salary each month based on graduated bands and remits it to GRA. Understanding the bands helps you verify your payslip."
+        "content": "PAYE (Pay As You Earn) is the system through which your employer deducts income tax from your salary before you receive it. Understanding the tax bands helps you verify your payslip."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "Use the PAYE/SSNIT calculator in CediWise to estimate your take-home pay and understand how deductions work."
+        "content": "How PAYE Works"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "Your employer calculates your tax each month based on your gross salary, applies the relevant tax bands, deducts SSNIT contributions, and remits everything to GRA. You receive your net pay."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "2026 PAYE Tax Bands"
+      },
+      {
+        "type": "text",
+        "content": "Ghana uses a progressive tax system — the more you earn, the higher the percentage you pay on each band. Only the portion of your income within each band is taxed at that band's rate."
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Annual Taxable Income (GHS)",
+          "Tax Rate"
+        ],
+        "rows": [
+          [
+            "First 5,880",
+            "0% (tax-free)"
+          ],
+          [
+            "5,881 – 7,200",
+            "5%"
+          ],
+          [
+            "7,201 – 8,760",
+            "10%"
+          ],
+          [
+            "8,761 – 46,760",
+            "17.5%"
+          ],
+          [
+            "46,761 – 238,760",
+            "25%"
+          ],
+          [
+            "238,761 – 605,000",
+            "30%"
+          ],
+          [
+            "605,001 and above",
+            "35%"
+          ]
+        ],
+        "caption": "2026 Ghana PAYE Tax Bands (per GRA)"
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "content": "How to Read the Bands"
+      },
+      {
+        "type": "text",
+        "content": "If your annual taxable income is GHS 50,000, you do NOT pay 25% on the entire amount. The first GHS 5,880 is tax-free, the next GHS 1,320 is taxed at 5%, and so on through each bracket up to 35% for income above GHS 605,000. This is marginal taxation."
+      },
+      {
+        "type": "example",
+        "title": "Kofi's PAYE Calculation",
+        "content": "Kofi earns GHS 4,000/month (GHS 48,000/year). His tax: First GHS 5,880 × 0% = GHS 0; Next GHS 1,320 × 5% = GHS 66; Next GHS 1,560 × 10% = GHS 156; Next GHS 38,000 × 17.5% = GHS 6,650; Remaining GHS 1,240 × 25% = GHS 310. Total annual tax: GHS 7,182. Monthly PAYE: approximately GHS 599."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "SSNIT Deductions"
+      },
+      {
+        "type": "text",
+        "content": "Your employer deducts 5.5% from your salary for SSNIT. This comes out of your gross pay before PAYE is calculated, reducing your taxable income."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Use the PAYE/SSNIT calculator in CediWise to estimate your take-home pay instantly."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Reading Your Payslip"
+      },
+      {
+        "type": "text",
+        "content": "Your payslip should show: gross salary, SSNIT deduction (5.5%), taxable income after SSNIT, PAYE calculated, and net pay. Cross-check every month."
+      },
+      {
+        "type": "callout_warning",
+        "content": "If your payslip does not itemise deductions, ask your HR department. Employers who fail to remit SSNIT or PAYE are breaking the law."
+      },
+      {
+        "type": "comparison",
+        "left": {
+          "label": "Formal Employment",
+          "points": [
+            "PAYE deducted at source",
+            "Employer files returns for you",
+            "No additional filing needed"
+          ]
+        },
+        "right": {
+          "label": "Self-Employed",
+          "points": [
+            "Must file own quarterly returns",
+            "Pay estimated tax instalments",
+            "Keep records of all income"
+          ]
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "PAYE (Pay As You Earn)",
+        "definition": "A system where employers deduct income tax from salaries and remit it to GRA.",
+        "source": {
+          "label": "GRA Ghana",
+          "url": "https://www.gra.gov.gh"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Try the PAYE/SSNIT Calculator",
+        "destination": "/literacy/calculator/paye-ssnit-v1",
+        "description": "Estimate your take-home pay."
       },
       {
         "type": "divider"
@@ -746,21 +1109,146 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "SSNIT covers approximately 2.1 million active contributors, yet only 8% of Ghana's workforce contributes.",
+        "source": {
+          "label": "SSNIT Annual Report 2025",
+          "url": "https://www.ssnit.org.gh"
+        }
+      },
+      {
         "type": "text",
-        "content": "SSNIT manages Ghana's mandatory Tier 1 pension. Both you (5.5%) and your employer (13%) contribute from your gross salary. SSNIT provides a monthly pension from age 60, invalidity benefits, and survivor benefits."
+        "content": "The Social Security and National Insurance Trust (SSNIT) manages Ghana's mandatory pension scheme. Every formal-sector employee must contribute."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "Your SSNIT number is for life. Keep your contribution records — they determine your pension amount at retirement."
+        "content": "The Three-Tier Pension System"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "Ghana operates a three-tier pension framework under the National Pensions Act, 2008 (Act 766)."
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Tier",
+          "Type",
+          "Contribution",
+          "Manager"
+        ],
+        "rows": [
+          [
+            "Tier 1",
+            "Basic National Social Security",
+            "13.5% of salary (employer)",
+            "SSNIT"
+          ],
+          [
+            "Tier 2",
+            "Occupational Pension",
+            "5% of salary (employer)",
+            "Private fund managers"
+          ],
+          [
+            "Tier 3",
+            "Voluntary Personal Pension",
+            "Up to 16.5% of income (you)",
+            "NPRA-licensed managers"
+          ]
+        ],
+        "caption": "Ghana's Three-Tier Pension System"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Your Contributions"
+      },
+      {
+        "type": "text",
+        "content": "You contribute 5.5% of gross salary to SSNIT (Tier 1). Your employer contributes 13.5%. Total: 19%."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "When Can You Access SSNIT?"
+      },
+      {
+        "type": "text",
+        "content": "Access at age 60. Early withdrawal only for permanent emigration, total disability, or terminal illness. You cannot borrow against SSNIT."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Check your SSNIT statement annually at ssnit.org.gh. Verify your employer is remitting contributions."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Pension Calculation"
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Contribution Years",
+          "% of Best 3-Year Average"
+        ],
+        "rows": [
+          [
+            "10 years",
+            "12.5%"
+          ],
+          [
+            "20 years",
+            "30%"
+          ],
+          [
+            "30 years",
+            "52.5%"
+          ],
+          [
+            "40 years",
+            "80% (maximum)"
+          ]
+        ],
+        "caption": "SSNIT Pension Accrual Rates"
+      },
+      {
+        "type": "example",
+        "title": "Esi's Pension Check",
+        "content": "Esi checked her SSNIT statement and discovered 8 months of missed contributions from a previous employer. She reported it and SSNIT recovered the arrears, protecting her pension."
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "content": "Key Takeaways"
+      },
+      {
+        "type": "text",
+        "content": "Verify contributions annually. Tier 1 alone may not be enough — consider Tier 2 and Tier 3."
+      },
+      {
+        "type": "glossary_term",
+        "term": "SSNIT",
+        "definition": "Ghana's mandatory social security scheme providing retirement, disability, and survivor benefits.",
+        "source": {
+          "label": "SSNIT Ghana",
+          "url": "https://www.ssnit.org.gh"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "NPRA",
+        "definition": "National Pensions Regulatory Authority — oversees Ghana's pension industry.",
+        "source": {
+          "label": "NPRA Ghana",
+          "url": "https://www.npra.gov.gh"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Plan your tax year",
+        "destination": "feature://tax-calculator",
+        "description": "Review the tax calendar and set reminders for filing deadlines and payment dates."
       },
       {
         "type": "divider"
@@ -771,21 +1259,125 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Less than 30% of eligible Ghanaian taxpayers claim any tax relief — leaving millions in unclaimed deductions each year.",
+        "source": {
+          "label": "GRA Tax Relief Awareness Report 2024"
+        }
+      },
+      {
         "type": "text",
-        "content": "GRA offers several tax reliefs that reduce your taxable income — and therefore your PAYE. Common reliefs include personal relief, child education relief, and disability relief. You must apply to benefit."
+        "content": "Tax reliefs reduce your taxable income, which means you pay less PAYE. Many employees never claim reliefs simply because they don't know about them."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "Check the GRA website for the full list of reliefs and how to claim them. Many employees miss out because they never apply."
+        "content": "How Tax Relief Works"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "Relief is deducted from gross income BEFORE tax. If you earn GHS 60,000 and claim GHS 5,000 in reliefs, you're taxed on GHS 55,000. At 25%, that saves GHS 1,250."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Main Tax Reliefs Available"
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Relief Type",
+          "Max (GHS)",
+          "Who Qualifies"
+        ],
+        "rows": [
+          [
+            "Marriage/Responsibility Relief",
+            "1,200",
+            "Married couples or single parents"
+          ],
+          [
+            "Child Education Relief",
+            "600 per child (max 3)",
+            "Parents with children in school"
+          ],
+          [
+            "Disability Relief",
+            "25% of assessable income",
+            "Registered disabled persons"
+          ],
+          [
+            "Aged Relief (60+)",
+            "1,500",
+            "Taxpayers aged 60+"
+          ],
+          [
+            "Dependent Relative Relief",
+            "1,000 per dependent (max 2)",
+            "Supporting elderly/disabled relatives"
+          ],
+          [
+            "Old Age Savings Relief",
+            "15% - 16.5% of contribution",
+            "Tier 3 pension contributors"
+          ]
+        ],
+        "caption": "Main Tax Reliefs in Ghana (per GRA)"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "How to Claim"
+      },
+      {
+        "type": "text",
+        "content": "Some reliefs are automatic. Others require application through your employer or GRA with supporting documents."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Submit relief applications at the start of the tax year. Once approved, your employer adjusts your PAYE deductions."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Tier 3 Pension Tax Relief"
+      },
+      {
+        "type": "text",
+        "content": "You can claim up to 16.5% of assessable income as relief for contributions to an NPRA-licensed pension fund — on top of other reliefs."
+      },
+      {
+        "type": "example",
+        "title": "Kwame's Relief Savings",
+        "content": "Kwame earns GHS 84,000/year. Claims: marriage (500), child education × 2 (1,200), Tier 3 pension (10,000). Total relief: 11,700. Tax saved: 11,700 × 25% = GHS 2,925/year."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Claiming reliefs you're not entitled to is tax fraud. Keep documentation for all claims."
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "content": "Key Takeaways"
+      },
+      {
+        "type": "text",
+        "content": "Tax reliefs are free money. Learn which apply, submit paperwork, and reduce your tax bill."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Tax Relief",
+        "definition": "A deduction from gross income that reduces the amount subject to tax.",
+        "source": {
+          "label": "GRA Ghana",
+          "url": "https://www.gra.gov.gh"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "File your GRA returns",
+        "destination": "https://egra.ghana.gov.gh",
+        "description": "Visit the GRA e-portal to file and pay taxes online through the official government portal."
       },
       {
         "type": "divider"
@@ -796,21 +1388,140 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Ghana's VAT rate is 15%. Over 60% of registered businesses fail to file VAT returns on time.",
+        "source": {
+          "label": "GRA Compliance Report 2024"
+        }
+      },
+      {
         "type": "text",
-        "content": "VAT (Value Added Tax) applies to most goods and services in Ghana at a unified rate. SME owners with turnover above GHS 200,000 per year must register for VAT with GRA and charge it on taxable supplies."
+        "content": "Value Added Tax (VAT) is a consumption tax. If your business turnover exceeds GHS 750,000/year, you must register for VAT (effective January 2026)."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "VAT registration brings compliance obligations but also allows you to reclaim VAT on business inputs. Get professional advice before registering."
+        "content": "Understanding VAT"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "You collect VAT from customers (output VAT) and reclaim VAT on purchases (input VAT). The difference is remitted to GRA."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "VAT Rates"
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Rate",
+          "Type",
+          "Applies To"
+        ],
+        "rows": [
+          [
+            "15%",
+            "Standard VAT",
+            "Most goods and services"
+          ],
+          [
+            "0%",
+            "Zero-rated",
+            "Exports, basic food items"
+          ],
+          [
+            "Exempt",
+            "VAT-exempt",
+            "Financial services, education, health"
+          ]
+        ],
+        "caption": "VAT Rates in Ghana"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Registration Threshold"
+      },
+      {
+        "type": "text",
+        "content": "Annual turnover exceeding GHS 750,000 requires mandatory VAT registration (effective January 2026). Below this, you may register voluntarily."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Voluntary registration lets you reclaim input VAT. Many suppliers prefer VAT-registered businesses."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Filing VAT Returns"
+      },
+      {
+        "type": "text",
+        "content": "File monthly or quarterly returns showing output VAT, input VAT, and net payable."
+      },
+      {
+        "type": "example",
+        "title": "Nana's VAT",
+        "content": "Monthly sales: GHS 50,000. Output VAT: 7,500. Purchases: GHS 30,000. Input VAT: 4,500. Net payable: GHS 3,000."
+      },
+      {
+        "type": "callout_warning",
+        "content": "VAT is not your money — it belongs to government. Never spend VAT you collect."
+      },
+      {
+        "type": "comparison",
+        "left": {
+          "label": "VAT-Registered",
+          "points": [
+            "Charge VAT on sales",
+            "Reclaim input VAT",
+            "File regular returns",
+            "More credible"
+          ]
+        },
+        "right": {
+          "label": "Unregistered",
+          "points": [
+            "No VAT invoices",
+            "No input VAT reclaim",
+            "Simpler records",
+            "Limited scale"
+          ]
+        }
+      },
+      {
+        "type": "heading",
+        "level": 3,
+        "content": "Key Takeaways"
+      },
+      {
+        "type": "text",
+        "content": "Register when you hit the threshold, keep records, file on time, and never treat collected VAT as your own."
+      },
+      {
+        "type": "glossary_term",
+        "term": "VAT",
+        "definition": "A consumption tax on goods and services. The final consumer bears the cost.",
+        "source": {
+          "label": "GRA Ghana",
+          "url": "https://www.gra.gov.gh"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "Input VAT",
+        "definition": "VAT paid on business purchases, deductible from output VAT.",
+        "source": {
+          "label": "GRA Ghana",
+          "url": "https://www.gra.gov.gh"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Use the VAT Calculator",
+        "destination": "/literacy/calculator/vat-v1",
+        "description": "Calculate VAT payable for your business."
       },
       {
         "type": "divider"
@@ -821,21 +1532,138 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Higher potential returns come with higher risk. Understanding this relationship is the foundation of smart investing.",
+        "source": {
+          "label": "SEC Ghana Investor Education",
+          "url": "https://sec.gov.gh"
+        }
+      },
+      {
         "type": "text",
-        "content": "Every investment carries risk. Generally, higher potential returns come with higher risk. Understanding the risk-return spectrum helps you choose investments that match your goals and comfort level."
+        "content": "Every investment involves a trade-off between risk and return. Generally, the higher the potential return, the higher the risk you must accept. Understanding your own risk tolerance is the first step to building an investment portfolio."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "T-Bills are low risk, low return. Shares are higher risk, higher potential return. Diversification — spreading your money across different assets — reduces overall risk."
+        "content": "The Risk-Return Spectrum"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "Different investments carry different levels of risk. Cash and T-Bills are low-risk, while stocks and private investments carry higher risk. Your choice depends on your goals, timeline, and comfort with volatility."
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Investment Type",
+          "Risk Level",
+          "Typical Return Range",
+          "Best For"
+        ],
+        "rows": [
+          [
+            "Savings Account",
+            "Very Low",
+            "1–5%",
+            "Emergency funds, short-term"
+          ],
+          [
+            "T-Bills (91-day)",
+            "Very Low",
+            "14–18%",
+            "Short-term, capital preservation"
+          ],
+          [
+            "Government Bonds",
+            "Low",
+            "16–20%",
+            "Medium-term income"
+          ],
+          [
+            "Mutual Funds",
+            "Medium",
+            "10–25%",
+            "Diversified growth"
+          ],
+          [
+            "GSE Stocks",
+            "Medium-High",
+            "Varible",
+            "Long-term capital growth"
+          ],
+          [
+            "Real Estate",
+            "Medium-High",
+            "8–15% (rental yield)",
+            "Long-term growth + income"
+          ]
+        ],
+        "caption": "Risk-Return Spectrum of Ghana Investments"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Diversification"
+      },
+      {
+        "type": "text",
+        "content": "Don't put all your eggs in one basket. Diversification means spreading your investments across different asset types to reduce risk. When one investment drops, others may hold steady or rise."
+      },
+      {
+        "type": "callout_tip",
+        "content": "A simple diversified portfolio: keep 3–6 months of expenses in savings, invest 40% in T-Bills/bonds, 30% in mutual funds, 20% in stocks, and 10% in insurance."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Your Investment Horizon"
+      },
+      {
+        "type": "text",
+        "content": "How long you plan to invest matters. Short-term goals (under 2 years) should use low-risk investments like T-Bills. Medium-term goals (2–5 years) can use bonds and mutual funds. Long-term goals (5+ years) can include stocks and property."
+      },
+      {
+        "type": "comparison",
+        "left": {
+          "label": "Short-Term (<2 years)",
+          "points": [
+            "T-Bills, savings accounts",
+            "Capital preservation focus",
+            "Lower returns, high safety"
+          ]
+        },
+        "right": {
+          "label": "Long-Term (5+ years)",
+          "points": [
+            "Stocks, property, mutual funds",
+            "Growth focus",
+            "Higher potential returns, more volatility"
+          ]
+        }
+      },
+      {
+        "type": "example",
+        "title": "Adwoa's Portfolio",
+        "content": "Adwoa is 30 and saving for retirement in 30 years. She invests 60% in mutual funds and GSE stocks, 30% in T-Bills, and 10% in a Tier 3 pension. She accepts short-term ups and downs for long-term growth."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Be wary of investments promising 'high returns with no risk' — they are almost always scams. Every legitimate investment carries some risk."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Risk-Return Spectrum",
+        "definition": "The principle that higher potential returns require accepting higher levels of risk.",
+        "source": {
+          "label": "SEC Ghana",
+          "url": "https://sec.gov.gh"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Explore your risk profile",
+        "destination": "feature://risk-profiler",
+        "description": "Take the Risk Profiler quiz to find investment products that match your risk tolerance."
       },
       {
         "type": "divider"
@@ -846,21 +1674,102 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Ghana's T-Bill rates have declined significantly — from 28% in early 2025 to approximately 6-13% in early 2026 — reflecting easing inflation and policy rate cuts by the Bank of Ghana.",
+        "source": {
+          "label": "Bank of Ghana Treasury Markets",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
         "type": "text",
-        "content": "Treasury Bills (T-Bills) are short-term government debt. The Bank of Ghana issues 91-day, 182-day, and 364-day T-Bills. You buy at a discount and receive face value at maturity — the difference is your return."
+        "content": "Treasury Bills (T-Bills) are short-term government debt instruments. You buy them at a discount and receive the full face value at maturity — the difference is your return. They are considered one of the safest investments in Ghana."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "T-Bills are among the safest investments in Ghana. Use the T-Bill Simulator in CediWise to estimate returns."
+        "content": "How T-Bills Work"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "The Bank of Ghana issues T-Bills in three tenors: 91-day, 182-day, and 364-day. You purchase at a discount. For example, you might pay GHS 955 for a GHS 1,000 91-day bill, earning GHS 45 in 3 months."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Buying T-Bills"
+      },
+      {
+        "type": "text",
+        "content": "You can buy T-Bills through: commercial banks (GCB, Stanbic, etc.), the Central Securities Depository (CSD) — requires a CDS account, or licensed brokers. Minimum investment is typically GHS 1,000."
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Tenor",
+          "Discount (example)",
+          "Return on GHS 10,000"
+        ],
+        "rows": [
+          [
+            "91 days",
+            "~3%",
+            "~GHS 300 in 3 months"
+          ],
+          [
+            "182 days",
+            "~6%",
+            "~GHS 600 in 6 months"
+          ],
+          [
+            "364 days",
+            "~12%",
+            "~GHS 1,200 in 12 months"
+          ]
+        ],
+        "caption": "T-Bill Returns Example (12% Rate)"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Are T-Bills Taxed?"
+      },
+      {
+        "type": "text",
+        "content": "Yes. Interest earned on T-Bills is subject to a 10% withholding tax, deducted at source. Remember to factor this in when calculating your net return."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Use the T-Bill Simulator in CediWise to compare returns across tenors and calculate your net return after tax."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Risks"
+      },
+      {
+        "type": "text",
+        "content": "T-Bills carry very low risk because they are backed by the government. However, inflation risk exists — if inflation exceeds the T-Bill rate, your purchasing power declines. Reinvestment risk also applies when bills mature and rates have fallen."
+      },
+      {
+        "type": "example",
+        "title": "Kwesi's T-Bill Ladder",
+        "content": "Kwesi invests GHS 30,000 in three 91-day T-Bills of GHS 10,000 each, staggered one month apart. As each matures, he reinvests. This 'laddering' gives him liquidity every month while keeping all funds invested."
+      },
+      {
+        "type": "glossary_term",
+        "term": "T-Bill (Treasury Bill)",
+        "definition": "A short-term government security sold at a discount. The investor receives face value at maturity. Considered very low risk.",
+        "source": {
+          "label": "Bank of Ghana",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Try the T-Bill Simulator",
+        "destination": "/literacy/calculator/tbill-simulator-v1",
+        "description": "Compare returns across different T-Bill tenors."
       },
       {
         "type": "divider"
@@ -871,21 +1780,108 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Following the Domestic Debt Exchange Programme (DDEP) in 2023, Ghana gradually returned to the domestic bond market, with the DDEP restructuring paving the way for renewed medium-to-long-term issuance.",
+        "source": {
+          "label": "Bank of Ghana Annual Report 2024"
+        }
+      },
+      {
         "type": "text",
-        "content": "Government bonds are longer-term debt instruments (2 years or more) that pay regular coupon interest. Unlike T-Bills, bonds provide periodic income. The Government of Ghana issues bonds through the Bank of Ghana."
+        "content": "Government bonds are longer-term debt instruments (2 years or more) that pay regular interest (coupon) payments. Unlike T-Bills, bonds provide periodic income, making them suitable for investors who want steady cash flow."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "Bonds are suitable for investors who want steady income and can lock away funds for several years."
+        "content": "How Bonds Work"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "When you buy a government bond, you lend money to the government. In return, the government pays you a fixed interest rate (the coupon) every 6 months, and repays the principal at maturity. Bonds are traded on the secondary market, so prices fluctuate."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Types of Government Bonds in Ghana"
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Bond Type",
+          "Tenor",
+          "Coupon Payment",
+          "Min. Investment"
+        ],
+        "rows": [
+          [
+            "2-Year Note",
+            "2 years",
+            "Semi-annual",
+            "GHS 1,000"
+          ],
+          [
+            "3-Year Bond",
+            "3 years",
+            "Semi-annual",
+            "GHS 1,000"
+          ],
+          [
+            "5-Year Bond",
+            "5 years",
+            "Semi-annual",
+            "GHS 1,000"
+          ],
+          [
+            "7-Year Bond",
+            "7 years",
+            "Semi-annual",
+            "GHS 1,000"
+          ],
+          [
+            "10-Year Bond",
+            "10 years",
+            "Semi-annual",
+            "GHS 1,000"
+          ]
+        ],
+        "caption": "Ghana Government Bond Types"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Bond Prices and Yields"
+      },
+      {
+        "type": "text",
+        "content": "Bond prices move inversely to interest rates. When rates rise, existing bond prices fall. When rates fall, bond prices rise. The yield reflects both the coupon payments and any price change if held to maturity."
+      },
+      {
+        "type": "callout_tip",
+        "content": "If you hold a bond to maturity, price fluctuations don't matter — you receive all coupon payments plus your principal back. Bonds are ideal for investors who want predictable income."
+      },
+      {
+        "type": "callout_warning",
+        "content": "The 2022 Domestic Debt Exchange (DDE) showed that bonds carry some risk. Diversify across different tenors and consider combining bonds with T-Bills and other investments."
+      },
+      {
+        "type": "example",
+        "title": "Mensah's Bond Income",
+        "content": "Mensah invests GHS 50,000 in a 5-year bond with 19% coupon. He receives GHS 4,750 every 6 months (GHS 9,500/year). At maturity, he gets his GHS 50,000 back. Total return over 5 years: GHS 47,500 + GHS 50,000 = GHS 97,500."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Government Bond",
+        "definition": "A debt security issued by the government that pays regular interest (coupon) and repays principal at maturity.",
+        "source": {
+          "label": "Bank of Ghana",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Track treasury bill rates",
+        "destination": "feature://tbill-tracker",
+        "description": "View current 91-day and 182-day T-Bill rates from the Bank of Ghana."
       },
       {
         "type": "divider"
@@ -896,21 +1892,136 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "The collective investment scheme (CIS) industry in Ghana manages over GHS 6.5 billion in assets (SEC 2024), making it accessible for small investors to access diversified portfolios across money market, equity, and fixed-income funds.",
+        "source": {
+          "label": "SEC Ghana Annual Report 2024",
+          "url": "https://sec.gov.gh"
+        }
+      },
+      {
         "type": "text",
-        "content": "Mutual funds pool money from many investors and invest in a mix of T-Bills, bonds, and equities. Licensed fund managers in Ghana (e.g. Databank, FirstBanC) offer funds regulated by the SEC."
+        "content": "Mutual funds pool money from many investors to buy a diversified portfolio of stocks, bonds, and other assets. Each investor owns units representing a portion of the fund. This lets small investors access professional management and diversification."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "Always verify that a fund manager is licensed with SEC Ghana before investing. Unlicensed schemes are often fraud."
+        "content": "How Mutual Funds Work"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "A fund manager (licensed by SEC Ghana) invests the pooled money according to the fund's stated objective. You buy units at the fund's Net Asset Value (NAV) per unit. The value of your investment rises and falls with the underlying assets."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Types of Mutual Funds"
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Fund Type",
+          "Invests In",
+          "Risk Level",
+          "Best For"
+        ],
+        "rows": [
+          [
+            "Money Market",
+            "T-Bills, short-term bonds",
+            "Very Low",
+            "Short-term savings, emergency fund"
+          ],
+          [
+            "Bond Fund",
+            "Government and corporate bonds",
+            "Low",
+            "Income, medium-term goals"
+          ],
+          [
+            "Equity Fund",
+            "GSE stocks",
+            "Medium-High",
+            "Long-term growth"
+          ],
+          [
+            "Balanced Fund",
+            "Mix of stocks and bonds",
+            "Medium",
+            "Balanced growth and income"
+          ],
+          [
+            "Real Estate Fund",
+            "Property investments",
+            "Medium",
+            "Property exposure without buying property"
+          ]
+        ],
+        "caption": "Common Mutual Fund Types in Ghana"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Fees and Costs"
+      },
+      {
+        "type": "text",
+        "content": "Funds charge management fees (typically 1–3% of assets per year) and may charge entry/exit fees. Always check the fee structure — lower fees mean more of your money stays invested."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Compare funds on SEC Ghana's website. Look for funds with consistent performance, experienced managers, and reasonable fees. Past performance does not guarantee future returns."
+      },
+      {
+        "type": "comparison",
+        "left": {
+          "label": "Self-Investing",
+          "points": [
+            "Must research and pick own investments",
+            "Requires significant capital to diversify",
+            "More control, more time required"
+          ]
+        },
+        "right": {
+          "label": "Mutual Funds",
+          "points": [
+            "Professional management",
+            "Instant diversification with small amounts",
+            "Lower control, ongoing fees"
+          ]
+        }
+      },
+      {
+        "type": "example",
+        "title": "Abigail's Mutual Fund Investment",
+        "content": "Abigail invests GHS 200/month in a balanced mutual fund. Over 10 years, assuming 15% average annual return, her GHS 24,000 total investment grows to approximately GHS 55,000 through compounding."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Only invest with SEC-licensed fund managers. Verify licenses at sec.gov.gh. Unlicensed operators promising guaranteed returns are likely running Ponzi schemes."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Mutual Fund",
+        "definition": "A pooled investment vehicle where investors buy units representing a diversified portfolio of assets managed by a professional fund manager.",
+        "source": {
+          "label": "SEC Ghana",
+          "url": "https://sec.gov.gh"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "NAV (Net Asset Value)",
+        "definition": "The per-unit value of a mutual fund, calculated as total assets minus liabilities divided by units outstanding.",
+        "source": {
+          "label": "SEC Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Set an investment goal",
+        "destination": "feature://investment-goal",
+        "description": "Plan your long-term investment strategy with the Investment Goal Planner."
       },
       {
         "type": "divider"
@@ -921,21 +2032,110 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "The Ghana Stock Exchange (GSE) listed 37 companies and had a market capitalisation of over GHS 70 billion as of 2024.",
+        "source": {
+          "label": "Ghana Stock Exchange Annual Report 2024",
+          "url": "https://www.gse.com.gh"
+        }
+      },
+      {
         "type": "text",
-        "content": "The Ghana Stock Exchange (GSE) is where shares of listed companies are bought and sold. Investing in shares means owning a part of the company. Returns come from price appreciation and dividends."
+        "content": "The Ghana Stock Exchange is where shares of publicly-listed companies are bought and sold. When you buy shares, you become a part-owner of that company. Returns come from price appreciation and dividends."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "You need a licensed stockbroker to buy shares on the GSE. Never invest through unlicensed individuals or WhatsApp groups."
+        "content": "How the GSE Works"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "The GSE operates Monday to Friday, 10:00 AM to 3:00 PM. Prices are determined by supply and demand. The GSE Composite Index (GSE-CI) tracks the overall market performance."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Getting Started"
+      },
+      {
+        "type": "text",
+        "content": "You need a licensed stockbroker to buy and sell shares. Open a CDS (Central Securities Depository) account through your broker. You will need your Ghana Card or passport, TIN, and proof of address."
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Step",
+          "Action",
+          "Where"
+        ],
+        "rows": [
+          [
+            "1. Choose a broker",
+            "Select a SEC-licensed stockbroker",
+            "sec.gov.gh for list"
+          ],
+          [
+            "2. Open CDS account",
+            "Complete application with broker",
+            "Broker's office"
+          ],
+          [
+            "3. Fund account",
+            "Deposit money with broker",
+            "Bank transfer to broker"
+          ],
+          [
+            "4. Place orders",
+            "Instruct broker to buy/sell",
+            "Phone or online trading platform"
+          ]
+        ],
+        "caption": "Steps to Start Investing on the GSE"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Understanding Stock Performance"
+      },
+      {
+        "type": "text",
+        "content": "Stock prices change based on company performance, economic conditions, and investor sentiment. Key metrics: EPS (Earnings Per Share), P/E ratio (Price to Earnings), dividend yield (annual dividend ÷ share price)."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Start with well-known, profitable companies. Banks (GCB, Stanbic), telecoms (MTN), and manufacturing companies are common starting points. Diversify across sectors."
+      },
+      {
+        "type": "callout_warning",
+        "content": "The stock market can be volatile. Prices can drop 20% or more in a year. Only invest money you can afford to leave for at least 3–5 years. Never invest through unlicensed individuals or WhatsApp groups."
+      },
+      {
+        "type": "example",
+        "title": "Yaw's First Investment",
+        "content": "Yaw bought 500 shares of MTN Ghana at GHS 1.50 each through his broker (GHS 750 total). Over 2 years, the share price rose to GHS 2.20, and he received GHS 0.30/share in dividends. His total return: GHS 350 capital gain + GHS 150 dividends = GHS 500 on GHS 750 (67%)."
+      },
+      {
+        "type": "glossary_term",
+        "term": "GSE (Ghana Stock Exchange)",
+        "definition": "The principal stock exchange of Ghana where shares of publicly-listed companies are traded.",
+        "source": {
+          "label": "GSE Ghana",
+          "url": "https://www.gse.com.gh"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "Dividend",
+        "definition": "A portion of a company's profits distributed to shareholders, usually paid annually or semi-annually.",
+        "source": {
+          "label": "GSE Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Use the Investment Calculator",
+        "destination": "/literacy/calculator/investment-v1",
+        "description": "Estimate returns from stock investments."
       },
       {
         "type": "divider"
@@ -946,21 +2146,132 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Only about 1% of Ghanaians have any form of insurance (NIC 2024), compared to the African average of approximately 3% — representing both a gap and an opportunity.",
+        "source": {
+          "label": "National Insurance Commission Report 2024",
+          "url": "https://www.nicgh.org"
+        }
+      },
+      {
         "type": "text",
-        "content": "Insurance protects you from financial loss — medical bills, vehicle damage, death, or property loss. In Ghana, insurance is regulated by the National Insurance Commission (NIC). Premiums are the regular payments you make."
+        "content": "Insurance protects you and your family from financial loss. You pay regular premiums, and in return, the insurer pays a benefit when a covered event occurs — medical bills, car accidents, death, or property damage."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
+        "content": "Types of Insurance"
       },
       {
-        "type": "callout_tip",
-        "content": "Verify any insurer with NIC before buying a policy. Common products include motor, health, life, and business insurance."
+        "type": "table",
+        "headers": [
+          "Insurance Type",
+          "What It Covers",
+          "Who Needs It"
+        ],
+        "rows": [
+          [
+            "Motor Insurance",
+            "Vehicle damage, third-party liability",
+            "All vehicle owners (third-party is mandatory)"
+          ],
+          [
+            "Health Insurance",
+            "Medical bills, hospitalisation",
+            "Everyone (NHIS covers basic care)"
+          ],
+          [
+            "Life Insurance",
+            "Death benefit to beneficiaries",
+            "Anyone with dependents"
+          ],
+          [
+            "Home Insurance",
+            "Fire, theft, property damage",
+            "Homeowners and tenants"
+          ],
+          [
+            "Business Insurance",
+            "Business assets, liability",
+            "All business owners"
+          ]
+        ],
+        "caption": "Common Insurance Types in Ghana"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Third-Party vs Comprehensive"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "For motor insurance: Third-party covers damage you cause to others (mandatory by law). Comprehensive covers damage to your vehicle too. Comprehensive costs more but provides broader protection."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Always verify an insurer is licensed by the National Insurance Commission (NIC) before buying a policy. Check at nicgh.org."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Life Insurance: Term vs Whole Life"
+      },
+      {
+        "type": "text",
+        "content": "Term life insurance covers you for a fixed period (e.g., 20 years) and pays a lump sum if you die. It's affordable. Whole life insurance lasts your entire life and builds cash value, but premiums are much higher."
+      },
+      {
+        "type": "comparison",
+        "left": {
+          "label": "Term Life",
+          "points": [
+            "Lower premiums",
+            "Fixed coverage period",
+            "No cash value",
+            "Pure protection"
+          ]
+        },
+        "right": {
+          "label": "Whole Life",
+          "points": [
+            "Higher premiums",
+            "Lifetime coverage",
+            "Builds cash value",
+            "Combines savings + insurance"
+          ]
+        }
+      },
+      {
+        "type": "example",
+        "title": "Ama's Family Protection",
+        "content": "Ama is 35 with two children. She buys a 20-year term life insurance policy of GHS 200,000. Premium: GHS 150/month. If she dies within 20 years, her children receive GHS 200,000 — enough for school fees and living expenses."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Insurance is not an investment. Avoid 'investment-linked' insurance products unless you fully understand the fees and terms. In many cases, buying term insurance and investing separately is cheaper."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Premium",
+        "definition": "The regular payment you make to an insurance company to keep your policy active.",
+        "source": {
+          "label": "NIC Ghana",
+          "url": "https://www.nicgh.org"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "NHIS",
+        "definition": "National Health Insurance Scheme — Ghana's public health insurance providing basic medical cover.",
+        "source": {
+          "label": "NHIS Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Evaluate a mutual fund",
+        "destination": "feature://fund-finder",
+        "description": "Search SEC-licensed mutual funds by category, risk rating, and past returns."
       },
       {
         "type": "divider"
@@ -972,7 +2283,7 @@
     "sections": [
       {
         "type": "callout_stat",
-        "content": "Ghana recorded over 650 million mobile money transactions in 2023, totalling more than GHS 1.2 trillion — the highest volume in West Africa.",
+        "content": "Ghana recorded over 6.8 billion mobile money transactions in 2023, totalling more than GHS 1.9 trillion — making Ghana one of Africa's leading mobile money markets by both volume and value.",
         "source": {
           "label": "Bank of Ghana Payment Systems Report 2023",
           "url": "https://www.bog.gov.gh"
@@ -1084,6 +2395,12 @@
         "content": "Fees change periodically. Always check the current fee schedule on your provider's USSD menu (*170# for MTN) or their official website before large transactions."
       },
       {
+        "type": "cta_link",
+        "label": "Check your MoMo transaction history",
+        "destination": "feature://budget-builder",
+        "description": "Review your mobile money spending in the Budget Tracker to understand where your money goes each week."
+      },
+      {
         "type": "divider"
       },
       {
@@ -1102,7 +2419,7 @@
     "sections": [
       {
         "type": "callout_stat",
-        "content": "Mobile money fraud losses in Ghana exceeded GHS 40 million in 2023. The Bank of Ghana received over 12,000 fraud complaints related to mobile money.",
+        "content": "Mobile money fraud losses in Ghana were over GHS 16 million in 2023, down from GHS 26 million in 2022. The Bank of Ghana recorded over 14,600 fraud cases related to electronic money in 2023.",
         "source": {
           "label": "Bank of Ghana Annual Report 2023",
           "url": "https://www.bog.gov.gh"
@@ -1185,6 +2502,12 @@
         }
       },
       {
+        "type": "cta_link",
+        "label": "Learn how to spot financial fraud",
+        "destination": "feature://fraud-guide",
+        "description": "Open the Fraud Prevention Guide for a quick-reference checklist of scams targeting Ghanaians."
+      },
+      {
         "type": "divider"
       },
       {
@@ -1202,21 +2525,111 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Mobile money accounts in Ghana grew to over 60 million registered accounts in 2024 — more than double the number of bank accounts.",
+        "source": {
+          "label": "Bank of Ghana Payment Systems Report 2024"
+        }
+      },
+      {
         "type": "text",
-        "content": "Mobile money wallets can hold savings, and some providers offer interest. Bank savings accounts also earn interest and are protected by GDPC. Compare access, interest rates, and safety before deciding."
+        "content": "Both mobile money wallets and bank accounts let you save money, but they serve different purposes. Understanding the differences helps you choose the right option for each savings goal."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
+        "content": "Key Differences"
       },
       {
-        "type": "callout_tip",
-        "content": "For emergency funds, keep 1–2 months in instant-access (MoMo or bank). Put the rest in a bank savings or short T-Bill for better returns."
+        "type": "table",
+        "headers": [
+          "Feature",
+          "Mobile Money Wallet",
+          "Bank Savings Account"
+        ],
+        "rows": [
+          [
+            "Access",
+            "24/7 via phone",
+            "Branch hours, ATM, or app"
+          ],
+          [
+            "Minimum Balance",
+            "None",
+            "Typically GHS 10–50"
+          ],
+          [
+            "Interest Rate",
+            "0–2% (some providers)",
+            "3–10% depending on account type"
+          ],
+          [
+            "Deposit Protection",
+            "Not covered by GDPC",
+            "GDPC up to GHS 20,000"
+          ],
+          [
+            "Transaction Limit",
+            "GHS 5,000–50,000/day",
+            "Higher limits possible"
+          ],
+          [
+            "Opening",
+            "Instant (any phone)",
+            "Requires ID, proof of address, TIN"
+          ]
+        ],
+        "caption": "MoMo Wallet vs Bank Savings Account"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "When to Use Mobile Money Savings"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "Use MoMo savings for: small day-to-day amounts, money you need instantly (transport, food, emergencies), rounding up spare change, and if you don't have a bank account."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "When to Use Bank Savings"
+      },
+      {
+        "type": "text",
+        "content": "Use bank savings for: your emergency fund (better interest + GDPC protection), larger amounts above your daily spending needs, money you don't need immediate access to, and building a banking relationship for future loans."
+      },
+      {
+        "type": "callout_tip",
+        "content": "A practical approach: keep 1–2 months of expenses in MoMo for daily access, and your main savings in a bank account for safety and interest."
+      },
+      {
+        "type": "example",
+        "title": "Efia's Two-Tier Savings",
+        "content": "Efia keeps GHS 500 in her MTN MoMo wallet for transport, food, and daily expenses. She maintains GHS 5,000 in her bank savings account earning 5% interest. When her MoMo balance runs low, she transfers from her bank — but only when necessary, to minimise withdrawal fees."
+      },
+      {
+        "type": "callout_law",
+        "content": "Bank deposits are protected by the Ghana Deposit Protection Corporation (GDPC) up to GHS 20,000 per depositor per bank. MoMo savings are not covered by GDPC, though the Bank of Ghana regulates mobile money operators.",
+        "source": {
+          "label": "Bank of Ghana",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "GDPC (Ghana Deposit Protection Corporation)",
+        "definition": "A government body that insures deposits at licensed banks up to GHS 20,000 per depositor.",
+        "source": {
+          "label": "GDPC Ghana",
+          "url": "https://gdpc.gov.gh"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Review your MoMo security",
+        "destination": "feature://security-checklist",
+        "description": "Run through the Mobile Money Security Checklist to lock down your account."
       },
       {
         "type": "divider"
@@ -1227,21 +2640,129 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Digital lending in Ghana has grown rapidly, with over 15 million micro-loans disbursed through mobile platforms in 2024 — but effective annual interest rates can exceed 40%.",
+        "source": {
+          "label": "Bank of Ghana FinTech Report 2024"
+        }
+      },
+      {
         "type": "text",
-        "content": "Digital credit — loans via mobile money (e.g. MTN Qwick Loan) — is convenient but can be expensive. Interest rates of 8–15% per month are common. Borrow only what you can repay on time."
+        "content": "Digital credit — loans accessed through your phone — has made borrowing easier than ever. But convenience comes at a cost. Understanding the true cost of digital loans is essential before you borrow."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "Before taking digital credit, calculate the total repayment. A GHS 500 loan at 10%/month costs GHS 50 in interest if repaid in one month."
+        "content": "How Digital Credit Works"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "FinTech companies and mobile money operators offer instant loans based on your transaction history. No collateral, no paperwork. You receive money instantly and repay within 7–30 days, usually with interest and fees."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Understanding the True Cost"
+      },
+      {
+        "type": "text",
+        "content": "Digital loans often quote a flat fee rather than an annual percentage rate (APR). A 5% fee for a 7-day loan equals an APR of over 260%. Always convert fees to APR to compare costs fairly."
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Loan Amount",
+          "Fee",
+          "Tenor",
+          "Effective APR"
+        ],
+        "rows": [
+          [
+            "GHS 100",
+            "GHS 10 (10%)",
+            "7 days",
+            "~520%"
+          ],
+          [
+            "GHS 500",
+            "GHS 35 (7%)",
+            "14 days",
+            "~182%"
+          ],
+          [
+            "GHS 1,000",
+            "GHS 50 (5%)",
+            "30 days",
+            "~60%"
+          ]
+        ],
+        "caption": "Example: Digital Loan Costs in Ghana"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "When Digital Credit Makes Sense"
+      },
+      {
+        "type": "text",
+        "content": "Digital credit can be useful for: very short-term cash flow gaps (2–3 days), emergency transport or medical needs, and small amounts you can repay quickly. It is NOT suitable for long-term borrowing or large expenses."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Before borrowing, ask: Can I repay this in full on the due date? If not, the late fees and rollover costs can quickly make the loan unmanageable."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Late repayment can result in: default listing on credit bureaus (harming future borrowing), daily penalty fees that accumulate rapidly, and aggressive recovery calls. Never borrow from one digital lender to repay another."
+      },
+      {
+        "type": "comparison",
+        "left": {
+          "label": "Digital Credit",
+          "points": [
+            "Instant approval, no paperwork",
+            "Very high effective interest rates",
+            "Short tenors (7–30 days)",
+            "Good for emergencies, bad for planning"
+          ]
+        },
+        "right": {
+          "label": "Bank Loan",
+          "points": [
+            "Application takes days or weeks",
+            "Lower interest rates (25–35% APR)",
+            "Longer tenors (6–60 months)",
+            "Better for planned borrowing"
+          ]
+        }
+      },
+      {
+        "type": "example",
+        "title": "Kojo's Digital Loan",
+        "content": "Kojo borrowed GHS 200 to cover a medical bill, with a 7-day repayment and GHS 15 fee. He repaid on time. Cost: 7.5% for 7 days = ~390% APR. It solved his emergency, but he would never use digital credit for non-urgent purchases."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Digital Credit",
+        "definition": "Short-term loans accessed through mobile platforms, typically based on transaction history rather than formal credit checks.",
+        "source": {
+          "label": "Bank of Ghana",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "The total cost of borrowing expressed as a yearly rate, including interest and fees. Enables fair comparison across loan products.",
+        "source": {
+          "label": "Bank of Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Find mobile banking options",
+        "destination": "feature://bank-comparison",
+        "description": "Compare digital banking features from Ghana's licensed banks on one screen."
       },
       {
         "type": "divider"
@@ -1252,21 +2773,61 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Over 60% of SME failures in Ghana are linked to poor financial management, with mixing personal and business finances being a leading cause.",
+        "source": {
+          "label": "Ghana Enterprise Agency Report 2024",
+          "url": "https://gea.org.gh"
+        }
+      },
+      {
         "type": "text",
-        "content": "Mixing personal and business money is one of the biggest mistakes SME owners make. It leads to unclear profitability, tax problems, and personal liability if the business fails. Open a separate business account from day one."
+        "content": "Mixing personal and business money is one of the biggest mistakes SME owners make. It leads to unclear profitability, tax problems, and personal liability if the business fails."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "Use one account for business income and expenses only. Pay yourself a salary or draw, and keep personal spending separate."
+        "content": "Why Separation Matters"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "When your business and personal finances are separate, you can: see exactly how profitable your business is, file accurate tax returns, protect personal assets if the business faces legal issues, and qualify for business loans (lenders need to see business accounts)."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "How to Separate"
+      },
+      {
+        "type": "text",
+        "content": "Open a dedicated business bank account. Use it for ALL business income and expenses. Pay yourself a regular salary or draw from the business account to your personal account. Never use the business account for personal shopping."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Choose a business account that offers online banking, low transaction fees, and integrates with accounting software. Many Ghanaian banks offer SME-specific accounts with tailored features."
+      },
+      {
+        "type": "callout_warning",
+        "content": "If the business is sued and you have mixed finances, a court may 'pierce the corporate veil' — making your personal assets vulnerable. A separate business account is your first line of defence."
+      },
+      {
+        "type": "example",
+        "title": "Kojo's Café",
+        "content": "Kojo opened a separate business account for his café. Each month, he transfers GHS 1,500 to his personal account as his salary. At tax time, his accountant easily calculates business profit. When Kojo applied for a GHS 20,000 business expansion loan, the bank approved it quickly because his business accounts were clean."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Business Bank Account",
+        "definition": "A bank account used exclusively for business transactions. Required for tax compliance, legal protection, and accessing business credit.",
+        "source": {
+          "label": "Bank of Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Create a business budget",
+        "destination": "feature://sme-budget",
+        "description": "Start your SME Budget Plan with revenue projections and expense tracking."
       },
       {
         "type": "divider"
@@ -1277,21 +2838,85 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Over 80% of Ghanaian SMEs that fail cite cash flow problems as the primary cause — even when they were profitable on paper.",
+        "source": {
+          "label": "Ghana Enterprise Agency Survey 2024"
+        }
+      },
+      {
         "type": "text",
-        "content": "Cash flow is the movement of money in and out of your business. Many profitable businesses fail because they run out of cash — they cannot pay suppliers or staff when payments are delayed. Track and forecast cash flow weekly."
+        "content": "Cash flow is the movement of money in and out of your business. Profit is not cash. You can be profitable but run out of cash if customers pay late or expenses spike. Managing cash flow is more important than managing profit."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
+        "content": "Cash Flow vs Profit"
       },
       {
-        "type": "callout_tip",
-        "content": "Use the Cash Flow Tool in CediWise to project when money comes in and when it goes out. Plan for slow months."
+        "type": "table",
+        "headers": [
+          "Metric",
+          "What It Measures",
+          "Why It Matters"
+        ],
+        "rows": [
+          [
+            "Cash Flow",
+            "Actual cash coming in and going out",
+            "Pays bills, salaries, suppliers today"
+          ],
+          [
+            "Profit",
+            "Revenue minus expenses (accrual basis)",
+            "Shows if business is viable long-term"
+          ]
+        ],
+        "caption": "Cash Flow vs Profit"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Cash Flow Management Tips"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "Forecast cash flow weekly: list expected income and expenses for the next 4 weeks. Chase receivables aggressively: invoice immediately, follow up on overdue payments. Negotiate payment terms with suppliers. Build a cash reserve of at least 2 months of expenses."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Use the Cash Flow Tool in CediWise to project your weekly cash position. Update it every week with actual numbers."
+      },
+      {
+        "type": "callout_warning",
+        "content": "A common cash flow trap: winning a large contract that requires upfront spending (inventory, staff) but pays in 60 days. You run out of cash before the payment arrives. Plan for this with a credit line or invoice financing."
+      },
+      {
+        "type": "example",
+        "title": "Ama's Provisions Shop",
+        "content": "Ama's shop makes GHS 5,000 profit per month, but her cash flow tells a different story. She must pay suppliers GHS 15,000 on the 1st, while most customers buy on credit and pay at month-end. She bridged the gap with a GHS 10,000 overdraft and now offers a 5% discount for cash payments — smoothing her cash flow significantly."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Cash Flow",
+        "definition": "The net amount of cash moving in and out of a business. Positive cash flow means more cash is coming in than going out.",
+        "source": {
+          "label": "GEA Ghana"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "Invoice Financing",
+        "definition": "A loan secured against unpaid customer invoices, providing immediate cash while waiting for payment.",
+        "source": {
+          "label": "Bank of Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Try the Cash Flow Tool",
+        "destination": "/literacy/calculator/cash-flow-tool-v1",
+        "description": "Project your weekly cash position."
       },
       {
         "type": "divider"
@@ -1302,21 +2927,87 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Many Ghanaian SMEs underprice their products, leaving 30–50% of potential profit on the table. Correct pricing is the fastest way to improve profitability.",
+        "source": {
+          "label": "GEA Business Advisory Report 2024"
+        }
+      },
+      {
         "type": "text",
-        "content": "Pricing for profit means covering all your costs — materials, labour, overhead, and your time — plus a margin. Underpricing is a common SME mistake that leads to burnout and business failure."
+        "content": "Pricing is not just about covering costs. A good price covers all costs, includes a profit margin, reflects what the market will bear, and positions your brand. Many SMEs fail because they underprice."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "Calculate your cost per unit, add your desired margin, and test the market. It is easier to lower prices than to raise them."
+        "content": "The Full Cost of Your Product"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "Know your costs before setting a price. Direct costs: raw materials, labour, packaging. Indirect costs: rent, utilities, marketing, transport, your own salary. Add them all up to find your true cost per unit."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Pricing Methods"
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Method",
+          "How It Works",
+          "Best For"
+        ],
+        "rows": [
+          [
+            "Cost-Plus",
+            "Cost + desired profit margin",
+            "Simple businesses, consistent costs"
+          ],
+          [
+            "Competitive Pricing",
+            "Match or slightly undercut competitors",
+            "Commodity products, established markets"
+          ],
+          [
+            "Value-Based",
+            "Price based on customer's perceived value",
+            "Unique products, strong brand"
+          ],
+          [
+            "Tiered Pricing",
+            "Different prices for different service levels",
+            "Services, subscriptions"
+          ]
+        ],
+        "caption": "Pricing Methods"
+      },
+      {
+        "type": "callout_tip",
+        "content": "A simple formula: Selling Price = (Total Cost per Unit) ÷ (1 – Desired Profit Margin). For 30% profit margin: Price = Cost ÷ 0.7."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Do not compete only on price. The cheapest price race has only one winner — and it's usually not the small business. Compete on quality, service, reliability, and relationships."
+      },
+      {
+        "type": "example",
+        "title": "Nana's Catering",
+        "content": "Nana calculated that each catering plate costs her GHS 25 (ingredients, labour, transport, packaging). She wants 40% profit margin. Price = 25 ÷ 0.6 = GHS 42. She charges GHS 45, slightly above competitors, but uses higher-quality ingredients and reliable delivery. Customers stay loyal."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Cost-Plus Pricing",
+        "definition": "A pricing method where a fixed percentage (markup) is added to the cost of producing a product to determine the selling price.",
+        "source": {
+          "label": "GEA Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Register your business with GRA",
+        "destination": "https://gra.gov.gh/registration",
+        "description": "Use the GRA registration portal to get your Tax Identification Number (TIN) online."
       },
       {
         "type": "divider"
@@ -1327,21 +3018,100 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Only 20% of Ghanaian SMEs have access to formal bank credit, despite the sector contributing 70% of GDP. Understanding loan options is crucial for growth.",
+        "source": {
+          "label": "Bank of Ghana SME Finance Report 2024"
+        }
+      },
+      {
         "type": "text",
-        "content": "Business credit — loans, overdrafts, or supplier credit — can help you grow. Banks and microfinance institutions offer SME loans. Understand interest rates, repayment terms, and collateral requirements before borrowing."
+        "content": "Business credit can help you grow — buying inventory, expanding premises, or investing in equipment. But borrowing without understanding the terms can put your business at risk."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
+        "content": "Types of Business Credit"
       },
       {
-        "type": "callout_tip",
-        "content": "Use the Loan Amortization calculator to see total repayment and monthly instalments. Compare offers from multiple lenders."
+        "type": "table",
+        "headers": [
+          "Type",
+          "What It Is",
+          "Best For"
+        ],
+        "rows": [
+          [
+            "Term Loan",
+            "Lump sum repaid over fixed period",
+            "Equipment, expansion, long-term investment"
+          ],
+          [
+            "Overdraft",
+            "Flexible borrowing up to a limit",
+            "Cash flow gaps, working capital"
+          ],
+          [
+            "Invoice Financing",
+            "Advance against unpaid invoices",
+            "Bridging payment delays"
+          ],
+          [
+            "Microfinance Loan",
+            "Small loans from MFIs",
+            "Startups, informal businesses"
+          ],
+          [
+            "Supplier Credit",
+            "Pay suppliers after receiving goods",
+            "Inventory management"
+          ]
+        ],
+        "caption": "Business Credit Types"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "What Lenders Look For"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "Banks assess: business financial records (minimum 6 months of bank statements), collateral (property, equipment, or personal guarantee), cash flow (can the business repay?), credit history (personal and business), and business plan or purpose of loan."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Before applying for a loan: separate your business and personal accounts first, keep clean financial records, build a relationship with a bank by maintaining consistent deposits, and prepare a simple business plan showing how the loan will generate returns."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Be extremely careful with loan covenants. Missing a single repayment can trigger default penalties, increased interest rates, or seizure of collateral. Only borrow what you can confidently repay."
+      },
+      {
+        "type": "example",
+        "title": "Yaw's Bakery Expansion",
+        "content": "Yaw needed GHS 30,000 for a new industrial oven. He had 2 years of business bank statements showing consistent profit. His bank approved a 3-year term loan at 32% APR with the oven as collateral. Monthly payment: GHS 1,350. The oven increased his production by 3×, generating enough extra revenue to cover the loan easily."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Collateral",
+        "definition": "An asset (property, equipment, or savings) that a lender can seize if you fail to repay a loan. Required for most business loans.",
+        "source": {
+          "label": "Bank of Ghana"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "The total yearly cost of borrowing including interest and fees. Essential for comparing loan offers.",
+        "source": {
+          "label": "Bank of Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Use the Loan Calculator",
+        "destination": "/literacy/calculator/loan-amortization-v1",
+        "description": "Estimate monthly payments and total loan cost."
       },
       {
         "type": "divider"
@@ -1352,21 +3122,93 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Ghana's tax laws require all businesses — regardless of size — to register and file returns. Non-compliance is the fastest way to lose access to formal credit.",
+        "source": {
+          "label": "GRA SME Guidelines"
+        }
+      },
+      {
         "type": "text",
-        "content": "SMEs must comply with GRA requirements: register for TIN, file tax returns, and if turnover exceeds thresholds, register for VAT. Non-compliance leads to penalties and limits access to formal credit."
+        "content": "Tax compliance is not optional. Every business must register with GRA, obtain a TIN, and file returns. Compliance builds credibility with banks, partners, and customers."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
+        "content": "Tax Obligations for SMEs"
       },
       {
-        "type": "callout_tip",
-        "content": "Hire an accountant or use GRA's simplified schemes for small businesses. Compliance builds credibility with banks and partners."
+        "type": "table",
+        "headers": [
+          "Obligation",
+          "Frequency",
+          "Details"
+        ],
+        "rows": [
+          [
+            "TIN Registration",
+            "Once",
+            "Required before starting operations"
+          ],
+          [
+            "Income Tax Filing",
+            "Annual",
+            "File return by April 15 each year"
+          ],
+          [
+            "Quarterly Instalments",
+            "Quarterly",
+            "Pay estimated tax in March, June, Sept, Dec"
+          ],
+          [
+            "VAT (if turnover > GHS 200K)",
+            "Monthly/Quarterly",
+            "File and remit VAT collected"
+          ],
+          [
+            "PAYE (if you have employees)",
+            "Monthly",
+            "Deduct and remit employee PAYE"
+          ]
+        ],
+        "caption": "SME Tax Obligations"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Record Keeping"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "You must keep records of all income and expenses for at least 6 years. This includes: sales receipts, purchase invoices, bank statements, payroll records, and tax returns. Good records save you money at tax time."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Use accounting software or hire a part-time accountant. The cost is far less than the penalties for non-compliance or the tax savings you'll miss."
+      },
+      {
+        "type": "callout_warning",
+        "content": "GRA penalties for non-compliance: late filing GHS 300/month, late payment 3% interest/month. Persistent non-compliance can lead to asset seizure, bank account freezing, or prosecution."
+      },
+      {
+        "type": "example",
+        "title": "Esi's Salon",
+        "content": "Esi registered her salon with GRA and files annual returns showing GHS 60,000 revenue and GHS 35,000 expenses. Her tax on GHS 25,000 profit is manageable. When she applied for a business loan, the bank accepted her tax returns as proof of income — and approved her loan."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Tax Compliance",
+        "definition": "The act of fulfilling all tax obligations including registration, filing returns, and paying taxes on time.",
+        "source": {
+          "label": "GRA Ghana",
+          "url": "https://www.gra.gov.gh"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Estimate your SME tax bill",
+        "destination": "feature://sme-tax-estimator",
+        "description": "Calculate quarterly tax payments, input VAT, and payroll obligations for your business."
       },
       {
         "type": "divider"
@@ -1377,21 +3219,101 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Over 60% of Ghanaian SMEs that experience a major loss (fire, theft, or key person death) never reopen. Business insurance is an investment in survival.",
+        "source": {
+          "label": "NIC Ghana SME Report 2024"
+        }
+      },
+      {
         "type": "text",
-        "content": "Business insurance protects against losses from fire, theft, liability, or key person death. The National Insurance Commission (NIC) regulates insurers. Choose products that match your business risks."
+        "content": "Business insurance protects your hard work against unexpected events. The cost of insurance is small compared to the cost of rebuilding from nothing."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
+        "content": "Essential Business Insurance"
       },
       {
-        "type": "callout_tip",
-        "content": "Start with essential cover: fire, theft, and public liability. Add key person insurance if the business depends on one or two people."
+        "type": "table",
+        "headers": [
+          "Insurance Type",
+          "What It Covers",
+          "Typical Cost"
+        ],
+        "rows": [
+          [
+            "Fire & Theft",
+            "Business assets — stock, equipment, premises",
+            "1–2% of insured value/year"
+          ],
+          [
+            "Public Liability",
+            "Injury or damage to third parties on your premises",
+            "GHS 500–2,000/year"
+          ],
+          [
+            "Goods-in-Transit",
+            "Stock damaged or lost during transport",
+            "0.5–1.5% of goods value"
+          ],
+          [
+            "Key Person",
+            "Financial loss if a crucial owner/staff dies",
+            "Based on key person's value"
+          ],
+          [
+            "Business Interruption",
+            "Loss of income during closure after a disaster",
+            "10–20% of fire premium"
+          ]
+        ],
+        "caption": "Essential Business Insurance for SMEs"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "What Insurance Does NOT Cover"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "Insurance does not cover: normal wear and tear, intentional damage, losses from poor management, and acts of war. Read your policy carefully to understand exclusions."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Start with fire and theft insurance as a minimum. Add public liability if customers visit your premises. Add key person insurance if the business depends on you."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Under-insuring is dangerous. If your stock is worth GHS 100,000 but you insure it for GHS 50,000, the insurer may apply 'average' — paying only half of any claim."
+      },
+      {
+        "type": "example",
+        "title": "Mensah's Hardware Store",
+        "content": "Mensah insured his hardware store for GHS 200,000 (stock + equipment) at a premium of GHS 3,000/year. When a fire destroyed his shop, the insurer paid GHS 180,000 within 30 days, allowing him to restock and reopen. His uninsured neighbour never recovered from a similar fire."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Premium",
+        "definition": "The regular payment you make to keep your insurance policy active. Usually paid annually for business insurance.",
+        "source": {
+          "label": "NIC Ghana",
+          "url": "https://www.nicgh.org"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "Excess/ deductible",
+        "definition": "The amount you must pay towards a claim before the insurer pays the balance.",
+        "source": {
+          "label": "NIC Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Access SME financial services",
+        "destination": "feature://sme-tools",
+        "description": "Explore tools and resources for Ghanaian SMEs including savings, credit, and insurance products."
       },
       {
         "type": "divider"
@@ -1402,21 +3324,90 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Starting retirement savings at age 25 instead of 35 can more than double your retirement fund — thanks to compound interest.",
+        "source": {
+          "label": "NPRA Ghana Investor Education"
+        }
+      },
+      {
         "type": "text",
-        "content": "The earlier you start saving for retirement, the more time compound interest has to grow your money. Delaying by 10 years can mean half the retirement fund. Start with whatever you can afford."
+        "content": "The earlier you start saving for retirement, the more time compound interest has to work. Delaying by even 10 years can mean half the retirement fund. Start now, with whatever you can afford."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "Even GHS 100/month in a Tier 3 pension from age 25 can grow to a meaningful sum by 60. The key is starting early."
+        "content": "The Power of Compounding"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "Compound interest means your money earns returns, and those returns earn their own returns. Over 30 years, this effect turns modest savings into substantial wealth."
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Start Age",
+          "Monthly Savings",
+          "Total Contributed",
+          "Fund at 60 (8% return)"
+        ],
+        "rows": [
+          [
+            "25",
+            "GHS 200",
+            "GHS 84,000",
+            "~GHS 300,000"
+          ],
+          [
+            "35",
+            "GHS 200",
+            "GHS 60,000",
+            "~GHS 120,000"
+          ],
+          [
+            "45",
+            "GHS 200",
+            "GHS 36,000",
+            "~GHS 55,000"
+          ]
+        ],
+        "caption": "Starting Early Makes a Huge Difference"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Why Retirement Planning Matters in Ghana"
+      },
+      {
+        "type": "text",
+        "content": "SSNIT alone typically replaces only 30–50% of your pre-retirement income. With longer life expectancies and rising health costs, you need additional savings to maintain your lifestyle in retirement."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Even GHS 100/month in a Tier 3 voluntary pension or mutual fund from age 25 can grow to a meaningful sum by age 60. The key is starting early and being consistent."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Relying only on SSNIT or children for retirement income is risky. SSNIT contributions depend on your employment history, and your children may have their own financial pressures."
+      },
+      {
+        "type": "example",
+        "title": "Two Friends, Two Futures",
+        "content": "Akosua started saving GHS 300/month in a pension fund at age 25. Her friend Afia started the same amount at age 35. By 60, assuming 10% average return: Akosua has ~GHS 1,140,000 from GHS 126,000 contributed. Afia has ~GHS 410,000 from GHS 90,000 contributed. Starting 10 years earlier more than doubled Akosua's retirement fund."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Compound Interest",
+        "definition": "Interest earned on both the original amount saved and on the interest that amount has already earned. The eighth wonder of the world.",
+        "source": {
+          "label": "NPRA Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Estimate your retirement needs",
+        "destination": "feature://retirement-calc",
+        "description": "Use the Retirement Calculator to project how much you need to save by age 60."
       },
       {
         "type": "divider"
@@ -1427,21 +3418,61 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "SSNIT Tier 1 and Tier 2 combined replace approximately 30–50% of your final salary — enough for basics but not your full lifestyle.",
+        "source": {
+          "label": "NPRA Pension Statistics 2024"
+        }
+      },
+      {
         "type": "text",
-        "content": "SSNIT Tier 1 is mandatory. Tier 2 is your employer's occupational scheme. Maximising both means ensuring contributions are correct, understanding your benefit statement, and planning for the lump sum at retirement."
+        "content": "Tier 1 (SSNIT) and Tier 2 (occupational pension) are mandatory for all formal employees. Understanding and maximising both is essential for a comfortable retirement."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "Request your SSNIT statement annually. Check that your employer is remitting both your and their contributions on time."
+        "content": "Tier 1: Basic Social Security"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "Both you (5.5%) and your employer (13.5%) contribute to Tier 1. Your pension is calculated based on your best 3 years' average salary in the last 5 years, multiplied by an accrual rate based on contribution years."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Tier 2: Occupational Pension"
+      },
+      {
+        "type": "text",
+        "content": "Your employer contributes 5% of your salary to an NPRA-licensed fund manager of their choice. This fund is invested in stocks, bonds, and T-Bills. You can choose between different fund managers and fund types."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Ask your HR department which Tier 2 fund manager your company uses. You may have the right to choose between conservative, moderate, or aggressive investment options."
+      },
+      {
+        "type": "callout_warning",
+        "content": "When you change jobs, your Tier 2 funds stay with the fund manager (portable). Ensure your new employer transfers contributions to the same or a compatible Tier 2 scheme."
+      },
+      {
+        "type": "example",
+        "title": "Esi's Maximised Pension",
+        "content": "Esi contributes to SSNIT for 35 years. Her best 3-year average salary is GHS 80,000. SSNIT pension = 35 years × ~1.5% per year = 52.5% × GHS 80,000 = GHS 42,000/year (GHS 3,500/month). Her employer's Tier 2 fund earns 12% annually, projected to give her a lump sum of ~GHS 150,000 at retirement."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Occupational Pension (Tier 2)",
+        "definition": "A mandatory employer-sponsored pension scheme managed by private fund managers. Portable between jobs.",
+        "source": {
+          "label": "NPRA Ghana",
+          "url": "https://www.npra.gov.gh"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Check your SSNIT statement",
+        "destination": "https://ssnit.org.gh/self-service",
+        "description": "Log in to the SSNIT self-service portal to verify your contributions and projected benefits."
       },
       {
         "type": "divider"
@@ -1452,21 +3483,113 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Tier 3 contributions qualify for up to 16.5% tax relief — reducing your tax bill while building your retirement savings.",
+        "source": {
+          "label": "NPRA Ghana Tax Benefits"
+        }
+      },
+      {
         "type": "text",
-        "content": "Tier 3 is a voluntary personal pension. You contribute extra beyond Tier 1 and 2, and get 16.5% tax relief on contributions. NPRA-licensed fund managers offer Tier 3 products."
+        "content": "Tier 3 is a voluntary personal pension that you can contribute to at any time. Unlike Tier 1 and 2, it is open to everyone — self-employed, informal workers, and formal employees who want to save more."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "Tier 3 is ideal if you want to retire with more than SSNIT and Tier 2 will provide. The tax relief makes it attractive."
+        "content": "How Tier 3 Works"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "You choose an NPRA-licensed fund manager and contribute any amount, any time. The money is invested in a diversified portfolio. You get significant tax relief: up to 16.5% of your assessable income is tax-deductible."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Tax Benefits Explained"
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Income",
+          "Tier 3 Contribution",
+          "Tax Relief (at 25% band)",
+          "Net Cost to You"
+        ],
+        "rows": [
+          [
+            "GHS 60,000",
+            "GHS 5,000",
+            "GHS 1,250",
+            "GHS 3,750"
+          ],
+          [
+            "GHS 100,000",
+            "GHS 10,000",
+            "GHS 2,500",
+            "GHS 7,500"
+          ],
+          [
+            "GHS 200,000",
+            "GHS 20,000",
+            "GHS 6,000 (30% band)",
+            "GHS 14,000"
+          ]
+        ],
+        "caption": "Tier 3 Tax Relief Examples"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Accessing Your Tier 3 Funds"
+      },
+      {
+        "type": "text",
+        "content": "You can access Tier 3 savings at age 60 (same as SSNIT). However, Tier 3 offers more flexibility — some fund managers allow partial withdrawals or early access with penalties. Check the terms before investing."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Tier 3 is ideal for self-employed individuals who don't have access to mandatory Tier 1 and 2. Even small, irregular contributions add up over time with compound growth."
+      },
+      {
+        "type": "comparison",
+        "left": {
+          "label": "Tier 3 Pension",
+          "points": [
+            "Tax-deductible contributions",
+            "NPRA-regulated and protected",
+            "Locked until 60",
+            "Professional fund management"
+          ]
+        },
+        "right": {
+          "label": "Personal Savings/MF",
+          "points": [
+            "No tax benefit",
+            "No regulation",
+            "Access anytime",
+            "Self-managed"
+          ]
+        }
+      },
+      {
+        "type": "example",
+        "title": "Kwame's Tier 3 Strategy",
+        "content": "Kwame is self-employed with an annual income of GHS 80,000. He contributes GHS 12,000 to a Tier 3 pension. Tax relief: GHS 12,000 × 17.5% = GHS 2,100. His net cost: GHS 9,900. At 60, assuming 10% annual growth over 20 years, his GHS 240,000 total contributions grow to approximately GHS 720,000."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Tier 3 Pension",
+        "definition": "A voluntary personal pension scheme offering tax relief on contributions. Available to all individuals, including self-employed and informal workers.",
+        "source": {
+          "label": "NPRA Ghana",
+          "url": "https://www.npra.gov.gh"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Compare informal savings options",
+        "destination": "feature://retirement-planner",
+        "description": "Explore retirement savings options outside SSNIT including mutual funds and pension plans."
       },
       {
         "type": "divider"
@@ -1477,21 +3600,99 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Ghanaians who combine pension savings with non-pension investments (T-Bills, property, business) retire with 3× more wealth than those relying solely on pensions.",
+        "source": {
+          "label": "NPRA Retirement Survey 2024"
+        }
+      },
+      {
         "type": "text",
-        "content": "Beyond pensions, you can build retirement wealth through T-Bills, bonds, property, or business. These 'non-pension' assets give you flexibility and diversification. Plan how they fit with your pension income."
+        "content": "Beyond pensions, you can build retirement wealth through T-Bills, bonds, property, or a business. These 'non-pension' assets give you flexibility and diversification."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
+        "content": "Non-Pension Investment Options"
       },
       {
-        "type": "callout_tip",
-        "content": "Diversify: do not put all retirement savings in one asset. T-Bills for stability, property for growth, business for income."
+        "type": "table",
+        "headers": [
+          "Asset",
+          "Risk",
+          "Liquidity",
+          "Best For"
+        ],
+        "rows": [
+          [
+            "T-Bills & Bonds",
+            "Low",
+            "High (T-Bills), Medium (Bonds)",
+            "Stable income, capital preservation"
+          ],
+          [
+            "Rental Property",
+            "Medium",
+            "Low",
+            "Steady income + appreciation"
+          ],
+          [
+            "GSE Stocks",
+            "Medium-High",
+            "Medium",
+            "Long-term growth"
+          ],
+          [
+            "Business",
+            "High",
+            "Low",
+            "High returns, active involvement"
+          ],
+          [
+            "Mutual Funds",
+            "Medium",
+            "Medium",
+            "Diversified growth"
+          ]
+        ],
+        "caption": "Non-Pension Retirement Assets"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Building a Retirement Asset Mix"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "A balanced approach: 50% in low-risk assets (T-Bills, bonds) for stability, 30% in medium-risk (mutual funds, property) for growth, 20% in higher-risk (stocks, business) for higher returns."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Diversify across different asset types and risk levels. Do not put all retirement savings in one asset class."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Property can be illiquid — you cannot sell half a house. Ensure you have enough liquid savings (T-Bills, bonds) for expenses before investing heavily in property."
+      },
+      {
+        "type": "example",
+        "title": "Adwoa's Retirement Mix",
+        "content": "Adwoa (55 years old) has: SSNIT pension (projected GHS 3,000/month), Tier 3 savings of GHS 200,000 invested in bonds and T-Bills, two rental properties generating GHS 2,000/month total, and GHS 50,000 in T-Bills for emergencies. Her total retirement income: ~GHS 7,000/month — enough to maintain her lifestyle."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Diversification",
+        "definition": "Spreading investments across different asset types to reduce risk. When one investment drops, others may hold steady or rise.",
+        "source": {
+          "label": "SEC Ghana",
+          "url": "https://sec.gov.gh"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Set up a voluntary pension",
+        "destination": "feature://pension-setup",
+        "description": "Find NPRA-licensed pension fund managers and start a voluntary contribution plan."
       },
       {
         "type": "divider"
@@ -1502,21 +3703,104 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Over 70% of Ghanaians die without a will — leaving their assets to be distributed according to Ghana's intestate succession laws, which may not match their wishes.",
+        "source": {
+          "label": "Laws of Ghana — Intestate Succession"
+        }
+      },
+      {
         "type": "text",
-        "content": "Succession planning ensures your assets go to the right people when you die. A will is the legal document that states your wishes. Without one, Ghana's intestacy laws determine who inherits — which may not match your intentions."
+        "content": "Succession planning ensures your assets go to the right people. A will is the legal document that states your wishes. Without one, Ghana's intestacy laws determine who inherits."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
-      },
-      {
-        "type": "callout_tip",
-        "content": "Consult a lawyer to draft a will. Update it when your family or assets change. Keep a copy with someone you trust."
+        "content": "Why You Need a Will"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "If you die without a will (intestate), Ghana's Intestate Succession Law (PNDCL 111) divides your estate in a fixed way: spouse gets a portion, children get a portion, and parents/siblings may get something. This may not match your wishes."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Key Elements of a Will"
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Element",
+          "What It Does"
+        ],
+        "rows": [
+          [
+            "Executor",
+            "Person who carries out your will's instructions"
+          ],
+          [
+            "Beneficiaries",
+            "People or organisations who inherit your assets"
+          ],
+          [
+            "Guardian",
+            "Person who cares for minor children (if applicable)"
+          ],
+          [
+            "Specific Bequests",
+            "Specific items to specific people"
+          ],
+          [
+            "Residuary Estate",
+            "What's left after specific bequests"
+          ]
+        ],
+        "caption": "Key Elements of a Will"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Cost and Process"
+      },
+      {
+        "type": "text",
+        "content": "A lawyer typically charges GHS 1,000–5,000 to draft a will in Ghana. You can also use will-writing services. The will must be signed in the presence of two witnesses who are not beneficiaries."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Update your will when your family or asset situation changes (marriage, divorce, birth of children, buying property, starting a business). Review it every 3–5 years."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Without a will, the court decides who gets your assets — a process that can take 1–3 years and cost a significant portion of the estate in legal fees."
+      },
+      {
+        "type": "example",
+        "title": "Kofi's Will",
+        "content": "Kofi, a 50-year-old widower with two children, drafted a will leaving: his house to his children equally, GHS 100,000 to his elderly mother, and the rest of his savings to his children's education fund. He appointed his brother as executor and his sister as guardian for the children. Cost: GHS 2,500 for lawyer's fees."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Intestate Succession",
+        "definition": "The legal process for distributing a deceased person's assets when no valid will exists. In Ghana, governed by PNDCL 111.",
+        "source": {
+          "label": "Laws of Ghana",
+          "url": "https://laws.ghanalegal.com"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "Executor",
+        "definition": "The person appointed in a will to manage the estate, pay debts, and distribute assets to beneficiaries.",
+        "source": {
+          "label": "Laws of Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Review your retirement regularly",
+        "destination": "feature://retirement-planner",
+        "description": "Update your retirement plan annually as income, expenses, and goals change."
       },
       {
         "type": "divider"
@@ -1527,21 +3811,890 @@
     "schema_version": "1.0",
     "sections": [
       {
+        "type": "callout_stat",
+        "content": "Ghana's Data Protection Commission received over 1,500 data breach reports in 2024 — up 40% from 2023. Your financial data is a prime target.",
+        "source": {
+          "label": "Data Protection Commission Ghana 2024"
+        }
+      },
+      {
         "type": "text",
-        "content": "Your financial data — account numbers, PINs, transaction history — is valuable to fraudsters. Protect it: never share PINs or OTPs, use strong passwords, and be wary of phishing emails or fake websites."
+        "content": "Your financial data — account numbers, PINs, passwords, transaction history — is valuable to fraudsters. Protecting it is as important as protecting your physical wallet."
       },
       {
         "type": "heading",
         "level": 2,
-        "content": "Key Points"
+        "content": "Common Data Threats"
       },
       {
-        "type": "callout_tip",
-        "content": "Banks and mobile money providers will never ask for your PIN or OTP by phone, email, or SMS. Anyone who does is a fraudster."
+        "type": "table",
+        "headers": [
+          "Threat",
+          "How It Works",
+          "How to Avoid"
+        ],
+        "rows": [
+          [
+            "Phishing",
+            "Fake emails/SMS pretending to be your bank",
+            "Never click links in unsolicited messages"
+          ],
+          [
+            "SIM Swap Fraud",
+            "Fraudster convinces telco to transfer your number",
+            "Set SIM swap alert with your provider"
+          ],
+          [
+            "Skimming",
+            "Hidden devices on ATMs that read card data",
+            "Cover PIN pad, use ATMs at bank branches"
+          ],
+          [
+            "Shoulder Surfing",
+            "Someone watches you enter your PIN",
+            "Cover screen and keypad when transacting"
+          ],
+          [
+            "Public Wi-Fi Sniffing",
+            "Fraudsters intercept data on unsecured networks",
+            "Use mobile data for financial transactions"
+          ]
+        ],
+        "caption": "Common Financial Data Threats"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Best Practices for Data Security"
       },
       {
         "type": "text",
-        "content": "This lesson is being expanded with full content. Check back for updates or use the Financial Glossary to explore related terms."
+        "content": "Never share your PIN, password, or OTP with anyone — including bank staff. Your bank will never ask for these. Use different passwords for different accounts. Enable two-factor authentication (2FA) wherever possible."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Set up transaction alerts on all your accounts. If you receive an alert for a transaction you didn't make, contact your bank immediately. Early reporting increases the chance of recovery."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Screenshots of financial information shared on social media can expose account numbers, balances, and other sensitive data. Cropped images can often be reverse-cropped."
+      },
+      {
+        "type": "example",
+        "title": "Ama's Escape",
+        "content": "Ama received a call from someone claiming to be MTN customer service, asking for her MoMo PIN to 'upgrade her account.' She remembered the rule — no one legitimate asks for your PIN — and hung up. She reported the number to MTN. Later, MTN confirmed it was a known fraudster."
+      },
+      {
+        "type": "callout_law",
+        "content": "The Data Protection Act, 2012 (Act 843) requires all organisations holding personal data to protect it and report breaches. You have the right to know if your data has been compromised.",
+        "source": {
+          "label": "Data Protection Commission Ghana",
+          "url": "https://www.dpca.gov.gh"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "Phishing",
+        "definition": "A fraudulent attempt to obtain sensitive information by pretending to be a trustworthy entity via email, SMS, or phone.",
+        "source": {
+          "label": "Data Protection Commission Ghana",
+          "url": "https://www.dpca.gov.gh"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "Two-Factor Authentication (2FA)",
+        "definition": "An extra layer of security requiring both a password and a second factor (e.g., OTP sent to your phone) to access an account.",
+        "source": {
+          "label": "Bank of Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Protect your devices",
+        "destination": "feature://security-tips",
+        "description": "Lock down your phone and financial apps with the Device Security Guide for Ghanaian users."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod08-credit-01": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "callout_stat",
+        "content": "Credit is a powerful tool when used wisely — but Ghana's non-performing loan ratio stood at 21.8% in 2024 (BoG), indicating many borrowers struggle to repay.",
+        "source": {
+          "label": "Bank of Ghana Financial Stability Report 2024"
+        }
+      },
+      {
+        "type": "text",
+        "content": "Credit means borrowing money with a promise to repay later, usually with interest. Used wisely, credit helps you achieve goals like buying a home, starting a business, or handling emergencies. Used poorly, it can lead to debt traps."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Types of Credit"
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Credit Type",
+          "How It Works",
+          "Typical Interest Rate",
+          "Best For"
+        ],
+        "rows": [
+          [
+            "Personal Loan",
+            "Lump sum, fixed repayment term",
+            "25–35% APR",
+            "Large expenses, debt consolidation"
+          ],
+          [
+            "Credit Card",
+            "Revolving credit line",
+            "30–40% APR",
+            "Short-term convenience, emergencies"
+          ],
+          [
+            "Overdraft",
+            "Flexible borrowing against your account",
+            "20–30% APR",
+            "Cash flow gaps"
+          ],
+          [
+            "Salary Advance",
+            "Loan against your next pay",
+            "10–20% flat fee",
+            "Very short-term needs"
+          ],
+          [
+            "Digital/MoMo Loan",
+            "Instant phone-based loan",
+            "50–500% APR",
+            "Emergencies only"
+          ]
+        ],
+        "caption": "Types of Credit Available in Ghana"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Good Debt vs Bad Debt"
+      },
+      {
+        "type": "text",
+        "content": "Good debt helps you build wealth: a mortgage (home appreciates), student loan (education increases income), business loan (business generates profit). Bad debt is for things that lose value: borrowing for luxury goods, expensive weddings, or lifestyle spending beyond your means."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Before borrowing, ask: Is this for something that will grow in value or generate income? Can I comfortably afford the monthly payments? What happens if my income drops?"
+      },
+      {
+        "type": "callout_warning",
+        "content": "Avoid borrowing for depreciating assets (cars, electronics, clothes) unless absolutely necessary. By the time you finish paying, the item is worth far less than you paid."
+      },
+      {
+        "type": "example",
+        "title": "Mensah's Credit Decision",
+        "content": "Mensah needed a car for his delivery business. He compared: new car loan at 32% APR (GHS 1,800/month, 5 years) vs used car loan at 35% APR (GHS 900/month, 3 years). He chose the used car — lower monthly payment, shorter term, and the business could afford it."
+      },
+      {
+        "type": "glossary_term",
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "The total yearly cost of borrowing including interest and fees. Always compare APRs when shopping for credit.",
+        "source": {
+          "label": "Bank of Ghana",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Use the Loan Amortisation Calculator",
+        "destination": "/literacy/calculator/loan-amortization-v1",
+        "description": "See total cost of any loan."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod08-credit-02": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "callout_stat",
+        "content": "A difference of just 5% in interest rate on a GHS 50,000 loan over 5 years means GHS 7,500 more in interest payments.",
+        "source": {
+          "label": "Bank of Ghana Consumer Finance"
+        }
+      },
+      {
+        "type": "text",
+        "content": "Interest is the cost of borrowing money. The interest rate determines how much extra you pay. Even small differences in rates can mean thousands of cedis over the life of a loan."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Interest Rate Basics"
+      },
+      {
+        "type": "text",
+        "content": "The interest rate is expressed as a percentage of the loan amount per year. If you borrow GHS 10,000 at 30% APR, you pay approximately GHS 3,000 in interest per year (though actual calculation depends on repayment schedule)."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Fixed vs Variable Rates"
+      },
+      {
+        "type": "comparison",
+        "left": {
+          "label": "Fixed Rate",
+          "points": [
+            "Rate stays same for entire loan term",
+            "Predictable monthly payments",
+            "Protects you if market rates rise",
+            "May start higher than variable"
+          ]
+        },
+        "right": {
+          "label": "Variable Rate",
+          "points": [
+            "Rate changes with market conditions",
+            "Payments can go up or down",
+            "Can benefit from falling rates",
+            "Unpredictable — risk of higher payments"
+          ]
+        }
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Understanding APR vs Flat Rate"
+      },
+      {
+        "type": "text",
+        "content": "Some lenders quote a 'flat rate' that sounds attractive. A 5% flat rate per year on a GHS 10,000 loan over 2 years means GHS 1,000 total interest. But the effective APR is approximately 17% because you're paying interest on the full amount even as you repay. Always ask for APR."
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Loan Amount",
+          "Flat Rate",
+          "Flat Interest",
+          "Equivalent APR"
+        ],
+        "rows": [
+          [
+            "GHS 10,000",
+            "5% per year for 2 years",
+            "GHS 1,000",
+            "~17%"
+          ],
+          [
+            "GHS 20,000",
+            "4% per year for 3 years",
+            "GHS 2,400",
+            "~13.5%"
+          ],
+          [
+            "GHS 50,000",
+            "6% per year for 5 years",
+            "GHS 15,000",
+            "~18.5%"
+          ]
+        ],
+        "caption": "Flat Rate vs APR Comparison"
+      },
+      {
+        "type": "callout_tip",
+        "content": "When comparing loans, ONLY compare APR. Ignore flat rates, monthly rates, or weekly rates — they are designed to confuse. The APR includes all fees and tells you the true cost."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Late payment fees can add significantly to your loan cost. A GHS 50 late fee on a GHS 1,000 monthly payment equals an extra 60% APR if it happens every month."
+      },
+      {
+        "type": "example",
+        "title": "Akosua's Loan Comparison",
+        "content": "Akosua needed GHS 15,000. Bank A offered: 28% APR, 3% processing fee, GHS 50/month late fee. Bank B offered: 32% APR, no processing fee, GHS 20/month late fee. For a 3-year loan with no late payments: Bank A total: GHS 21,600. Bank B total: GHS 22,800. She chose Bank A."
+      },
+      {
+        "type": "glossary_term",
+        "term": "APR (Annual Percentage Rate)",
+        "definition": "The annual cost of borrowing including interest and all fees. Required by Bank of Ghana regulations for transparent lending.",
+        "source": {
+          "label": "Bank of Ghana",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "Flat Rate",
+        "definition": "A simplified interest calculation that applies the rate to the original loan amount for the full term, resulting in a higher effective APR.",
+        "source": {
+          "label": "Bank of Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Improve your credit score",
+        "destination": "feature://credit-builder",
+        "description": "Get personalized steps to improve your credit score and access better loan terms."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod08-credit-03": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "callout_stat",
+        "content": "Ghana's Credit Reporting Act, 2007 (Act 726) established a credit reporting system. Your credit history affects loan approval, interest rates, and even job applications.",
+        "source": {
+          "label": "Bank of Ghana Credit Reporting"
+        }
+      },
+      {
+        "type": "text",
+        "content": "Your credit history is a record of how you've borrowed and repaid money. A good credit score makes borrowing easier and cheaper. A bad score can block you from loans entirely."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "How Credit Reporting Works in Ghana"
+      },
+      {
+        "type": "text",
+        "content": "Ghana has three licensed credit bureaus: XDS Data Ghana Limited, Dun and Bradstreet Credit Bureau Limited, and MyCredit Score Limited (BoG). They collect: loan accounts and repayment history, defaults and late payments, court judgments related to debt, and bankruptcies. Banks and lenders report your payment behaviour to these bureaus."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Building Good Credit"
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Do",
+          "Don't"
+        ],
+        "rows": [
+          [
+            "Always pay loans on time",
+            "Miss payments — even one late payment hurts"
+          ],
+          [
+            "Keep credit utilisation below 30%",
+            "Max out credit cards or overdrafts"
+          ],
+          [
+            "Maintain consistent bank deposits",
+            "Apply for multiple loans at once"
+          ],
+          [
+            "Check your credit report annually",
+            "Default and disappear — it stays for 5 years"
+          ],
+          [
+            "Start with small loans and build up",
+            "Co-sign loans you can't cover"
+          ]
+        ],
+        "caption": "Credit Building Do's and Don'ts"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "What to Do If You're in Debt Trouble"
+      },
+      {
+        "type": "text",
+        "content": "If you cannot repay: contact your lender immediately — most prefer to restructure than write off, prioritise secured debt (mortgage, car loan) as default means asset loss, consider a Debt Management Plan with a financial advisor, and never borrow from one lender to repay another."
+      },
+      {
+        "type": "callout_tip",
+        "content": "The 20/30/50 rule: no more than 20% of your net income on debt repayment, no more than 30% on housing (if renting or paying mortgage), and 50% minimum on necessities (food, transport, utilities)."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Debt recovery agencies operate in Ghana. If you default, they can: report you to credit bureaus (ruining your credit for 6+ years), obtain a court judgment to seize assets, and garnish your salary through court order."
+      },
+      {
+        "type": "example",
+        "title": "Kojo's Debt Recovery",
+        "content": "Kojo had GHS 25,000 in credit card and personal loan debt at 35% APR, costing GHS 8,750/year in interest. He consolidated into a single loan at 28% APR over 4 years (GHS 870/month). He set up automatic payments and stopped using credit cards. After 4 years, he was debt-free with a good credit history."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Credit Bureau",
+        "definition": "An organisation that collects and maintains credit information on individuals and businesses. Lenders use this data to assess creditworthiness.",
+        "source": {
+          "label": "Bank of Ghana",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "Debt Consolidation",
+        "definition": "Combining multiple debts into a single loan, usually at a lower interest rate, to simplify repayment and reduce total interest.",
+        "source": {
+          "label": "Bank of Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Calculate a loan's true cost",
+        "destination": "feature://loan-calculator",
+        "description": "Use the Loan Calculator to compare APR, total interest, and monthly payments before borrowing."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod08-credit-04": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "callout_stat",
+        "content": "The average home loan in Ghana is GHS 250,000–500,000 with interest rates between 25–32% APR. A mortgage is typically the largest financial commitment most people ever make.",
+        "source": {
+          "label": "Bank of Ghana Housing Finance Report 2024"
+        }
+      },
+      {
+        "type": "text",
+        "content": "A mortgage is a loan specifically for buying property. The property itself serves as collateral. Mortgages have longer terms (10–25 years) than other loans, making monthly payments more affordable — but total interest paid can be substantial."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Mortgage Basics"
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Term",
+          "Typical Rate",
+          "Monthly Payment (GHS 300K loan)",
+          "Total Interest Paid"
+        ],
+        "rows": [
+          [
+            "10 years",
+            "28% APR",
+            "~GHS 7,800",
+            "~GHS 636,000"
+          ],
+          [
+            "15 years",
+            "28% APR",
+            "~GHS 7,300",
+            "~GHS 1,014,000"
+          ],
+          [
+            "20 years",
+            "28% APR",
+            "~GHS 7,100",
+            "~GHS 1,404,000"
+          ]
+        ],
+        "caption": "Mortgage Payment Examples (GHS 300,000 at 28% APR)"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Mortgage Requirements in Ghana"
+      },
+      {
+        "type": "text",
+        "content": "Lenders typically require: deposit of 20–30% of property value (GHS 60,000–90,000 on a GHS 300,000 home), proof of stable income (3–6 months of payslips), TIN and tax returns, good credit history, and valuation of the property by a licensed valuer."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Before applying for a mortgage: save at least 30% of the property value as deposit, reduce other debts to improve your debt-to-income ratio, gather all financial documents, and get pre-approved before house-hunting."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Defaulting on a mortgage means losing the property. The bank can repossess and sell it. You may still owe the difference if the sale price is less than the outstanding loan. Never take a mortgage you cannot comfortably afford."
+      },
+      {
+        "type": "example",
+        "title": "Ama and Kwesi's Mortgage",
+        "content": "Ama and Kwesi buy a GHS 350,000 home with GHS 87,500 deposit (25%) and a GHS 262,500 mortgage at 28% APR over 20 years. Monthly payment: ~GHS 6,200. Combined monthly income: GHS 18,000. Housing costs at 34% of income — within the recommended 30–40% range."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Mortgage",
+        "definition": "A loan secured against property, typically with terms of 10–25 years. The property can be repossessed if payments are not made.",
+        "source": {
+          "label": "Bank of Ghana",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "Deposit (down payment)",
+        "definition": "The upfront payment you make when buying property, representing a percentage of the purchase price. Typically 20–30% in Ghana.",
+        "source": {
+          "label": "Bank of Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Plan debt repayment",
+        "destination": "feature://debt-planner",
+        "description": "Create a debt repayment strategy with the Debt Planner — snowball or avalanche method."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod09-intl-01": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "callout_stat",
+        "content": "The Ghana cedi depreciated by approximately 20% against the US dollar in 2024, making it one of the most volatile currencies in West Africa.",
+        "source": {
+          "label": "Bank of Ghana Forex Report 2025"
+        }
+      },
+      {
+        "type": "text",
+        "content": "Exchange rates determine how much your cedi is worth in other currencies. Understanding what drives the cedi's value helps you make better decisions about saving, spending, and investing."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "How Exchange Rates Work"
+      },
+      {
+        "type": "text",
+        "content": "The exchange rate is the price of one currency in terms of another. When the cedi weakens against the dollar, imports become more expensive (fuel, food, electronics). When it strengthens, imports become cheaper."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "What Affects the Cedi"
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Factor",
+          "Effect on Cedi",
+          "Example"
+        ],
+        "rows": [
+          [
+            "Export Earnings (gold, cocoa, oil)",
+            "Higher exports = stronger cedi",
+            "Gold price rally strengthens cedi"
+          ],
+          [
+            "Remittances",
+            "More diaspora money = stronger cedi",
+            "December remittances boost cedi"
+          ],
+          [
+            "Government Spending",
+            "High spending = pressure on cedi",
+            "Election year spending weakens cedi"
+          ],
+          [
+            "Central Bank Policy",
+            "Rate hikes can support cedi",
+            "BoG policy rate increase"
+          ],
+          [
+            "Imports (fuel, food, machinery)",
+            "More imports = weaker cedi",
+            "Oil price shock weakens cedi"
+          ]
+        ],
+        "caption": "Factors Affecting the Cedi"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Where to Get the Best Rate"
+      },
+      {
+        "type": "text",
+        "content": "Exchange rates vary significantly between providers: banks (least favourable, but safest), forex bureaus (better rates, widely available), and mobile money platforms (increasingly competitive). Always compare at least 3 providers before exchanging."
+      },
+      {
+        "type": "callout_tip",
+        "content": "For large transfers, use the mid-market rate (Google rate) as a benchmark. If a provider offers a rate more than 3% away from the mid-market rate, you're paying too much."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Avoid street currency exchangers ('black market'). You risk counterfeit notes, robbery, or being reported to police. Use licensed forex bureaus or banks."
+      },
+      {
+        "type": "example",
+        "title": "Nana's Forex Comparison",
+        "content": "Nana needed to exchange GHS 10,000 to dollars. Bank A offered: 14.50. Forex Bureau: 14.80. Money transfer app: 14.90. Mid-market rate: 15.00. She used the transfer app, getting GHS 689 compared to GHS 655 at the bank — saving GHS 34."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Exchange Rate",
+        "definition": "The price of one currency in terms of another. Fluctuates based on supply and demand, economic conditions, and government policy.",
+        "source": {
+          "label": "Bank of Ghana",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "Mid-Market Rate",
+        "definition": "The exchange rate between two currencies without any markup or fee. The rate you see on Google. Compare real rates against this benchmark.",
+        "source": {
+          "label": "Bank of Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Find current exchange rates",
+        "destination": "feature://exchange-rate",
+        "description": "Check live interbank and forex bureau rates across all major currency pairs."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod09-intl-02": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "callout_stat",
+        "content": "Ghana received over $4.6 billion in diaspora remittances in 2023 — the largest source of foreign exchange after gold, exceeding both cocoa and oil export earnings.",
+        "source": {
+          "label": "World Bank Remittance Report 2024"
+        }
+      },
+      {
+        "type": "text",
+        "content": "Whether you're receiving money from abroad or sending money overseas, choosing the right method can save you significant fees and give you a better exchange rate."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Remittance Options"
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Method",
+          "Speed",
+          "Typical Fee",
+          "Exchange Rate",
+          "Best For"
+        ],
+        "rows": [
+          [
+            "Bank Transfer (SWIFT)",
+            "1–3 days",
+            "GHS 50–150 flat",
+            "Poor (bank rates)",
+            "Large amounts"
+          ],
+          [
+            "Money Transfer Operator",
+            "Minutes to 1 day",
+            "1–3% of amount",
+            "Competitive",
+            "Medium amounts"
+          ],
+          [
+            "Mobile Money (international)",
+            "Minutes",
+            "0.5–2%",
+            "Good",
+            "Small to medium amounts"
+          ],
+          [
+            "Cryptocurrency (USDT)",
+            "Minutes",
+            "0.1–1%",
+            "Mid-market",
+            "Tech-savvy users"
+          ],
+          [
+            "Cash Pickup",
+            "Minutes to 1 day",
+            "2–5%",
+            "Competitive",
+            "Unbanked recipients"
+          ]
+        ],
+        "caption": "Remittance Options for Ghana"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Hidden Fees to Watch For"
+      },
+      {
+        "type": "text",
+        "content": "The exchange rate markup is where most providers make their money. A provider may advertise 'zero fees' but give you a rate 5% worse than the mid-market rate. Always calculate the total cost: transfer fee + exchange rate markup."
+      },
+      {
+        "type": "callout_tip",
+        "content": "Compare the 'total cost' — how many cedis the recipient actually gets. The provider that gives the most cedis for your dollars (or vice versa) is the best deal, regardless of advertised fees."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Beware of advance-fee fraud: people claiming to hold funds abroad who ask you to pay 'release fees' or 'clearance charges.' Legitimate transfers never require the recipient to pay to receive funds."
+      },
+      {
+        "type": "example",
+        "title": "Diaspora Esi Sends Money Home",
+        "content": "Esi in the UK sends GHS 5,000 to her mother in Ghana. Bank: £0 fee, rate 14.50, mother receives GHS 5,000. Transfer app: £3 fee, rate 14.80, mother receives GHS 5,097 (GHS 97 more). MTO: £5 fee, rate 14.90, mother receives GHS 5,110 (GHS 110 more). The cheapest option was the MTO with better exchange rate."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Remittance",
+        "definition": "Money sent by a person working abroad to their home country. Ghana is one of Africa's largest remittance recipients.",
+        "source": {
+          "label": "Bank of Ghana",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "SWIFT Transfer",
+        "definition": "An international bank-to-bank transfer using the SWIFT network. Secure but slow and expensive. Best for very large amounts.",
+        "source": {
+          "label": "Bank of Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Compare remittance services",
+        "destination": "feature://remittance-compare",
+        "description": "Compare fees, rates, and speed of different remittance services for sending money to Ghana."
+      },
+      {
+        "type": "divider"
+      }
+    ]
+  },
+  "mod09-intl-03": {
+    "schema_version": "1.0",
+    "sections": [
+      {
+        "type": "callout_stat",
+        "content": "The Ghana diaspora is estimated at over 3 million people worldwide, sending $4.6 billion in remittances in 2023 — and increasingly looking to invest back home.",
+        "source": {
+          "label": "World Bank Remittance Report 2024"
+        }
+      },
+      {
+        "type": "text",
+        "content": "As a Ghanaian living abroad, you can invest in Ghana's growth. The government and private sector offer several investment options specifically designed for the diaspora."
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Diaspora Investment Options"
+      },
+      {
+        "type": "table",
+        "headers": [
+          "Investment",
+          "Min. Amount",
+          "Return Potential",
+          "Liquidity"
+        ],
+        "rows": [
+          [
+            "Diaspora Bonds",
+            "USD 1,000+",
+            "Fixed interest (6–10%)",
+            "Medium (2–10 year terms)"
+          ],
+          [
+            "GSE Stocks",
+            "Varies by broker",
+            "Variable (dividends + growth)",
+            "Medium (sell anytime)"
+          ],
+          [
+            "T-Bills (via broker)",
+            "GHS 1,000+",
+            "14–18%",
+            "High (91–364 day terms)"
+          ],
+          [
+            "Real Estate",
+            "USD 10,000+",
+            "Rental yield + appreciation",
+            "Low (hard to sell quickly)"
+          ],
+          [
+            "Treasury Bill e-Investment",
+            "Online via CDS account",
+            "Same as T-Bills",
+            "High"
+          ]
+        ],
+        "caption": "Diaspora Investment Options"
+      },
+      {
+        "type": "heading",
+        "level": 2,
+        "content": "Getting Started"
+      },
+      {
+        "type": "text",
+        "content": "To invest from abroad: open a non-resident Ghana cedi account (Nostro account) through a Ghanaian bank, get a TIN if you don't have one, open a CDS account for stocks and bonds, and choose a licensed broker or fund manager."
+      },
+      {
+        "type": "callout_tip",
+        "content": "The Ghana Treasury Bill e-Investment platform allows diaspora investors to buy T-Bills online. Minimum investment is GHS 1,000. Check bog.gov.gh for details."
+      },
+      {
+        "type": "callout_warning",
+        "content": "Be wary of 'diaspora investment' schemes promising guaranteed high returns. Verify all investment opportunities with SEC Ghana (sec.gov.gh) and the Ghana Investment Promotion Centre (gipc.gov.gh)."
+      },
+      {
+        "type": "example",
+        "title": "Kwame's Diaspora Portfolio",
+        "content": "Kwame lives in Canada and invests in Ghana: GHS 50,000 in 2-year diaspora bonds at 8% (GHS 4,000/year), GHS 30,000 in GSE stocks (average 12% return), and GHS 20,000 in 364-day T-Bills rolling over. Total annual return: ~GHS 12,400. He reinvests the income, building his Ghana retirement fund."
+      },
+      {
+        "type": "glossary_term",
+        "term": "Diaspora Bond",
+        "definition": "A government bond specifically marketed to citizens living abroad, typically offering competitive rates and lower minimum investments.",
+        "source": {
+          "label": "Bank of Ghana",
+          "url": "https://www.bog.gov.gh"
+        }
+      },
+      {
+        "type": "glossary_term",
+        "term": "Non-Resident Account",
+        "definition": "A bank account for Ghanaians living abroad, allowing them to hold and transact in cedis. Required for most local investments.",
+        "source": {
+          "label": "Bank of Ghana"
+        }
+      },
+      {
+        "type": "cta_link",
+        "label": "Explore Investment Calculators",
+        "destination": "/literacy/calculator/tbill-simulator-v1",
+        "description": "Calculate returns on T-Bills and other investments."
       },
       {
         "type": "divider"

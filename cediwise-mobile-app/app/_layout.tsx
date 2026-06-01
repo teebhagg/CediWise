@@ -3,6 +3,7 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as Sentry from "@sentry/react-native";
 import * as SplashScreen from "expo-splash-screen";
+import { Asset } from "expo-asset";
 // import { StatusBar } from 'expo-status-bar';
 import { TriggerProvider } from "@/contexts/TriggerContext";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
@@ -157,6 +158,10 @@ function AppShell() {
             options={{ headerShown: false }}
           />
           <Stack.Screen
+            name="onboarding-demos"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
             name="notifications"
             options={{ headerShown: false }}
           />
@@ -185,6 +190,8 @@ function RootLayout() {
   // Keeps tokens fresh while app is in foreground/resumed.
   useAuthRefresh();
 
+  const [videosLoaded, setVideosLoaded] = useState(false);
+
   const [fontsLoaded] = useFonts({
     "Figtree-Light": require("../assets/fonts/Figtree-Light.ttf"),
     "Figtree-Regular": require("../assets/fonts/Figtree-Regular.ttf"),
@@ -193,7 +200,25 @@ function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded) {
+    async function preloadVideos() {
+      try {
+        await Promise.all([
+          Asset.fromModule(require("../assets/videos/onboarding/smart-bugget-snippet.mp4")).downloadAsync(),
+          Asset.fromModule(require("../assets/videos/onboarding/sme-snippet.mp4")).downloadAsync(),
+          Asset.fromModule(require("../assets/videos/onboarding/tax-calculator-snippet.mp4")).downloadAsync(),
+          Asset.fromModule(require("../assets/videos/onboarding/learn-snippet.mp4")).downloadAsync(),
+        ]);
+      } catch (e) {
+        console.warn("Failed to preload onboarding videos", e);
+      } finally {
+        setVideosLoaded(true);
+      }
+    }
+    preloadVideos();
+  }, []);
+
+  useEffect(() => {
+    if (fontsLoaded && videosLoaded) {
       setAppIsReady(true);
       SplashScreen.hideAsync();
     }
@@ -208,7 +233,7 @@ function RootLayout() {
       const cancel = (taxTask as { cancel?: () => void }).cancel;
       if (typeof cancel === "function") cancel();
     };
-  }, [fontsLoaded]);
+  }, [fontsLoaded, videosLoaded]);
 
   useEffect(() => {
     const isExpoGo = (Constants.appOwnership ?? "") === "expo";

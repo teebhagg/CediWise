@@ -44,10 +44,15 @@ export default function LessonScreen() {
   const [lessonMarkedComplete, setLessonMarkedComplete] = useState(false);
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
+  const scrollRef = useRef<any>(null);
 
   const scrollHandler = useAnimatedScrollHandler((event) => {
     scrollY.value = event.contentOffset.y;
   });
+
+  const scrollToQuiz = useCallback(() => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+  }, []);
 
   // ── Data ────────────────────────────────────────────────────────────────────
   const lesson = lessons.find((l) => l.id === lessonId);
@@ -242,6 +247,7 @@ export default function LessonScreen() {
       />
 
       <Animated.ScrollView
+        ref={scrollRef}
         onScroll={scrollHandler}
         scrollEventThrottle={16}
         snapToOffsets={[0, DEFAULT_EXPANDED_HEIGHT - DEFAULT_STANDARD_HEIGHT]}
@@ -304,6 +310,7 @@ export default function LessonScreen() {
               lessonId={lessonId ?? ""}
               questions={quizQuestions}
               onComplete={handleQuizComplete}
+              onStartQuiz={scrollToQuiz}
             />
           )}
 

@@ -13,7 +13,8 @@ import {
   ExpandedHeader,
 } from "@/components/CediWiseHeader";
 import { ModuleCard } from "@/components/features/literacy/ModuleCard";
-import { MODULES } from "@/constants/literacy";
+import { LEVEL_LABELS, MODULES } from "@/constants/literacy";
+import type { ModuleDifficulty } from "@/types/literacy";
 import { useConnectivity } from "@/hooks/useConnectivity";
 import { useLessons } from "@/hooks/useLessons";
 import { useProgress } from "@/hooks/useProgress";
@@ -164,19 +165,55 @@ export default function LiteracyScreen() {
             </Text>
           </Animated.View>
 
-          {/* Module cards — column + gap keeps spacing consistent (no nested list). */}
+          {/* Module cards — grouped by complexity level */}
           {loading ? (
             <View style={styles.loadingState}>
               <Text style={styles.loadingText}>Loading...</Text>
             </View>
           ) : (
-            <View style={styles.moduleStack}>
-              {MODULES.map((module, index) => (
-                <View key={module.id} style={{ width: "100%" }}>
-                  {renderModuleItem({ item: module, index })}
-                </View>
-              ))}
-            </View>
+            (() => {
+              const levelOrder: ModuleDifficulty[] = [
+                "foundational",
+                "intermediate",
+                "advanced",
+              ];
+              const grouped = levelOrder.reduce(
+                (acc, level) => {
+                  acc[level] = MODULES.filter((m) => m.level === level);
+                  return acc;
+                },
+                {} as Record<string, typeof MODULES>,
+              );
+              // Track global index for staggered rendering
+              let globalIndex = 0;
+              return levelOrder.map((level) => {
+                const modules = grouped[level];
+                if (modules.length === 0) return null;
+                const section = (
+                  <View key={level} style={{ width: "100%", gap: 12 }}>
+                    <Animated.View
+                      collapsable={false}
+                      entering={FadeInDown.delay(200 + globalIndex * 40)
+                        .duration(300)
+                        .springify()}
+                      style={styles.levelHeader}>
+                      <Text style={styles.levelLabel}>
+                        {LEVEL_LABELS[level]}
+                      </Text>
+                    </Animated.View>
+                    {modules.map((module) => {
+                      const idx = globalIndex++;
+                      return (
+                        <View key={module.id} style={{ width: "100%" }}>
+                          {renderModuleItem({ item: module, index: idx })}
+                        </View>
+                      );
+                    })}
+                  </View>
+                );
+                return section;
+              });
+            })()
           )}
         </View>
       </Animated.ScrollView>
@@ -284,6 +321,17 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 4,
     marginBottom: 2,
+  },
+  levelHeader: {
+    marginTop: 4,
+    marginBottom: 12,
+  },
+  levelLabel: {
+    fontSize: 13,
+    fontFamily: "Figtree-Bold",
+    color: "#64748b",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
   },
   modulesLabel: {
     fontSize: 13,

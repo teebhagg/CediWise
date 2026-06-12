@@ -2,9 +2,8 @@
  * generate-reminders — Supabase Edge Function (Deno)
  *
  * Schedule: Cron Sunday 00:00 UTC (weekly)
- * Purpose: Generate 1 AI-personalized weekly reminder per user using Groq,
- *          stored in scheduled_reminders (scheduled_day = monday).
- *          Mobile app schedules a single weekly local notification.
+ * Purpose: Generate 2 AI-personalized reminders per user (Monday + Thursday) using Groq,
+ *          stored in scheduled_reminders. Mobile app schedules fixed local notifications.
  *
  * Auth: x-internal-service-token must match CRON_SECRET (preferred) or
  *       SUPABASE_SERVICE_ROLE_KEY during rollout.
@@ -25,14 +24,15 @@ const PROFILE_PAGE_SIZE = 500;
 
 const REMINDER_SYSTEM_PROMPT = `You are CediWise AI, a proactive financial assistant for Ghanaians.
 
-Your task: Generate 1 short, friendly weekly push notification message for the user — a start-of-week expense check-in.
+Your task: Generate 2 short, friendly push notification messages for the user — Monday (start-of-week check-in) and Thursday (mid-week check-in).
 
-The message should:
+Each message should:
 - Be 3-5 words for the title, 1 friendly sentence for the body (max 20 words)
 - Use emojis naturally (💰📊🎯🔥👀✅💪📈⏰🎉)
 - Feel like a helpful reminder from a friend, not a robot
 - Reference the user's actual budget context when possible
 - Be encouraging, warm, and culturally aware (Ghanaian users)
+- Monday and Thursday copy must feel distinct (week start vs mid-week pulse)
 
 RULES:
 - Use ₵ symbol for amounts
@@ -41,7 +41,8 @@ RULES:
 
 Return ONLY valid JSON matching this schema:
 {
-  "weekly": { "title": "3-5 word title", "body": "1-sentence body" }
+  "monday": { "title": "3-5 word title", "body": "1-sentence body" },
+  "thursday": { "title": "3-5 word title", "body": "1-sentence body" }
 }`;
 
 type ReminderRow = {
@@ -79,25 +80,28 @@ function parseGroqReminders(rawContent: string, userId: string, weekLabel: strin
     return [];
   }
 
-  const weekly = reminders.weekly as Record<string, unknown> | undefined;
-  if (
-    weekly &&
-    typeof weekly.title === "string" &&
-    typeof weekly.body === "string" &&
-    weekly.title.trim() &&
-    weekly.body.trim()
-  ) {
-    return [{
-      user_id: userId,
-      title: weekly.title.trim(),
-      body: weekly.body.trim(),
-      deep_link: "/expenses",
-      scheduled_day: "monday",
-      week_label: weekLabel,
-    }];
+  const rows: ReminderRow[] = [];
+  for (const day of ["monday", "thursday"] as const) {
+    const slot = reminders[day] as Record<string, unknown> | undefined;
+    if (
+      slot &&
+      typeof slot.title === "string" &&
+      typeof slot.body === "string" &&
+      slot.title.trim() &&
+      slot.body.trim()
+    ) {
+      rows.push({
+        user_id: userId,
+        title: slot.title.trim(),
+        body: slot.body.trim(),
+        deep_link: "/expenses",
+        scheduled_day: day,
+        week_label: weekLabel,
+      });
+    }
   }
 
-  return [];
+  return rows;
 }
 
 async function callGroq(context: string, userId: string, weekLabel: string): Promise<ReminderRow[] | null> {
@@ -119,7 +123,7 @@ async function callGroq(context: string, userId: string, weekLabel: string): Pro
         ],
         response_format: { type: "json_object" },
         temperature: 0.7,
-        max_tokens: 300,
+        max_tokens: 500,
       }),
       signal: groqController.signal,
     });
@@ -218,31 +222,6 @@ async function fetchAllProfileIds(
   return { ids, error: null };
 }
 
-async function fetchActiveDeviceUserIds(supabase: SupabaseClient): Promise<Set<string>> {
-  const userIds = new Set<string>();
-  let offset = 0;
-
-  while (true) {
-    const { data, error } = await supabase
-      .from("push_devices")
-      .select("user_id")
-      .eq("is_active", true)
-      .range(offset, offset + PROFILE_PAGE_SIZE - 1);
-
-    if (error) {
-      console.error("Failed to fetch push devices:", error);
-      break;
-    }
-
-    const page = (data ?? []) as { user_id: string }[];
-    for (const row of page) userIds.add(row.user_id);
-    if (page.length < PROFILE_PAGE_SIZE) break;
-    offset += PROFILE_PAGE_SIZE;
-  }
-
-  return userIds;
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: { "Access-Control-Allow-Origin": "*" } });
@@ -268,11 +247,9 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify(pErr), { status: 500 });
   }
 
-  const usersWithDevices = await fetchActiveDeviceUserIds(supabase);
-
   const { data: existingReminders, error: eErr } = await supabase
     .from("scheduled_reminders")
-    .select("user_id")
+    .select("user_id, scheduled_day")
     .eq("week_label", weekLabel);
 
   if (eErr) {
@@ -280,11 +257,19 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify(eErr), { status: 500 });
   }
 
-  const usersWithReminders = new Set((existingReminders ?? []).map((r: { user_id: string }) => r.user_id));
+  const daysByUser = new Map<string, Set<string>>();
+  for (const row of existingReminders ?? []) {
+    const r = row as { user_id: string; scheduled_day: string };
+    if (!daysByUser.has(r.user_id)) daysByUser.set(r.user_id, new Set());
+    daysByUser.get(r.user_id)!.add(r.scheduled_day);
+  }
 
-  const eligibleUserIds = profileIds.filter(
-    (id) => usersWithDevices.has(id) && !usersWithReminders.has(id),
-  );
+  const hasBothSlots = (userId: string) => {
+    const days = daysByUser.get(userId);
+    return days?.has("monday") && days?.has("thursday");
+  };
+
+  const eligibleUserIds = profileIds.filter((id) => !hasBothSlots(id));
 
   const generatedCounts = await runWithConcurrency(
     eligibleUserIds,

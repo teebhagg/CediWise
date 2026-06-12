@@ -211,7 +211,7 @@ export default function ProfileScreen() {
               "Check your connection and try again, or enable in system settings.",
             );
           } else {
-            showSuccess("Notifications on", "You’ll get expense reminders and updates.");
+            showSuccess("Notifications on", "You’ll get expense reminders on Mondays and Thursdays.");
           }
         } else {
           await disablePushNotifications(user.id);
@@ -499,7 +499,7 @@ export default function ProfileScreen() {
                 <ListGroup.ItemContent>
                   <ListGroup.ItemTitle>Push notifications</ListGroup.ItemTitle>
                   <ListGroup.ItemDescription>
-                    Expense reminders and updates
+                    Expense reminders on Mondays and Thursdays
                   </ListGroup.ItemDescription>
                 </ListGroup.ItemContent>
                 <ListGroup.ItemSuffix>

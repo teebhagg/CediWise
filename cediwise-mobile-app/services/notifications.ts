@@ -9,12 +9,13 @@ import { supabase } from "@/utils/supabase";
 import { log } from "@/utils/logger";
 import { pickUnseenMessage } from "./notificationMessages";
 import {
-  DEFAULT_WEEKLY_WEEKDAY,
   evaluateShouldRescheduleReminders,
-  pickWeeklyAiReminder,
+  pickAiReminderForDay,
   REMINDER_SCHEDULE_VERSION,
+  REMINDER_SLOTS,
   shouldMigrateLegacyFrequency,
   type ReminderFrequency,
+  type ReminderSlotDay,
 } from "./reminderScheduleLogic";
 import { getISOWeekLabel } from "@/utils/weekLabel";
 
@@ -22,15 +23,14 @@ const REMINDER_ID_KEY = "@cediwise_notification_weekly_reminder_id";
 const REMINDER_VERSION_KEY = "@cediwise_notification_daily_reminder_version";
 const REMINDER_SCHEDULED_WEEK_KEY = "@cediwise_notification_reminder_scheduled_week";
 const REMINDER_USED_AI_KEY = "@cediwise_notification_reminder_used_ai";
-/** @deprecated Legacy second slot from twice-weekly reminders. Cleared on migrate. */
-const LEGACY_REMINDER_ID_SECOND_KEY = "@cediwise_notification_daily_reminder_id_2";
+/** Thursday slot (Expo weekday 4). Monday uses REMINDER_ID_KEY. */
+const REMINDER_ID_THURSDAY_KEY = "@cediwise_notification_daily_reminder_id_2";
 const LAST_SYNC_KEY = "@cediwise_notification_last_sync";
 const TOKEN_KEY = "@cediwise_notification_expo_token";
 const GATE_COMPLETED_KEY = "@cediwise_notification_gate_completed";
 const NEXT_ROUTE_KEY = "@cediwise_notification_gate_next_route";
 const DISABLED_BY_USER_KEY = "@cediwise_notification_disabled_by_user";
 const REMINDER_FREQUENCY_KEY = "@cediwise_notification_reminder_frequency";
-const REMINDER_WEEKDAY_KEY = "@cediwise_notification_reminder_weekday";
 const DEFAULT_CHANNEL_ID = "cediwise-default";
 const TOKEN_REFRESH_THROTTLE_MS = 24 * 60 * 60 * 1000;
 
@@ -133,37 +133,18 @@ export async function consumePendingNotificationRoute(): Promise<string | null> 
   return route;
 }
 
-/** Weekly expense reminders only (`daily` / `twice_weekly` are migrated away). */
+/** Fixed twice-weekly reminders (Monday + Thursday). Users cannot pick days. */
 export async function getReminderFrequency(): Promise<ReminderFrequency> {
   const stored = await AsyncStorage.getItem(REMINDER_FREQUENCY_KEY);
   if (shouldMigrateLegacyFrequency(stored)) {
-    await AsyncStorage.setItem(REMINDER_FREQUENCY_KEY, "weekly");
-    const weekdayStr = await AsyncStorage.getItem(REMINDER_WEEKDAY_KEY);
-    if (!weekdayStr) {
-      await AsyncStorage.setItem(
-        REMINDER_WEEKDAY_KEY,
-        String(DEFAULT_WEEKLY_WEEKDAY),
-      );
-    }
-    await AsyncStorage.removeItem(REMINDER_VERSION_KEY);
+    await cancelAllReminders();
+    await AsyncStorage.setItem(REMINDER_FREQUENCY_KEY, "twice_weekly");
   }
-  return "weekly";
-}
-
-/** JS getDay(): 0=Sun, 1=Mon, ... 6=Sat. Expo weekday: 1=Mon, ..., 7=Sun. */
-function jsDayToExpoWeekday(jsDay: number): number {
-  return jsDay === 0 ? 7 : jsDay;
+  return "twice_weekly";
 }
 
 export async function setReminderFrequency(_freq: ReminderFrequency): Promise<void> {
-  await AsyncStorage.setItem(REMINDER_FREQUENCY_KEY, "weekly");
-  const weekdayStr = await AsyncStorage.getItem(REMINDER_WEEKDAY_KEY);
-  if (!weekdayStr) {
-    await AsyncStorage.setItem(
-      REMINDER_WEEKDAY_KEY,
-      String(DEFAULT_WEEKLY_WEEKDAY),
-    );
-  }
+  await AsyncStorage.setItem(REMINDER_FREQUENCY_KEY, "twice_weekly");
   await AsyncStorage.removeItem(REMINDER_VERSION_KEY);
 }
 
@@ -173,7 +154,7 @@ export async function setReminderFrequency(_freq: ReminderFrequency): Promise<vo
 async function cancelAllReminders(): Promise<void> {
   const ids = [
     await AsyncStorage.getItem(REMINDER_ID_KEY),
-    await AsyncStorage.getItem(LEGACY_REMINDER_ID_SECOND_KEY),
+    await AsyncStorage.getItem(REMINDER_ID_THURSDAY_KEY),
   ];
   for (const id of ids) {
     if (id) {
@@ -186,7 +167,7 @@ async function cancelAllReminders(): Promise<void> {
   }
   await AsyncStorage.multiRemove([
     REMINDER_ID_KEY,
-    LEGACY_REMINDER_ID_SECOND_KEY,
+    REMINDER_ID_THURSDAY_KEY,
     REMINDER_VERSION_KEY,
     REMINDER_SCHEDULED_WEEK_KEY,
     REMINDER_USED_AI_KEY,
@@ -254,12 +235,14 @@ function handleExpenseReminderReceived(data: Record<string, unknown> | undefined
 }
 
 async function shouldRescheduleReminders(userId: string, force: boolean): Promise<boolean> {
-  const [[, storedVersion], [, storedWeek], [, reminderId], [, usedAi]] = await AsyncStorage.multiGet([
-    REMINDER_VERSION_KEY,
-    REMINDER_SCHEDULED_WEEK_KEY,
-    REMINDER_ID_KEY,
-    REMINDER_USED_AI_KEY,
-  ]);
+  const [[, storedVersion], [, storedWeek], [, reminderId], [, reminderIdThursday], [, usedAi]] =
+    await AsyncStorage.multiGet([
+      REMINDER_VERSION_KEY,
+      REMINDER_SCHEDULED_WEEK_KEY,
+      REMINDER_ID_KEY,
+      REMINDER_ID_THURSDAY_KEY,
+      REMINDER_USED_AI_KEY,
+    ]);
 
   return evaluateShouldRescheduleReminders({
     force,
@@ -268,31 +251,10 @@ async function shouldRescheduleReminders(userId: string, force: boolean): Promis
     storedWeek,
     currentWeek: getISOWeekLabel(),
     reminderId,
+    reminderIdSecond: reminderIdThursday,
     usedAi,
     hasPendingAi: await hasPendingAIReminders(userId),
   });
-}
-
-/**
- * Check if the user already logged expenses today.
- */
-async function hasLoggedExpensesToday(userId: string): Promise<boolean> {
-  if (!supabase) return false;
-  try {
-    const today = new Date().toISOString().slice(0, 10);
-    const { count, error } = await supabase
-      .from("budget_transactions")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .gte("occurred_at", today)
-      .lt("occurred_at", new Date(Date.now() + 86400000).toISOString().slice(0, 10))
-      .limit(1);
-
-    if (error) return false;
-    return (count ?? 0) > 0;
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -324,29 +286,9 @@ async function fetchAIReminders(userId: string): Promise<AIReminderRow[]> {
 }
 
 /**
- * Get the next date that matches the given weekday.
- * Expo weekday: 1=Mon, ..., 7=Sun.
- */
-function getNextWeekdayDate(weekday: number, hour: number, minute: number): Date {
-  const now = new Date();
-  const currentDay = jsDayToExpoWeekday(now.getDay());
-
-  let daysUntil = weekday - currentDay;
-  if (daysUntil < 0 || (daysUntil === 0 && (now.getHours() > hour || (now.getHours() === hour && now.getMinutes() >= minute)))) {
-    daysUntil += 7;
-  }
-
-  const target = new Date(now);
-  target.setDate(target.getDate() + daysUntil);
-  target.setHours(hour, minute, 0, 0);
-  return target;
-}
-
-/**
- * Schedule a single weekly expense reminder (Monday 20:00 by default).
+ * Schedule fixed twice-weekly expense reminders (Monday + Thursday, 20:00).
  *
  * Uses AI-generated copy from the server when available, otherwise the static pool.
- * Smart skip: if the next fire is today and the user already logged expenses, skip to next week.
  */
 export async function scheduleExpenseReminders(userId: string, force = false): Promise<void> {
   await getReminderFrequency();
@@ -362,72 +304,52 @@ export async function scheduleExpenseReminders(userId: string, force = false): P
 
   await cancelAllReminders();
 
-  const weekdayStr = await AsyncStorage.getItem(REMINDER_WEEKDAY_KEY);
-  const weekday = weekdayStr
-    ? parseInt(weekdayStr, 10)
-    : DEFAULT_WEEKLY_WEEKDAY;
-
   const aiMessages = await fetchAIReminders(userId);
-  const weeklyAi = pickWeeklyAiReminder(aiMessages);
-  let usedAi = false;
-  let title: string;
-  let body: string;
-  let scheduledReminderId: string | undefined;
-
-  if (weeklyAi) {
-    usedAi = true;
-    title = weeklyAi.title;
-    body = weeklyAi.body;
-    scheduledReminderId = weeklyAi.id;
-  } else {
-    const msg = await pickUnseenMessage();
-    title = msg.title;
-    body = msg.body;
-  }
-
-  const todayExpoWeekday = jsDayToExpoWeekday(new Date().getDay());
-  const hasLoggedToday = await hasLoggedExpensesToday(userId);
-  const todayMatches = weekday === todayExpoWeekday;
-  const skipThisWeek = todayMatches && hasLoggedToday;
-
-  let reminderId: string | null = null;
-
-  if (skipThisWeek) {
-    const nextDate = getNextWeekdayDate(weekday, 20, 0);
-    if (isToday(nextDate) && hasLoggedToday) {
-      nextDate.setDate(nextDate.getDate() + 7);
-    }
-    reminderId = await scheduleOneTimeNotification(
-      nextDate,
-      title,
-      body,
-      scheduledReminderId,
-    );
-  } else {
-    reminderId = await scheduleWeeklyNotification(
-      weekday,
-      title,
-      body,
-      scheduledReminderId,
-    );
-  }
-
+  let aiSlotsUsed = 0;
   const pairs: [string, string][] = [
     [REMINDER_VERSION_KEY, REMINDER_SCHEDULE_VERSION],
     [REMINDER_SCHEDULED_WEEK_KEY, getISOWeekLabel()],
-    [REMINDER_USED_AI_KEY, usedAi ? "true" : "false"],
   ];
-  if (reminderId) {
-    pairs.push([REMINDER_ID_KEY, reminderId]);
+
+  for (const slot of REMINDER_SLOTS) {
+    const slotAi = pickAiReminderForDay(aiMessages, slot.day);
+    let title: string;
+    let body: string;
+    let scheduledReminderId: string | undefined;
+
+    if (slotAi) {
+      aiSlotsUsed += 1;
+      title = slotAi.title;
+      body = slotAi.body;
+      scheduledReminderId = slotAi.id;
+    } else {
+      const msg = await pickUnseenMessage(slot.day);
+      title = msg.title;
+      body = msg.body;
+    }
+
+    const reminderId = await scheduleWeeklyNotification(
+      slot.expoWeekday,
+      title,
+      body,
+      scheduledReminderId,
+    );
+
+    if (reminderId) {
+      const storageKey = slotStorageKey(slot.day);
+      pairs.push([storageKey, reminderId]);
+    }
   }
+
+  pairs.push([
+    REMINDER_USED_AI_KEY,
+    aiSlotsUsed === REMINDER_SLOTS.length ? "true" : "false",
+  ]);
   await AsyncStorage.multiSet(pairs);
 }
 
-function isToday(date: Date): boolean {
-  const now = new Date();
-  return date.getFullYear() === now.getFullYear()
-    && date.getMonth() === now.getMonth()
-    && date.getDate() === now.getDate();
+function slotStorageKey(day: ReminderSlotDay): string {
+  return day === "monday" ? REMINDER_ID_KEY : REMINDER_ID_THURSDAY_KEY;
 }
 
 function buildReminderNotificationData(scheduledReminderId?: string): Record<string, string> {
@@ -439,33 +361,6 @@ function buildReminderNotificationData(scheduledReminderId?: string): Record<str
     data.scheduled_reminder_id = scheduledReminderId;
   }
   return data;
-}
-
-async function scheduleOneTimeNotification(
-  date: Date,
-  title: string,
-  body: string,
-  scheduledReminderId?: string,
-): Promise<string | null> {
-  try {
-    const trigger: { type: "date"; date: Date; channelId?: string } = {
-      type: "date",
-      date,
-    };
-    if (Platform.OS === "android") trigger.channelId = DEFAULT_CHANNEL_ID;
-
-    return await Notifications.scheduleNotificationAsync({
-      content: {
-        title,
-        body,
-        data: buildReminderNotificationData(scheduledReminderId),
-      },
-      trigger,
-    });
-  } catch (err) {
-    log.warn("Failed to schedule one-time notification", err);
-    return null;
-  }
 }
 
 async function scheduleWeeklyNotification(

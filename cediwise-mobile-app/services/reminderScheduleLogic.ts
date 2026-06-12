@@ -1,21 +1,32 @@
 /** @deprecated Daily reminders are no longer supported. */
-export type LegacyReminderFrequency = "daily" | "twice_weekly";
+export type LegacyReminderFrequency = "daily" | "weekly";
 
-export type ReminderFrequency = "weekly";
+export type ReminderFrequency = "twice_weekly";
 
-export const REMINDER_SCHEDULE_VERSION = "v6";
+export type ReminderSlotDay = "monday" | "thursday";
 
-/** Default weekly slot: Monday 20:00 (Expo weekday 1). */
+export const REMINDER_SCHEDULE_VERSION = "v8";
+
+/** Fixed reminder slots — users do not pick days. Expo weekday: 1=Mon, 4=Thu. */
+export const REMINDER_SLOTS: ReadonlyArray<{
+  day: ReminderSlotDay;
+  expoWeekday: number;
+}> = [
+  { day: "monday", expoWeekday: 1 },
+  { day: "thursday", expoWeekday: 4 },
+] as const;
+
+/** @deprecated Use REMINDER_SLOTS. Kept for tests referencing Monday default. */
 export const DEFAULT_WEEKLY_WEEKDAY = 1;
 
 export function normalizeLegacyReminderFrequency(
   _stored: string | null,
 ): ReminderFrequency {
-  return "weekly";
+  return "twice_weekly";
 }
 
 export function shouldMigrateLegacyFrequency(stored: string | null): boolean {
-  return stored != null && stored !== "weekly";
+  return stored != null && stored !== "twice_weekly";
 }
 
 export type RescheduleEvaluationInput = {
@@ -25,6 +36,7 @@ export type RescheduleEvaluationInput = {
   storedWeek: string | null;
   currentWeek: string;
   reminderId: string | null;
+  reminderIdSecond: string | null;
   usedAi: string | null;
   hasPendingAi: boolean;
 };
@@ -35,18 +47,14 @@ export function evaluateShouldRescheduleReminders(
   if (input.force) return true;
   if (input.storedVersion !== input.currentVersion) return true;
   if (input.storedWeek !== input.currentWeek) return true;
-  if (!input.reminderId) return true;
+  if (!input.reminderId || !input.reminderIdSecond) return true;
   if (input.usedAi !== "true" && input.hasPendingAi) return true;
   return false;
 }
 
-/** Pick the best AI row for a single weekly local notification. */
-export function pickWeeklyAiReminder<
+/** Pick AI copy for a fixed Mon/Thu slot. */
+export function pickAiReminderForDay<
   T extends { day: string; title: string; body: string },
->(rows: T[]): T | undefined {
-  return (
-    rows.find((r) => r.day === "monday") ??
-    rows.find((r) => r.day === "thursday") ??
-    rows[0]
-  );
+>(rows: T[], day: ReminderSlotDay): T | undefined {
+  return rows.find((r) => r.day === day);
 }

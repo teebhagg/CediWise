@@ -1,5 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
+import type { ReminderSlotDay } from "./reminderScheduleLogic";
+
 export type ReminderMessage = {
   id: string;
   title: string;
@@ -9,6 +11,37 @@ export type ReminderMessage = {
 
 const SHOWN_MESSAGES_KEY = "@cediwise_notification_shown_message_ids";
 
+/** Fallback copy when AI reminders are unavailable — tuned for weekly cadence. */
+const WEEKLY_MESSAGE_POOL: ReminderMessage[] = [
+  { id: "w01", title: "📊 Week Ahead", body: "Start the week strong — log any expenses from the weekend.", deepLink: "/expenses" },
+  { id: "w02", title: "💰 Monday Check", body: "Quick weekly check-in: where did your money go last week?", deepLink: "/expenses" },
+  { id: "w03", title: "🎯 Fresh Week", body: "New week, clean slate. Log spending to stay on track.", deepLink: "/expenses" },
+  { id: "w04", title: "👀 Sneak Peek", body: "Your weekly spending snapshot is a tap away.", deepLink: "/expenses" },
+  { id: "w05", title: "🔥 Stay Sharp", body: "One weekly log keeps your budget honest. You've got this!", deepLink: "/expenses" },
+  { id: "w06", title: "✅ Quick Win", body: "30 seconds now saves surprises later. Log your week.", deepLink: "/expenses" },
+  { id: "w07", title: "💪 Money Moves", body: "Weekly tracking builds real financial clarity.", deepLink: "/expenses" },
+  { id: "w08", title: "📈 On Track?", body: "See how your budget is shaping up this week.", deepLink: "/expenses" },
+  { id: "w09", title: "⏰ Weekly Snap", body: "Time for your Monday money snapshot — quick and easy.", deepLink: "/expenses" },
+  { id: "w10", title: "🎉 You Got This", body: "A small weekly habit leads to big results.", deepLink: "/expenses" },
+];
+
+/** Fallback copy for the fixed Thursday mid-week slot. */
+const THURSDAY_MESSAGE_POOL: ReminderMessage[] = [
+  { id: "t01", title: "🎯 Midweek Check", body: "How is your spending tracking this week? Quick log keeps you honest.", deepLink: "/expenses" },
+  { id: "t02", title: "📊 Halfway There", body: "Thursday pulse check — see where your budget stands.", deepLink: "/expenses" },
+  { id: "t03", title: "👀 Week So Far", body: "Curious how the week is going? Log expenses to find out.", deepLink: "/expenses" },
+  { id: "t04", title: "💰 Stay Aware", body: "A mid-week log now beats a surprise at month-end.", deepLink: "/expenses" },
+  { id: "t05", title: "🔥 Keep It Up", body: "You are halfway through the week — keep your budget sharp.", deepLink: "/expenses" },
+  { id: "t06", title: "✅ Quick Catch-Up", body: "Log anything from Mon–Wed before the week runs away.", deepLink: "/expenses" },
+  { id: "t07", title: "📈 On Course?", body: "See if you are still on track before the weekend.", deepLink: "/expenses" },
+  { id: "t08", title: "💪 Money Moves", body: "Mid-week tracking builds real financial clarity.", deepLink: "/expenses" },
+];
+
+function poolForSlot(slot: ReminderSlotDay): ReminderMessage[] {
+  return slot === "thursday" ? THURSDAY_MESSAGE_POOL : WEEKLY_MESSAGE_POOL;
+}
+
+/** @deprecated Legacy daily pool — kept for reference. */
 const MESSAGE_POOL: ReminderMessage[] = [
   { id: "m01", title: "💰 Cash Check", body: "Quick 30-second check-in to see where your money went today.", deepLink: "/expenses" },
   { id: "m02", title: "📊 Budget Pulse", body: "How's your budget looking? One tap to log today's expenses.", deepLink: "/expenses" },
@@ -80,8 +113,8 @@ export async function resetShownMessages(): Promise<void> {
   }
 }
 
-export async function pickUnseenMessage(): Promise<ReminderMessage> {
-  const pool = getMessagePool();
+export async function pickUnseenMessage(slot: ReminderSlotDay = "monday"): Promise<ReminderMessage> {
+  const pool = poolForSlot(slot);
   const shown = await getShownMessageIds();
 
   const unseen = pool.filter((m) => !shown.has(m.id));

@@ -1,6 +1,6 @@
 # generate-reminders
 
-Generates 1 AI-personalized weekly expense reminder per user using Groq LLaMA 3.1. Stores results in `scheduled_reminders` (`scheduled_day = monday`) for the mobile app to schedule a single weekly local notification.
+Generates 2 AI-personalized expense reminders per user (Monday + Thursday) using Groq LLaMA 3.1. Stores results in `scheduled_reminders` for the mobile app to schedule fixed twice-weekly local notifications.
 
 ## Schedule
 
@@ -58,9 +58,9 @@ During rollout, if `CRON_SECRET` is unset, the function falls back to accepting 
 
 1. Validates `x-internal-service-token` against `CRON_SECRET` (or service role key during rollout)
 2. Paginates profiles opted in to `N-REMINDER`
-3. Skips users without active push devices or who already have rows for the current ISO week
-4. Calls Groq with budget context to generate one weekly message
+3. Skips users who already have both Monday and Thursday rows for the current ISO week
+4. Calls Groq with budget context to generate Monday + Thursday messages
 5. Upserts into `scheduled_reminders` with unique `(user_id, week_label, scheduled_day)`
-6. Mobile app schedules one weekly local notification (Monday 20:00 by default)
+6. Mobile app schedules two fixed local notifications (Monday and Thursday, 20:00)
 
 See also [MANUAL_STEPS_AFTER_MERGE.md](../../docs/MANUAL_STEPS_AFTER_MERGE.md) for deploy + cron checklist.

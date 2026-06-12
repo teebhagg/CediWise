@@ -60,7 +60,7 @@ export default function NotificationsGateScreen() {
     try {
       const ok = await enablePushNotifications(user.id);
       if (ok) {
-        showSuccess("Notifications on", "You’ll get reminders and updates.");
+        showSuccess("Notifications on", "You’ll get expense reminders on Mondays and Thursdays.");
         continueToNextRoute();
       } else {
         showError(

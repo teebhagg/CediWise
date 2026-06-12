@@ -1,4 +1,4 @@
-import { Check, Pencil } from "lucide-react-native";
+import { Check, Pencil, Plus } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import Animated, { FadeInRight, FadeOutLeft, Layout } from "react-native-reanimated";
@@ -11,6 +11,9 @@ interface SuggestionCardProps {
   reason: string;
   accepted: boolean;
   editable?: boolean;
+  allowZeroAmount?: boolean;
+  selectionIcon?: "checkbox" | "plus";
+  toggleDisabled?: boolean;
   error?: string;
   onToggle: () => void;
   onAmountChange?: (newAmount: number) => void;
@@ -45,6 +48,9 @@ export function SuggestionCard({
   reason,
   accepted,
   editable = false,
+  allowZeroAmount = false,
+  selectionIcon = "checkbox",
+  toggleDisabled = false,
   error,
   onToggle,
   onAmountChange
@@ -77,10 +83,13 @@ export function SuggestionCard({
       return;
     }
     const parsed = parseFloat(editValue);
-    if (!isNaN(parsed) && parsed > 0 && onAmountChange) {
+    const minAllowed = allowZeroAmount ? 0 : 0.01;
+    if (!isNaN(parsed) && parsed >= minAllowed && onAmountChange) {
       onAmountChange(parsed);
     }
   };
+
+  const showPlusIcon = selectionIcon === "plus";
 
   return (
     <Animated.View
@@ -93,7 +102,10 @@ export function SuggestionCard({
         error ? styles.containerError : null
       ]}
     >
-      <Pressable onPress={onToggle} style={styles.pressable} disabled={isEditing}>
+      <Pressable
+        onPress={onToggle}
+        style={styles.pressable}
+        disabled={isEditing || toggleDisabled}>
         <View style={styles.content}>
           <View style={styles.mainInfo}>
             <View style={styles.titleRow}>
@@ -138,9 +150,17 @@ export function SuggestionCard({
             )}
             <View style={[
               styles.checkbox,
-              accepted ? styles.checkboxActive : styles.checkboxInactive
+              showPlusIcon
+                ? styles.checkboxPlus
+                : accepted
+                  ? styles.checkboxActive
+                  : styles.checkboxInactive,
             ]}>
-              {accepted && <Check size={12} color="#0F172A" strokeWidth={3} />}
+              {showPlusIcon ? (
+                <Plus size={14} color="#A7F3D0" strokeWidth={2.5} />
+              ) : accepted ? (
+                <Check size={12} color="#0F172A" strokeWidth={3} />
+              ) : null}
             </View>
           </View>
         </View>
@@ -255,6 +275,10 @@ const styles = StyleSheet.create({
   checkboxInactive: {
     borderColor: "rgba(148, 163, 184, 0.3)",
     backgroundColor: "transparent",
+  },
+  checkboxPlus: {
+    borderColor: "rgba(52, 211, 153, 0.45)",
+    backgroundColor: "rgba(16, 185, 129, 0.14)",
   },
   textMuted: {
     color: "#64748B",

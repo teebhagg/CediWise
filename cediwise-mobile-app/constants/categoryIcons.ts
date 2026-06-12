@@ -41,6 +41,7 @@ export const CATEGORY_ICON_NAMES = [
   'Beer',
   'Gift',
   'Sparkles',
+  'Plus',
 ] as const;
 
 export type CategoryIconName = (typeof CATEGORY_ICON_NAMES)[number];
@@ -103,6 +104,7 @@ export const CATEGORY_NAME_TO_ICON: Record<string, CategoryIconName> = {
   Shopping: 'ShoppingCart',
   General: 'Wallet',
   Cash: 'Wallet',
+  Others: 'Plus',
   Transfers: 'ArrowLeftRight',
   Insurance: 'Shield',
   Wealth: 'TrendingUp',
@@ -140,6 +142,7 @@ export const PREDEFINED_CATEGORIES: { name: string; bucket: BudgetBucket; icon: 
   { name: 'Self-care', bucket: 'wants', icon: 'Sparkles' },
   { name: 'Shopping', bucket: 'wants', icon: 'ShoppingCart' },
   { name: 'General', bucket: 'wants', icon: 'Wallet' },
+  { name: 'Others', bucket: 'wants', icon: 'Plus' },
   { name: 'Savings', bucket: 'savings', icon: 'PiggyBank' },
 ];
 

@@ -207,6 +207,19 @@ export function getNetPreview(
   return computeGhanaTax2026Monthly(monthly);
 }
 
+/** Monthly income used for AI suggestions and budget caps (net when auto-tax is on). */
+export function getMonthlyBudgetIncome(
+  stableSalary: string,
+  incomeFrequency: IncomeFrequency,
+  autoTax: boolean,
+): number {
+  const gross = toMonthlySalary(toMoney(stableSalary), incomeFrequency);
+  if (gross <= 0) return 0;
+  if (!autoTax) return gross;
+  const preview = getNetPreview(stableSalary, incomeFrequency);
+  return preview?.netTakeHome ?? gross;
+}
+
 /**
  * Infer the closest named budget template from stored percentage values.
  * Returns "smart" if no named template matches within a 0.1% tolerance.
@@ -276,6 +289,7 @@ export function vitalsToInitialDraft(
     spendingStyle: vitals.spending_style ?? null,
     financialPriority: vitals.financial_priority ?? null,
     interests: vitals.interests ?? [],
+    priorityExpenses: [],
     selectedTemplate: inferTemplateFromPercentages(
       vitals.needs_pct,
       vitals.wants_pct,
@@ -286,5 +300,7 @@ export function vitalsToInitialDraft(
     goalAmount: "",
     goalTimeline: "",
     aiSuggestionsApplied: false,
+    aiCategories: [],
+    aiBudgetSplit: null,
   };
 }

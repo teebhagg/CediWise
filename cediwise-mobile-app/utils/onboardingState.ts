@@ -1,7 +1,19 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { readTourSeen } from "@/utils/tourStorage";
+import { log } from "./logger";
 import { supabase } from "./supabase";
+
+/** When true, skip remote upserts (logout/delete in progress). */
+let remotePersistSuspended = false;
+
+export function suspendOnboardingRemotePersist(): void {
+  remotePersistSuspended = true;
+}
+
+export function resumeOnboardingRemotePersist(): void {
+  remotePersistSuspended = false;
+}
 
 export const ONBOARDING_VERSION = 1;
 const LOCAL_CACHE_PREFIX = "@cediwise_onboarding_state:";
@@ -275,27 +287,40 @@ export async function getAccountOnboardingRecord(
 export async function upsertAccountOnboardingRecord(
   record: AccountOnboardingRecord
 ): Promise<AccountOnboardingRecord> {
-  if (supabase) {
-    const payload = {
-      user_id: record.userId,
-      onboarding_version: record.onboardingVersion,
-      state_1_status: record.state1Status,
-      state_1_seen_at: record.state1SeenAt,
-      state_1_completed_at: record.state1CompletedAt,
-      state_1_dismissed_at: record.state1DismissedAt,
-      state_1_invalidated_at: record.state1InvalidatedAt,
-      state_2_status: record.state2Status,
-      state_2_seen_at: record.state2SeenAt,
-      state_2_completed_at: record.state2CompletedAt,
-      state_2_dismissed_at: record.state2DismissedAt,
-      updated_at: new Date().toISOString(),
-    };
+  if (supabase && !remotePersistSuspended) {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const sessionUserId = session?.user?.id ?? null;
+      if (sessionUserId && sessionUserId === record.userId) {
+        const payload = {
+          user_id: record.userId,
+          onboarding_version: record.onboardingVersion,
+          state_1_status: record.state1Status,
+          state_1_seen_at: record.state1SeenAt,
+          state_1_completed_at: record.state1CompletedAt,
+          state_1_dismissed_at: record.state1DismissedAt,
+          state_1_invalidated_at: record.state1InvalidatedAt,
+          state_2_status: record.state2Status,
+          state_2_seen_at: record.state2SeenAt,
+          state_2_completed_at: record.state2CompletedAt,
+          state_2_dismissed_at: record.state2DismissedAt,
+          updated_at: new Date().toISOString(),
+        };
 
-    const { error } = await supabase
-      .from("user_onboarding_state")
-      .upsert(payload, { onConflict: "user_id" });
+        const { error } = await supabase
+          .from("user_onboarding_state")
+          .upsert(payload, { onConflict: "user_id" });
 
-    if (error) throw error;
+        if (error) throw error;
+      }
+    } catch (err) {
+      log.warn(
+        "user_onboarding_state upsert skipped or failed (local cache kept):",
+        err,
+      );
+    }
   }
 
   await writeLocalCache(record.userId, record);

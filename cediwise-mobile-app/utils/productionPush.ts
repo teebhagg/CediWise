@@ -22,6 +22,17 @@ export function initProductionPushServices(): void {
       dsn,
       tracesSampleRate: 0.15,
       enableAutoSessionTracking: true,
+      beforeSend(event) {
+        if (
+          event.exception?.values?.[0] &&
+          String(event.exception.values[0].value).includes("[object Object]")
+        ) {
+          event.exception.values[0].value =
+            "An error occurred that Sentry could not serialize into a readable message. Check the breadcrumbs and extra data for context.";
+          event.exception.values[0].type = "Unreadable Error";
+        }
+        return event;
+      },
     });
   }
 

@@ -12,6 +12,19 @@ import { isUuid } from "./uuid";
 
 type AttemptResult = { ok: true } | { ok: false; error: string };
 
+type FlushResult = { okCount: number; failCount: number };
+
+/** Postgres unique_violation — safe to treat recurring inserts as already synced. */
+export function isPostgresUniqueViolation(error: {
+  code?: string;
+  message?: string;
+} | null | undefined): boolean {
+  if (!error) return false;
+  if (error.code === "23505") return true;
+  const msg = error.message ?? "";
+  return msg.includes("duplicate key") && msg.includes("recurring_expense");
+}
+
 function errorMessage(e: unknown): string {
   if (e instanceof Error) return e.message;
   if (typeof e === "string") return e;
@@ -310,7 +323,10 @@ async function attemptMutationRemote(
       const { error } = await supabase
         .from("recurring_expenses")
         .insert(row);
-      if (error) return { ok: false, error: error.message };
+      if (error) {
+        if (isPostgresUniqueViolation(error)) return { ok: true };
+        return { ok: false, error: error.message };
+      }
       return { ok: true };
     }
 
@@ -605,11 +621,12 @@ const MUTATION_DEPENDENCY_ORDER: Record<string, number> = {
   sme_delete_category: 15,
 };
 
-/** Processes one sync run (start→end). Caller must refresh queue only after this returns so UI updates only on run boundaries. */
-export async function flushBudgetQueue(
+const flushTailByUser = new Map<string, Promise<FlushResult>>();
+
+async function flushBudgetQueueInner(
   userId: string,
-  limit = 25
-): Promise<{ okCount: number; failCount: number }> {
+  limit: number,
+): Promise<FlushResult> {
   try {
     const queue = await loadBudgetQueue(userId);
     const sorted = [...queue.items].sort((a, b) => {
@@ -653,6 +670,32 @@ export async function flushBudgetQueue(
       reason_bucket: "sync_throw",
     });
     throw err;
+  }
+}
+
+/**
+ * Processes one sync run (start→end). Serialized per user so overlapping flushes
+ * (e.g. recurring CRUD + syncNow) cannot double-apply the same queued mutation.
+ * Caller must refresh queue only after this returns so UI updates only on run boundaries.
+ */
+export async function flushBudgetQueue(
+  userId: string,
+  limit = 25,
+): Promise<FlushResult> {
+  const previous = flushTailByUser.get(userId) ?? Promise.resolve({
+    okCount: 0,
+    failCount: 0,
+  });
+  const run = previous
+    .catch(() => ({ okCount: 0, failCount: 0 }))
+    .then(() => flushBudgetQueueInner(userId, limit));
+  flushTailByUser.set(userId, run);
+  try {
+    return await run;
+  } finally {
+    if (flushTailByUser.get(userId) === run) {
+      flushTailByUser.delete(userId);
+    }
   }
 }
 

@@ -12,3 +12,8 @@ export function hasHydratedThisSession(): boolean {
 export function setHydratedThisSession(): void {
   hydratedThisSession = true;
 }
+
+/** Clears session hydrate flag (e.g. on logout) so the next login re-pulls remote. */
+export function resetHydratedThisSession(): void {
+  hydratedThisSession = false;
+}

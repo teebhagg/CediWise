@@ -7,9 +7,23 @@ import { Platform } from "react-native";
 import { useAnnouncementInboxStore } from "@/stores/notificationsStore";
 import { supabase } from "@/utils/supabase";
 import { log } from "@/utils/logger";
+import { pickUnseenMessage } from "./notificationMessages";
+import {
+  DEFAULT_WEEKLY_WEEKDAY,
+  evaluateShouldRescheduleReminders,
+  pickWeeklyAiReminder,
+  REMINDER_SCHEDULE_VERSION,
+  shouldMigrateLegacyFrequency,
+  type ReminderFrequency,
+} from "./reminderScheduleLogic";
+import { getISOWeekLabel } from "@/utils/weekLabel";
 
-const REMINDER_ID_KEY = "@cediwise_notification_daily_reminder_id";
+const REMINDER_ID_KEY = "@cediwise_notification_weekly_reminder_id";
 const REMINDER_VERSION_KEY = "@cediwise_notification_daily_reminder_version";
+const REMINDER_SCHEDULED_WEEK_KEY = "@cediwise_notification_reminder_scheduled_week";
+const REMINDER_USED_AI_KEY = "@cediwise_notification_reminder_used_ai";
+/** @deprecated Legacy second slot from twice-weekly reminders. Cleared on migrate. */
+const LEGACY_REMINDER_ID_SECOND_KEY = "@cediwise_notification_daily_reminder_id_2";
 const LAST_SYNC_KEY = "@cediwise_notification_last_sync";
 const TOKEN_KEY = "@cediwise_notification_expo_token";
 const GATE_COMPLETED_KEY = "@cediwise_notification_gate_completed";
@@ -17,14 +31,12 @@ const NEXT_ROUTE_KEY = "@cediwise_notification_gate_next_route";
 const DISABLED_BY_USER_KEY = "@cediwise_notification_disabled_by_user";
 const REMINDER_FREQUENCY_KEY = "@cediwise_notification_reminder_frequency";
 const REMINDER_WEEKDAY_KEY = "@cediwise_notification_reminder_weekday";
-const REMINDER_VERSION = "v3";
 const DEFAULT_CHANNEL_ID = "cediwise-default";
-const TOKEN_REFRESH_THROTTLE_MS = 24 * 60 * 60 * 1000; // 24h
+const TOKEN_REFRESH_THROTTLE_MS = 24 * 60 * 60 * 1000;
 
 let responseListener: Notifications.EventSubscription | null = null;
 let receiveListener: Notifications.EventSubscription | null = null;
 
-/** Last authenticated user id passed to {@link initNotificationSystem} (for inbox refresh on push). */
 let notificationUserId: string | null = null;
 
 const NAV_DEBOUNCE_MS = 2000;
@@ -90,12 +102,6 @@ export async function completeNotificationGate(): Promise<void> {
   await AsyncStorage.setItem(GATE_COMPLETED_KEY, "true");
 }
 
-/**
- * When push is off (env), never show the gate. When the OS has already granted
- * notification permission, skip the full-screen gate and persist completion so
- * re-login (after storage clear) still skips, matching system settings.
- * Otherwise the legacy AsyncStorage "Not now" / completed flag still applies.
- */
 export async function shouldShowNotificationPermissionGate(): Promise<boolean> {
   if (!isPushEnabled()) {
     return false;
@@ -127,12 +133,21 @@ export async function consumePendingNotificationRoute(): Promise<string | null> 
   return route;
 }
 
-/** Reminder frequency: daily or weekly. Weekly uses weekday from when user selected it. */
-export type ReminderFrequency = "daily" | "weekly";
-
+/** Weekly expense reminders only (`daily` / `twice_weekly` are migrated away). */
 export async function getReminderFrequency(): Promise<ReminderFrequency> {
   const stored = await AsyncStorage.getItem(REMINDER_FREQUENCY_KEY);
-  return stored === "weekly" ? "weekly" : "daily";
+  if (shouldMigrateLegacyFrequency(stored)) {
+    await AsyncStorage.setItem(REMINDER_FREQUENCY_KEY, "weekly");
+    const weekdayStr = await AsyncStorage.getItem(REMINDER_WEEKDAY_KEY);
+    if (!weekdayStr) {
+      await AsyncStorage.setItem(
+        REMINDER_WEEKDAY_KEY,
+        String(DEFAULT_WEEKLY_WEEKDAY),
+      );
+    }
+    await AsyncStorage.removeItem(REMINDER_VERSION_KEY);
+  }
+  return "weekly";
 }
 
 /** JS getDay(): 0=Sun, 1=Mon, ... 6=Sat. Expo weekday: 1=Mon, ..., 7=Sun. */
@@ -140,15 +155,353 @@ function jsDayToExpoWeekday(jsDay: number): number {
   return jsDay === 0 ? 7 : jsDay;
 }
 
-export async function setReminderFrequency(freq: ReminderFrequency): Promise<void> {
-  await AsyncStorage.setItem(REMINDER_FREQUENCY_KEY, freq);
-  if (freq === "weekly") {
-    await AsyncStorage.setItem(REMINDER_WEEKDAY_KEY, String(jsDayToExpoWeekday(new Date().getDay())));
-  } else {
-    await AsyncStorage.removeItem(REMINDER_WEEKDAY_KEY);
+export async function setReminderFrequency(_freq: ReminderFrequency): Promise<void> {
+  await AsyncStorage.setItem(REMINDER_FREQUENCY_KEY, "weekly");
+  const weekdayStr = await AsyncStorage.getItem(REMINDER_WEEKDAY_KEY);
+  if (!weekdayStr) {
+    await AsyncStorage.setItem(
+      REMINDER_WEEKDAY_KEY,
+      String(DEFAULT_WEEKLY_WEEKDAY),
+    );
   }
-  // Force reschedule (clearing version makes scheduleDailyExpenseReminder run and cancel + reschedule)
   await AsyncStorage.removeItem(REMINDER_VERSION_KEY);
+}
+
+/**
+ * Cancel all scheduled local reminders.
+ */
+async function cancelAllReminders(): Promise<void> {
+  const ids = [
+    await AsyncStorage.getItem(REMINDER_ID_KEY),
+    await AsyncStorage.getItem(LEGACY_REMINDER_ID_SECOND_KEY),
+  ];
+  for (const id of ids) {
+    if (id) {
+      try {
+        await Notifications.cancelScheduledNotificationAsync(id);
+      } catch {
+        // ignore stale IDs
+      }
+    }
+  }
+  await AsyncStorage.multiRemove([
+    REMINDER_ID_KEY,
+    LEGACY_REMINDER_ID_SECOND_KEY,
+    REMINDER_VERSION_KEY,
+    REMINDER_SCHEDULED_WEEK_KEY,
+    REMINDER_USED_AI_KEY,
+  ]);
+}
+
+type AIReminderRow = {
+  id: string;
+  day: string;
+  title: string;
+  body: string;
+};
+
+async function isRemindersOptedIn(userId: string): Promise<boolean> {
+  if (!supabase) return true;
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("notification_preferences")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error || !data) return true;
+    const prefs = data.notification_preferences as Record<string, unknown> | null;
+    return prefs?.["N-REMINDER"] !== false;
+  } catch {
+    return true;
+  }
+}
+
+async function hasPendingAIReminders(userId: string): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const { count, error } = await supabase
+      .from("scheduled_reminders")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("week_label", getISOWeekLabel())
+      .eq("is_shown", false);
+
+    return !error && (count ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
+async function markReminderShown(reminderId: string): Promise<void> {
+  if (!supabase) return;
+  try {
+    await supabase
+      .from("scheduled_reminders")
+      .update({ is_shown: true, shown_at: new Date().toISOString() })
+      .eq("id", reminderId)
+      .eq("is_shown", false);
+  } catch {
+    // ignore
+  }
+}
+
+function handleExpenseReminderReceived(data: Record<string, unknown> | undefined): void {
+  const reminderId = typeof data?.scheduled_reminder_id === "string" ? data.scheduled_reminder_id : null;
+  if (reminderId) {
+    void markReminderShown(reminderId);
+  }
+}
+
+async function shouldRescheduleReminders(userId: string, force: boolean): Promise<boolean> {
+  const [[, storedVersion], [, storedWeek], [, reminderId], [, usedAi]] = await AsyncStorage.multiGet([
+    REMINDER_VERSION_KEY,
+    REMINDER_SCHEDULED_WEEK_KEY,
+    REMINDER_ID_KEY,
+    REMINDER_USED_AI_KEY,
+  ]);
+
+  return evaluateShouldRescheduleReminders({
+    force,
+    storedVersion,
+    currentVersion: REMINDER_SCHEDULE_VERSION,
+    storedWeek,
+    currentWeek: getISOWeekLabel(),
+    reminderId,
+    usedAi,
+    hasPendingAi: await hasPendingAIReminders(userId),
+  });
+}
+
+/**
+ * Check if the user already logged expenses today.
+ */
+async function hasLoggedExpensesToday(userId: string): Promise<boolean> {
+  if (!supabase) return false;
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const { count, error } = await supabase
+      .from("budget_transactions")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .gte("occurred_at", today)
+      .lt("occurred_at", new Date(Date.now() + 86400000).toISOString().slice(0, 10))
+      .limit(1);
+
+    if (error) return false;
+    return (count ?? 0) > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Fetch pending AI-generated reminder messages for the current week.
+ * Rows are marked shown only when the local notification is delivered.
+ */
+async function fetchAIReminders(userId: string): Promise<AIReminderRow[]> {
+  if (!supabase) return [];
+  try {
+    const weekLabel = getISOWeekLabel();
+    const { data, error } = await supabase
+      .from("scheduled_reminders")
+      .select("id, scheduled_day, title, body")
+      .eq("user_id", userId)
+      .eq("week_label", weekLabel)
+      .eq("is_shown", false);
+
+    if (error || !data || data.length === 0) return [];
+
+    return data.map((r: { id: string; scheduled_day: string; title: string; body: string }) => ({
+      id: r.id,
+      day: r.scheduled_day,
+      title: r.title,
+      body: r.body,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Get the next date that matches the given weekday.
+ * Expo weekday: 1=Mon, ..., 7=Sun.
+ */
+function getNextWeekdayDate(weekday: number, hour: number, minute: number): Date {
+  const now = new Date();
+  const currentDay = jsDayToExpoWeekday(now.getDay());
+
+  let daysUntil = weekday - currentDay;
+  if (daysUntil < 0 || (daysUntil === 0 && (now.getHours() > hour || (now.getHours() === hour && now.getMinutes() >= minute)))) {
+    daysUntil += 7;
+  }
+
+  const target = new Date(now);
+  target.setDate(target.getDate() + daysUntil);
+  target.setHours(hour, minute, 0, 0);
+  return target;
+}
+
+/**
+ * Schedule a single weekly expense reminder (Monday 20:00 by default).
+ *
+ * Uses AI-generated copy from the server when available, otherwise the static pool.
+ * Smart skip: if the next fire is today and the user already logged expenses, skip to next week.
+ */
+export async function scheduleExpenseReminders(userId: string, force = false): Promise<void> {
+  await getReminderFrequency();
+
+  if (!(await isRemindersOptedIn(userId))) {
+    await cancelAllReminders();
+    return;
+  }
+
+  if (!(await shouldRescheduleReminders(userId, force))) {
+    return;
+  }
+
+  await cancelAllReminders();
+
+  const weekdayStr = await AsyncStorage.getItem(REMINDER_WEEKDAY_KEY);
+  const weekday = weekdayStr
+    ? parseInt(weekdayStr, 10)
+    : DEFAULT_WEEKLY_WEEKDAY;
+
+  const aiMessages = await fetchAIReminders(userId);
+  const weeklyAi = pickWeeklyAiReminder(aiMessages);
+  let usedAi = false;
+  let title: string;
+  let body: string;
+  let scheduledReminderId: string | undefined;
+
+  if (weeklyAi) {
+    usedAi = true;
+    title = weeklyAi.title;
+    body = weeklyAi.body;
+    scheduledReminderId = weeklyAi.id;
+  } else {
+    const msg = await pickUnseenMessage();
+    title = msg.title;
+    body = msg.body;
+  }
+
+  const todayExpoWeekday = jsDayToExpoWeekday(new Date().getDay());
+  const hasLoggedToday = await hasLoggedExpensesToday(userId);
+  const todayMatches = weekday === todayExpoWeekday;
+  const skipThisWeek = todayMatches && hasLoggedToday;
+
+  let reminderId: string | null = null;
+
+  if (skipThisWeek) {
+    const nextDate = getNextWeekdayDate(weekday, 20, 0);
+    if (isToday(nextDate) && hasLoggedToday) {
+      nextDate.setDate(nextDate.getDate() + 7);
+    }
+    reminderId = await scheduleOneTimeNotification(
+      nextDate,
+      title,
+      body,
+      scheduledReminderId,
+    );
+  } else {
+    reminderId = await scheduleWeeklyNotification(
+      weekday,
+      title,
+      body,
+      scheduledReminderId,
+    );
+  }
+
+  const pairs: [string, string][] = [
+    [REMINDER_VERSION_KEY, REMINDER_SCHEDULE_VERSION],
+    [REMINDER_SCHEDULED_WEEK_KEY, getISOWeekLabel()],
+    [REMINDER_USED_AI_KEY, usedAi ? "true" : "false"],
+  ];
+  if (reminderId) {
+    pairs.push([REMINDER_ID_KEY, reminderId]);
+  }
+  await AsyncStorage.multiSet(pairs);
+}
+
+function isToday(date: Date): boolean {
+  const now = new Date();
+  return date.getFullYear() === now.getFullYear()
+    && date.getMonth() === now.getMonth()
+    && date.getDate() === now.getDate();
+}
+
+function buildReminderNotificationData(scheduledReminderId?: string): Record<string, string> {
+  const data: Record<string, string> = {
+    type: "expense_reminder",
+    deep_link: "/expenses",
+  };
+  if (scheduledReminderId) {
+    data.scheduled_reminder_id = scheduledReminderId;
+  }
+  return data;
+}
+
+async function scheduleOneTimeNotification(
+  date: Date,
+  title: string,
+  body: string,
+  scheduledReminderId?: string,
+): Promise<string | null> {
+  try {
+    const trigger: { type: "date"; date: Date; channelId?: string } = {
+      type: "date",
+      date,
+    };
+    if (Platform.OS === "android") trigger.channelId = DEFAULT_CHANNEL_ID;
+
+    return await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        data: buildReminderNotificationData(scheduledReminderId),
+      },
+      trigger,
+    });
+  } catch (err) {
+    log.warn("Failed to schedule one-time notification", err);
+    return null;
+  }
+}
+
+async function scheduleWeeklyNotification(
+  weekday: number,
+  title: string,
+  body: string,
+  scheduledReminderId?: string,
+): Promise<string | null> {
+  try {
+    const trigger: { type: "weekly"; weekday: number; hour: number; minute: number; channelId?: string } = {
+      type: "weekly",
+      weekday,
+      hour: 20,
+      minute: 0,
+    };
+    if (Platform.OS === "android") trigger.channelId = DEFAULT_CHANNEL_ID;
+
+    return await Notifications.scheduleNotificationAsync({
+      content: {
+        title,
+        body,
+        data: buildReminderNotificationData(scheduledReminderId),
+      },
+      trigger,
+    });
+  } catch (err) {
+    log.warn("Failed to schedule weekly notification", err);
+    return null;
+  }
+}
+
+/** Backward-compatible alias — prefer {@link scheduleExpenseReminders} with an explicit userId. */
+export async function scheduleDailyExpenseReminder(userId?: string): Promise<void> {
+  const uid = userId ?? notificationUserId;
+  if (!uid) return;
+  await scheduleExpenseReminders(uid);
 }
 
 async function upsertPushDevice(userId: string, expoPushToken: string) {
@@ -177,61 +530,6 @@ async function upsertPushDevice(userId: string, expoPushToken: string) {
   }
 }
 
-export async function scheduleDailyExpenseReminder(): Promise<void> {
-  const storedVersion = await AsyncStorage.getItem(REMINDER_VERSION_KEY);
-  const existingReminderId = await AsyncStorage.getItem(REMINDER_ID_KEY);
-  const frequency = (await AsyncStorage.getItem(REMINDER_FREQUENCY_KEY)) === "weekly" ? "weekly" : "daily";
-
-  if (storedVersion === REMINDER_VERSION && existingReminderId) {
-    return;
-  }
-
-  if (existingReminderId) {
-    try {
-      await Notifications.cancelScheduledNotificationAsync(existingReminderId);
-    } catch {
-      // ignore stale IDs
-    }
-  }
-
-  const reminderId = await Notifications.scheduleNotificationAsync({
-    content: {
-      title: "Log today’s expenses",
-      body: "Spend 30 seconds to keep your budget accurate.",
-      data: {
-        type: "daily_expense_reminder",
-        deep_link: "/expenses",
-      },
-    },
-    trigger: (await (async () => {
-      if (frequency === "weekly") {
-        const weekdayStr = await AsyncStorage.getItem(REMINDER_WEEKDAY_KEY);
-        const weekday = weekdayStr ? parseInt(weekdayStr, 10) : jsDayToExpoWeekday(new Date().getDay());
-        const t: { type: "weekly"; weekday: number; hour: number; minute: number; channelId?: string } = {
-          type: "weekly",
-          weekday,
-          hour: 20,
-          minute: 0,
-        };
-        if (Platform.OS === "android") t.channelId = DEFAULT_CHANNEL_ID;
-        return t;
-      }
-      const t: { type: "daily"; hour: number; minute: number; channelId?: string } = {
-        type: "daily",
-        hour: 20,
-        minute: 0,
-      };
-      if (Platform.OS === "android") t.channelId = DEFAULT_CHANNEL_ID;
-      return t;
-    })()),
-  });
-
-  await AsyncStorage.multiSet([
-    [REMINDER_ID_KEY, reminderId],
-    [REMINDER_VERSION_KEY, REMINDER_VERSION],
-  ]);
-}
-
 export async function syncExpoPushToken(userId: string): Promise<void> {
   if (!isPushEnabled() || !userId || !supabase) return;
 
@@ -256,7 +554,6 @@ export async function syncExpoPushToken(userId: string): Promise<void> {
   ]);
 }
 
-/** Syncs push token if permission granted and last sync was longer than throttle ago (or never). */
 export async function refreshPushTokenIfNeeded(userId: string): Promise<void> {
   if (!isPushEnabled() || !userId) return;
   try {
@@ -288,7 +585,6 @@ export async function deactivateCurrentDeviceToken(userId: string): Promise<void
   }
 }
 
-/** True if permission granted and user has not turned notifications off in app. */
 export async function getNotificationsEnabled(): Promise<boolean> {
   try {
     const { granted } = await Notifications.getPermissionsAsync();
@@ -300,18 +596,8 @@ export async function getNotificationsEnabled(): Promise<boolean> {
   }
 }
 
-/** Turn off push: cancel local reminder and deactivate token. Does not revoke system permission. */
 export async function disablePushNotifications(userId: string): Promise<void> {
-  const existingReminderId = await AsyncStorage.getItem(REMINDER_ID_KEY);
-  if (existingReminderId) {
-    try {
-      await Notifications.cancelScheduledNotificationAsync(existingReminderId);
-    } catch {
-      // ignore
-    }
-    await AsyncStorage.removeItem(REMINDER_ID_KEY);
-    await AsyncStorage.removeItem(REMINDER_VERSION_KEY);
-  }
+  await cancelAllReminders();
   await deactivateCurrentDeviceToken(userId);
   await AsyncStorage.setItem(DISABLED_BY_USER_KEY, "true");
 }
@@ -331,12 +617,19 @@ export async function initNotificationSystem(userId: string | null): Promise<voi
   if (!responseListener) {
     responseListener = Notifications.addNotificationResponseReceivedListener((response: Notifications.NotificationResponse) => {
       const data = response.notification.request.content.data as Record<string, unknown> | undefined;
+      if (data?.type === "expense_reminder") {
+        handleExpenseReminderReceived(data);
+      }
       handleNotificationNavigation(data);
     });
   }
 
   if (!receiveListener) {
-    receiveListener = Notifications.addNotificationReceivedListener(() => {
+    receiveListener = Notifications.addNotificationReceivedListener((notification) => {
+      const data = notification.request.content.data as Record<string, unknown> | undefined;
+      if (data?.type === "expense_reminder") {
+        handleExpenseReminderReceived(data);
+      }
       if (notificationUserId) {
         void useAnnouncementInboxStore.getState().refresh(notificationUserId);
       }
@@ -349,20 +642,22 @@ export async function initNotificationSystem(userId: string | null): Promise<voi
     const lastResponse = await Notifications.getLastNotificationResponseAsync();
     if (lastResponse) {
       const data = lastResponse.notification.request.content.data as Record<string, unknown> | undefined;
+      if (data?.type === "expense_reminder") {
+        handleExpenseReminderReceived(data);
+      }
       handleNotificationNavigation(data);
     }
   } catch (error) {
     log.warn("Notification init failed", error);
   }
 
-  // If user has already enabled notifications (OS permission + not disabled in app): ensure reminder and token.
   void (async () => {
     try {
       const { granted } = await Notifications.getPermissionsAsync();
       if (!granted) return;
       const enabled = await getNotificationsEnabled();
       if (!enabled) return;
-      await scheduleDailyExpenseReminder();
+      await scheduleExpenseReminders(userId);
       await refreshPushTokenIfNeeded(userId);
     } catch {
       // ignore
@@ -389,7 +684,7 @@ export async function enablePushNotifications(userId: string): Promise<boolean> 
   }
 
   try {
-    await scheduleDailyExpenseReminder();
+    await scheduleExpenseReminders(userId, true);
     await syncExpoPushToken(userId);
     await AsyncStorage.removeItem(DISABLED_BY_USER_KEY);
     return true;
@@ -398,3 +693,5 @@ export async function enablePushNotifications(userId: string): Promise<boolean> 
     return false;
   }
 }
+
+export type { ReminderFrequency } from "./reminderScheduleLogic";

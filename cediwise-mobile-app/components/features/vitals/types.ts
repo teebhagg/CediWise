@@ -45,6 +45,8 @@ export type Draft = {
   spendingStyle: SpendingStyle | null;
   financialPriority: FinancialPriority | null;
   interests: string[];
+  /** Up to 5 priority expenses from Step 2 — fed into AI suggestions. */
+  priorityExpenses: string[];
   // Budget template (Screen 3 — user picks; "smart" uses computeIntelligentStrategy)
   selectedTemplate: BudgetTemplateKey;
   // Recurring expenses (Screen 3 — added via dialog)
@@ -55,6 +57,8 @@ export type Draft = {
   goalTimeline: string;
   // AI Suggestions
   aiSuggestionsApplied: boolean;
+  aiCategories: { name: string; bucket: "needs" | "wants" | "savings"; limit: number }[];
+  aiBudgetSplit: { needsPct: number; wantsPct: number; savingsPct: number } | null;
 };
 
 export type UpdateDraft = (patch: Partial<Draft>) => void;
@@ -68,9 +72,16 @@ export type AppliedAIGoalSelection = {
   goalTimeline: string;
 };
 
+export type AIBudgetSplit = {
+  needsPct: number;
+  wantsPct: number;
+  savingsPct: number;
+};
+
 export interface AppliedAISelections {
   categories: { name: string; bucket: "needs" | "wants" | "savings"; limit: number }[];
   recurringExpenses: RecurringExpense[];
   goals: AppliedAIGoalSelection[];
   templateKey: BudgetTemplateKey;
+  budgetSplit?: AIBudgetSplit;
 }

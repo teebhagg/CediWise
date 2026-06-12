@@ -8,6 +8,11 @@ import { DeficitResolutionModal } from "@/components/DeficitResolutionModal";
 import { RolloverAllocationModal } from "@/components/RolloverAllocationModal";
 import { AIChatFAB } from "@/components/features/ai/AIChatFAB";
 import { BudgetExpensesCard } from "@/components/features/budget/BudgetExpensesCard";
+import {
+  BudgetPullSyncHint,
+  useBudgetPeekContentStyle,
+} from "@/components/features/budget/BudgetPullSyncHint";
+import { BudgetSyncStatusBar } from "@/components/features/budget/BudgetSyncStatusBar";
 import { BudgetModals } from "@/components/features/budget/BudgetModals";
 import { BudgetOverviewCard } from "@/components/features/budget/BudgetOverviewCard";
 import { BudgetPendingSyncCard } from "@/components/features/budget/BudgetPendingSyncCard";
@@ -18,7 +23,6 @@ import { BudgetSetupCycleCard } from "@/components/features/budget/BudgetSetupCy
 
 import { BudgetToolsCard } from "@/components/features/budget/BudgetToolsCard";
 import { CashFlowWidget } from "@/components/features/budget/CashFlowWidget";
-import { MigrationPrompt } from "@/components/features/budget/MigrationPrompt";
 import { StartNewCycleCard } from "@/components/features/budget/StartNewCycleCard";
 import { useBudgetScreenState } from "@/components/features/budget/useBudgetScreenState";
 import { SURVIVE_THE_MONTH_CASH_FLOW_UI_ENABLED } from "@/constants/featureFlags";
@@ -31,10 +35,12 @@ import { useRecurringExpenses } from "@/hooks/useRecurringExpenses";
 import { useAIChatFabTransitionStore } from "@/stores/aiChatFabTransitionStore";
 import { useAIChatShellStore } from "@/stores/aiChatShellStore";
 import { analytics } from "@/utils/analytics";
+import type { OnboardingStatus } from "@/utils/onboardingState";
+import { isPostVitalsAwaitingHomeTour } from "@/utils/tourSessionGuard";
 import * as Haptics from "expo-haptics";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { Plus, Settings, WifiOff } from "lucide-react-native";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -62,6 +68,24 @@ import {
   filterEffectiveRecurringExpenses,
   toMonthlyEquivalentAmount,
 } from "@/utils/recurringHelpers";
+
+function isOnboardingTourBlockingPullHint(params: {
+  onboardingLoaded: boolean;
+  setupCompleted: boolean;
+  state1Status: OnboardingStatus | null;
+  state2Status: OnboardingStatus | null;
+  isTourActive: boolean;
+}): boolean {
+  if (!params.onboardingLoaded) return true;
+  if (params.isTourActive) return true;
+  const status = params.setupCompleted
+    ? params.state2Status
+    : params.state1Status;
+  return status === "never_seen" || status === "in_progress";
+}
+
+const PULL_HINT_AFTER_TOUR_SCROLL_MS = 650;
+const PULL_HINT_AFTER_TOUR_DELAY_MS = 400;
 
 export default function BudgetScreen() {
   const router = useRouter();
@@ -128,6 +152,10 @@ export default function BudgetScreen() {
 
   const insets = useSafeAreaInsets();
   const scrollY = useSharedValue(0);
+  const peekOffset = useSharedValue(0);
+  const peekContentStyle = useBudgetPeekContentStyle(peekOffset);
+  const [pullHintActive, setPullHintActive] = useState(false);
+  const pullHintPlayedRef = useRef(false);
   const scrollHandler = useAnimatedScrollHandler((event) => {
     scrollY.value = event.contentOffset.y;
   });
@@ -136,6 +164,9 @@ export default function BudgetScreen() {
   const {
     startActiveOnboardingIfEligible,
     onboardingLoaded,
+    state1Status,
+    state2Status,
+    isTourActive,
   } = useTourContext();
   const { scrollViewRef } = useTour();
   const { isConnected } = useConnectivity();
@@ -145,6 +176,124 @@ export default function BudgetScreen() {
   const initialSyncRanRef = useRef(false);
   const firstViewLoggedCycleIdRef = useRef<string | null>(null);
   const budgetTourTriggeredRef = useRef(false);
+  const priorOnboardingStatusRef = useRef<OnboardingStatus | null>(null);
+  const pullHintAfterTourTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  const showPostVitalsSkeleton =
+    fromVitals &&
+    (budget.isLoading ||
+      (budget.pendingCount > 0 && !initialSyncAttempted));
+
+  const onboardingTourBlockingPullHint = isOnboardingTourBlockingPullHint({
+    onboardingLoaded,
+    setupCompleted: personalization.setupCompleted,
+    state1Status,
+    state2Status,
+    isTourActive,
+  });
+
+  const schedulePullSyncHint = useCallback(
+    (delayMs: number) => {
+      if (pullHintAfterTourTimerRef.current) {
+        clearTimeout(pullHintAfterTourTimerRef.current);
+      }
+      pullHintAfterTourTimerRef.current = setTimeout(() => {
+        pullHintAfterTourTimerRef.current = null;
+        setPullHintActive(true);
+      }, delayMs);
+    },
+    [],
+  );
+
+  const showPullSyncHintAfterTour = useCallback(() => {
+    if (budget.isLoading || showPostVitalsSkeleton) return;
+    if (budget.isSyncing || refreshing) return;
+    if (onboardingTourBlockingPullHint) return;
+    const wantsHint =
+      budget.pendingCount > 0 || !pullHintPlayedRef.current;
+    if (!wantsHint) return;
+
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+    schedulePullSyncHint(
+      PULL_HINT_AFTER_TOUR_SCROLL_MS + PULL_HINT_AFTER_TOUR_DELAY_MS,
+    );
+  }, [
+    budget.isLoading,
+    budget.isSyncing,
+    budget.pendingCount,
+    onboardingTourBlockingPullHint,
+    refreshing,
+    schedulePullSyncHint,
+    showPostVitalsSkeleton,
+    scrollViewRef,
+  ]);
+
+  const isSyncingVisible =
+    budget.isSyncing || refreshing || budget.retryIn !== null;
+
+  useEffect(() => {
+    if (refreshing || isSyncingVisible) {
+      setPullHintActive(false);
+    }
+  }, [refreshing, isSyncingVisible]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id || budget.isLoading || showPostVitalsSkeleton) return;
+      if (budget.isSyncing || refreshing) return;
+      if (onboardingTourBlockingPullHint) return;
+      const wantsHint =
+        budget.pendingCount > 0 || !pullHintPlayedRef.current;
+      if (!wantsHint) return;
+
+      const t = setTimeout(() => setPullHintActive(true), 1200);
+      return () => clearTimeout(t);
+    }, [
+      user?.id,
+      budget.isLoading,
+      showPostVitalsSkeleton,
+      budget.isSyncing,
+      refreshing,
+      budget.pendingCount,
+      onboardingTourBlockingPullHint,
+    ]),
+  );
+
+  useEffect(() => {
+    if (!onboardingLoaded) return;
+
+    const status = personalization.setupCompleted
+      ? state2Status
+      : state1Status;
+    if (!status) return;
+
+    const previous = priorOnboardingStatusRef.current;
+    priorOnboardingStatusRef.current = status;
+
+    if (
+      previous === "in_progress" &&
+      (status === "completed" || status === "dismissed")
+    ) {
+      showPullSyncHintAfterTour();
+    }
+  }, [
+    onboardingLoaded,
+    personalization.setupCompleted,
+    showPullSyncHintAfterTour,
+    state1Status,
+    state2Status,
+  ]);
+
+  useEffect(
+    () => () => {
+      if (pullHintAfterTourTimerRef.current) {
+        clearTimeout(pullHintAfterTourTimerRef.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     const shouldShow = budget.pendingCount > 0 || budget.isSyncing;
@@ -156,10 +305,6 @@ export default function BudgetScreen() {
     return () => clearTimeout(id);
   }, [budget.isSyncing, budget.pendingCount]);
 
-  const showPostVitalsSkeleton =
-    fromVitals &&
-    (budget.isLoading ||
-      (budget.pendingCount > 0 && !initialSyncAttempted));
   const hasCategories = derived.cycleCategories.length > 0;
 
   /** Tour zones (budget-overview, budget-actions) exist only when content is shown. */
@@ -168,34 +313,39 @@ export default function BudgetScreen() {
     !budget.isLoading &&
     !showPostVitalsSkeleton;
 
-  useEffect(() => {
-    if (!user?.id || !onboardingLoaded || budget.isLoading || budgetTourTriggeredRef.current) {
-      return;
-    }
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id || !onboardingLoaded || budget.isLoading || budgetTourTriggeredRef.current) {
+        return;
+      }
+      if (isPostVitalsAwaitingHomeTour(user.id)) {
+        return;
+      }
 
-    const state1BudgetStepKey =
-      !personalization.isLoading && !personalization.hasProfile
-        ? "state1-budget-personalization"
-        : "state1-budget-payday";
+      const state1BudgetStepKey =
+        !personalization.isLoading && !personalization.hasProfile
+          ? "state1-budget-personalization"
+          : "state1-budget-payday";
 
-    if (!tourZonesReady) {
-      const timeoutId = setTimeout(() => {
-        budgetTourTriggeredRef.current = false;
-      }, BUDGET_TOUR_READY_TIMEOUT_MS);
-      return () => clearTimeout(timeoutId);
-    }
+      if (!tourZonesReady) {
+        const timeoutId = setTimeout(() => {
+          budgetTourTriggeredRef.current = false;
+        }, BUDGET_TOUR_READY_TIMEOUT_MS);
+        return () => clearTimeout(timeoutId);
+      }
 
-    budgetTourTriggeredRef.current = true;
-    void startActiveOnboardingIfEligible("budget", { state1BudgetStepKey });
-  }, [
-    budget.isLoading,
-    onboardingLoaded,
-    personalization.hasProfile,
-    personalization.isLoading,
-    tourZonesReady,
-    user?.id,
-    startActiveOnboardingIfEligible,
-  ]);
+      budgetTourTriggeredRef.current = true;
+      void startActiveOnboardingIfEligible("budget", { state1BudgetStepKey });
+    }, [
+      budget.isLoading,
+      onboardingLoaded,
+      personalization.hasProfile,
+      personalization.isLoading,
+      tourZonesReady,
+      user?.id,
+      startActiveOnboardingIfEligible,
+    ]),
+  );
 
   useEffect(() => {
     if (!tourZonesReady) {
@@ -216,6 +366,21 @@ export default function BudgetScreen() {
       .catch(() => { })
       .finally(() => setInitialSyncAttempted(true));
   }, [fromVitals, user?.id, budget.isLoading, budget.pendingCount, budget.syncNow, budget]);
+
+  // Drain pending queue when returning to the budget tab (e.g. after offline edits).
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id || budget.isLoading || budget.isSyncing) return;
+      if (budget.pendingCount === 0) return;
+      void budget.syncNow();
+    }, [
+      user?.id,
+      budget.isLoading,
+      budget.isSyncing,
+      budget.pendingCount,
+      budget.syncNow,
+    ]),
+  );
 
   // Fire BudgetFirstViewShown once per cycle when overview is actually visible
   useEffect(() => {
@@ -293,9 +458,32 @@ export default function BudgetScreen() {
         ].filter(Boolean)}
       />
 
+      <BudgetSyncStatusBar
+        visible={isSyncingVisible}
+        label={derived.syncPillLabel}
+        top={DEFAULT_EXPANDED_HEIGHT + insets.top + 6}
+      />
+
+      <BudgetPullSyncHint
+        active={
+          pullHintActive &&
+          !isSyncingVisible &&
+          !refreshing &&
+          !onboardingTourBlockingPullHint
+        }
+        peekOffset={peekOffset}
+        topInset={DEFAULT_EXPANDED_HEIGHT + insets.top}
+        onFinished={() => {
+          setPullHintActive(false);
+          if (budget.pendingCount === 0) {
+            pullHintPlayedRef.current = true;
+          }
+        }}
+      />
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
+        style={{ flex: 1, paddingTop: pullHintActive ? 20 : 0 }}
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}>
         <Animated.ScrollView
           ref={scrollViewRef}
@@ -315,6 +503,8 @@ export default function BudgetScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={() => {
+                pullHintPlayedRef.current = true;
+                setPullHintActive(false);
                 onRefresh()
                   .then(() => {
                     showSuccess(
@@ -331,7 +521,7 @@ export default function BudgetScreen() {
               progressViewOffset={Platform.OS === "android" ? 60 : undefined}
             />
           }>
-          <View className="gap-4">
+          <Animated.View className="gap-4" style={peekContentStyle}>
             {/* Onboarding: Personalize first (new users who haven't done vitals) */}
             {!!user &&
               !personalization.isLoading &&
@@ -594,7 +784,7 @@ export default function BudgetScreen() {
 
               </>
             )}
-          </View>
+          </Animated.View>
         </Animated.ScrollView>
 
         {user && canAccessBudget && derived.cycleIsSet ? (
@@ -756,19 +946,6 @@ export default function BudgetScreen() {
         onConfirm={modals.handleRolloverConfirm}
       />
 
-      {modals.budgetPreferenceMigration ? (
-        <MigrationPrompt
-          visible
-          lifeStagePhrase={modals.budgetPreferenceMigration.lifeStagePhrase}
-          financialPriorityPhrase={
-            modals.budgetPreferenceMigration.financialPriorityPhrase
-          }
-          currentAllocations={modals.budgetPreferenceMigration.current}
-          suggestedAllocations={modals.budgetPreferenceMigration.suggested}
-          onConfirm={modals.handleConfirmBudgetPreferenceMigration}
-          onCancel={modals.handleDismissBudgetPreferenceMigration}
-        />
-      ) : null}
     </View>
   );
 }

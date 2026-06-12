@@ -1,6 +1,8 @@
 import { ANALYTICS_EVENTS } from "@/constants/analyticsEvents";
 import { getPostHogOptional } from "@/utils/analytics/posthogClientRef";
+import { CommonActions } from "@react-navigation/native";
 import { router } from "expo-router";
+import { store as routerStore } from "expo-router/build/global-state/router-store";
 import {
   setPendingNotificationRoute,
   shouldShowNotificationPermissionGate,
@@ -9,19 +11,27 @@ import { log } from "./logger";
 import { getPostAuthRoute } from "./profileVitals";
 
 /**
- * Leave authenticated stacks and land on `/auth` using the public Expo Router API.
- * `dismissTo` collapses nested stacks toward `/auth` when that route exists in
- * history; `replace` then pins the root to auth so back cannot return to
- * pre-logout screens (per Expo Router `dismissTo` / `replace` semantics).
+ * Leave authenticated stacks and land on `/auth` with a single-screen history so
+ * the device back button cannot return to pre-logout screens.
  */
 export function resetNavigationToAuth(): void {
   try {
-    router.dismissTo("/auth");
-    return; 
+    routerStore.assertIsReady();
+    const resetState = routerStore.getStateForHref("/auth");
+    if (resetState) {
+      routerStore.navigationRef.dispatch(CommonActions.reset(resetState));
+      return;
+    }
   } catch (e) {
-    log.warn("resetNavigationToAuth: dismissTo failed", e);
-    router.replace("/auth");
+    log.warn("resetNavigationToAuth: CommonActions.reset failed", e);
   }
+
+  try {
+    router.dismissAll();
+  } catch (e) {
+    log.warn("resetNavigationToAuth: dismissAll failed", e);
+  }
+  router.replace("/auth");
 }
 
 /**

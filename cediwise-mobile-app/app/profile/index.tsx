@@ -48,14 +48,9 @@ import {
   disablePushNotifications,
   enablePushNotifications,
   getNotificationsEnabled,
-  getReminderFrequency,
-  type ReminderFrequency,
-  scheduleDailyExpenseReminder,
-  setReminderFrequency,
 } from "@/services/notifications";
 import { useAnnouncementInboxStore } from "@/stores/notificationsStore";
 import { deleteAccountRemote, getDisplayContact } from "@/utils/auth";
-import { resetNavigationToAuth } from "@/utils/authRouting";
 import { clearBudgetLocal } from "@/utils/budgetStorage";
 import { log } from "@/utils/logger";
 import { clearOnboardingLocalCache } from "@/utils/onboardingState";
@@ -104,8 +99,6 @@ export default function ProfileScreen() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [notificationsLoading, setNotificationsLoading] = useState(false);
-  const [reminderFrequency, setReminderFrequencyState] = useState<ReminderFrequency>("daily");
-  const [reminderFrequencyLoading, setReminderFrequencyLoading] = useState(false);
   const { effectiveTier, isOnTrial, trialEndsAt, pendingTier, pendingTierStartDate } = useTierContext();
   const inboxUnread = useAnnouncementInboxStore((s) => s.unreadCount);
 
@@ -124,11 +117,6 @@ export default function ProfileScreen() {
     if (!user?.id) return;
     void useAnnouncementInboxStore.getState().refresh(user.id);
   }, [user?.id]);
-
-  useEffect(() => {
-    if (!notificationsEnabled) return;
-    void getReminderFrequency().then(setReminderFrequencyState);
-  }, [notificationsEnabled]);
 
   const handleBackPress = async () => {
     try {
@@ -243,31 +231,10 @@ export default function ProfileScreen() {
     [user?.id, notificationsEnabled, showSuccess, showError],
   );
 
-  const handleReminderFrequencyChange = useCallback(
-    async (freq: ReminderFrequency) => {
-      if (reminderFrequencyLoading || reminderFrequency === freq) return;
-      setReminderFrequencyLoading(true);
-      try {
-        await setReminderFrequency(freq);
-        setReminderFrequencyState(freq);
-        await scheduleDailyExpenseReminder();
-        const label = freq === "daily" ? "Daily" : "Weekly";
-        showSuccess("Reminder updated", `${label} at 6 PM`);
-      } catch (e) {
-        log.error("Reminder frequency change failed:", e);
-        showError("Couldn't update", "Try again.");
-      } finally {
-        setReminderFrequencyLoading(false);
-      }
-    },
-    [reminderFrequency, reminderFrequencyLoading, showSuccess, showError],
-  );
-
   const handleLogoutConfirm = async () => {
     try {
       await logout();
       setShowLogoutModal(false);
-      resetNavigationToAuth();
     } catch (e) {
       log.error("Logout error:", e);
       showError(
@@ -295,7 +262,6 @@ export default function ProfileScreen() {
       } catch {
         // Session may already be invalid after auth user deletion
       }
-      resetNavigationToAuth();
       showSuccess(
         "Account deleted",
         "Your account and associated data have been removed.",
@@ -551,72 +517,7 @@ export default function ProfileScreen() {
                   )}
                 </ListGroup.ItemSuffix>
               </ListGroup.Item>
-              {notificationsEnabled ? (
-                <>
-                  <Separator className="mx-4" />
-                  <ListGroup.Item disabled>
-                    <ListGroup.ItemPrefix />
-                    <ListGroup.ItemContent>
-                      <ListGroup.ItemTitle>Reminder frequency</ListGroup.ItemTitle>
-                      <ListGroup.ItemDescription>
-                        {reminderFrequency === "daily"
-                          ? "Every day at 6 PM"
-                          : "Once a week at 6 PM"}
-                      </ListGroup.ItemDescription>
-                    </ListGroup.ItemContent>
-                    <ListGroup.ItemSuffix>
-                      {reminderFrequencyLoading ? (
-                        <Text className="text-slate-400 text-sm">Updating…</Text>
-                      ) : (
-                        <View className="flex-row gap-2">
-                          <PressableFeedback
-                            animation={false}
-                            onPress={onItemPress(() => handleReminderFrequencyChange("daily"))}
-                          >
-                            <PressableFeedback.Ripple />
-                            <View
-                              className={`rounded-lg px-3 py-2 ${
-                                reminderFrequency === "daily" ? "bg-emerald-500/30" : "bg-slate-500/20"
-                              }`}
-                            >
-                              <Text
-                                className={
-                                  reminderFrequency === "daily"
-                                    ? "font-semibold text-emerald-400"
-                                    : "text-slate-400"
-                                }
-                              >
-                                Daily
-                              </Text>
-                            </View>
-                          </PressableFeedback>
-                          <PressableFeedback
-                            animation={false}
-                            onPress={onItemPress(() => handleReminderFrequencyChange("weekly"))}
-                          >
-                            <PressableFeedback.Ripple />
-                            <View
-                              className={`rounded-lg px-3 py-2 ${
-                                reminderFrequency === "weekly" ? "bg-emerald-500/30" : "bg-slate-500/20"
-                              }`}
-                            >
-                              <Text
-                                className={
-                                  reminderFrequency === "weekly"
-                                    ? "font-semibold text-emerald-400"
-                                    : "text-slate-400"
-                                }
-                              >
-                                Weekly
-                              </Text>
-                            </View>
-                          </PressableFeedback>
-                        </View>
-                      )}
-                    </ListGroup.ItemSuffix>
-                  </ListGroup.Item>
-                </>
-              ) : null}
+
               <Separator className="mx-4" />
               <PressableFeedback
                 animation={false}

@@ -421,7 +421,6 @@ export function buildRecurringCommitmentInsights(params: {
   const {
     monthlyNetIncome,
     totalRecurringMonthly,
-    disposableIncome,
     totalSpentInRange,
     spentWindowSpanDays,
   } = params;
@@ -441,19 +440,23 @@ export function buildRecurringCommitmentInsights(params: {
 
   if (totalRecurringMonthly > 0) {
     const pctOfIncome = (totalRecurringMonthly / monthlyNetIncome) * 100;
+    const flexibleAfterLogged =
+      typeof totalSpentInRange === 'number' && totalSpentInRange > 0
+        ? Math.max(0, monthlyNetIncome - totalSpentInRange)
+        : monthlyNetIncome;
     items.push({
       id: 'rec-flex',
-      title: 'After recurring bills',
+      title: 'Tracked recurring bills',
       variant: 'info',
-      body: `Fixed recurring totals about ₵${totalRecurringMonthly.toFixed(0)}/mo (${pctOfIncome.toFixed(0)}% of net income). Roughly ₵${disposableIncome.toFixed(0)}/mo is left for flexible categories.`,
+      body: `About ₵${totalRecurringMonthly.toFixed(0)}/mo in recurring commitments (${pctOfIncome.toFixed(0)}% of net). Budget uses full net income; log bills under Expenses when you pay them. Flexible left after logged spend: about ₵${flexibleAfterLogged.toFixed(0)}.`,
     });
 
     if (pctOfIncome >= 60) {
       items.push({
         id: 'rec-heavy',
-        title: 'High fixed-cost load',
+        title: 'High recurring load',
         variant: 'warning',
-        body: 'Over 60% of your net income goes to recurring commitments. Consider trimming subscriptions or renegotiating bills to free flexible budget.',
+        body: 'Over 60% of net income is tied up in tracked recurring bills. Review subscriptions or renegotiate fixed costs if flexible spending feels tight.',
       });
     }
   }

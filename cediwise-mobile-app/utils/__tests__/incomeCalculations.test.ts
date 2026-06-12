@@ -1,6 +1,9 @@
-import type { IncomeSource } from "../../types/budget";
+import type { IncomeSource, RecurringExpense } from "../../types/budget";
 import { computeGhanaTax2026Monthly } from "../ghanaTax";
-import { getMonthlyNetIncome } from "../incomeCalculations";
+import {
+  getMonthlyDisposableIncome,
+  getMonthlyNetIncome,
+} from "../incomeCalculations";
 
 function makeSource(overrides: Partial<IncomeSource>): IncomeSource {
   return {
@@ -69,5 +72,44 @@ describe("getMonthlyNetIncome", () => {
     ];
     const total = getMonthlyNetIncome(sources);
     expect(Number.isFinite(total)).toBe(true);
+  });
+});
+
+function makeRecurring(overrides: Partial<RecurringExpense>): RecurringExpense {
+  return {
+    id: "r1",
+    userId: "u1",
+    name: "Rent",
+    amount: 500,
+    frequency: "monthly",
+    bucket: "needs",
+    startDate: "2020-01-01",
+    isActive: true,
+    autoAllocate: false,
+    createdAt: "",
+    updatedAt: "",
+    ...overrides,
+  };
+}
+
+describe("getMonthlyDisposableIncome", () => {
+  it("uses full net income as disposable baseline", () => {
+    const sources = [makeSource({ amount: 4000, applyDeductions: false })];
+    const recurring = [makeRecurring({ amount: 1200 })];
+    const result = getMonthlyDisposableIncome(sources, recurring);
+    expect(result.netIncome).toBe(4000);
+    expect(result.totalRecurringMonthly).toBe(1200);
+    expect(result.disposableIncome).toBe(4000);
+  });
+
+  it("still reports recurring total for planning display", () => {
+    const sources = [makeSource({ amount: 3000, applyDeductions: false })];
+    const recurring = [
+      makeRecurring({ amount: 100, frequency: "weekly" }),
+      makeRecurring({ id: "r2", amount: 200, isActive: false }),
+    ];
+    const result = getMonthlyDisposableIncome(sources, recurring);
+    expect(result.totalRecurringMonthly).toBeCloseTo((100 * 52) / 12, 5);
+    expect(result.disposableIncome).toBe(3000);
   });
 });

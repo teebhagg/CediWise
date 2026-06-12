@@ -1,4 +1,4 @@
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { useAnnouncementInboxStore } from "@/stores/notificationsStore";
 import { Bell, WifiOff } from "lucide-react-native";
 import { useCallback, useEffect, useMemo } from "react";
@@ -181,29 +181,31 @@ export default function DashboardScreen() {
 
   const tourZonesReady = !isHomeLoading && onboardingLoaded;
 
-  useEffect(() => {
-    if (!onboardingLoaded || !tourZonesReady || !activeOnboardingState) {
-      return;
-    }
+  useFocusEffect(
+    useCallback(() => {
+      if (!onboardingLoaded || !tourZonesReady || !activeOnboardingState) {
+        return;
+      }
 
-    const currentStatus =
-      activeOnboardingState === "state_1_unpersonalized"
-        ? state1Status
-        : state2Status;
+      const currentStatus =
+        activeOnboardingState === "state_1_unpersonalized"
+          ? state1Status
+          : state2Status;
 
-    if (currentStatus !== "never_seen") {
-      return;
-    }
+      if (currentStatus !== "never_seen") {
+        return;
+      }
 
-    void startActiveOnboardingIfEligible("home");
-  }, [
-    activeOnboardingState,
-    onboardingLoaded,
-    startActiveOnboardingIfEligible,
-    state1Status,
-    state2Status,
-    tourZonesReady,
-  ]);
+      void startActiveOnboardingIfEligible("home");
+    }, [
+      activeOnboardingState,
+      onboardingLoaded,
+      startActiveOnboardingIfEligible,
+      state1Status,
+      state2Status,
+      tourZonesReady,
+    ]),
+  );
 
   const handleSeeAllPress = useCallback(() => {
     router.push("/expenses");

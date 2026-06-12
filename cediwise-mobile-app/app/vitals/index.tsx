@@ -8,6 +8,7 @@ import {
 import type { BudgetPreview, Draft, StepErrors } from "@/components/features/vitals/types";
 import {
   computeIntelligentStrategy,
+  getMonthlyBudgetIncome,
   getNetPreview,
   recurringStoreToWizardLines,
   toMoney,
@@ -21,6 +22,7 @@ import { useAISuggestions } from "@/hooks/useAISuggestions";
 import { useAuth } from "@/hooks/useAuth";
 import { useBudget } from "@/hooks/useBudget";
 import { usePersonalizationStore } from "@/stores/personalizationStore";
+import { useBudgetStore } from "@/stores/budgetStore";
 import { useProfileVitalsStore } from "@/stores/profileVitalsStore";
 import { useRecurringExpensesStore } from "@/stores/recurringExpensesStore";
 import { usePendingAISelections } from "@/utils/aiSelections";
@@ -28,11 +30,13 @@ import { analytics } from "@/utils/analytics";
 import { enqueueMutation } from "@/utils/budgetStorage";
 import { trySyncProfileWithRetries } from "@/utils/budgetSync";
 import { isOnline } from "@/utils/connectivity";
+import { findPrimaryIncomeSource } from "@/utils/incomeSourceHelpers";
 import { log } from "@/utils/logger";
 import {
   writePersonalizationStatusCache,
   writeProfileVitalsCache,
 } from "@/utils/profileVitals";
+import { markPostVitalsHomeFirstOnboarding } from "@/utils/tourSessionGuard";
 import { readTourSeen } from "@/utils/tourStorage";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
@@ -86,12 +90,15 @@ function makeDefaultDraft(): Draft {
     spendingStyle: null,
     financialPriority: null,
     interests: [],
+    priorityExpenses: [],
     selectedTemplate: "smart",
     recurringExpenses: [],
     goalType: null,
     goalAmount: "",
     goalTimeline: "",
     aiSuggestionsApplied: false,
+    aiCategories: [],
+    aiBudgetSplit: null,
   };
 }
 
@@ -123,8 +130,12 @@ export default function VitalsWizard() {
   const [error, setError] = useState<string | null>(null);
 
   const ai = useAISuggestions();
-  const { current: pendingAiSelections, updateCurrent, updateRawSuggestions } =
-    usePendingAISelections();
+  const {
+    current: pendingAiSelections,
+    updateCurrent,
+    updateRawSuggestions,
+    updatePriorityExpenses,
+  } = usePendingAISelections();
 
   const transition = useSharedValue(1);
   const direction = useSharedValue<1 | -1>(1);
@@ -399,6 +410,8 @@ export default function VitalsWizard() {
           ...prev,
           aiSuggestionsApplied: true,
           selectedTemplate: selections.templateKey || "smart",
+          aiCategories: selections.categories,
+          aiBudgetSplit: selections.budgetSplit ?? null,
           recurringExpenses: newRecurring ?? prev.recurringExpenses,
           goalType: firstGoal ? firstGoal.type : prev.goalType,
           goalAmount: firstGoal ? firstGoal.goalAmount : prev.goalAmount,
@@ -430,6 +443,12 @@ export default function VitalsWizard() {
     }
 
     try {
+      const monthlyBudgetIncome = getMonthlyBudgetIncome(
+        draft.stableSalary,
+        draft.incomeFrequency,
+        draft.autoTax,
+      );
+
       const results = await ai.fetchSuggestions({
         salary: draft.stableSalary,
         autoTax: draft.autoTax,
@@ -438,16 +457,16 @@ export default function VitalsWizard() {
         spendingStyle: draft.spendingStyle,
         financialPriority: draft.financialPriority,
         interests: draft.interests,
+        priorityExpenses: draft.priorityExpenses,
         existingRecurring: draft.recurringExpenses.map((r) => r.name),
         country: "GH",
+        monthlyBudgetIncome,
       });
 
       if (results) {
         updateRawSuggestions(results);
-        const monthlyIncomeStr = toMonthlySalary(
-          toMoney(draft.stableSalary),
-          draft.incomeFrequency,
-        ).toString();
+        updatePriorityExpenses(draft.priorityExpenses);
+        const monthlyIncomeStr = monthlyBudgetIncome.toString();
 
         router.push({
           pathname: "/vitals/ai-suggestions",
@@ -460,7 +479,7 @@ export default function VitalsWizard() {
       log.error("Error fetching AI suggestions", e);
       setError(e instanceof Error ? e.message : "Failed to generate suggestions. Please try again.");
     }
-  }, [ai, canContinue, draft, updateRawSuggestions]);
+  }, [ai, canContinue, draft, updatePriorityExpenses, updateRawSuggestions]);
 
   useEffect(() => {
     const showBack = editMode || draft.step > 0;
@@ -577,12 +596,37 @@ export default function VitalsWizard() {
           financialPriority: draft.financialPriority,
         });
 
-        // Resolve final percentages — named template overrides the engine output
+        // Resolve final percentages — AI split → named template → engine output
         const tmpl = BUDGET_TEMPLATES[draft.selectedTemplate];
-        const finalNeedsPct = tmpl.needsPct ?? computed.needsPct;
-        const finalWantsPct = tmpl.wantsPct ?? computed.wantsPct;
-        const finalSavingsPct = tmpl.savingsPct ?? computed.savingsPct;
+        const aiSplit = draft.aiBudgetSplit;
+        const finalNeedsPct =
+          aiSplit?.needsPct ?? tmpl.needsPct ?? computed.needsPct;
+        const finalWantsPct =
+          aiSplit?.wantsPct ?? tmpl.wantsPct ?? computed.wantsPct;
+        const finalSavingsPct =
+          aiSplit?.savingsPct ?? tmpl.savingsPct ?? computed.savingsPct;
         const finalStrategy = tmpl.strategyForDb ?? computed.strategy;
+
+        const fixedAmountsByCategory: Record<string, number> = {};
+        const customCategories: {
+          name: string;
+          bucket: "needs" | "wants" | "savings";
+          limitAmount: number;
+        }[] = [];
+        for (const cat of draft.aiCategories) {
+          const name = cat.name.trim();
+          const isOthers =
+            cat.bucket === "wants" && name.toLowerCase() === "others";
+          if (!name || (cat.limit <= 0 && !isOthers)) continue;
+          if (cat.limit > 0) {
+            fixedAmountsByCategory[name] = cat.limit;
+          }
+          customCategories.push({
+            name,
+            bucket: cat.bucket,
+            limitAmount: isOthers ? 0 : cat.limit,
+          });
+        }
 
         const createdAt = new Date().toISOString();
 
@@ -624,11 +668,13 @@ export default function VitalsWizard() {
 
         const online = await isOnline();
         if (online) {
-          void trySyncProfileWithRetries(user.id, queued).then((syncResult) => {
-            if (!syncResult.ok) {
-              log.error("[Vitals] Background profile sync failed", { syncResult });
-            }
-          });
+          const syncResult = await trySyncProfileWithRetries(user.id, queued);
+          if (!syncResult.ok) {
+            setError(
+              "Couldn't save your profile. Check your connection and try again.",
+            );
+            return;
+          }
         }
 
         await writePersonalizationStatusCache(user.id, true);
@@ -659,11 +705,21 @@ export default function VitalsWizard() {
           profile_version: 1,
         });
 
-        void usePersonalizationStore.getState().refresh();
-        void useProfileVitalsStore.getState().refresh();
+        if (!editMode) {
+          await markPostVitalsHomeFirstOnboarding(user.id);
+        }
+        usePersonalizationStore.getState().applyOptimisticSetupCompleted();
 
-        const existingPrimaryIncome = budget.state?.incomeSources?.find(
-          (source) => source.type === "primary",
+        if (!editMode) {
+          router.replace("/(tabs)?fromVitals=1");
+        }
+
+        await usePersonalizationStore.getState().refresh();
+        await useProfileVitalsStore.getState().refresh();
+
+        const existingPrimaryIncome = findPrimaryIncomeSource(
+          useBudgetStore.getState().state?.incomeSources ??
+            budget.state?.incomeSources,
         );
         if (existingPrimaryIncome) {
           await budget.updateIncomeSource(existingPrimaryIncome.id, {
@@ -687,7 +743,13 @@ export default function VitalsWizard() {
           wantsPct: finalWantsPct,
           savingsPct: finalSavingsPct,
           interests: draft.interests,
-          seedCategories: false,
+          seedCategories: true,
+          fixedAmountsByCategory:
+            Object.keys(fixedAmountsByCategory).length > 0
+              ? fixedAmountsByCategory
+              : undefined,
+          customCategories:
+            customCategories.length > 0 ? customCategories : undefined,
           lifeStage: draft.lifeStage ?? null,
         });
 
@@ -702,7 +764,7 @@ export default function VitalsWizard() {
           for (const line of draft.recurringExpenses) {
             const amt = toMoney(line.amount);
             if (amt <= 0 || !line.name.trim()) continue;
-            const bucket = line.bucket === "needs" ? "needs" : "wants";
+            const bucket = line.bucket;
             const key = `${line.name.trim().toLowerCase()}:${bucket}:monthly:${amt}`;
             if (seen.has(key)) continue;
             seen.add(key);
@@ -711,7 +773,7 @@ export default function VitalsWizard() {
               amount: amt,
               frequency: "monthly",
               bucket,
-              autoAllocate: true,
+              autoAllocate: false,
             });
           }
         }
@@ -740,7 +802,7 @@ export default function VitalsWizard() {
         if (editMode) {
           router.back();
         } else {
-          router.replace("/(tabs)/budget");
+          await budget.syncNow();
         }
       } catch (e) {
         const offline = !(await isOnline());
@@ -1074,37 +1136,54 @@ export default function VitalsWizard() {
             borderTopWidth: 1,
             borderTopColor: "rgba(255,255,255,0.06)",
           }}>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <AnimatedView style={[{ flex: draft.step === 1 ? 0.4 : 1 }, backBtnStyle]}>
-              <SecondaryButton onPress={goBack}>
-                Back
-              </SecondaryButton>
-            </AnimatedView>
-
-            {draft.step < totalSteps - 1 ? (
+          {draft.step === 1 ? (
+            <View style={{ gap: 12 }}>
               <PrimaryButton
-                onPress={draft.step === 1 ? handleGetSuggestions : goNext}
-                disabled={draft.step === 1 ? (!canContinue || ai.isLoading) : !canContinue}
-                loading={draft.step === 1 && ai.isLoading}
-                style={{
-                  flex: 1,
-                  opacity: canContinue ? 1 : 0.5,
-                }}>
-                {draft.step === 1
-                  ? (ai.isLoading ? "Researching..." : "Get Budget Suggestions")
-                  : "Continue"}
+                onPress={handleGetSuggestions}
+                disabled={!canContinue || ai.isLoading}
+                loading={ai.isLoading}
+                accessibilityLabel="Suggest budget with AI"
+                style={{ width: "100%", opacity: canContinue ? 1 : 0.5 }}>
+                {ai.isLoading ? "Generating…" : "Suggest budget"}
               </PrimaryButton>
-            ) : (
-              <PrimaryButton
-                onPress={handleFinish}
-                loading={loading}
-                disabled={loading}
-                style={{ flex: 1 }}>
-                {loading ? "Saving…" : editMode ? "Save changes" : "Complete"}
-              </PrimaryButton>
-            )}
-          </View>
 
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <AnimatedView style={[{ flex: 1 }, backBtnStyle]}>
+                  <SecondaryButton onPress={goBack}>Back</SecondaryButton>
+                </AnimatedView>
+                <SecondaryButton
+                  onPress={goNext}
+                  disabled={!canContinue || ai.isLoading}
+                  accessibilityLabel="Continue with manual setup"
+                  style={{ flex: 1, opacity: canContinue && !ai.isLoading ? 1 : 0.5 }}>
+                  Continue manually
+                </SecondaryButton>
+              </View>
+            </View>
+          ) : (
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <AnimatedView style={[{ flex: 1 }, backBtnStyle]}>
+                <SecondaryButton onPress={goBack}>Back</SecondaryButton>
+              </AnimatedView>
+
+              {draft.step < totalSteps - 1 ? (
+                <PrimaryButton
+                  onPress={goNext}
+                  disabled={!canContinue}
+                  style={{ flex: 1, opacity: canContinue ? 1 : 0.5 }}>
+                  Continue
+                </PrimaryButton>
+              ) : (
+                <PrimaryButton
+                  onPress={handleFinish}
+                  loading={loading}
+                  disabled={loading}
+                  style={{ flex: 1 }}>
+                  {loading ? "Saving…" : editMode ? "Save changes" : "Complete"}
+                </PrimaryButton>
+              )}
+            </View>
+          )}
         </View>
       </View>
     </SafeAreaView>

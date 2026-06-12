@@ -12,11 +12,13 @@ import React, {
 type PendingAISelectionsState = {
   current: AppliedAISelections | null;
   rawSuggestions: AIProfileSuggestions | null;
+  priorityExpenses: string[];
 };
 
 export type PendingAISelectionsContextValue = PendingAISelectionsState & {
   updateCurrent: (value: AppliedAISelections | null) => void;
   updateRawSuggestions: (value: AIProfileSuggestions | null) => void;
+  updatePriorityExpenses: (value: string[]) => void;
   reset: () => void;
 };
 
@@ -28,6 +30,7 @@ export function PendingAISelectionsProvider({ children }: { children: ReactNode 
   const [rawSuggestions, setRawSuggestions] = useState<AIProfileSuggestions | null>(
     null,
   );
+  const [priorityExpenses, setPriorityExpenses] = useState<string[]>([]);
 
   const updateCurrent = useCallback((value: AppliedAISelections | null) => {
     setCurrent(value);
@@ -37,20 +40,35 @@ export function PendingAISelectionsProvider({ children }: { children: ReactNode 
     setRawSuggestions(value);
   }, []);
 
+  const updatePriorityExpenses = useCallback((value: string[]) => {
+    setPriorityExpenses(value);
+  }, []);
+
   const reset = useCallback(() => {
     setCurrent(null);
     setRawSuggestions(null);
+    setPriorityExpenses([]);
   }, []);
 
   const value = useMemo<PendingAISelectionsContextValue>(
     () => ({
       current,
       rawSuggestions,
+      priorityExpenses,
       updateCurrent,
       updateRawSuggestions,
+      updatePriorityExpenses,
       reset,
     }),
-    [current, rawSuggestions, updateCurrent, updateRawSuggestions, reset],
+    [
+      current,
+      rawSuggestions,
+      priorityExpenses,
+      updateCurrent,
+      updateRawSuggestions,
+      updatePriorityExpenses,
+      reset,
+    ],
   );
 
   return (

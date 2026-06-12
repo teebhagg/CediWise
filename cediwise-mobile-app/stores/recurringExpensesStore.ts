@@ -43,6 +43,31 @@ function recurringCacheKey(userId: string): string {
 const FLUSH_USER_MESSAGE =
   "Saved on this device. Cloud sync will retry; check the sync queue if this persists.";
 
+const RECURRING_FLUSH_DEBOUNCE_MS = 400;
+const recurringFlushTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function scheduleRecurringBudgetFlush(
+  userId: string,
+  get: () => RecurringExpensesStore,
+  set: (partial: Partial<RecurringExpensesStore>) => void,
+): void {
+  const existing = recurringFlushTimers.get(userId);
+  if (existing) clearTimeout(existing);
+  recurringFlushTimers.set(
+    userId,
+    setTimeout(() => {
+      recurringFlushTimers.delete(userId);
+      void flushBudgetQueue(userId)
+        .then((r) => afterRecurringFlush(userId, r, get, set))
+        .catch((err) => {
+          log.error("[recurringExpenses] flushBudgetQueue failed", err);
+          if (get().userId !== userId) return;
+          set({ budgetQueueFlushError: FLUSH_USER_MESSAGE });
+        });
+    }, RECURRING_FLUSH_DEBOUNCE_MS),
+  );
+}
+
 function afterRecurringFlush(
   userId: string,
   result: { okCount: number; failCount: number },
@@ -288,16 +313,7 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
         },
       });
 
-      void flushBudgetQueue(userId)
-        .then((r) => afterRecurringFlush(userId, r, get, set))
-        .catch((err) => {
-          log.error(
-            "[recurringExpenses] flushBudgetQueue failed (addRecurringExpense)",
-            err,
-          );
-          if (get().userId !== userId) return;
-          set({ budgetQueueFlushError: FLUSH_USER_MESSAGE });
-        });
+      scheduleRecurringBudgetFlush(userId, get, set);
     },
 
     updateRecurringExpense: async (id, params) => {
@@ -352,16 +368,7 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
         payload: updatePayload,
       });
 
-      void flushBudgetQueue(userId)
-        .then((r) => afterRecurringFlush(userId, r, get, set))
-        .catch((err) => {
-          log.error(
-            "[recurringExpenses] flushBudgetQueue failed (updateRecurringExpense)",
-            err,
-          );
-          if (get().userId !== userId) return;
-          set({ budgetQueueFlushError: FLUSH_USER_MESSAGE });
-        });
+      scheduleRecurringBudgetFlush(userId, get, set);
     },
 
     deleteRecurringExpense: async (id) => {
@@ -386,16 +393,7 @@ export const useRecurringExpensesStore = create<RecurringExpensesStore>(
         payload: { id },
       });
 
-      void flushBudgetQueue(userId)
-        .then((r) => afterRecurringFlush(userId, r, get, set))
-        .catch((err) => {
-          log.error(
-            "[recurringExpenses] flushBudgetQueue failed (deleteRecurringExpense)",
-            err,
-          );
-          if (get().userId !== userId) return;
-          set({ budgetQueueFlushError: FLUSH_USER_MESSAGE });
-        });
+      scheduleRecurringBudgetFlush(userId, get, set);
     },
   }),
 );

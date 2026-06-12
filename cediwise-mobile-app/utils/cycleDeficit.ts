@@ -30,7 +30,7 @@ export function computeCycleDeficit(params: {
   cycleId: string;
   transactions: BudgetTransaction[];
   monthlyNetIncome: number;
-  /** When set, overspend is measured against this (e.g. disposable after recurring). */
+  /** When set, overspend is measured against this (defaults to full net income). */
   budgetBaseline?: number;
 }): CycleDeficitResult | null {
   const { cycleId, transactions, monthlyNetIncome, budgetBaseline } = params;

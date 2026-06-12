@@ -54,9 +54,9 @@ describe("reminderScheduleLogic", () => {
 
   it("uses fixed Monday and Thursday slots only", () => {
     expect(REMINDER_SLOTS).toEqual([
-      { day: "monday", expoWeekday: 1 },
-      { day: "thursday", expoWeekday: 4 },
+      { day: "monday", expoWeekday: 2 },
+      { day: "thursday", expoWeekday: 5 },
     ]);
-    expect(DEFAULT_WEEKLY_WEEKDAY).toBe(1);
+    expect(DEFAULT_WEEKLY_WEEKDAY).toBe(2);
   });
 });

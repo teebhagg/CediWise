@@ -23,7 +23,7 @@ const REMINDER_ID_KEY = "@cediwise_notification_weekly_reminder_id";
 const REMINDER_VERSION_KEY = "@cediwise_notification_daily_reminder_version";
 const REMINDER_SCHEDULED_WEEK_KEY = "@cediwise_notification_reminder_scheduled_week";
 const REMINDER_USED_AI_KEY = "@cediwise_notification_reminder_used_ai";
-/** Thursday slot (Expo weekday 4). Monday uses REMINDER_ID_KEY. */
+/** Thursday slot (Expo weekday 5). Monday uses REMINDER_ID_KEY (Expo weekday 2). */
 const REMINDER_ID_THURSDAY_KEY = "@cediwise_notification_daily_reminder_id_2";
 const LAST_SYNC_KEY = "@cediwise_notification_last_sync";
 const TOKEN_KEY = "@cediwise_notification_expo_token";
@@ -217,13 +217,17 @@ async function hasPendingAIReminders(userId: string): Promise<boolean> {
 async function markReminderShown(reminderId: string): Promise<void> {
   if (!supabase) return;
   try {
-    await supabase
+    const { error } = await supabase
       .from("scheduled_reminders")
       .update({ is_shown: true, shown_at: new Date().toISOString() })
       .eq("id", reminderId)
       .eq("is_shown", false);
-  } catch {
-    // ignore
+
+    if (error) {
+      log.warn("Failed to mark scheduled reminder shown", error.message);
+    }
+  } catch (err) {
+    log.warn("Failed to mark scheduled reminder shown", err);
   }
 }
 

@@ -5,19 +5,19 @@ export type ReminderFrequency = "twice_weekly";
 
 export type ReminderSlotDay = "monday" | "thursday";
 
-export const REMINDER_SCHEDULE_VERSION = "v8";
+export const REMINDER_SCHEDULE_VERSION = "v9";
 
-/** Fixed reminder slots — users do not pick days. Expo weekday: 1=Mon, 4=Thu. */
+/** Fixed reminder slots — users do not pick days. Expo weekday: 1=Sun, 2=Mon, 5=Thu. */
 export const REMINDER_SLOTS: ReadonlyArray<{
   day: ReminderSlotDay;
   expoWeekday: number;
 }> = [
-  { day: "monday", expoWeekday: 1 },
-  { day: "thursday", expoWeekday: 4 },
+  { day: "monday", expoWeekday: 2 },
+  { day: "thursday", expoWeekday: 5 },
 ] as const;
 
 /** @deprecated Use REMINDER_SLOTS. Kept for tests referencing Monday default. */
-export const DEFAULT_WEEKLY_WEEKDAY = 1;
+export const DEFAULT_WEEKLY_WEEKDAY = 2;
 
 export function normalizeLegacyReminderFrequency(
   _stored: string | null,

@@ -9,7 +9,13 @@ import {
 import { AppState, AppStateStatus } from "react-native";
 import { deactivateCurrentDeviceToken } from "../services/notifications";
 import { clearAuthData, getStoredAuthData } from "../utils/auth";
+import { resetNavigationToAuth } from "../utils/authRouting";
 import { resetStoresOnLogout } from "../utils/resetStoresOnLogout";
+import { suspendOnboardingRemotePersist } from "../utils/onboardingState";
+import {
+  cancelTourPersistence,
+  clearPostVitalsHomeFirstOnboarding,
+} from "../utils/tourSessionGuard";
 import { log } from "../utils/logger";
 import { supabase } from "../utils/supabase";
 
@@ -40,6 +46,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
   /** Bumps on auth transitions so stale async work cannot commit React state. */
   const authEventIdRef = useRef(0);
+  /** True while `logout()` is in flight — avoids SIGNED_OUT racing logout navigation. */
+  const isLoggingOutRef = useRef(false);
   const isMountedRef = useRef(true);
 
   const loadUser = useCallback(async (expectedToken: number) => {
@@ -98,10 +106,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (event === "SIGNED_OUT") {
         clearDebounce();
+        if (isLoggingOutRef.current) {
+          return;
+        }
         setUser(null);
         setIsLoading(false);
         authEventIdRef.current += 1;
-        const capturedToken = authEventIdRef.current;
         void (async () => {
           try {
             await clearAuthData();
@@ -109,12 +119,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           } catch (e) {
             log.warn("Auth state SIGNED_OUT cleanup:", e);
           }
-          if (
-            capturedToken !== authEventIdRef.current ||
-            !isMountedRef.current
-          ) {
+          if (!isMountedRef.current) {
             return;
           }
+          resetNavigationToAuth();
         })();
         return;
       }
@@ -147,10 +155,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [loadUser]);
 
   const logout = useCallback(async () => {
+    isLoggingOutRef.current = true;
     authEventIdRef.current += 1;
-    const capturedToken = authEventIdRef.current;
+    suspendOnboardingRemotePersist();
+    const userId = user?.id;
+    if (userId) {
+      await clearPostVitalsHomeFirstOnboarding(userId);
+    }
+    cancelTourPersistence();
     try {
-      const userId = user?.id;
       if (userId) {
         await deactivateCurrentDeviceToken(userId);
       }
@@ -167,16 +180,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (storeErr) {
         log.warn("resetStoresOnLogout failed (continuing logout):", storeErr);
       }
-      if (
-        capturedToken !== authEventIdRef.current ||
-        !isMountedRef.current
-      ) {
-        return;
-      }
-      setUser(null);
     } catch (e) {
       log.error("Error during logout:", e);
       throw e;
+    } finally {
+      isLoggingOutRef.current = false;
+      if (!isMountedRef.current) {
+        return;
+      }
+      setUser(null);
+      resetNavigationToAuth();
     }
   }, [user?.id]);
 

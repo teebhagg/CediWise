@@ -3,9 +3,10 @@
  * Uses LESSON_DEFS from constants/lessons.ts as the source of truth.
  *
  * Run from cediwise-mobile-app:
- *   npx tsx scripts/seed-lessons.ts
+ *   npm run seed:lessons
  *
- * Prerequisites: Create scripts/.env with SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
+ * Env: checks .env and .env.local. Needs EXPO_PUBLIC_SUPABASE_URL and
+ *      SUPABASE_SERVICE_ROLE_KEY (from Supabase dashboard → Settings → API).
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -32,10 +33,23 @@ function loadEnv(envPath: string): Record<string, string> {
   return env;
 }
 
-const envFile = path.join(__dirname, ".env");
-const envVars = loadEnv(envFile);
+const appRoot = path.resolve(__dirname, "..");
+const envPaths = [
+  path.join(__dirname, ".env"),
+  path.join(appRoot, ".env"),
+  path.join(appRoot, ".env.local"),
+];
+const envVars = envPaths.reduce(
+  (acc, p) => ({ ...acc, ...loadEnv(p) }),
+  {} as Record<string, string>
+);
 
-const SUPABASE_URL = envVars.SUPABASE_URL ?? process.env.SUPABASE_URL ?? "";
+const SUPABASE_URL =
+  envVars.SUPABASE_URL ??
+  envVars.EXPO_PUBLIC_SUPABASE_URL ??
+  process.env.SUPABASE_URL ??
+  process.env.EXPO_PUBLIC_SUPABASE_URL ??
+  "";
 const SUPABASE_SERVICE_ROLE_KEY =
   envVars.SUPABASE_SERVICE_ROLE_KEY ??
   process.env.SUPABASE_SERVICE_ROLE_KEY ??
@@ -43,8 +57,10 @@ const SUPABASE_SERVICE_ROLE_KEY =
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error(
-    "\n❌  Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.\n" +
-      "    Create scripts/.env with both values.\n"
+    "\n❌  Missing SUPABASE_URL (or EXPO_PUBLIC_SUPABASE_URL) or SUPABASE_SERVICE_ROLE_KEY.\n" +
+    "    Add to cediwise-mobile-app/.env.local:\n" +
+    "      SUPABASE_URL=... (or EXPO_PUBLIC_SUPABASE_URL)\n" +
+    "      SUPABASE_SERVICE_ROLE_KEY=... (Supabase → Settings → API)\n"
   );
   process.exit(1);
 }

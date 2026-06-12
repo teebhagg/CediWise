@@ -9,12 +9,18 @@ import { useProfileVitalsStore } from "@/stores/profileVitalsStore";
 import { useProgressStore } from "@/stores/progressStore";
 import { useRecurringExpensesStore } from "@/stores/recurringExpensesStore";
 import { useSMELedgerStore } from "@/stores/smeLedgerStore";
+import { resetHydratedThisSession } from "@/utils/budgetHydrateSession";
+import { suspendOnboardingRemotePersist } from "@/utils/onboardingState";
+import { cancelTourPersistence } from "@/utils/tourSessionGuard";
 
 /**
  * Clears in-memory Zustand state after auth storage is wiped (logout).
  * Keeps prior user data from persisting until hooks re-run.
  */
 export async function resetStoresOnLogout(): Promise<void> {
+  suspendOnboardingRemotePersist();
+  cancelTourPersistence();
+  resetHydratedThisSession();
   useAIAnalysisStore.getState().clear();
   useAIChatShellStore.getState().resetForLogout();
   useAIChatFabTransitionStore.getState().reset();

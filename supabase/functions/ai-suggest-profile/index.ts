@@ -3,7 +3,13 @@
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { insertCostRow, estimateGroqCostUsd } from "../_shared/ai/aiCostTracker.ts";
-import { SUGGEST_PROFILE_SYSTEM_PROMPT, formatSuggestProfileUserPrompt, type SuggestProfileInput } from "../_shared/ai/aiSuggestPrompt.ts";
+import {
+  SUGGEST_PROFILE_SYSTEM_PROMPT,
+  convertToMonthlyIncome,
+  formatSuggestProfileUserPrompt,
+  type SuggestProfileInput,
+} from "../_shared/ai/aiSuggestPrompt.ts";
+import { normalizeProfileSuggestion } from "../_shared/ai/normalizeProfileSuggestion.ts";
 import { stripJsonFence, profileSuggestionSchema } from "../_shared/ai/aiResponseValidation.ts";
 import { corsHeaders } from "../_shared/ai/cors.ts";
 import { groqChatCompletion } from "../_shared/ai/groqClient.ts";
@@ -25,10 +31,20 @@ function bodyToSuggestProfileInput(body: Record<string, unknown>): Partial<Sugge
   if (Array.isArray(body.interests)) {
     out.interests = body.interests.filter((x): x is string => typeof x === "string");
   }
+  if (Array.isArray(body.priorityExpenses)) {
+    out.priorityExpenses = body.priorityExpenses.filter((x): x is string => typeof x === "string");
+  }
   if (Array.isArray(body.existingRecurring)) {
     out.existingRecurring = body.existingRecurring.filter((x): x is string => typeof x === "string");
   }
   if (typeof body.country === "string") out.country = body.country;
+  if (
+    typeof body.monthlyBudgetIncome === "number" &&
+    Number.isFinite(body.monthlyBudgetIncome) &&
+    body.monthlyBudgetIncome > 0
+  ) {
+    out.monthlyBudgetIncome = body.monthlyBudgetIncome;
+  }
   return out;
 }
 
@@ -109,11 +125,6 @@ Deno.serve(async (req) => {
     });
   }
 
-  const contentLength = req.headers.get("content-length");
-  console.log(
-    `[ai-suggest-profile] meta content-length=${contentLength ?? "unknown"} body-keys=${Object.keys(profileBody).length}`,
-  );
-
   try {
     const promptInput = bodyToSuggestProfileInput(profileBody);
     const userPrompt = formatSuggestProfileUserPrompt(promptInput);
@@ -133,16 +144,39 @@ Deno.serve(async (req) => {
     });
 
     const rawContent = stripJsonFence(groqResult.content);
-    console.log("[ai-suggest-profile] Raw AI content:", rawContent);
+    if (Deno.env.get("DEBUG_AI") === "true") {
+      console.log("[ai-suggest-profile] Raw AI content:", rawContent);
+    }
     let parsed;
     try {
       parsed = JSON.parse(rawContent);
     } catch (e) {
-      console.error("[ai-suggest-profile] JSON Parse Error. Raw content:", rawContent);
+      if (Deno.env.get("DEBUG_AI") === "true") {
+        console.error("[ai-suggest-profile] JSON Parse Error. Raw content:", rawContent);
+      } else {
+        console.error(
+          "[ai-suggest-profile] JSON Parse Error. Content length:",
+          rawContent.length,
+        );
+      }
       throw new Error(`Failed to parse AI response as JSON: ${e instanceof Error ? e.message : String(e)}`);
     }
 
     const validated = profileSuggestionSchema.parse(parsed);
+    const monthlyIncome =
+      typeof promptInput.monthlyBudgetIncome === "number" &&
+      Number.isFinite(promptInput.monthlyBudgetIncome) &&
+      promptInput.monthlyBudgetIncome > 0
+        ? promptInput.monthlyBudgetIncome
+        : convertToMonthlyIncome(
+            promptInput.salary ?? 0,
+            promptInput.incomeFrequency,
+          );
+    const normalized = normalizeProfileSuggestion(
+      validated,
+      monthlyIncome,
+      promptInput.lifeStage,
+    );
     const elapsed = Date.now() - started;
 
     // Track costs
@@ -159,7 +193,7 @@ Deno.serve(async (req) => {
 
     return new Response(
       JSON.stringify({
-        suggestions: validated,
+        suggestions: normalized,
         economicContext: {
           inflationRate: 0,
           snapshotDate: new Date().toISOString(),

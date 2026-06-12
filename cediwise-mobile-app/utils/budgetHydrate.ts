@@ -6,6 +6,7 @@ import type {
   IncomeSource,
 } from "../types/budget";
 import { normalizeBudgetEngineMode } from "./budgetEngine";
+import { dedupePrimaryIncomeSources } from "./incomeSourceHelpers";
 import { isOnline } from "./connectivity";
 import { supabase } from "./supabase";
 
@@ -216,7 +217,7 @@ export async function fetchBudgetStateRemote(
       ...(interests ? { interests } : {}),
       budgetEngineMode,
     },
-    incomeSources,
+    incomeSources: dedupePrimaryIncomeSources(incomeSources),
     cycles,
     categories,
     transactions,
@@ -260,7 +261,9 @@ export function mergeBudgetState(
     userId: local.userId,
     // Prefer local prefs, but keep any remote keys we don't have.
     prefs: { ...remote.prefs, ...local.prefs },
-    incomeSources: mergeById(remote.incomeSources, local.incomeSources),
+    incomeSources: dedupePrimaryIncomeSources(
+      mergeById(remote.incomeSources, local.incomeSources),
+    ),
     cycles: mergeById(remote.cycles, local.cycles),
     categories: mergeById(remote.categories, local.categories),
     transactions: mergeById(remote.transactions, local.transactions),

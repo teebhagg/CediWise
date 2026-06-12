@@ -130,7 +130,7 @@ export default function OnboardingScreen() {
 
             <View className="gap-2">
               <PrimaryButton
-                onPress={() => router.replace("/auth")}
+                onPress={() => router.replace("/onboarding-demos")}
                 className="w-full h-14">
                 Get Started
               </PrimaryButton>

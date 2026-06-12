@@ -13,11 +13,20 @@ import {
   clearOnboardingLocalCache,
   getAccountOnboardingRecord,
   getOnboardingStatus,
+  resumeOnboardingRemotePersist,
   setOnboardingStatus,
   upsertAccountOnboardingRecord,
   type OnboardingStateKey,
   type OnboardingStatus,
 } from "@/utils/onboardingState";
+import {
+  clearPostVitalsHomeFirstOnboarding,
+  completePostVitalsHomeTour,
+  hydratePostVitalsHomeFirstOnboarding,
+  isPostVitalsAwaitingHomeTour,
+  isTourPersistenceCancelled,
+  resetTourPersistence,
+} from "@/utils/tourSessionGuard";
 import { router } from "expo-router";
 import {
   ReactNode,
@@ -65,6 +74,7 @@ type TourContextType = {
   state1Status: OnboardingStatus | null;
   state2Status: OnboardingStatus | null;
   currentReplayState: OnboardingStateKey | null;
+  isTourActive: boolean;
   resetTourSeen: () => Promise<void>;
 };
 
@@ -87,6 +97,7 @@ const NO_OP_TOUR_CONTEXT: TourContextType = {
   state1Status: null,
   state2Status: null,
   currentReplayState: null,
+  isTourActive: false,
   resetTourSeen: async () => { },
 };
 
@@ -186,6 +197,7 @@ function TourContextInner({
     useState<OnboardingStateKey | null>(null);
   const [currentReplayState, setCurrentReplayState] =
     useState<OnboardingStateKey | null>(null);
+  const [isTourActive, setIsTourActive] = useState(false);
   const [lastPersonalizationComplete, setLastPersonalizationComplete] =
     useState<boolean | null>(null);
 
@@ -198,6 +210,9 @@ function TourContextInner({
       setOnboardingLoaded(true);
       return;
     }
+    resetTourPersistence();
+    resumeOnboardingRemotePersist();
+    await hydratePostVitalsHomeFirstOnboarding(userId);
     const nextRecord = await getAccountOnboardingRecord(userId);
     setRecord(nextRecord);
     setOnboardingLoaded(true);
@@ -211,17 +226,22 @@ function TourContextInner({
   const persistRecord = useCallback(
     async (nextRecord: AccountOnboardingRecord) => {
       setRecord(nextRecord);
-      if (!userId) return;
-      await upsertAccountOnboardingRecord(nextRecord);
+      if (!userId || isTourPersistenceCancelled()) return;
+      try {
+        await upsertAccountOnboardingRecord(nextRecord);
+      } catch {
+        // upsertAccountOnboardingRecord logs and keeps local cache
+      }
     },
     [userId]
   );
 
   const startRun = useCallback(
     async (run: ActiveRun) => {
-      if (!userId || !record) return;
+      if (!userId || !record || isTourPersistenceCancelled()) return;
 
       activeRunRef.current = run;
+      setIsTourActive(true);
       setActiveOnboardingState(run.state);
       if (run.isReplay) {
         setCurrentReplayState(run.state);
@@ -314,7 +334,15 @@ function TourContextInner({
       if (status === "dismissed" || status === "completed" || status === "invalidated") {
         return;
       }
-      if (activeRunRef.current?.state === activeState) {
+      if (activeRunRef.current) {
+        return;
+      }
+
+      if (
+        segment === "budget" &&
+        activeState === "state_2_personalized" &&
+        isPostVitalsAwaitingHomeTour(userId)
+      ) {
         return;
       }
 
@@ -340,7 +368,7 @@ function TourContextInner({
   );
 
   const invalidateState1AndPromoteToState2 = useCallback(async () => {
-    if (!record || !userId) return;
+    if (!record || !userId || isTourPersistenceCancelled()) return;
 
     const now = new Date().toISOString();
     let nextRecord = setOnboardingStatus(record, "state_1_unpersonalized", "invalidated", now);
@@ -351,16 +379,9 @@ function TourContextInner({
     };
     setActiveOnboardingState("state_2_personalized");
     activeRunRef.current = null;
+    setIsTourActive(false);
     await persistRecord(nextRecord);
-    router.replace("/(tabs)");
-    const group = ONBOARDING_STEP_GROUPS.state2Home;
-    await startRun({
-      state: group.state,
-      segment: group.segment,
-      firstStep: group.firstStep,
-      isReplay: false,
-    });
-  }, [activeRunRef, persistRecord, record, startRun, userId]);
+  }, [activeRunRef, persistRecord, record, userId]);
 
   useEffect(() => {
     if (!userId || !onboardingLoaded || personalization.isLoading) return;
@@ -397,16 +418,27 @@ function TourContextInner({
   const handleTourEnd = useCallback(
     async (reason: TourEndReason) => {
       const run = activeRunRef.current;
-      if (!run || !record || !userId) return;
+      if (!run || !record || !userId || isTourPersistenceCancelled()) return;
 
       activeRunRef.current = null;
+      setIsTourActive(false);
       setCurrentReplayState(null);
 
       if (reason === "skipped") {
+        if (
+          run.segment === "home" &&
+          isPostVitalsAwaitingHomeTour(userId)
+        ) {
+          await completePostVitalsHomeTour(userId);
+          router.push("/(tabs)/budget?fromVitals=1");
+          return;
+        }
+
         const dismissedRecord = setOnboardingStatus(record, run.state, "dismissed");
         setActiveOnboardingState(run.state);
         await persistRecord(dismissedRecord);
-        if (run.state === "state_2_personalized") {
+        if (run.state === "state_2_personalized" && run.segment === "budget") {
+          await clearPostVitalsHomeFirstOnboarding(userId);
           analytics.tourSkippedCoreBudget({ userId });
         }
         return;
@@ -414,7 +446,12 @@ function TourContextInner({
 
       if (run.segment === "home") {
         setActiveOnboardingState(run.state);
-        router.push("/(tabs)/budget");
+        if (isPostVitalsAwaitingHomeTour(userId)) {
+          await completePostVitalsHomeTour(userId);
+          router.push("/(tabs)/budget?fromVitals=1");
+        } else {
+          router.push("/(tabs)/budget");
+        }
         return;
       }
 
@@ -422,6 +459,7 @@ function TourContextInner({
       setActiveOnboardingState(run.state);
       await persistRecord(completedRecord);
       if (run.state === "state_2_personalized") {
+        await clearPostVitalsHomeFirstOnboarding(userId);
         analytics.tourCompletedCoreBudget({ userId });
       }
     },
@@ -454,6 +492,7 @@ function TourContextInner({
     await persistRecord(nextRecord);
     setActiveOnboardingState(null);
     setCurrentReplayState(null);
+    setIsTourActive(false);
   }, [persistRecord, record, userId]);
 
   const value = useMemo<TourContextType>(
@@ -466,11 +505,13 @@ function TourContextInner({
       state1Status,
       state2Status,
       currentReplayState,
+      isTourActive,
       resetTourSeen,
     }),
     [
       activeOnboardingState,
       currentReplayState,
+      isTourActive,
       onboardingLoaded,
       resetTourSeen,
       startActiveOnboardingIfEligible,

@@ -4,6 +4,7 @@ import {
   computeIntelligentAllocationFromProfile,
   hasMeaningfulPreferenceSignals,
 } from "@/utils/budgetFromPreferences";
+import { findPrimaryIncomeSource } from "@/utils/incomeSourceHelpers";
 
 export type BudgetPreferenceBootstrapFns = {
   setupBudget: (params: {
@@ -96,9 +97,7 @@ export async function runBudgetPreferenceBootstrapCore(
   inFlightRef.current = true;
   try {
     const allocation = computeIntelligentAllocationFromProfile(vitals);
-    const existingPrimary = state?.incomeSources?.find(
-      (s) => s.type === "primary"
-    );
+    const existingPrimary = findPrimaryIncomeSource(state?.incomeSources);
     if (existingPrimary) {
       await updateIncomeSource(existingPrimary.id, {
         name: existingPrimary.name || "Primary income",

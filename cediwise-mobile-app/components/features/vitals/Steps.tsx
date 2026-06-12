@@ -2,7 +2,46 @@ import { LabeledTextInput } from "@/components/LabeledTextInput";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import type { GhanaTaxBreakdown } from "@/utils/ghanaTax";
-import { Check, ChevronDown, ChevronRight, Sparkles, Target, X } from "lucide-react-native";
+import {
+  MAX_PRIORITY_EXPENSES,
+  PRIORITY_EXPENSE_OPTIONS,
+} from "@/components/features/vitals/priorityExpenses";
+import {
+  Briefcase,
+  Building2,
+  Bus,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  Clapperboard,
+  CreditCard,
+  Dumbbell,
+  Gamepad2,
+  GraduationCap,
+  Heart,
+  Home,
+  Landmark,
+  LayoutGrid,
+  ListChecks,
+  Music,
+  Palmtree,
+  PiggyBank,
+  Plane,
+  Scale,
+  Shield,
+  Shirt,
+  ShoppingCart,
+  Sparkle,
+  Sparkles,
+  Stethoscope,
+  Sun,
+  Target,
+  Utensils,
+  Wifi,
+  X,
+  Zap,
+  type LucideIcon,
+} from "lucide-react-native";
 import { memo, ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Keyboard,
@@ -210,12 +249,25 @@ function CheckboxOption({
   );
 }
 
-function PillOption({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+function PillOption({
+  label,
+  selected,
+  onPress,
+  icon: Icon,
+  disabled,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+  icon?: LucideIcon;
+  disabled?: boolean;
+}) {
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="checkbox"
-      accessibilityState={{ checked: selected }}
+      accessibilityState={{ checked: selected, disabled: !!disabled }}
       style={({ pressed }) => ({
         minHeight: 44,
         borderRadius: 999,
@@ -227,24 +279,29 @@ function PillOption({ label, selected, onPress }: { label: string; selected: boo
         flexDirection: "row",
         alignItems: "center",
         gap: 8,
-        opacity: pressed ? 0.9 : 1,
+        opacity: disabled ? 0.45 : pressed ? 0.9 : 1,
       })}>
-      <View
-        style={{
-          width: 18,
-          height: 18,
-          borderRadius: 9,
-          borderWidth: 1.5,
-          borderColor: selected ? "#22C55E" : "rgba(148,163,184,0.55)",
-          backgroundColor: selected ? "#22C55E" : "transparent",
-          alignItems: "center",
-          justifyContent: "center",
-        }}>
-        {selected ? <Check size={11} color="#04140A" /> : null}
-      </View>
+      {Icon ? (
+        <Icon size={15} color={selected ? "#86EFAC" : "#94A3B8"} />
+      ) : (
+        <View
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: 9,
+            borderWidth: 1.5,
+            borderColor: selected ? "#22C55E" : "rgba(148,163,184,0.55)",
+            backgroundColor: selected ? "#22C55E" : "transparent",
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
+          {selected ? <Check size={11} color="#04140A" /> : null}
+        </View>
+      )}
       <Text style={{ color: selected ? "#DCFCE7" : "#E2E8F0", fontFamily: "Figtree-Medium", fontSize: 13 }}>
         {label}
       </Text>
+      {Icon && selected ? <Check size={13} color="#22C55E" style={{ marginLeft: 2 }} /> : null}
     </Pressable>
   );
 }
@@ -257,27 +314,72 @@ const INCOME_FREQUENCIES: { value: IncomeFrequency; label: string; description: 
   { value: "monthly", label: "Monthly", description: "Paid once monthly (default cycle behavior)." },
 ];
 
-const LIFE_STAGES: { value: LifeStage; label: string; description: string }[] = [
-  { value: "student", label: "Student", description: "Lower steady income, education-heavy priorities." },
-  { value: "young_professional", label: "Young Professional", description: "Early career growth and lifestyle balance." },
-  { value: "family", label: "Family", description: "Household needs and long-term stability focus." },
-  { value: "retiree", label: "Retiree", description: "Preserve spending stability and savings drawdown." },
+const LIFE_STAGES: {
+  value: LifeStage;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+}[] = [
+  { value: "student", label: "Student", description: "Lower steady income, education-heavy priorities.", icon: GraduationCap },
+  { value: "young_professional", label: "Young Professional", description: "Early career growth and lifestyle balance.", icon: Briefcase },
+  { value: "family", label: "Family", description: "Household needs and long-term stability focus.", icon: Home },
+  { value: "retiree", label: "Retiree", description: "Preserve spending stability and savings drawdown.", icon: Sun },
 ];
 
-const SPENDING_STYLES: { value: SpendingStyle; label: string; description: string }[] = [
-  { value: "conservative", label: "Conservative", description: "Prefers lower discretionary spend and tighter limits." },
-  { value: "moderate", label: "Moderate", description: "Balanced day-to-day spending pattern." },
-  { value: "liberal", label: "Liberal", description: "Higher flexibility for wants and lifestyle spending." },
+const SPENDING_STYLES: {
+  value: SpendingStyle;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+}[] = [
+  { value: "conservative", label: "Conservative", description: "Prefers lower discretionary spend and tighter limits.", icon: Shield },
+  { value: "moderate", label: "Moderate", description: "Balanced day-to-day spending pattern.", icon: Scale },
+  { value: "liberal", label: "Liberal", description: "Higher flexibility for wants and lifestyle spending.", icon: Sparkles },
 ];
 
-const FINANCIAL_PRIORITIES: { value: FinancialPriority; label: string; description: string }[] = [
-  { value: "debt_payoff", label: "Pay Off Debt", description: "Prioritize reducing debt obligations faster." },
-  { value: "savings_growth", label: "Grow Savings", description: "Prioritize emergency fund and long-term reserves." },
-  { value: "lifestyle", label: "Lifestyle", description: "Leave more room for wants and quality-of-life spending." },
-  { value: "balanced", label: "Balanced", description: "Keep debt, savings, and lifestyle relatively even." },
+const FINANCIAL_PRIORITIES: {
+  value: FinancialPriority;
+  label: string;
+  description: string;
+  icon: LucideIcon;
+}[] = [
+  { value: "debt_payoff", label: "Pay Off Debt", description: "Prioritize reducing debt obligations faster.", icon: CreditCard },
+  { value: "savings_growth", label: "Grow Savings", description: "Prioritize emergency fund and long-term reserves.", icon: PiggyBank },
+  { value: "lifestyle", label: "Lifestyle", description: "Leave more room for wants and quality-of-life spending.", icon: Palmtree },
+  { value: "balanced", label: "Balanced", description: "Keep debt, savings, and lifestyle relatively even.", icon: LayoutGrid },
 ];
 
 const INTERESTS = ["Tech", "Fashion", "Fitness", "Food", "Travel", "Gaming", "Music", "Business", "Beauty"] as const;
+
+const INTEREST_OPTIONS: { label: (typeof INTERESTS)[number]; icon: LucideIcon }[] = [
+  { label: "Tech", icon: Building2 },
+  { label: "Fashion", icon: Shirt },
+  { label: "Fitness", icon: Dumbbell },
+  { label: "Food", icon: Utensils },
+  { label: "Travel", icon: Plane },
+  { label: "Gaming", icon: Gamepad2 },
+  { label: "Music", icon: Music },
+  { label: "Business", icon: Briefcase },
+  { label: "Beauty", icon: Sparkle },
+];
+
+const PRIORITY_EXPENSE_ICONS: Record<string, LucideIcon> = {
+  Rent: Home,
+  Groceries: ShoppingCart,
+  Transport: Bus,
+  Utilities: Zap,
+  "School Fees": GraduationCap,
+  "Tithes/Church": Heart,
+  "Data Bundles": Wifi,
+  "Dining Out": Utensils,
+  Entertainment: Clapperboard,
+  Clothing: Shirt,
+  Healthcare: Stethoscope,
+  "Debt Payments": CreditCard,
+  Childcare: Heart,
+  Insurance: Shield,
+  Savings: PiggyBank,
+};
 
 const GOAL_TYPES: { value: GoalType; label: string }[] = [
   { value: "emergency_fund", label: "Emergency Fund" },
@@ -438,6 +540,102 @@ export const StepIncome = memo(function StepIncome({
 
 // ─── StepStyle ("Your Style") ─────────────────────────────────────────────────
 
+function ExpandableStyleSection({
+  open,
+  onToggle,
+  title,
+  subtitle,
+  icon: Icon,
+  accent = "#818CF8",
+  children,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  title: string;
+  subtitle?: string;
+  icon: LucideIcon;
+  accent?: string;
+  children: ReactNode;
+}) {
+  const expand = useSharedValue(0);
+  const chevronRotate = useSharedValue(0);
+
+  useEffect(() => {
+    expand.value = withTiming(open ? 1 : 0, { duration: 240, easing: Easing.out(Easing.cubic) });
+    chevronRotate.value = withSpring(open ? 1 : 0, { damping: 18, stiffness: 200 });
+  }, [open, expand, chevronRotate]);
+
+  const bodyStyle = useAnimatedStyle(() => ({
+    maxHeight: 520 * expand.value,
+    opacity: expand.value,
+    overflow: "hidden",
+  }));
+
+  const chevronStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${chevronRotate.value * 180}deg` }],
+  }));
+
+  return (
+    <View
+      style={{
+        borderWidth: 1,
+        borderColor: open ? `${accent}55` : "rgba(148,163,184,0.2)",
+        borderRadius: 16,
+        backgroundColor: open ? `${accent}10` : "rgba(15,23,42,0.35)",
+        overflow: "hidden",
+      }}>
+      <Pressable
+        onPress={onToggle}
+        style={({ pressed }) => ({
+          flexDirection: "row",
+          alignItems: "center",
+          gap: 10,
+          paddingHorizontal: 14,
+          paddingVertical: 14,
+          opacity: pressed ? 0.85 : 1,
+        })}>
+        <View
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 14,
+            backgroundColor: `${accent}20`,
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
+          <Icon size={14} color={accent} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: open ? "#E2E8F0" : "#CBD5E1", fontFamily: "Figtree-SemiBold", fontSize: 14 }}>
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text style={{ color: "#64748B", fontFamily: "Figtree-Regular", fontSize: 11, marginTop: 2 }}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+        <Animated.View style={chevronStyle}>
+          <ChevronDown size={16} color={open ? accent : "#94A3B8"} />
+        </Animated.View>
+      </Pressable>
+
+      <Animated.View style={bodyStyle}>
+        <View
+          style={{
+            paddingHorizontal: 14,
+            paddingBottom: 16,
+            gap: 12,
+            borderTopWidth: 1,
+            borderTopColor: "rgba(148,163,184,0.12)",
+          }}>
+          {children}
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
+
 type StepStyleProps = {
   draft: Draft;
   toggleInterest: (interest: string) => void;
@@ -445,6 +643,24 @@ type StepStyleProps = {
 };
 
 export const StepStyle = memo(function StepStyle({ draft, toggleInterest, updateDraft }: StepStyleProps) {
+  const [priorityOpen, setPriorityOpen] = useState(draft.priorityExpenses.length > 0);
+  const atPriorityLimit = draft.priorityExpenses.length >= MAX_PRIORITY_EXPENSES;
+
+  const togglePriorityExpense = useCallback(
+    (expense: string) => {
+      const selected = draft.priorityExpenses.includes(expense);
+      if (selected) {
+        updateDraft({
+          priorityExpenses: draft.priorityExpenses.filter((x) => x !== expense),
+        });
+        return;
+      }
+      if (draft.priorityExpenses.length >= MAX_PRIORITY_EXPENSES) return;
+      updateDraft({ priorityExpenses: [...draft.priorityExpenses, expense] });
+    },
+    [draft.priorityExpenses, updateDraft],
+  );
+
   return (
     <View>
       <StepHeading title="Your Style" subtitle="Personalizes your budget split and spending categories. All optional." />
@@ -457,6 +673,7 @@ export const StepStyle = memo(function StepStyle({ draft, toggleInterest, update
               <PillOption
                 key={item.value}
                 label={item.label}
+                icon={item.icon}
                 selected={draft.lifeStage === item.value}
                 onPress={() => updateDraft({ lifeStage: draft.lifeStage === item.value ? null : item.value })}
               />
@@ -476,6 +693,7 @@ export const StepStyle = memo(function StepStyle({ draft, toggleInterest, update
               <PillOption
                 key={item.value}
                 label={item.label}
+                icon={item.icon}
                 selected={draft.spendingStyle === item.value}
                 onPress={() => updateDraft({ spendingStyle: draft.spendingStyle === item.value ? null : item.value })}
               />
@@ -495,6 +713,7 @@ export const StepStyle = memo(function StepStyle({ draft, toggleInterest, update
               <PillOption
                 key={item.value}
                 label={item.label}
+                icon={item.icon}
                 selected={draft.financialPriority === item.value}
                 onPress={() => updateDraft({ financialPriority: draft.financialPriority === item.value ? null : item.value })}
               />
@@ -510,16 +729,45 @@ export const StepStyle = memo(function StepStyle({ draft, toggleInterest, update
         <View>
           <SectionLabel text="Interests" />
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
-            {INTERESTS.map((interest) => (
+            {INTEREST_OPTIONS.map((item) => (
               <PillOption
-                key={interest}
-                label={interest}
-                selected={draft.interests.includes(interest)}
-                onPress={() => toggleInterest(interest)}
+                key={item.label}
+                label={item.label}
+                icon={item.icon}
+                selected={draft.interests.includes(item.label)}
+                onPress={() => toggleInterest(item.label)}
               />
             ))}
           </View>
         </View>
+
+        <ExpandableStyleSection
+          open={priorityOpen}
+          onToggle={() => setPriorityOpen((prev) => !prev)}
+          title="Top expenses (optional)"
+          subtitle={`Pick up to ${MAX_PRIORITY_EXPENSES} — AI will prioritize these in your budget`}
+          icon={ListChecks}
+          accent="#34D399">
+          <Text style={{ color: "#94A3B8", fontFamily: "Figtree-Regular", fontSize: 12, lineHeight: 18 }}>
+            Selected {draft.priorityExpenses.length}/{MAX_PRIORITY_EXPENSES}
+            {atPriorityLimit ? " · deselect one to change" : ""}
+          </Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+            {PRIORITY_EXPENSE_OPTIONS.map((expense) => {
+              const selected = draft.priorityExpenses.includes(expense);
+              return (
+                <PillOption
+                  key={expense}
+                  label={expense}
+                  icon={PRIORITY_EXPENSE_ICONS[expense] ?? Landmark}
+                  selected={selected}
+                  disabled={!selected && atPriorityLimit}
+                  onPress={() => togglePriorityExpense(expense)}
+                />
+              );
+            })}
+          </View>
+        </ExpandableStyleSection>
       </View>
     </View>
   );

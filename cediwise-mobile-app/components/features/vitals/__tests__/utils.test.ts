@@ -9,6 +9,7 @@
  */
 
 import {
+  getMonthlyBudgetIncome,
   toMonthlySalary,
   toMoney,
   inferTemplateFromPercentages,
@@ -387,6 +388,10 @@ describe("vitalsToInitialDraft", () => {
         goalType: "emergency_fund",
         goalAmount: "",
         goalTimeline: "",
+        aiSuggestionsApplied: false,
+        aiCategories: [],
+        aiBudgetSplit: null,
+        priorityExpenses: [],
       });
     });
 
@@ -407,7 +412,23 @@ describe("vitalsToInitialDraft", () => {
         goalType: null,
         goalAmount: "",
         goalTimeline: "",
+        aiSuggestionsApplied: false,
+        aiCategories: [],
+        aiBudgetSplit: null,
+        priorityExpenses: [],
       });
     });
+  });
+});
+
+describe("getMonthlyBudgetIncome", () => {
+  it("returns gross monthly when autoTax is off", () => {
+    expect(getMonthlyBudgetIncome("4000", "monthly", false)).toBe(4000);
+  });
+
+  it("returns net take-home when autoTax is on", () => {
+    const net = getMonthlyBudgetIncome("5000", "monthly", true);
+    expect(net).toBeGreaterThan(0);
+    expect(net).toBeLessThan(5000);
   });
 });

@@ -27,12 +27,23 @@ type Props = {
   lessonId: string;
   questions: QuizQuestion[];
   onComplete: (score: number, correctCount: number) => void;
+  onStartQuiz?: () => void;
 };
 
-export function LessonQuiz({ lessonId, questions, onComplete }: Props) {
+function shuffleOptions(q: QuizQuestion): QuizQuestion {
+  const correct = q.options[q.correctIndex];
+  const shuffled = [...q.options].sort(() => Math.random() - 0.5);
+  const newIndex = shuffled.indexOf(correct);
+  return { ...q, options: shuffled, correctIndex: newIndex };
+}
+
+export function LessonQuiz({ lessonId, questions, onComplete, onStartQuiz }: Props) {
   const [quizState, setQuizState] = useState<QuizState>("idle");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
+  const [shuffled, setShuffled] = useState<QuizQuestion[] | null>(null);
+
+  const activeQuestions = shuffled ?? questions;
 
   const handleAnswered = useCallback((_correct: boolean, _firstAttempt: boolean) => {
     if (_correct) {
@@ -41,31 +52,33 @@ export function LessonQuiz({ lessonId, questions, onComplete }: Props) {
   }, []);
 
   const handleNext = useCallback(() => {
-    if (currentIndex < questions.length - 1) {
+    if (currentIndex < activeQuestions.length - 1) {
       setCurrentIndex((i) => i + 1);
     } else {
-      // All questions done — show results
       setQuizState("results");
     }
-  }, [currentIndex, questions.length]);
+  }, [currentIndex, activeQuestions.length]);
 
   const handleRetry = useCallback(() => {
+    setShuffled(questions.map(shuffleOptions));
     setCurrentIndex(0);
     setCorrectCount(0);
     setQuizState("active");
-  }, []);
+  }, [questions]);
 
   const handleContinue = useCallback(() => {
-    const score = questions.length > 0 ? correctCount / questions.length : 0;
+    const score = activeQuestions.length > 0 ? correctCount / activeQuestions.length : 0;
     onComplete(score, correctCount);
-  }, [correctCount, questions.length, onComplete]);
+  }, [correctCount, activeQuestions.length, onComplete]);
 
   const startQuiz = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShuffled(questions.map(shuffleOptions));
     setCurrentIndex(0);
     setCorrectCount(0);
     setQuizState("active");
-  }, []);
+    onStartQuiz?.();
+  }, [questions, onStartQuiz]);
 
   // ── IDLE STATE ──────────────────────────────────────────────────────────────
   if (quizState === "idle") {
@@ -94,7 +107,7 @@ export function LessonQuiz({ lessonId, questions, onComplete }: Props) {
     return (
       <QuizResults
         correctCount={correctCount}
-        totalCount={questions.length}
+        totalCount={activeQuestions.length}
         onRetry={handleRetry}
         onContinue={handleContinue}
       />
@@ -102,18 +115,18 @@ export function LessonQuiz({ lessonId, questions, onComplete }: Props) {
   }
 
   // ── ACTIVE STATE ────────────────────────────────────────────────────────────
-  const currentQuestion = questions[currentIndex];
+  const currentQuestion = activeQuestions[currentIndex];
   if (!currentQuestion) return null;
 
   return (
     <QuizCard
-      key={`${lessonId}-q${currentIndex}`}
+      key={`${lessonId}-q${currentIndex}-${shuffled ? "s" : "u"}`}
       question={currentQuestion}
       questionNumber={currentIndex + 1}
-      totalQuestions={questions.length}
+      totalQuestions={activeQuestions.length}
       onAnswered={handleAnswered}
       onNext={handleNext}
-      isLastQuestion={currentIndex === questions.length - 1}
+      isLastQuestion={currentIndex === activeQuestions.length - 1}
     />
   );
 }

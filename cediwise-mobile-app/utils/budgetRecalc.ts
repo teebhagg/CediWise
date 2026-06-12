@@ -28,8 +28,8 @@ export type BudgetRecalcOptions = {
 
 /**
  * Recalculate category limits from current allocations using weighted distribution.
- * Uses disposable income (net − recurring) for bucket totals when recurring data is supplied.
- * Recurring rows with autoAllocate reserve category limits via fixedAmount.
+ * Bucket totals use full net income; recurring rows do not reduce the envelope base.
+ * Recurring rows with autoAllocate optionally reserve category limits via fixedAmount.
  */
 export function recalculateBudgetFromAllocations(
   state: BudgetState,
@@ -47,16 +47,12 @@ export function recalculateBudgetFromAllocations(
     recurring,
     new Date(),
   );
-  const totalRecurringMonthly = effectiveRecurring.reduce(
-    (sum, e) => sum + toMonthlyEquivalentAmount(e.amount, e.frequency),
-    0,
-  );
-  const disposableIncome = Math.max(0, monthlyNetIncome - totalRecurringMonthly);
+  const budgetBaseline = Math.max(0, monthlyNetIncome);
 
   const bucketTotals: Record<BudgetBucket, number> = {
-    needs: disposableIncome * activeCycle.needsPct,
-    wants: disposableIncome * activeCycle.wantsPct,
-    savings: disposableIncome * activeCycle.savingsPct,
+    needs: budgetBaseline * activeCycle.needsPct,
+    wants: budgetBaseline * activeCycle.wantsPct,
+    savings: budgetBaseline * activeCycle.savingsPct,
   };
 
   const now = new Date().toISOString();

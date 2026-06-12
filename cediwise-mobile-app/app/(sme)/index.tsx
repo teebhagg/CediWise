@@ -73,7 +73,8 @@ export default function SMEDashboardScreen() {
     setRefreshing(true);
     const start = Date.now();
     try {
-      await sme.hydrate();
+      await sme.syncNow();
+      await sme.hydrate({ force: true });
     } finally {
       await waitWhile(() => useSMELedgerStore.getState().isLoading, {
         timeoutMs: 15_000,

@@ -414,7 +414,8 @@ export default function RecurringExpensesScreen() {
               <Text style={styles.emptyTitle}>No Recurring Expenses</Text>
               <Text style={styles.emptyText}>
                 Add subscriptions, memberships, or regular payments to track
-                them automatically.
+                commitments. Log them under Expenses when you pay — that is what
+                reduces your flexible budget.
               </Text>
             </Card>
           </Animated.View>

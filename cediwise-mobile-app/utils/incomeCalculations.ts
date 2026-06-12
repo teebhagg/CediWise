@@ -24,8 +24,9 @@ export function getMonthlyNetIncome(
 }
 
 /**
- * Net income minus effective recurring commitments (active, in date range).
- * Bucket percentages should apply to `disposableIncome`.
+ * Budget baseline from net income plus recurring totals for planning display.
+ * Recurring rows in the Recurring Expenses section do not reduce `disposableIncome`;
+ * only logged transactions (add/batch expense) reduce flexible budget via spend totals.
  */
 export function getMonthlyDisposableIncome(
   incomeSources: IncomeSource[],
@@ -44,6 +45,6 @@ export function getMonthlyDisposableIncome(
   return {
     netIncome,
     totalRecurringMonthly,
-    disposableIncome: Math.max(0, netIncome - totalRecurringMonthly),
+    disposableIncome: Math.max(0, netIncome),
   };
 }

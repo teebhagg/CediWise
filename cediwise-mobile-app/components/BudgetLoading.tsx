@@ -5,6 +5,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
+  withSequence,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -85,35 +86,55 @@ export function BudgetLoadingSkeleton() {
 
 export function InlineSyncPill({ visible, label, className }: { visible: boolean; label: string; className?: string }) {
   const spin = useSharedValue(0);
+  const pulse = useSharedValue(0);
 
   useEffect(() => {
     if (!visible) return;
-    spin.value = withRepeat(withTiming(1, { duration: 900, easing: Easing.linear }), -1, false);
-  }, [spin, visible]);
+    spin.value = withRepeat(
+      withTiming(1, { duration: 1100, easing: Easing.linear }),
+      -1,
+      false,
+    );
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 700, easing: Easing.inOut(Easing.quad) }),
+        withTiming(0, { duration: 700, easing: Easing.inOut(Easing.quad) }),
+      ),
+      -1,
+      true,
+    );
+  }, [pulse, spin, visible]);
 
   const spinStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${spin.value * 360}deg` }],
+  }));
+
+  const glowStyle = useAnimatedStyle(() => ({
+    opacity: 0.35 + pulse.value * 0.45,
+    transform: [{ scale: 0.92 + pulse.value * 0.12 }],
   }));
 
   if (!visible) return null;
 
   return (
     <View className={`flex-row items-center gap-2.5 px-3 py-2.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 ${className}`}>
-      <Animated.View
-        style={[
-          {
-            width: 14,
-            height: 14,
-            borderRadius: 7,
-            borderWidth: 2,
-            borderTopColor: 'rgba(226,232,240,0.95)',
-            borderRightColor: 'rgba(226,232,240,0.35)',
-            borderBottomColor: 'rgba(226,232,240,0.35)',
-            borderLeftColor: 'rgba(226,232,240,0.35)',
-          },
-          spinStyle,
-        ]}
-      />
+      <Animated.View style={glowStyle}>
+        <Animated.View
+          style={[
+            {
+              width: 14,
+              height: 14,
+              borderRadius: 7,
+              borderWidth: 2,
+              borderTopColor: 'rgba(167, 243, 208, 0.95)',
+              borderRightColor: 'rgba(167, 243, 208, 0.2)',
+              borderBottomColor: 'rgba(167, 243, 208, 0.2)',
+              borderLeftColor: 'rgba(167, 243, 208, 0.55)',
+            },
+            spinStyle,
+          ]}
+        />
+      </Animated.View>
       <Text className="text-slate-200 font-medium text-xs">{label}</Text>
     </View>
   );

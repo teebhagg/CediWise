@@ -1,0 +1,5 @@
+• Onboarding videos: preview Smart Budget, SME Ledger, Tax & Salary, and Learn before you start.
+• Vitals AI: smarter suggestions, fewer duplicates, and better matching to your priority expenses.
+• Budget sync stays reliable on app open, after Vitals, and on the Budget tab—pull down to refresh anytime.
+• Weekly expense reminders (Mondays at 8 PM) with varied messages replace daily nudges.
+• Clearer recurring bills, improved SME refresh, and polish throughout.

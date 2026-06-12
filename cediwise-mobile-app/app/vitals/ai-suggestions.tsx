@@ -9,7 +9,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 export default function AISuggestionsRoute() {
   const params = useLocalSearchParams<{ monthlyIncomeStr: string }>();
   const router = useRouter();
-  const { rawSuggestions, updateCurrent } = usePendingAISelections();
+  const { rawSuggestions, priorityExpenses, updateCurrent } = usePendingAISelections();
 
   const suggestions = rawSuggestions;
   const monthlyIncome = parseFloat(params.monthlyIncomeStr ?? "");
@@ -47,6 +47,7 @@ export default function AISuggestionsRoute() {
     <AISuggestionsScreen
       suggestions={suggestions}
       monthlyIncome={monthlyIncome}
+      priorityExpenses={priorityExpenses}
       onApply={handleApply}
       onSkip={handleSkip}
       onBack={handleBack}

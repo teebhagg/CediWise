@@ -26,6 +26,10 @@ import type {
 } from "../types/budget";
 import { logActivity } from "../utils/activityLog";
 import {
+  findPrimaryIncomeSource,
+  isPrimaryIncomeCandidate,
+} from "../utils/incomeSourceHelpers";
+import {
   blendAllocation,
   getHistoricalAvgByCategory,
 } from "../utils/allocationBlending";
@@ -128,6 +132,10 @@ function categoryToPayload(cat: BudgetCategory): Record<string, unknown> {
   };
 }
 
+function isWantsOthersCategory(bucket: BudgetBucket, name: string): boolean {
+  return bucket === "wants" && name.trim().toLowerCase() === "others";
+}
+
 function seedCategories(interests?: string[]) {
   // NOTE: Keep categories small + stable; budgets are edited frequently on mobile.
   // Wants are the main personalization surface (based on interests).
@@ -154,14 +162,15 @@ function seedCategories(interests?: string[]) {
 
     // Fill with sensible defaults if no/low interest signal.
     const fallbacks = ["Dining Out", "Clothing", "Hobbies"] as const;
-    const out = [...base, ...picked, ...fallbacks];
+    const out = [...base, ...picked, ...fallbacks, "Others"];
     const uniq: string[] = [];
     for (const name of out) {
       const normalized = name.trim();
       if (!normalized) continue;
       if (!uniq.includes(normalized)) uniq.push(normalized);
     }
-    return uniq.slice(0, 5);
+    const withoutOthers = uniq.filter((name) => name !== "Others");
+    return [...withoutOthers.slice(0, 4), "Others"];
   };
 
   return {
@@ -216,6 +225,12 @@ export type UseBudgetReturn = {
     seedCategories?: boolean;
     /** Fixed amounts from vitals (e.g. Rent, ECG) for obligation-first allocation */
     fixedAmountsByCategory?: Record<string, number>;
+    /** AI or vitals categories with explicit limits (merged into seeded lists) */
+    customCategories?: {
+      name: string;
+      bucket: BudgetBucket;
+      limitAmount: number;
+    }[];
     lifeStage?: "student" | "young_professional" | "family" | "retiree" | null;
   }) => Promise<void>;
   computeNewCyclePreview: () => {
@@ -441,8 +456,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       new Date(),
     );
 
-    // Bucket limits are shares of disposable income only when it is positive;
-    // non-positive disposable must not produce negative limits for consumers.
+    // Bucket limits are shares of full net income when positive.
     const limitsBase = disposableIncome > 0 ? disposableIncome : 0;
     const needsLimit = limitsBase * activeCycle.needsPct;
     const wantsLimit = limitsBase * activeCycle.wantsPct;
@@ -514,6 +528,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       interests,
       seedCategories: shouldSeedCategories = true,
       fixedAmountsByCategory,
+      customCategories,
       lifeStage,
     }: {
       paydayDay: number;
@@ -523,6 +538,11 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       interests?: string[];
       seedCategories?: boolean;
       fixedAmountsByCategory?: Record<string, number>;
+      customCategories?: {
+        name: string;
+        bucket: BudgetBucket;
+        limitAmount: number;
+      }[];
       lifeStage?:
         | "student"
         | "young_professional"
@@ -591,6 +611,28 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         ];
       }
 
+      const categoryKey = (bucket: BudgetBucket, name: string) =>
+        `${bucket}:${name.trim().toLowerCase()}`;
+      const existingKeys = new Set(
+        allNames.map(({ bucket, name }) => categoryKey(bucket, name)),
+      );
+      for (const custom of customCategories ?? []) {
+        const normalized = custom.name.trim();
+        if (
+          !normalized ||
+          (custom.limitAmount <= 0 && !isWantsOthersCategory(custom.bucket, normalized))
+        ) {
+          continue;
+        }
+        const key = categoryKey(custom.bucket, normalized);
+        if (existingKeys.has(key)) continue;
+        existingKeys.add(key);
+        allNames.push({ bucket: custom.bucket, name: normalized });
+        if (custom.bucket === "needs" && !needsList.includes(normalized)) {
+          needsList.push(normalized);
+        }
+      }
+
       const recurringSnap =
         useRecurringExpensesStore.getState().recurringExpenses;
       const { disposableIncome } = getMonthlyDisposableIncome(
@@ -630,13 +672,15 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
             : bucket === "wants"
               ? seeded.wants
               : seeded.savings;
-        const inputs: CategoryLimitInput[] = names.map((name) => ({
-          name,
-          bucket,
-          fixedAmount: mergedFixed[name],
-          manualOverride:
-            bucket === "needs" && name.trim().toLowerCase() === "emergency",
-        }));
+        const inputs: CategoryLimitInput[] = names
+          .filter((name) => !isWantsOthersCategory(bucket, name))
+          .map((name) => ({
+            name,
+            bucket,
+            fixedAmount: mergedFixed[name],
+            manualOverride:
+              bucket === "needs" && name.trim().toLowerCase() === "emergency",
+          }));
         const limits = computeWeightedCategoryLimits(
           bucketTotals[bucket],
           inputs,
@@ -652,12 +696,38 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           );
           limitByKey.set(`${bucket}:${name}`, blended);
         });
+        for (const name of names) {
+          if (isWantsOthersCategory(bucket, name)) {
+            limitByKey.set(`${bucket}:${name}`, 0);
+          }
+        }
+      }
+
+      const customLimitByKey = new Map<string, number>();
+      for (const custom of customCategories ?? []) {
+        const normalized = custom.name.trim();
+        if (
+          !normalized ||
+          (custom.limitAmount <= 0 && !isWantsOthersCategory(custom.bucket, normalized))
+        ) {
+          continue;
+        }
+        customLimitByKey.set(
+          categoryKey(custom.bucket, normalized),
+          custom.limitAmount,
+        );
+        limitByKey.set(`${custom.bucket}:${normalized}`, custom.limitAmount);
       }
 
       const categories: BudgetCategory[] = allNames.map(
         ({ bucket, name }, index) => {
-          const limitAmount = limitByKey.get(`${bucket}:${name}`) ?? 0;
-          const isFixed = (mergedFixed[name] ?? 0) > 0;
+          const key = categoryKey(bucket, name);
+          const computedLimit = limitByKey.get(`${bucket}:${name}`) ?? 0;
+          const customLimit = customLimitByKey.get(key);
+          const limitAmount = customLimit ?? computedLimit;
+          const isFixed =
+            customLimit != null || (mergedFixed[name] ?? 0) > 0;
+          const isCustom = customLimit != null;
           return {
             id: uuidv4(),
             userId,
@@ -665,7 +735,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
             bucket,
             name,
             limitAmount: Math.max(0, Math.round(limitAmount * 100) / 100),
-            isCustom: false,
+            isCustom,
             parentId: null,
             sortOrder: index,
             suggestedLimit: null,
@@ -1128,18 +1198,31 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       const current =
         useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
       const now = new Date().toISOString();
+      const existingPrimary = findPrimaryIncomeSource(current.incomeSources);
+      const reusingPrimary =
+        !!existingPrimary && isPrimaryIncomeCandidate(name, type);
+      const resolvedType: IncomeSourceType = reusingPrimary ? "primary" : type;
       const source: IncomeSource = {
-        id: uuidv4(),
+        id: reusingPrimary ? existingPrimary!.id : uuidv4(),
         userId,
-        name: name.trim() || "Income",
-        type,
+        name:
+          name.trim() ||
+          (reusingPrimary ? existingPrimary!.name : "Income"),
+        type: resolvedType,
         amount: Math.max(0, amount),
-        applyDeductions: type === "primary" ? applyDeductions : false,
-        createdAt: now,
+        applyDeductions:
+          resolvedType === "primary" ? applyDeductions : false,
+        createdAt: reusingPrimary
+          ? existingPrimary!.createdAt
+          : now,
         updatedAt: now,
       };
 
-      const nextIncomeSources = [source, ...current.incomeSources];
+      const nextIncomeSources = reusingPrimary
+        ? current.incomeSources.map((s) =>
+            s.id === existingPrimary!.id ? source : s,
+          )
+        : [source, ...current.incomeSources];
       const tempState: BudgetState = {
         ...current,
         incomeSources: nextIncomeSources,

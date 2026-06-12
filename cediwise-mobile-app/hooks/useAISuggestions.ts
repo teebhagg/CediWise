@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/utils/supabase";
 import { getStoredAuthData, refreshStoredSession } from "@/utils/auth";
 import { analytics } from "@/utils/analytics";
-import type { AIProfileSuggestions, AISuggestionCategory, AISuggestionRecurring, AISuggestionGoal } from "@/types/ai";
+import type { AIProfileSuggestions } from "@/types/ai";
 import { log } from "@/utils/logger";
 
 export interface UseAISuggestionsParams {
@@ -13,8 +13,11 @@ export interface UseAISuggestionsParams {
   spendingStyle: string | null;
   financialPriority: string | null;
   interests: string[];
+  priorityExpenses?: string[];
   existingRecurring: string[];
   country?: string;
+  /** Net or gross monthly income used for budget math (client-computed). */
+  monthlyBudgetIncome?: number;
 }
 
 async function resolveAccessToken(): Promise<string | null> {
@@ -56,8 +59,10 @@ export function useAISuggestions() {
           spendingStyle: params.spendingStyle,
           financialPriority: params.financialPriority,
           interests: params.interests,
+          priorityExpenses: params.priorityExpenses ?? [],
           existingRecurring: params.existingRecurring,
-          country: params.country ?? "GH"
+          country: params.country ?? "GH",
+          monthlyBudgetIncome: params.monthlyBudgetIncome,
         },
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -70,16 +75,17 @@ export function useAISuggestions() {
 
       // Wrap suggestions with 'accepted' state
       const raw = data.suggestions;
+      // Server normalizeProfileSuggestion is authoritative; avoid re-deduping client-side.
       const wrapped: AIProfileSuggestions = {
         ...raw,
-        categories: (raw.categories || []).map((c: any) => ({ ...c, accepted: false })),
-        recurringExpenses: (raw.recurringExpenses || []).map((r: any) => ({ ...r, accepted: false })),
-        goals: (raw.goals || []).map((g: any, idx: number) => ({
+        categories: (raw.categories || []).map((c: { id: string; name: string; bucket: string; suggestedLimit: number; reason?: string; confidence?: number }) => ({ ...c, accepted: false })),
+        recurringExpenses: (raw.recurringExpenses || []).map((r: { id: string; name: string; amount: number; bucket: string; reason?: string; confidence?: number }) => ({ ...r, accepted: false })),
+        goals: (raw.goals || []).map((g: { id?: string; type: string; amount: number; timelineMonths: number; reason?: string; confidence?: number }, idx: number) => ({
           ...g,
           id: g.id || `goal-${idx}-${Date.now()}`,
           accepted: false,
         })),
-        economicContext: data.economicContext
+        economicContext: data.economicContext,
       };
 
       setSuggestions(wrapped);

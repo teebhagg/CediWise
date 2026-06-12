@@ -15,10 +15,21 @@ export type PersonalizationStoreState = {
 export type PersonalizationStoreActions = {
   initForUser: (userId: string | null) => Promise<void>;
   refresh: () => Promise<void>;
+  /** After vitals finish — hide personalization banner before remote catches up. */
+  applyOptimisticSetupCompleted: () => void;
 };
 
 export type PersonalizationStore =
   PersonalizationStoreState & PersonalizationStoreActions;
+
+function mergePersonalizationFromRemote(
+  cachedSetupCompleted: boolean,
+  remote: { exists: boolean; setupCompleted: boolean },
+): { setupCompleted: boolean; hasProfile: boolean } {
+  const setupCompleted = remote.setupCompleted || cachedSetupCompleted;
+  const hasProfile = remote.exists || setupCompleted;
+  return { setupCompleted, hasProfile };
+}
 
 export const usePersonalizationStore = create<PersonalizationStore>(
   (set, get) => ({
@@ -29,7 +40,11 @@ export const usePersonalizationStore = create<PersonalizationStore>(
 
     initForUser: async (userId: string | null) => {
       const { userId: currentUserId, isLoading: currentLoading } = get();
-      if (userId === currentUserId && (currentLoading || currentUserId !== null)) {
+      if (userId === currentUserId && currentLoading) {
+        return;
+      }
+      if (userId === currentUserId && userId !== null) {
+        void get().refresh();
         return;
       }
 
@@ -39,6 +54,12 @@ export const usePersonalizationStore = create<PersonalizationStore>(
         return;
       }
       await get().refresh();
+    },
+
+    applyOptimisticSetupCompleted: () => {
+      const { userId } = get();
+      if (!userId) return;
+      set({ setupCompleted: true, hasProfile: true, isLoading: false });
     },
 
     refresh: async () => {
@@ -52,26 +73,37 @@ export const usePersonalizationStore = create<PersonalizationStore>(
       set({ isLoading: true });
 
       const cached = await readPersonalizationStatusCache(startUserId);
+      const cachedSetupCompleted = cached?.setupCompleted === true;
       if (cached && get().userId === startUserId) {
-        set({ setupCompleted: cached.setupCompleted, isLoading: false });
+        set({
+          setupCompleted: cached.setupCompleted,
+          hasProfile: cached.setupCompleted,
+          isLoading: false,
+        });
       }
 
       try {
         const remote = await fetchPersonalizationStatusRemote(startUserId);
         if (get().userId !== startUserId) return;
-        set({ hasProfile: remote.exists, setupCompleted: remote.setupCompleted });
+        const merged = mergePersonalizationFromRemote(
+          cachedSetupCompleted,
+          remote,
+        );
+        set(merged);
         await writePersonalizationStatusCache(
           startUserId,
-          remote.setupCompleted
+          merged.setupCompleted,
         );
       } catch {
         if (get().userId !== startUserId) return;
-        set({ hasProfile: false });
+        if (!cachedSetupCompleted) {
+          set({ hasProfile: false });
+        }
       } finally {
         if (get().userId === startUserId) {
           set({ isLoading: false });
         }
       }
     },
-  })
+  }),
 );

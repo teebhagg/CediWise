@@ -18,10 +18,6 @@ const MIN_HOME_FOCUS_COUNT = 4;
 const MIN_DAYS_AFTER_FIRST_FOCUS = 5;
 const SHOW_DELAY_MS = 2800;
 
-/** In dev builds, show on every home focus (for QA); skips cooldowns and dismiss persistence. */
-const FORCE_PROMPT_EACH_FOCUS_DEV = typeof __DEV__ !== "undefined" && __DEV__;
-const SHOW_DELAY_MS_DEV = 500;
-
 const DISMISS_COOLDOWN_MS = 21 * 24 * 60 * 60 * 1000;
 const AFTER_SUBMIT_COOLDOWN_MS = 75 * 24 * 60 * 60 * 1000;
 
@@ -75,7 +71,6 @@ export function usePeriodicFeedbackPrompt({
   }, []);
 
   const persistDismiss = useCallback(async () => {
-    if (FORCE_PROMPT_EACH_FOCUS_DEV) return;
     if (!userId) return;
     try {
       const prev = await loadFeedbackPromptState(userId);
@@ -100,20 +95,6 @@ export function usePeriodicFeedbackPrompt({
 
     clearShowTimer();
     openedThisFocusRef.current = false;
-
-    if (FORCE_PROMPT_EACH_FOCUS_DEV) {
-      if (!userId || !userEmail?.trim() || authLoading || isHomeLoading) {
-        return;
-      }
-      showTimerRef.current = setTimeout(() => {
-        showTimerRef.current = null;
-        if (stale()) return;
-        if (openedThisFocusRef.current) return;
-        openedThisFocusRef.current = true;
-        setModalVisible(true);
-      }, SHOW_DELAY_MS_DEV);
-      return;
-    }
 
     if (
       !userId ||
@@ -230,7 +211,7 @@ export function usePeriodicFeedbackPrompt({
 
   const onNeverAsk = useCallback(async () => {
     dismissUiOnly();
-    if (FORCE_PROMPT_EACH_FOCUS_DEV || !userId) return;
+    if (!userId) return;
     await persistDismiss();
     try {
       const prev = await loadFeedbackPromptState(userId);
@@ -291,18 +272,16 @@ export function usePeriodicFeedbackPrompt({
 
         dismissUiOnly();
 
-        if (!FORCE_PROMPT_EACH_FOCUS_DEV) {
-          try {
-            const prev = await loadFeedbackPromptState(userId);
-            const submittedAt = new Date().toISOString();
-            await saveFeedbackPromptState(userId, {
-              ...prev,
-              lastQuickSubmitAt: submittedAt,
-              lastSubmittedAt: submittedAt,
-            });
-          } catch (e) {
-            console.warn("Failed to persist feedback prompt submit state:", e);
-          }
+        try {
+          const prev = await loadFeedbackPromptState(userId);
+          const submittedAt = new Date().toISOString();
+          await saveFeedbackPromptState(userId, {
+            ...prev,
+            lastQuickSubmitAt: submittedAt,
+            lastSubmittedAt: submittedAt,
+          });
+        } catch (e) {
+          console.warn("Failed to persist feedback prompt submit state:", e);
         }
 
         return { ok: true };

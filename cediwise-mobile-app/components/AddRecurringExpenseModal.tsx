@@ -64,7 +64,7 @@ export function AddRecurringExpenseModal({
   const [frequency, setFrequency] =
     useState<RecurringExpenseFrequency>("monthly");
   const [bucket, setBucket] = useState<BudgetBucket>("wants");
-  const [autoAllocate, setAutoAllocate] = useState(true);
+  const [autoAllocate, setAutoAllocate] = useState(false);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [endDate, setEndDate] = useState("");
   const [error, setError] = useState<string | undefined>();
@@ -91,7 +91,7 @@ export function AddRecurringExpenseModal({
       setAmount("");
       setFrequency("monthly");
       setBucket("wants");
-      setAutoAllocate(true);
+      setAutoAllocate(false);
       setCategoryId(null);
       setEndDate("");
     }
@@ -116,7 +116,7 @@ export function AddRecurringExpenseModal({
         0,
       );
     if (others + monthlyNew > netIncomeMonthly * 0.95) {
-      return "Recurring bills are close to your net income — little room left for flexible spending.";
+      return "Tracked recurring bills are close to your net income — remember to log payments under Expenses.";
     }
     return null;
   }, [amount, editing?.id, frequency, netIncomeMonthly, peerRecurring]);
@@ -349,7 +349,12 @@ export function AddRecurringExpenseModal({
             setAutoAllocate((v) => !v);
           }}
           style={styles.toggleRow}>
-          <Text style={styles.toggleLabel}>Auto-allocate each cycle</Text>
+          <View style={styles.toggleCopy}>
+            <Text style={styles.toggleLabel}>Auto-allocate to category</Text>
+            <Text style={styles.toggleHint}>
+              Optional — reserves category limit; log under Expenses when paid.
+            </Text>
+          </View>
           <View style={[styles.toggle, autoAllocate && styles.toggleOn]}>
             <View
               style={[styles.toggleThumb, autoAllocate && styles.toggleThumbOn]}
@@ -398,11 +403,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    gap: 12,
     paddingVertical: 8,
+  },
+  toggleCopy: {
+    flex: 1,
+    gap: 4,
   },
   toggleLabel: {
     fontSize: 14,
     color: "#E2E8F0",
+  },
+  toggleHint: {
+    fontSize: 11,
+    color: "#94A3B8",
+    lineHeight: 15,
   },
   toggle: {
     width: 48,

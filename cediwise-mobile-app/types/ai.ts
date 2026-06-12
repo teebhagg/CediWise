@@ -167,7 +167,7 @@ export interface AISuggestionRecurring {
   id: string;
   name: string;
   amount: number;
-  bucket: "needs" | "wants";
+  bucket: "needs" | "wants" | "savings";
   reason: string;
   confidence: number;
   accepted: boolean;
@@ -179,6 +179,7 @@ export interface AISuggestionGoal {
   amount: number;
   timelineMonths: number;
   reason: string;
+  confidence?: number;
   accepted: boolean;
 }
 

@@ -85,7 +85,7 @@ const ExpandableRecurringSection = memo(function ExpandableRecurringSection({
         accessibilityHint={
           expanded
             ? 'Collapses explanation'
-            : 'Shows how recurring bills affect your flexible budget'
+            : 'Shows how recurring bills are tracked separately from logged spending'
         }
         className="flex-row items-center gap-3 px-3 py-3 min-h-[48px]"
         style={({ pressed }) => ({ opacity: pressed ? 0.88 : 1 })}
@@ -113,7 +113,7 @@ const ExpandableRecurringSection = memo(function ExpandableRecurringSection({
             className="text-slate-500 text-[11px] leading-[16px]"
             numberOfLines={3}
           >
-            {"Fixed bills — flexible budget uses what's left after this."}
+            {"Tracked bills — log them under Expenses when paid; they don't reduce net until then."}
           </Text>
         </View>
       </Animated.View>
@@ -188,7 +188,7 @@ function VitalHeroCardInner({
               </Text>
               <Text
                 className="text-emerald-400 font-semibold text-xs mt-0.5"
-                accessibilityLabel={`Flexible budget remaining ${formatCurrency(flexibleLeft)} Ghana cedis after recurring bills and logged spending`}
+                accessibilityLabel={`Flexible budget remaining ${formatCurrency(flexibleLeft)} Ghana cedis after logged spending this cycle`}
               >
                 ₵{formatCurrency(flexibleLeft)}
               </Text>

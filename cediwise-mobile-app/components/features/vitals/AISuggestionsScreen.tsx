@@ -5,8 +5,42 @@ import React, { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import Animated, { FadeIn, useAnimatedStyle, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { expenseMatchesPriority } from "./expenseMatching";
 import { SuggestionCard } from "./SuggestionCard";
-import type { AppliedAISelections, BudgetTemplateKey } from "./types";
+import {
+  isWantsOthersCategory,
+  WANTS_OTHERS_CATEGORY_ID,
+} from "./wantsOthersCategory";
+import type { AppliedAISelections, BudgetTemplateKey, RecurringExpense } from "./types";
+
+const CONFIDENCE_PRESELECT = 0.7;
+
+function buildInitialSelection<T>(
+  items: T[],
+  getKey: (item: T) => string,
+  getConfidence?: (item: T) => number | undefined,
+  matchesPriority?: (item: T) => boolean,
+  priorityExpenses: string[] = [],
+): Set<string> {
+  const selected = new Set<string>();
+  if (priorityExpenses.length > 0 && matchesPriority) {
+    for (const item of items) {
+      if (matchesPriority(item)) selected.add(getKey(item));
+    }
+    if (selected.size > 0) {
+      selected.add(WANTS_OTHERS_CATEGORY_ID);
+      return selected;
+    }
+  }
+  for (const item of items) {
+    const confidence = getConfidence?.(item) ?? 1;
+    if (confidence >= CONFIDENCE_PRESELECT) {
+      selected.add(getKey(item));
+    }
+  }
+  selected.add(WANTS_OTHERS_CATEGORY_ID);
+  return selected;
+}
 // Actually, let's just inline formatGHS since I see it was local to Steps.tsx earlier:
 function formatCurrency(amount: number): string {
   return `₵${Math.round(Math.max(0, amount)).toLocaleString("en-GB")}`;
@@ -15,6 +49,7 @@ function formatCurrency(amount: number): string {
 interface AISuggestionsScreenProps {
   suggestions: AIProfileSuggestions;
   monthlyIncome: number;
+  priorityExpenses?: string[];
   onApply: (selections: AppliedAISelections) => void;
   onSkip: () => void;
   onBack: () => void;
@@ -23,16 +58,39 @@ interface AISuggestionsScreenProps {
 export function AISuggestionsScreen({
   suggestions,
   monthlyIncome,
+  priorityExpenses = [],
   onApply,
   onSkip,
   onBack
 }: AISuggestionsScreenProps) {
   const insets = useSafeAreaInsets();
 
-  // Selection state (using IDs or types as keys)
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-  const [selectedRecurring, setSelectedRecurring] = useState<Set<string>>(new Set());
-  const [selectedGoals, setSelectedGoals] = useState<Set<string>>(new Set());
+  // Selection state (using IDs or types as keys); pre-select high-confidence items
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(() =>
+    buildInitialSelection(
+      suggestions.categories,
+      (c) => c.id,
+      (c) => c.confidence,
+      (c) => expenseMatchesPriority(c.name, priorityExpenses),
+      priorityExpenses,
+    ),
+  );
+  const [selectedRecurring, setSelectedRecurring] = useState<Set<string>>(() =>
+    buildInitialSelection(
+      suggestions.recurringExpenses.filter((r) => r.bucket !== "savings"),
+      (r) => r.id,
+      (r) => r.confidence,
+      (r) => expenseMatchesPriority(r.name, priorityExpenses),
+      priorityExpenses,
+    ),
+  );
+  const [selectedGoals, setSelectedGoals] = useState<Set<string>>(() =>
+    buildInitialSelection(
+      suggestions.goals,
+      (g) => g.type,
+      (g) => g.confidence,
+    ),
+  );
 
   const [showProTip, setShowProTip] = useState(true);
 
@@ -61,21 +119,21 @@ export function AISuggestionsScreen({
     setAmountOverrides(prev => ({ ...prev, [id]: amount }));
   };
 
-  // Calculate total selected for validation
+  // Monthly allocations only — goal targets are not monthly budget lines
   const totalSelected = useMemo(() => {
     let total = 0;
-    suggestions.categories.forEach(c => {
-      if (selectedCategories.has(c.id)) total += (amountOverrides[c.id] ?? c.suggestedLimit);
+    suggestions.categories.forEach((c) => {
+      if (selectedCategories.has(c.id)) {
+        total += amountOverrides[c.id] ?? c.suggestedLimit;
+      }
     });
-    suggestions.recurringExpenses.forEach(r => {
-      if (selectedRecurring.has(r.id)) total += (amountOverrides[r.id] ?? r.amount);
-    });
-    // Assuming goals are also funded from this monthly income budget
-    suggestions.goals.forEach(g => {
-      if (selectedGoals.has(g.type)) total += (amountOverrides[g.type] ?? g.amount);
+    suggestions.recurringExpenses.forEach((r) => {
+      if (selectedRecurring.has(r.id) && r.bucket !== "savings") {
+        total += amountOverrides[r.id] ?? r.amount;
+      }
     });
     return total;
-  }, [selectedCategories, selectedRecurring, selectedGoals, amountOverrides, suggestions]);
+  }, [selectedCategories, selectedRecurring, amountOverrides, suggestions]);
 
   const isOverBudget = totalSelected > monthlyIncome;
   const remaining = Math.max(0, monthlyIncome - totalSelected);
@@ -84,18 +142,36 @@ export function AISuggestionsScreen({
   const handleApply = () => {
     if (totalSelectedCount === 0 || isOverBudget) return;
 
+    const categoryRows = suggestions.categories
+      .filter((c) =>
+        isWantsOthersCategory(c.name, c.bucket) || selectedCategories.has(c.id),
+      )
+      .map((c) => ({
+        name: c.name,
+        bucket: c.bucket,
+        limit: amountOverrides[c.id] ?? c.suggestedLimit,
+      }));
+
+    const savingsRecurringAsCategories = suggestions.recurringExpenses
+      .filter((r) => selectedRecurring.has(r.id) && r.bucket === "savings")
+      .map((r) => ({
+        name: r.name,
+        bucket: "savings" as const,
+        limit: amountOverrides[r.id] ?? r.amount,
+      }));
+
+    const recurringExpenses: RecurringExpense[] = suggestions.recurringExpenses
+      .filter((r) => selectedRecurring.has(r.id) && r.bucket !== "savings")
+      .map((r) => ({
+        id: r.id,
+        name: r.name,
+        bucket: r.bucket === "needs" ? "needs" : "wants",
+        amount: String(amountOverrides[r.id] ?? r.amount),
+      }));
+
     const appliedSelections: AppliedAISelections = {
-      categories: suggestions.categories
-        .filter(c => selectedCategories.has(c.id))
-        .map(c => ({ name: c.name, bucket: c.bucket, limit: amountOverrides[c.id] ?? c.suggestedLimit })),
-      recurringExpenses: suggestions.recurringExpenses
-        .filter((r) => selectedRecurring.has(r.id))
-        .map((r) => ({
-          id: r.id,
-          name: r.name,
-          bucket: r.bucket,
-          amount: String(amountOverrides[r.id] ?? r.amount),
-        })),
+      categories: [...categoryRows, ...savingsRecurringAsCategories],
+      recurringExpenses,
       goals: suggestions.goals
         .filter((g) => selectedGoals.has(g.type))
         .map((g) => ({
@@ -104,6 +180,13 @@ export function AISuggestionsScreen({
           goalTimeline: String(g.timelineMonths),
         })),
       templateKey: suggestions.templateKey as BudgetTemplateKey,
+      budgetSplit: suggestions.budgetSplit
+        ? {
+            needsPct: suggestions.budgetSplit.needsPct,
+            wantsPct: suggestions.budgetSplit.wantsPct,
+            savingsPct: suggestions.budgetSplit.savingsPct,
+          }
+        : undefined,
     };
 
     onApply(appliedSelections);
@@ -138,7 +221,7 @@ export function AISuggestionsScreen({
       {/* Income Budget Bar (Sticky) */}
       <View style={styles.budgetBarContainer}>
         <View style={styles.budgetBarHeader}>
-          <Text style={styles.budgetBarTitle}>Monthly Income</Text>
+          <Text style={styles.budgetBarTitle}>Monthly budget income</Text>
           <Text style={styles.budgetBarAmount}>{formatCurrency(monthlyIncome)}</Text>
         </View>
 
@@ -182,8 +265,9 @@ export function AISuggestionsScreen({
               <Text style={styles.sectionTitle}>Suggested Categories</Text>
               <View style={styles.sectionLine} />
             </View>
-            {suggestions.categories.map(c => {
-              const accepted = selectedCategories.has(c.id);
+            {suggestions.categories.map((c) => {
+              const isOthers = isWantsOthersCategory(c.name, c.bucket);
+              const accepted = isOthers || selectedCategories.has(c.id);
               const val = amountOverrides[c.id] ?? c.suggestedLimit;
               return (
                 <SuggestionCard
@@ -193,7 +277,10 @@ export function AISuggestionsScreen({
                   amount={formatCurrency(val)}
                   reason={c.reason}
                   accepted={accepted}
-                  editable={true}
+                  editable={!isOthers}
+                  allowZeroAmount={isOthers}
+                  selectionIcon={isOthers ? "plus" : "checkbox"}
+                  toggleDisabled={isOthers}
                   onAmountChange={(num) => setOverride(c.id, num)}
                   onToggle={() => toggleCategory(c.id)}
                 />

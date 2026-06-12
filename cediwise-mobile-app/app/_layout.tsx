@@ -3,12 +3,13 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as Sentry from "@sentry/react-native";
 import * as SplashScreen from "expo-splash-screen";
+import { Asset } from "expo-asset";
 // import { StatusBar } from 'expo-status-bar';
 import { TriggerProvider } from "@/contexts/TriggerContext";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import * as WebBrowser from "expo-web-browser";
 import { HeroUINativeProvider } from "heroui-native";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AppState,
   InteractionManager,
@@ -53,6 +54,7 @@ import { useDebtStore } from "../stores/debtStore";
 import { usePersonalizationStore } from "../stores/personalizationStore";
 import { useProfileVitalsStore } from "../stores/profileVitalsStore";
 import { useRecurringExpensesStore } from "../stores/recurringExpensesStore";
+import { useBudgetStore } from "../stores/budgetStore";
 import { useSMELedgerStore } from "../stores/smeLedgerStore";
 import {
   hasHydratedThisSession,
@@ -77,25 +79,40 @@ SplashScreen.preventAutoHideAsync();
  */
 function AppShell() {
   const { user } = useAuth();
-  const { hydrateFromRemote } = useBudget(user?.id);
+  const { hydrateFromRemote, syncNow } = useBudget(user?.id);
   useBudgetPreferenceBootstrap(user?.id);
+  const sessionBootstrapRef = useRef(false);
+  const lastForegroundSyncRef = useRef(0);
+  const FOREGROUND_SYNC_MIN_MS = 45_000;
 
   useEffect(() => {
     void initNotificationSystem(user?.id ?? null);
   }, [user?.id]);
 
   useEffect(() => {
+    const userId = user?.id;
     const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") {
-        void initNotificationSystem(user?.id ?? null);
-      }
+      if (state !== "active" || !userId) return;
+      void initNotificationSystem(userId);
+      const queuePending = useBudgetStore.getState().queue?.items.length ?? 0;
+      if (queuePending === 0) return;
+      const now = Date.now();
+      if (now - lastForegroundSyncRef.current < FOREGROUND_SYNC_MIN_MS) return;
+      lastForegroundSyncRef.current = now;
+      void (async () => {
+        await syncNow();
+        await hydrateFromRemote({ force: true });
+      })();
     });
     return () => sub.remove();
-  }, [user?.id]);
+  }, [user?.id, syncNow, hydrateFromRemote]);
 
   // Central Bootstrap: Initialize all critical data stores as soon as user is ready.
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      sessionBootstrapRef.current = false;
+      return;
+    }
 
     // 1. Personalization & Profile Vitals & SME Data (Parallel)
     void usePersonalizationStore.getState().initForUser(user.id);
@@ -105,19 +122,27 @@ function AppShell() {
     void useRecurringExpensesStore.getState().initForUser(user.id);
     void useDebtStore.getState().initForUser(user.id);
 
-    // 2. Budget Hydration (Once per session)
-    if (!hasHydratedThisSession()) {
-      setHydratedThisSession();
-      void (async () => {
+    // 2. Session sync: push queue, pull remote, then mark hydrated (once per session)
+    if (hasHydratedThisSession() || sessionBootstrapRef.current) return;
+    sessionBootstrapRef.current = true;
+
+    void (async () => {
+      try {
+        await syncNow();
         await hydrateFromRemote();
-        await useSMELedgerStore.getState().initForUser(user.id); // Ensure SME is ready
-        await import("../utils/smeSync").then((m) => m.flushSMEQueue(user.id!));
+        const smeSync = await import("../utils/smeSync");
+        await smeSync.hydrateSMEFromRemote(user.id);
+        await useSMELedgerStore.getState().initForUser(user.id);
+        await smeSync.flushSMEQueue(user.id);
         await import("../stores/vaultStore").then((m) =>
           m.useVaultStore.getState().initForUser(user.id),
         );
-      })();
-    }
-  }, [user?.id, hydrateFromRemote]);
+        setHydratedThisSession();
+      } catch {
+        sessionBootstrapRef.current = false;
+      }
+    })();
+  }, [user?.id, hydrateFromRemote, syncNow]);
 
   return (
     <View style={{ flex: 1, backgroundColor: "black" }}>
@@ -157,6 +182,10 @@ function AppShell() {
             options={{ headerShown: false }}
           />
           <Stack.Screen
+            name="onboarding-demos"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
             name="notifications"
             options={{ headerShown: false }}
           />
@@ -185,6 +214,8 @@ function RootLayout() {
   // Keeps tokens fresh while app is in foreground/resumed.
   useAuthRefresh();
 
+  const [videosLoaded, setVideosLoaded] = useState(false);
+
   const [fontsLoaded] = useFonts({
     "Figtree-Light": require("../assets/fonts/Figtree-Light.ttf"),
     "Figtree-Regular": require("../assets/fonts/Figtree-Regular.ttf"),
@@ -193,7 +224,25 @@ function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded) {
+    async function preloadVideos() {
+      try {
+        await Promise.all([
+          Asset.fromModule(require("../assets/videos/onboarding/smart-budget-snippet.mp4")).downloadAsync(),
+          Asset.fromModule(require("../assets/videos/onboarding/sme-snippet.mp4")).downloadAsync(),
+          Asset.fromModule(require("../assets/videos/onboarding/tax-calculator-snippet.mp4")).downloadAsync(),
+          Asset.fromModule(require("../assets/videos/onboarding/learn-snippet.mp4")).downloadAsync(),
+        ]);
+      } catch (e) {
+        console.warn("Failed to preload onboarding videos", e);
+      } finally {
+        setVideosLoaded(true);
+      }
+    }
+    preloadVideos();
+  }, []);
+
+  useEffect(() => {
+    if (fontsLoaded && videosLoaded) {
       setAppIsReady(true);
       SplashScreen.hideAsync();
     }
@@ -208,7 +257,7 @@ function RootLayout() {
       const cancel = (taxTask as { cancel?: () => void }).cancel;
       if (typeof cancel === "function") cancel();
     };
-  }, [fontsLoaded]);
+  }, [fontsLoaded, videosLoaded]);
 
   useEffect(() => {
     const isExpoGo = (Constants.appOwnership ?? "") === "expo";

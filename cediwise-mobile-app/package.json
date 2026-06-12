@@ -1,7 +1,7 @@
 {
   "name": "cediwise-mobile-app",
   "main": "expo-router/entry",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "scripts": {
     "postinstall": "patch-package",
     "start": "expo start",
@@ -67,6 +67,7 @@
     "expo-symbols": "~1.0.8",
     "expo-system-ui": "~6.0.9",
     "expo-vector-icons": "^10.0.1",
+    "expo-video": "~3.0.16",
     "expo-web-browser": "~15.0.10",
     "heroui-native": "^1.0.2",
     "lucide-react-native": "^0.563.0",

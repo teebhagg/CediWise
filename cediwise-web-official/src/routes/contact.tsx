@@ -19,7 +19,7 @@ export const Route = createFileRoute('/contact')({
       path: '/contact',
       title: 'Contact',
       description:
-        "Get in touch with the CediWise team. Questions, feedback, or support — we’d love to hear from you.",
+        'Email, support, or reach Joshua Ansah. Questions about PAYE, budgeting, or the app.',
     }),
 })
 
@@ -27,7 +27,7 @@ const contactMethods = [
   {
     icon: Mail01Icon,
     title: 'Email',
-    description: 'For general inquiries, privacy, or legal matters.',
+    description: 'General questions, privacy, or legal.',
     links: [
       { label: 'joshua.ansah@cediwise.app', href: 'mailto:joshua.ansah@cediwise.app' },
       { label: 'joshua.ansah@cediwise.app', href: 'mailto:joshua.ansah@cediwise.app' },
@@ -36,7 +36,7 @@ const contactMethods = [
   {
     icon: MessageQuestionIcon,
     title: 'Support',
-    description: 'App issues, feature requests, or bug reports.',
+    description: 'Bugs, broken features, or ideas for the app.',
     links: [
       {
         label: 'Open an issue on GitHub',
@@ -47,7 +47,7 @@ const contactMethods = [
   {
     icon: CallIcon,
     title: 'Creator',
-    description: 'Connect with Joshua Ansah, the developer behind CediWise.',
+    description: 'Joshua Ansah built CediWise.',
     links: [
       {
         label: 'Portfolio — joshua-ansah.vercel.app',
@@ -89,11 +89,11 @@ function ContactPage() {
             className="mb-16"
           >
             <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">
-              Contact us
+              Get in touch
             </h1>
             <p className="mt-6 text-lg text-zinc-400 max-w-2xl">
-              Questions, feedback, or support — we&apos;d love to hear from
-              you. Choose the option that fits best.
+              Wrong PAYE calc? Feature idea? Pick the channel below. We read everything; replies
+              usually within a few days.
             </p>
           </motion.header>
 
@@ -151,8 +151,7 @@ function ContactPage() {
             transition={{ delay: 0.5 }}
             className="mt-12 text-sm text-zinc-500"
           >
-            We typically respond within a few days. For urgent app issues,
-            consider opening a GitHub issue if the project is open source.
+            For urgent app bugs, a GitHub issue is often fastest if the repo is public.
           </motion.p>
         </div>
       </main>

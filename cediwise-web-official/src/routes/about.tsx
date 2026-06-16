@@ -14,9 +14,9 @@ export const Route = createFileRoute('/about')({
   head: () =>
     createPageHead({
       path: '/about',
-      title: 'About the Personal Finance Companion for Ghana',
+      title: 'About CediWise',
       description:
-        'CediWise is a personal finance companion for Ghana, created by Joshua Ansah to help Ghanaians manage salary, budgeting, debt, SME expenses, and financial literacy.',
+        'CediWise helps Ghanaians check PAYE, budget in cedis, and run a small business ledger. Built by Joshua Ansah.',
     }),
 })
 
@@ -59,8 +59,7 @@ function AboutPage() {
                 About CediWise
               </h1>
               <p className="mt-6 text-xl text-zinc-400 leading-relaxed max-w-2xl">
-                CediWise is a personal finance companion for Ghana, built as a passion project to help
-                people make clearer money decisions and build better financial habits.
+                A finance app for Ghana. Check your pay, plan spending, keep SME records tidy.
               </p>
             </motion.header>
 
@@ -71,29 +70,26 @@ function AboutPage() {
               className="space-y-10 text-zinc-300 leading-relaxed"
             >
               <p className="text-lg">
-                CediWise was created by{' '}
-                <strong className="text-white">Joshua Ansah</strong> — a software engineer who saw a
-                gap: many Ghanaians lack the tools and knowledge to plan their finances, save
-                consistently, and invest for the future.
+                Joshua Ansah built CediWise after seeing friends struggle with payslips they didn&apos;t
+                understand, budgets that broke by mid-month, and side businesses with no proper records.
               </p>
 
               <p>
-                The goal is simple: teach and help Ghanaians to prepare and plan a better way to save,
-                keep, and invest money for a rainy day. Not through complex spreadsheets or expensive
-                courses, but through a single, accessible app that combines salary calculation,
-                budgeting, SME ledger, and financial literacy — all tailored to Ghana.
+                The idea was one app: run your salary through GRA tables, see what&apos;s left to spend,
+                track MoMo and cash, and keep VAT straight if you sell something on the side. No
+                imported categories. No spreadsheet gymnastics.
               </p>
 
               <p>
-                CediWise is built with care, one feature at a time. No big corporate backing — just a
-                developer who believes every Ghanaian deserves clarity over their money.
+                We ship slowly and test with real users. If something&apos;s wrong with a PAYE calc or a
+                VAT rule, we fix it. Money in Ghana is serious enough to get right.
               </p>
 
               <div className="rounded-2xl border border-white/10 bg-white/2 p-8 mt-12">
                 <h2 className="text-xl font-bold text-white mb-4">Meet the creator</h2>
                 <p className="text-zinc-400 mb-6">
-                  Joshua Ansah is a software engineer with a focus on building products that make a
-                  difference. CediWise is his contribution to financial empowerment in Ghana.
+                  Joshua is a software engineer based in Ghana. CediWise is the product he wished
+                  existed when he started earning a salary.
                 </p>
                 <motion.a
                   href="https://joshua-ansah.vercel.app"
@@ -126,7 +122,7 @@ function AboutPage() {
             name: 'Joshua Ansah',
             jobTitle: 'Software Engineer',
             description:
-              'Creator of CediWise, a finance app helping Ghanaians plan, save, and invest for a rainy day.',
+              'Creator of CediWise, a Ghana finance app for PAYE checks, budgeting, and SME records.',
             url: 'https://joshua-ansah.vercel.app',
             affiliation: {
               '@type': 'Organization',

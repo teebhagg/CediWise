@@ -1,0 +1,339 @@
+# CediWise — Full Content
+
+> CediWise is Ghana's financial operating system — verify PAYE and SSNIT, plan spending in cedis, manage SME VAT compliance, and learn money skills built for the Ghanaian context (PAYE, SSNIT, MoMo, Treasury Bills, Ghana Stock Exchange). Mobile app v0.3.1.
+
+## Site Overview
+
+- **Website**: https://cediwise.app
+- **Mobile app version**: 0.3.1 (Android & iOS)
+- **Android App**: https://play.google.com/store/apps/details?id=com.cediwise.app
+- **iOS App**: https://apps.apple.com/app/cediwise/id6739578016
+- **X**: https://x.com/cediwiseapp (@cediwiseapp)
+- **Instagram**: https://www.instagram.com/cediwiseapp/ (@cediwiseapp)
+- **TikTok**: https://www.tiktok.com/@cediwiseapp (@cediwiseapp)
+- **Sitemap**: https://cediwise.app/sitemap.xml
+- **Pricing**: Free (GHS 0 — salary calculator + all lessons), Smart Budget (GHS 15/mo or GHS 39/quarter), SME Ledger (GHS 25/mo or GHS 65/quarter). Quarterly billing saves ~13%. 30-day free trial on paid plans.
+
+## Key Pages
+
+- [Home](https://cediwise.app/) — Landing page with product overview, feature highlights, and app download links.
+- [Pricing](https://cediwise.app/pricing) — Three tiers: Free (GHS 0), Smart Budget (GHS 15/mo), SME Ledger (GHS 25/mo). 30-day free trial on paid plans.
+- [About](https://cediwise.app/about) — Mission, team, and story behind CediWise.
+- [Contact](https://cediwise.app/contact) — Contact form and support information.
+- [Salary Calculator](https://cediwise.app/salary-calculator) — 2026 PAYE/SSNIT calculator with NHIS deductions.
+- [Try Salary Calculator](https://cediwise.app/try-salary-calculator) — Free web tool with 5 calculations per day.
+- [Budgeting Tool](https://cediwise.app/budgeting-tool) — Smart budgeting with progress bars, recurring expenses, and spending charts.
+- [SME Ledger](https://cediwise.app/sme-ledger) — Sales & expenses ledger with VAT tracking and GHS 750k threshold alerts.
+- [Financial Literacy](https://cediwise.app/financial-literacy) — 9 modules, 41 Ghana-specific lessons (full content in app Learn tab).
+- [Debt Dashboard](https://cediwise.app/debt-dashboard) — Debt payoff plans with total interest cost calculations.
+- [Spending Insights](https://cediwise.app/spending-insights) — Spending visualization with charts and category breakdowns.
+- [Privacy Policy](https://cediwise.app/privacy) — Data handling and privacy practices.
+- [Terms of Service](https://cediwise.app/terms) — Terms and conditions.
+
+---
+
+# Mobile Application (v0.3.1)
+
+## Navigation
+
+Four bottom tabs: **Home**, **Budget**, **Learn**, **Business**.
+
+## Home Tab
+
+- Quick access to salary calculator and payslip verification
+- Vitals wizard for first-time budget setup (income, fixed expenses, debt, savings goals)
+- Onboarding videos previewing Smart Budget, SME Ledger, Tax & Salary, and Learn
+- Contextual lesson nudges based on user activity
+
+## Budget Tab (Smart Budget & SME Ledger)
+
+- Needs / Wants / Savings budget cycles with progress bars
+- Expense logging with categories
+- Recurring bills and reminders
+- Debt dashboard: balances, minimum payments, payoff dates, total interest
+- Spending insights: charts and category breakdowns
+- Savings Vault for goal-based saving
+- Budget AI chat for personalised guidance
+- Offline mode with sync on reconnect
+- Pull-to-refresh; reliable sync on app open and after Vitals
+
+## Learn Tab
+
+- 9 modules, 41 lessons (see Financial Literacy Curriculum below)
+- End-of-lesson quizzes
+- In-lesson calculators (Budget Builder, PAYE/SSNIT, T-Bill simulator, Cash Flow, Loan Amortization, Savings Goal)
+- Searchable glossary: 75+ Ghana-specific financial terms
+- Progress tracking across modules
+
+## Business Tab (SME Ledger)
+
+- Sales and expense ledger separate from personal budget
+- Auto 20% VAT calculation (VAT Act 1151)
+- GHS 750,000 annual turnover threshold alerts
+- Monthly profit & loss summary
+- CSV export for accountants
+- Improved SME data refresh (v0.3.1)
+
+## Notifications (v0.3.1)
+
+- Weekly expense reminders (Mondays at 8 PM) with varied messages
+- Replaces previous daily nudge pattern
+
+## Billing & Payments
+
+- Paystack integration: card and Mobile Money (MoMo)
+- Monthly or quarterly subscription cycles
+- 30-day free trial on Smart Budget and SME Ledger
+
+## Ghana-Specific Capabilities
+
+- GRA 2026 PAYE tax bands and reliefs
+- SSNIT contributions with GHS 69,000 salary cap
+- Unified VAT at 20% for SME compliance
+- Treasury Bills, government bonds, Ghana Stock Exchange content in lessons
+- MoMo safety, fraud prevention, and digital credit awareness
+- Diaspora remittances and forex education
+
+---
+
+# Pricing & Plans
+
+| Plan | Monthly | Quarterly | Key features |
+|------|---------|-----------|--------------|
+| Free | GHS 0 | — | 2026 PAYE & SSNIT calculator, all 41 literacy lessons, glossary, future GRA tax updates |
+| Smart Budget | GHS 15 | GHS 39 | Budgeting, debt dashboard, recurring bills, spending charts, Savings Vault, offline mode, Budget AI chat |
+| SME Ledger | GHS 25 | GHS 65 | Everything in Smart Budget + business ledger, 20% VAT, GHS 750K alert, monthly P&L, CSV export |
+
+Paid plans include a **30-day free trial**. Cancel anytime.
+
+---
+
+# Financial Literacy Curriculum
+
+Free in the CediWise app (Learn tab). 9 modules, 41 lessons, ~567 minutes total. Each lesson includes Ghana-specific examples, sourced facts, and optional quizzes. Full interactive content is available in the mobile app.
+
+Web overview: https://cediwise.app/financial-literacy
+
+## In-Lesson Calculators
+
+| Calculator | Used in lessons |
+|------------|-----------------|
+| Budget Builder | Build Your First Monthly Budget |
+| PAYE/SSNIT | PAYE Deep Dive — 2026 Tax Bands |
+| T-Bill Simulator | Treasury Bills (T-Bills) |
+| Cash Flow Tool | Cash Flow Management for Ghanaian SMEs |
+| Loan Amortization | Business Credit and Financing; Understanding Credit and Loans; Interest Rates and APR |
+| Savings Goal | Emergency Funds & Financial Resilience |
+
+---
+
+## MOD-01 — Understanding Your Money
+
+**Level:** Foundational | **Estimated time:** 57 minutes
+
+Master budgeting, payslips, savings, and emergency funds — the foundation of financial literacy in Ghana.
+
+**Learning objectives:**
+- Build and stick to a monthly household budget
+- Apply the 50/30/20 rule to your own income
+- Track your daily spending and spot leaks
+- Understand susu and formal savings options
+- Build a 3–6 month emergency fund
+
+**Lessons:**
+
+1. **Build Your First Monthly Budget** (12 min, beginner) — Calculator: Budget Builder. Tags: budget, income, expenses, planning.
+2. **The 50/30/20 Rule Explained** (10 min, beginner) — Tags: 50/30/20, needs, wants, savings.
+3. **Tracking Your Spending** (15 min, beginner) — Tags: spending, tracking, habits, leaks.
+4. **Saving: From Susu to Savings Accounts** (10 min, beginner) — Tags: susu, savings, bank, informal.
+5. **Emergency Funds & Financial Resilience** (10 min, beginner) — Calculator: Savings Goal. Tags: emergency fund, resilience, safety net.
+
+---
+
+## MOD-02 — Tax & Pension
+
+**Level:** Intermediate | **Estimated time:** 75 minutes
+
+Navigate GRA, PAYE, SSNIT, tax reliefs, and VAT — essential for every working Ghanaian.
+
+**Learning objectives:**
+- Register with GRA and obtain a TIN
+- Understand PAYE tax bands and deductions
+- Know your SSNIT contributions and benefits
+- Claim eligible tax reliefs
+- Understand VAT for SME owners
+
+**Lessons:**
+
+1. **The Ghana Revenue Authority and You** (8 min, beginner) — Tags: GRA, TIN, registration, tax.
+2. **PAYE Deep Dive — 2026 Tax Bands** (18 min, intermediate) — Calculator: PAYE/SSNIT. Tags: PAYE, tax bands, 2026, deductions.
+3. **SSNIT: Your Pension Foundation** (18 min, intermediate) — Tags: SSNIT, pension, Tier 1, contributions.
+4. **Tax Reliefs You Can Claim** (15 min, intermediate) — Tags: tax relief, deductions, GRA.
+5. **VAT for SME Owners** (16 min, intermediate) — Tags: VAT, SME, turnover, compliance.
+
+---
+
+## MOD-03 — Investing
+
+**Level:** Intermediate | **Estimated time:** 85 minutes
+
+T-Bills, bonds, mutual funds, GSE, and insurance — grow your wealth safely.
+
+**Learning objectives:**
+- Understand the risk-return spectrum
+- Invest in T-Bills and government bonds
+- Evaluate mutual funds and CIS
+- Navigate the Ghana Stock Exchange
+- Choose appropriate insurance products
+
+**Lessons:**
+
+1. **The Risk-Return Spectrum** (12 min, beginner) — Tags: risk, return, investing, spectrum.
+2. **Treasury Bills (T-Bills)** (15 min, intermediate) — Calculator: T-Bill Simulator. Tags: T-Bills, treasury, government, fixed income.
+3. **Government Bonds** (12 min, intermediate) — Tags: bonds, government, fixed income, yield.
+4. **Mutual Funds & Collective Investment Schemes** (15 min, intermediate) — Tags: mutual funds, CIS, diversification.
+5. **Ghana Stock Exchange Basics** (18 min, intermediate) — Tags: GSE, stocks, equities, shares.
+6. **Insurance in Ghana** (13 min, intermediate) — Tags: insurance, protection, life, health.
+
+---
+
+## MOD-04 — Mobile Money & Digital Finance
+
+**Level:** Foundational | **Estimated time:** 45 minutes
+
+Use Ghana's digital payment ecosystem safely — MoMo, savings, and digital credit.
+
+**Learning objectives:**
+- Understand how mobile money works and who regulates it
+- Identify and avoid mobile money fraud
+- Compare MoMo savings vs. bank savings
+- Borrow digitally with awareness of costs
+
+**Lessons:**
+
+1. **Mobile Money: Ghana's Financial Revolution** (10 min, beginner) — Tags: MoMo, MTN, Vodafone, digital payments.
+2. **Mobile Money Safety & Fraud Prevention** (12 min, beginner) — Tags: fraud, safety, scams, MoMo.
+3. **Mobile Money Savings vs. Bank Savings** (11 min, beginner) — Tags: savings, MoMo, bank, interest.
+4. **Digital Credit & Borrowing Wisely** (12 min, intermediate) — Tags: digital credit, loans, borrowing, fintech.
+
+---
+
+## MOD-05 — SME Finance
+
+**Level:** Intermediate | **Estimated time:** 105 minutes
+
+Separate personal and business finances, manage cash flow, price for profit, and access credit.
+
+**Learning objectives:**
+- Separate personal and business finances
+- Manage SME cash flow effectively
+- Price products and services for profit
+- Access business credit and financing
+- Meet tax compliance requirements
+- Protect your business with insurance
+
+**Lessons:**
+
+1. **Separating Personal and Business Finances** (12 min, beginner) — Tags: SME, separation, business, personal.
+2. **Cash Flow Management for Ghanaian SMEs** (20 min, intermediate) — Calculator: Cash Flow Tool. Tags: cash flow, SME, working capital.
+3. **Pricing for Profit** (18 min, intermediate) — Tags: pricing, profit, margins, SME.
+4. **Business Credit and Financing** (20 min, intermediate) — Calculator: Loan Amortization. Tags: credit, loans, SME, financing.
+5. **Tax Compliance for SMEs** (20 min, intermediate) — Tags: tax, VAT, compliance, GRA.
+6. **Business Insurance and Risk Management** (15 min, intermediate) — Tags: insurance, risk, SME, protection.
+
+---
+
+## MOD-06 — Retirement Planning
+
+**Level:** Intermediate | **Estimated time:** 70 minutes
+
+Maximise SSNIT Tier 1 & 2, add Tier 3, and plan for non-pension assets and succession.
+
+**Learning objectives:**
+- Start retirement planning early
+- Maximise SSNIT Tier 1 and Tier 2 benefits
+- Use Tier 3 voluntary pension and tax relief
+- Build non-pension retirement assets
+- Plan succession and wills
+
+**Lessons:**
+
+1. **Why Start Retirement Planning Now** (12 min, beginner) — Tags: retirement, planning, compound, early.
+2. **Maximising Your SSNIT Tier 1 & 2** (15 min, intermediate) — Tags: SSNIT, Tier 1, Tier 2, pension.
+3. **Tier 3 Voluntary Pension** (15 min, intermediate) — Tags: Tier 3, voluntary, pension, tax relief.
+4. **Non-Pension Retirement Assets** (15 min, intermediate) — Tags: investments, property, retirement, assets.
+5. **Succession Planning & Wills** (13 min, intermediate) — Tags: wills, succession, estate, inheritance.
+
+---
+
+## MOD-07 — Protecting Your Money
+
+**Level:** Foundational | **Estimated time:** 35 minutes
+
+Spot scams, know your consumer rights, and safeguard your financial data.
+
+**Learning objectives:**
+- Recognise the five universal red flags of financial fraud
+- Identify common scams targeting Ghanaians
+- Know your rights as a financial consumer
+- Protect your financial data and privacy
+
+**Lessons:**
+
+1. **Common Financial Scams in Ghana** (12 min, beginner) — Tags: scams, fraud, Ponzi, red flags.
+2. **Consumer Rights in Ghana's Financial Sector** (12 min, beginner) — Tags: consumer rights, BoG, complaints.
+3. **Financial Data Privacy & Security** (11 min, beginner) — Tags: privacy, security, data, passwords.
+
+---
+
+## MOD-08 — Credit & Debt Management
+
+**Level:** Intermediate | **Estimated time:** 55 minutes
+
+Understand loans, interest rates, credit scores, and manage debt responsibly.
+
+**Learning objectives:**
+- Understand different types of credit and how loans work
+- Compare interest rates and total borrowing costs
+- Build and maintain a good credit history
+- Manage debt repayment and avoid over-indebtedness
+
+**Lessons:**
+
+1. **Understanding Credit and Loans** (12 min, beginner) — Calculator: Loan Amortization. Tags: credit, loans, borrowing.
+2. **Interest Rates and APR** (14 min, intermediate) — Calculator: Loan Amortization. Tags: interest, APR, borrowing, rates.
+3. **Managing Debt and Building Credit** (15 min, intermediate) — Tags: debt, credit score, repayment, credit history.
+4. **Mortgages and Home Financing** (14 min, advanced) — Tags: mortgage, home loan, property, housing.
+
+---
+
+## MOD-09 — International Finance & Remittances
+
+**Level:** Intermediate | **Estimated time:** 40 minutes
+
+Navigate forex, send and receive money abroad, and engage with Ghana's diaspora economy.
+
+**Learning objectives:**
+- Understand how exchange rates work and what affects the cedi
+- Send and receive money across borders safely and cheaply
+- Explore diaspora investment opportunities in Ghana
+
+**Lessons:**
+
+1. **Forex and Exchange Rates Explained** (12 min, intermediate) — Tags: forex, exchange rate, cedi, currency, BoG.
+2. **Sending and Receiving Money Across Borders** (14 min, beginner) — Tags: remittance, transfer, diaspora, cross-border, MoMo.
+3. **Diaspora Engagement and Investing in Ghana** (14 min, intermediate) — Tags: diaspora, investment, Ghana, non-resident, bonds.
+
+---
+
+# Glossary
+
+The CediWise app includes a searchable glossary of **75+ Ghana-specific financial terms** (e.g. PAYE, SSNIT, T-Bill, MoMo, VAT, susu, Tier 3 pension). Available in the Learn tab under Glossary.
+
+---
+
+# Structured Data
+
+- Organization: CediWise (Ghana)
+- Application category: FinanceApplication (SoftwareApplication)
+- Sitemap: https://cediwise.app/sitemap.xml

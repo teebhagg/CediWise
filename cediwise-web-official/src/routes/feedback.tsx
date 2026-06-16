@@ -31,9 +31,9 @@ export const Route = createFileRoute('/feedback')({
   head: () =>
     createPageHead({
       path: '/feedback',
-      title: 'Leave Feedback',
+      title: 'Feedback',
       description:
-        'Share your beta feedback for CediWise. Report bugs, request features, and help us improve your experience.',
+        'Tell us what worked, what broke, or what you want next. Helps us fix CediWise faster.',
     }),
 })
 
@@ -157,9 +157,10 @@ function FeedbackPage() {
             transition={{ duration: 0.45 }}
             className="mb-8"
           >
-            <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">Leave feedback</h1>
+            <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">Send feedback</h1>
             <p className="mt-4 max-w-2xl text-zinc-400">
-              Your beta feedback helps us improve CediWise faster. Tell us what worked, what broke, and what you want next.
+              You use the app; we build it. Report bugs, request features, or say what confused you.
+              Honest notes help most.
             </p>
           </motion.header>
 
@@ -177,9 +178,9 @@ function FeedbackPage() {
               <div className="space-y-4">
                 <div className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-2 text-emerald-300">
                   <HugeiconsIcon icon={CheckmarkCircle01Icon} className="size-5" />
-                  <span className="text-sm font-medium">Thanks, your feedback was sent.</span>
+                  <span className="text-sm font-medium">Thanks — we got it.</span>
                 </div>
-                <p className="text-sm text-zinc-400">Your input helps shape the next beta updates.</p>
+                <p className="text-sm text-zinc-400">We read every submission.</p>
                 <Button onClick={() => setSubmitted(false)} className="h-10 rounded-xl">
                   Send another feedback
                 </Button>
@@ -263,7 +264,7 @@ function FeedbackPage() {
                   <Textarea
                     id="feedback-text"
                     rows={6}
-                    placeholder="Share your experience, issues, or suggestions"
+                    placeholder="What happened? What did you expect?"
                     value={formState.feedback_text}
                     onChange={(event) => updateField('feedback_text', event.target.value)}
                     aria-invalid={!!errors.feedback_text || feedbackTooShort}

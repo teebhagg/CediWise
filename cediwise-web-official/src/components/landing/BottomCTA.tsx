@@ -7,6 +7,7 @@ import {
   CEDIWISE_ANDROID_PLAY_STORE_URL,
   CEDIWISE_IOS_APP_STORE_URL,
 } from '@/lib/storeLinks'
+import { Link } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
 
 export function BottomCTA() {
@@ -35,20 +36,28 @@ export function BottomCTA() {
               transition={{ delay: 0.2, duration: 0.5 }}
               className="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary"
             >
-              Start Your Journey
+              Free to start
             </motion.div>
 
             <h2 className="text-4xl font-bold tracking-tight text-white sm:text-6xl">
-              Ready to master your <br />
-              <span className="text-primary italic">financial future?</span>
+              Don&apos;t guess your take-home
             </h2>
 
             <p className="mx-auto mt-8 max-w-xl text-lg text-zinc-400">
-              Join thousands of Ghanaians using CediWise to track salaries,
-              manage Small Business (SME) budgets, and grow their wealth with confidence.
+              About 200 people use CediWise to check PAYE, plan spending, and keep SME records straight.
+              Salary check is free on the web. Budgeting and more live in the app.
             </p>
 
-            <div className="mt-12 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <Link
+                to="/try-salary-calculator"
+                className="inline-flex h-14 items-center justify-center rounded-full bg-emerald-600 px-8 text-lg font-bold text-white transition-colors hover:bg-emerald-500"
+              >
+                Check my pay
+              </Link>
+            </div>
+
+            <div className="mt-6 flex flex-col items-center justify-center gap-4 sm:flex-row">
               <a
                 href={CEDIWISE_ANDROID_PLAY_STORE_URL}
                 target="_blank"

@@ -15,36 +15,37 @@ export const Route = createFileRoute('/pricing')({
   head: () =>
     createPageHead({
       path: '/pricing',
-      title: 'Pricing — CediWise',
-      description: 'Pricing that makes sense. Full breakdown of Free, Budget, and SME Ledger tiers.',
+      title: 'Pricing',
+      description:
+        'Free salary calculator. Smart Budget from GHS 15/mo. SME Ledger from GHS 25/mo. 30-day free trial on paid plans.',
     }),
 })
 
 const comparisonFeatures = [
   {
-    category: 'Calculators & Education',
+    category: 'Salary & learning',
     features: [
-      { name: '2026 PAYE & SSNIT (incl. NHIS)', free: true, budget: true, sme: true },
-      { name: 'Free Financial Education Modules', free: true, budget: true, sme: true },
-      { name: 'Future GRA Tax Updates', free: true, budget: true, sme: true },
+      { name: '2026 PAYE & SSNIT calculator', free: true, budget: true, sme: true },
+      { name: 'Financial literacy lessons', free: true, budget: true, sme: true },
+      { name: 'Future GRA tax updates', free: true, budget: true, sme: true },
     ]
   },
   {
-    category: 'Wealth Management',
+    category: 'Personal money',
     features: [
-      { name: 'Smart Budgeting & Progress Bars', free: false, budget: true, sme: true },
-      { name: 'Debt Dashboard & Payoff Plans', free: false, budget: true, sme: true },
-      { name: 'Recurring Expenses & Insights', free: false, budget: true, sme: true },
-      { name: 'Offline Mode + Charts', free: false, budget: true, sme: true },
+      { name: 'Budgeting & progress bars', free: false, budget: true, sme: true },
+      { name: 'Debt dashboard & payoff plans', free: false, budget: true, sme: true },
+      { name: 'Recurring bills & spending charts', free: false, budget: true, sme: true },
+      { name: 'Offline mode', free: false, budget: true, sme: true },
     ]
   },
   {
-    category: 'Business & Accounting',
+    category: 'Business',
     features: [
-      { name: 'Sales & Expenses Ledger', free: false, budget: false, sme: true },
-      { name: 'Auto 20% VAT + GHS 750k Alert', free: false, budget: false, sme: true },
-      { name: 'CSV Export for Accountant', free: false, budget: false, sme: true },
-      { name: 'Monthly P&L Summary', free: false, budget: false, sme: true },
+      { name: 'Sales & expenses ledger', free: false, budget: false, sme: true },
+      { name: 'Auto 20% VAT + GHS 750K alert', free: false, budget: false, sme: true },
+      { name: 'CSV export for accountant', free: false, budget: false, sme: true },
+      { name: 'Monthly profit summary', free: false, budget: false, sme: true },
     ]
   }
 ]
@@ -84,18 +85,17 @@ function PricingPage() {
             className="text-center mb-16"
           >
             <h1 className="text-4xl font-bold tracking-tight text-white mb-6 sm:text-5xl">
-              Pricing that makes sense
+              Simple pricing
             </h1>
             <p className="text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-              Free salary calculator forever.<br />
-              <span className="font-semibold text-emerald-400">First 100 users get 60 days full access FREE.</span><br />
-              Everyone else gets 30 days free.
+              Salary calculator stays free forever.
+              <br />
+              Smart Budget and SME Ledger include a <span className="font-semibold text-emerald-400">30-day free trial</span>.
             </p>
 
             <div className="mt-8 flex items-center justify-center">
               <div className="inline-flex items-center gap-3 backdrop-blur-md bg-white/5 border border-white/10 text-zinc-300 text-sm px-4 py-2 rounded-full">
-                <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xs font-bold px-3 py-1 rounded-full">LAUNCH PROMO</span>
-                Cancel anytime • No hidden fees • Ghana cedi only
+                Cancel anytime · Prices in GHS only
               </div>
             </div>
 
@@ -137,9 +137,8 @@ function PricingPage() {
             className="max-w-2xl mx-auto mb-12 text-center"
           >
             <div className="inline-flex flex-wrap items-center justify-center gap-x-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-6 py-4 text-sm text-zinc-300 leading-relaxed">
-              <span className="text-emerald-400 font-semibold">ROI check:</span>
-              Smart Budget costs GHS 180/year. Estimated PAYE recovery from common employer errors: GHS 1,800+/year.
-              That&apos;s a potential <span className="text-emerald-400 font-bold">10× return.</span>
+              <span className="text-emerald-400 font-semibold">Worth it?</span>
+              Smart Budget is GHS 180/year. Catching one wrong PAYE deduction often saves more than that.
             </div>
           </motion.div>
 
@@ -153,27 +152,24 @@ function PricingPage() {
             >
               <div className="flex-1">
                 <h3 className="text-2xl font-semibold text-white">Free</h3>
-                <p className="text-zinc-400 mt-2 text-sm">Salary &amp; Tax Calculator only</p>
+                <p className="text-zinc-400 mt-2 text-sm">PAYE &amp; SSNIT calculator + lessons</p>
                 <div className="mt-8">
                   <span className="text-5xl font-bold text-white">GHS 0</span>
                   <span className="text-zinc-500 font-medium">/forever</span>
                 </div>
                 <ul className="mt-8 space-y-4 text-zinc-300 text-sm">
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> 2026 PAYE &amp; SSNIT (incl. NHIS)</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Free Financial Education modules</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Future GRA tax updates</li>
-                  <li className="flex items-center gap-3 text-zinc-500 opacity-60"><HugeiconsIcon icon={Cancel01Icon} className="size-5 text-zinc-600 shrink-0" /> Smart budget, debt, SME ledger</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> 2026 PAYE &amp; SSNIT calculator</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Financial literacy lessons</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> GRA rate updates</li>
+                  <li className="flex items-center gap-3 text-zinc-500 opacity-60"><HugeiconsIcon icon={Cancel01Icon} className="size-5 text-zinc-600 shrink-0" /> Budget, debt, SME ledger</li>
                 </ul>
               </div>
-              <button
-                type="button"
-                aria-haspopup="dialog"
-                aria-expanded={downloadPickerOpen}
-                onClick={() => setDownloadPickerOpen(true)}
+              <Link
+                to="/try-salary-calculator"
                 className="mt-10 block w-full cursor-pointer text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-4 rounded-2xl transition-colors"
               >
-                Use Free Calculator
-              </button>
+                Try free calculator
+              </Link>
             </motion.div>
 
             {/* BUDGET TIER */}
@@ -188,8 +184,8 @@ function PricingPage() {
               </div>
               <div className="flex-1">
                 <h3 className="text-2xl font-semibold text-white">Smart Budget</h3>
-                <p className="text-zinc-400 mt-2 text-sm">Budgeting • Debt • Recurring • Insights</p>
-                <p className="text-emerald-400/80 mt-1 text-xs italic">If you find one salary error, this pays for itself 10× over.</p>
+                <p className="text-zinc-400 mt-2 text-sm">Budget, debt, charts, offline</p>
+                <p className="text-emerald-400/80 mt-1 text-xs">One caught payslip error can cover a year.</p>
 
                 <div className="mt-8 flex items-baseline gap-1">
                   <span className="text-5xl font-bold text-white">
@@ -209,10 +205,10 @@ function PricingPage() {
 
                 <ul className="mt-8 space-y-4 text-zinc-300 text-sm">
                   <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Everything in Free</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Smart budgeting &amp; progress bars</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Debt dashboard + payoff plans</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Recurring expenses &amp; insights</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Offline mode + charts</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Budgeting &amp; safe-to-spend</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Debt dashboard</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Spending charts</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Offline mode</li>
                 </ul>
               </div>
               <button
@@ -222,7 +218,7 @@ function PricingPage() {
                 onClick={() => setDownloadPickerOpen(true)}
                 className="mt-10 block w-full cursor-pointer text-center bg-emerald-500 hover:bg-emerald-400 text-white font-semibold py-4 rounded-2xl transition-colors shadow-lg shadow-emerald-500/25"
               >
-                Start 30-Day Free Trial
+                Start 30-day trial
               </button>
             </motion.div>
 
@@ -235,8 +231,8 @@ function PricingPage() {
             >
               <div className="flex-1">
                 <h3 className="text-2xl font-semibold text-white">SME Ledger</h3>
-                <p className="text-zinc-400 mt-2 text-sm">Full business tools + everything above</p>
-                <p className="text-emerald-400/80 mt-1 text-xs italic">One GRA penalty costs more than 3 years of this tier.</p>
+                <p className="text-zinc-400 mt-2 text-sm">Business ledger + everything above</p>
+                <p className="text-emerald-400/80 mt-1 text-xs">One GRA penalty costs more than years of this.</p>
 
                 <div className="mt-8 flex items-baseline gap-1">
                   <span className="text-5xl font-bold text-white">
@@ -270,7 +266,7 @@ function PricingPage() {
                 onClick={() => setDownloadPickerOpen(true)}
                 className="mt-10 block w-full cursor-pointer text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-4 rounded-2xl transition-colors"
               >
-                Start 30-Day Free Trial
+                Start 30-day trial
               </button>
             </motion.div>
           </div>
@@ -353,9 +349,9 @@ function PricingPage() {
             </div>
             <div className="relative flex justify-center">
               <span className="bg-[#0A0A0A] px-4 text-sm text-zinc-500 text-center max-w-xl">
-                First 100 sign-ups (tracked automatically) get <strong className="text-white">60 days FREE full access</strong>.<br />
-                All new users after that get 30 days free.<br />
-                After trial you only pay if you want to keep the premium features. Cancel anytime. No questions.
+                <strong className="text-white">30-day free trial</strong> on Smart Budget and SME Ledger.
+                <br />
+                After that, pay only if you want to keep premium tools. Cancel anytime.
               </span>
             </div>
           </motion.div>

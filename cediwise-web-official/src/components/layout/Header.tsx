@@ -43,7 +43,7 @@ export function Header() {
   return (
     <header
       className={cn(
-        'fixed top-5 z-50 w-full transition-all duration-500 ease-in-out',
+        'fixed z-50 w-full transition-all duration-500 ease-in-out top-[calc(var(--salary-banner-height,0px)+1.25rem)]',
         scrolled ? 'py-3' : 'py-6',
       )}
     >

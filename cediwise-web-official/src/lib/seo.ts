@@ -31,11 +31,6 @@ export const getAppSchema = (): SchemaGenerator => ({
     name: 'CediWise',
     operatingSystem: 'Android, iOS',
     applicationCategory: 'FinanceApplication',
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.8',
-      ratingCount: '120',
-    },
     offers: {
       '@type': 'Offer',
       price: '0',
@@ -44,11 +39,11 @@ export const getAppSchema = (): SchemaGenerator => ({
     downloadUrl: CEDIWISE_ANDROID_PLAY_STORE_URL,
     installUrl: CEDIWISE_IOS_APP_STORE_URL,
     featureList: [
-      'Ghana Salary Calculator (2026 PAYE/SSNIT)',
-      'Budget Management',
-      'SME Ledger',
-      'Debt Tracking',
-      'Financial Literacy',
+      'GRA 2026 PAYE and SSNIT salary check',
+      'Budgeting with safe-to-spend',
+      'SME ledger and VAT tracking',
+      'Debt payoff planner',
+      'Ghana financial literacy lessons',
     ],
   }),
 })

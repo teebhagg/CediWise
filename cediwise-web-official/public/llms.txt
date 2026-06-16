@@ -1,0 +1,110 @@
+# CediWise — Finance App for Ghana
+
+> CediWise helps Ghanaians verify PAYE and SSNIT, budget in cedis, run an SME ledger, and learn money skills. Built for Ghana: GRA 2026 tax bands, SSNIT, MoMo, Treasury Bills, Ghana Stock Exchange, VAT Act 1151. Mobile app v0.3.1.
+
+## Mobile App (v0.3.1)
+
+Four tabs: **Home**, **Budget**, **Learn**, **Business**.
+
+**Free (GHS 0):** 2026 PAYE & SSNIT salary calculator, payslip verification, all 41 financial literacy lessons, searchable glossary (75+ Ghana-specific terms).
+
+**Smart Budget (GHS 15/mo or GHS 39/quarter):** Vitals budget wizard, Needs/Wants/Savings cycles, expense logging, recurring bills, debt dashboard with payoff plans, spending insights and charts, Savings Vault, offline sync, Budget AI chat. 30-day free trial.
+
+**SME Ledger (GHS 25/mo or GHS 65/quarter):** Everything in Smart Budget plus business sales & expenses ledger, auto 20% VAT (Act 1151), GHS 750,000 turnover alerts, monthly P&L, CSV export for accountants. Pay via Paystack card or MoMo. 30-day free trial.
+
+**Ghana-specific:** GRA 2026 PAYE bands, SSNIT cap GHS 69,000, unified VAT, MoMo billing, contextual lesson nudges, weekly expense reminders (Mondays 8 PM).
+
+## Key Pages
+
+- [Home](https://cediwise.app/): See your pay before payday. Salary calculator, budgeting, debt, SME ledger, financial literacy.
+- [Pricing](https://cediwise.app/pricing): Free calculator forever. Smart Budget GHS 15/mo. SME Ledger GHS 25/mo. 30-day free trial on paid plans.
+- [About](https://cediwise.app/about): Why Joshua Ansah built CediWise for Ghana.
+- [Contact](https://cediwise.app/contact): Email and support channels.
+- [Salary Calculator](https://cediwise.app/salary-calculator): Understand PAYE, SSNIT, and take-home pay. 2026 GRA guide.
+- [Try Salary Calculator](https://cediwise.app/try-salary-calculator): Free web tool — 5 runs/day for net pay breakdown.
+- [Budgeting Tool](https://cediwise.app/budgeting-tool): Budget with clarity. Safe-to-spend, categories, spending charts.
+- [SME Ledger](https://cediwise.app/sme-ledger): Run your business smarter. Sales, expenses, VAT, GHS 750K alert.
+- [Financial Literacy](https://cediwise.app/financial-literacy): 9 modules, 41 Ghana-specific lessons — free in the app Learn tab.
+- [Debt Dashboard](https://cediwise.app/debt-dashboard): Eliminate debt faster. Balances, repayments, payoff dates.
+- [Spending Insights](https://cediwise.app/spending-insights): Charts by category — part of budgeting.
+- [Privacy Policy](https://cediwise.app/privacy): Data handling and privacy practices.
+- [Terms of Service](https://cediwise.app/terms): Terms and conditions.
+
+## Financial Literacy (Learn Tab — 9 modules, 41 lessons)
+
+Free in the CediWise app. Ghana-specific curriculum with quizzes and in-lesson calculators. Web overview: https://cediwise.app/financial-literacy
+
+### MOD-01 — Understanding Your Money (foundational, ~57 min)
+- Build Your First Monthly Budget (12 min) — includes Budget Builder calculator
+- The 50/30/20 Rule Explained (10 min)
+- Tracking Your Spending (15 min)
+- Saving: From Susu to Savings Accounts (10 min)
+- Emergency Funds & Financial Resilience (10 min) — includes Savings Goal calculator
+
+### MOD-02 — Tax & Pension (intermediate, ~75 min)
+- The Ghana Revenue Authority and You (8 min)
+- PAYE Deep Dive — 2026 Tax Bands (18 min) — includes PAYE/SSNIT calculator
+- SSNIT: Your Pension Foundation (18 min)
+- Tax Reliefs You Can Claim (15 min)
+- VAT for SME Owners (16 min)
+
+### MOD-03 — Investing (intermediate, ~85 min)
+- The Risk-Return Spectrum (12 min)
+- Treasury Bills (T-Bills) (15 min) — includes T-Bill simulator
+- Government Bonds (12 min)
+- Mutual Funds & Collective Investment Schemes (15 min)
+- Ghana Stock Exchange Basics (18 min)
+- Insurance in Ghana (13 min)
+
+### MOD-04 — Mobile Money & Digital Finance (foundational, ~45 min)
+- Mobile Money: Ghana's Financial Revolution (10 min)
+- Mobile Money Safety & Fraud Prevention (12 min)
+- Mobile Money Savings vs. Bank Savings (11 min)
+- Digital Credit & Borrowing Wisely (12 min)
+
+### MOD-05 — SME Finance (intermediate, ~105 min)
+- Separating Personal and Business Finances (12 min)
+- Cash Flow Management for Ghanaian SMEs (20 min) — includes Cash Flow calculator
+- Pricing for Profit (18 min)
+- Business Credit and Financing (20 min) — includes Loan Amortization calculator
+- Tax Compliance for SMEs (20 min)
+- Business Insurance and Risk Management (15 min)
+
+### MOD-06 — Retirement Planning (intermediate, ~70 min)
+- Why Start Retirement Planning Now (12 min)
+- Maximising Your SSNIT Tier 1 & 2 (15 min)
+- Tier 3 Voluntary Pension (15 min)
+- Non-Pension Retirement Assets (15 min)
+- Succession Planning & Wills (13 min)
+
+### MOD-07 — Protecting Your Money (foundational, ~35 min)
+- Common Financial Scams in Ghana (12 min)
+- Consumer Rights in Ghana's Financial Sector (12 min)
+- Financial Data Privacy & Security (11 min)
+
+### MOD-08 — Credit & Debt Management (intermediate, ~55 min)
+- Understanding Credit and Loans (12 min) — includes Loan Amortization calculator
+- Interest Rates and APR (14 min) — includes Loan Amortization calculator
+- Managing Debt and Building Credit (15 min)
+- Mortgages and Home Financing (14 min)
+
+### MOD-09 — International Finance & Remittances (intermediate, ~40 min)
+- Forex and Exchange Rates Explained (12 min)
+- Sending and Receiving Money Across Borders (14 min)
+- Diaspora Engagement and Investing in Ghana (14 min)
+
+## App Downloads
+
+- [Android (Google Play)](https://play.google.com/store/apps/details?id=com.cediwise.app)
+- [iOS (App Store)](https://apps.apple.com/app/cediwise/id6739578016)
+
+## Social Media
+
+- [X](https://x.com/cediwiseapp): @cediwiseapp
+- [Instagram](https://www.instagram.com/cediwiseapp/): @cediwiseapp
+- [TikTok](https://www.tiktok.com/@cediwiseapp): @cediwiseapp
+
+## Structured Data
+
+- Organization: CediWise (Ghana), SoftwareApplication (FinanceApplication).
+- Sitemap: https://cediwise.app/sitemap.xml

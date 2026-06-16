@@ -2,4 +2,31 @@
 User-agent: *
 Disallow:
 
+# AI assistants (crawl for inference/indexing — permitted)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+# AI training crawlers (blocked to protect content)
+User-agent: CCBot
+Disallow: /
+
 Sitemap: https://cediwise.app/sitemap.xml
+
+# LLM content overview
+# https://cediwise.app/llms.txt
+# https://cediwise.app/llms-full.txt

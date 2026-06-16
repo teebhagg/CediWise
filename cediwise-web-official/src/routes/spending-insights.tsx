@@ -8,9 +8,9 @@ export const Route = createFileRoute('/spending-insights')({
   head: () =>
     createPageHead({
       path: '/spending-insights',
-      title: 'Spending Insights',
+      title: 'Spending insights',
       description:
-        'Visualize your spending with bar, line, and donut charts. See trends, averages, and category breakdowns across weeks and months.',
+        'Charts that show where your cedis went: by category, week, or month. Part of CediWise budgeting. Built for Ghana spending patterns.',
     }),
 })
 
@@ -34,34 +34,34 @@ const APP_JSON_LD = {
 
 const highlights = [
   {
-    title: 'Multiple chart types',
+    title: 'Bar, line, and donut charts',
     description:
-      'Switch between bar, line, and donut charts to understand your spending from different angles.',
+      'Same data, different views. Pick whichever makes your spending obvious.',
   },
   {
-    title: 'Smart time ranges',
+    title: 'Pick your time range',
     description:
-      'View insights over 1 week, 1 month, 6 months, or 1 year to spot short-term spikes and long-term trends.',
+      'Last week, month, six months, or year. Good for spotting a bad week vs a bad habit.',
   },
   {
-    title: 'Category breakdown',
+    title: 'By category',
     description:
-      'See exactly how much each category contributes to your total spend and what percentage it represents.',
+      'Food, transport, bills, subscriptions. See which slice of the pie grew.',
   },
   {
-    title: 'Average per period',
+    title: 'Average spend',
     description:
-      'Track your average spending per week or per month with clear reference lines and labels.',
+      'Your typical week or month, with a line when you are above or below normal.',
   },
   {
-    title: 'Built on your real data',
+    title: 'From real entries',
     description:
-      'Insights are powered by the same budget cycles and transactions you log in CediWise.',
+      'Charts use expenses you logged in CediWise. No bank sync required to start.',
   },
   {
-    title: 'Designed for Ghana',
+    title: 'Ghana categories',
     description:
-      'Spending insights tuned to Ghanaian spending patterns, from food and transport to bills and mobile money.',
+      'Food, trotro, MoMo, church, family. Categories that match local life.',
   },
 ]
 
@@ -69,56 +69,49 @@ function SpendingInsightsPage() {
   return (
     <>
       <FeatureInsightLayout
-        title="Spending Insights"
-        tagline="See Where Your Money Goes"
-        description="Visualize your spending with charts, trends, and category breakdowns. Understand your habits so you can change them."
+        title="See where the cedis went."
+        tagline="Spending insights"
+        description="Charts from your real transactions. Handy when you are broke by the 20th and cannot tell why."
         icon={ChartLineDataIcon}
         iconBgColor="bg-primary/30"
         image="/assets/ios/img-9.webp"
         highlights={highlights}
       >
+        <h2>What this is</h2>
+        <p>
+          Spending insights turn your expense list into pictures. Instead of scrolling through dozens
+          of MoMo and cash entries, you see bars and charts: how much went to food, transport, data,
+          rent, and the rest. It is included with the{' '}
+          <a href="/budgeting-tool">budgeting tool</a>, not a separate product.
+        </p>
+
         <h2>How it works</h2>
         <p>
-          The Spending Insights dashboard turns your raw transactions into clear visuals. Each time you
-          log an expense in CediWise, it feeds into your charts and category breakdowns — so you always
-          have an up-to-date view of where your money is going.
-        </p>
-        <p>
-          Choose between bar, line, and donut views. Bar charts show how much you spent in each period,
-          line charts highlight trends over time, and donut charts show how your spending is split
-          across categories.
+          Every time you log spending in CediWise, it feeds the charts. Open insights, choose a time
+          range, and switch between chart types. Bar charts compare periods. Line charts show trends.
+          Donut charts show what share each category took.
         </p>
 
-        <h2>Time ranges that match real life</h2>
+        <h2>Example</h2>
         <p>
-          Switch between 1 week, 1 month, 6 months, and 1 year. Short ranges help you catch recent
-          spikes — like an expensive week of transport or food — while longer ranges reveal patterns in
-          your lifestyle. The average per period line makes it easy to see when you are above or below
-          your usual spend.
+          You earn GHS 4,500 net. By the 18th you have GHS 200 left. The donut chart shows transport
+          at 28% and food at 35%. That is your answer: not mystery spending, specific categories. You
+          can trim trotro or eating out next month instead of guessing.
         </p>
 
-        <h2>By category, at a glance</h2>
+        <h2>Who this helps</h2>
         <p>
-          Every cedi you spend is assigned to a category. The insights view shows how much you spent in
-          each category, plus what percentage of your total it represents. That way, you can quickly see
-          if food, transport, subscriptions, or another category is quietly taking over your budget.
+          Anyone who asks &quot;where did my salary go?&quot; People who use MoMo for everything and
+          lose track. Budgeters who want proof that a category is out of control.
         </p>
 
-        <h2>Why it matters</h2>
-        <p>
-          Most people know they are overspending — they just don&apos;t know exactly where. Spending
-          Insights gives you the clarity to act. Once you can see your patterns, you can set better
-          limits, adjust categories, and build habits that support your goals instead of fighting them.
-        </p>
-
-        <h2>Works best with</h2>
+        <h2>Works well with</h2>
         <ul>
           <li>
-            <a href="/budgeting-tool">Budgeting Tool</a> to set the plans that power your insights.
+            <a href="/budgeting-tool">Budgeting tool</a> to set limits after you see the pattern.
           </li>
           <li>
-            <a href="/debt-dashboard">Debt Dashboard</a> to see how debt payments sit alongside your
-            everyday spending.
+            <a href="/debt-dashboard">Debt dashboard</a> to compare loan payments with daily spending.
           </li>
         </ul>
       </FeatureInsightLayout>
@@ -130,4 +123,3 @@ function SpendingInsightsPage() {
     </>
   )
 }
-

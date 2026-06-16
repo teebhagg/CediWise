@@ -10,7 +10,7 @@ export const Route = createFileRoute('/privacy')({
       path: '/privacy',
       title: 'Privacy Policy',
       description:
-        'CediWise Privacy Policy. Learn how we collect, use, and protect your personal information.',
+        'How CediWise handles your data: salary inputs, budgets, SME records, and account info.',
     }),
 })
 
@@ -19,17 +19,18 @@ function PrivacyPage() {
     <>
       <ContentPageLayout
         title="Privacy Policy"
-        subtitle="Last updated: February 21, 2026"
+        subtitle="Last updated February 21, 2026"
       >
         <section className="space-y-6">
+          <p>
+            CediWise runs salary calculators, budgets, SME ledgers, and lessons on web and mobile.
+            This page explains what we collect, why, and your choices.
+          </p>
+
           <h2>1. Introduction</h2>
           <p>
-            CediWise (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;) provides a
-            salary calculator, budgeting, small and medium enterprise (SME) ledger, and financial literacy
-            tools via web and mobile applications (the &quot;Services&quot;).
-            This Privacy Policy describes what personal information we collect,
-            how we use it, with whom we share it, and your rights. By using our
-            Services you agree to the terms below.
+            By using CediWise you agree to this policy. If anything here is unclear, email{' '}
+            <a href="mailto:joshua.ansah@cediwise.app">joshua.ansah@cediwise.app</a>.
           </p>
 
           <h2>2. Controller & Contact</h2>

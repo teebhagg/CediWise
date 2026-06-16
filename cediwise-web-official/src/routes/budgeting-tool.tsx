@@ -8,9 +8,9 @@ export const Route = createFileRoute('/budgeting-tool')({
   head: () =>
     createPageHead({
       path: '/budgeting-tool',
-      title: 'Budgeting Tool — Never Run Out of Money Before Month End',
+      title: 'Budget with clarity',
       description:
-        'See the exact date your money runs out if current spending continues, and your safe-to-spend figure updated daily. Ghana budgeting app built for real life.',
+        'See where your money goes, how much you can spend today, and when cash might run low. Ghana budgeting app in cedis.',
     }),
 })
 
@@ -34,34 +34,34 @@ const APP_JSON_LD = {
 
 const highlights = [
   {
-    title: 'Category-based budgets',
+    title: 'Categories that make sense',
     description:
-      'Set budgets for Needs, Wants, Savings, and custom categories. Aligned with the 50/30/20 rule.',
+      'Food, transport, rent, MoMo, savings. Set a limit per category instead of guessing.',
   },
   {
-    title: 'Real-time progress',
+    title: 'Spent vs left',
     description:
-      'See spent vs. remaining at a glance. Visual progress bars keep you on track throughout the month.',
+      'A simple bar shows what you have used and what is still available this month.',
   },
   {
-    title: 'Smart rollovers',
+    title: 'Safe to spend today',
     description:
-      'Unspent amounts can roll over to next month. Build savings momentum without extra effort.',
+      'The app tells you how much you can spend today without breaking the month.',
   },
   {
-    title: 'No spreadsheets',
+    title: 'Run-out date',
     description:
-      'Simple, focused UI. No formulas, no confusion. Just set your budget and track it.',
+      'If you keep spending at this pace, you see roughly when money might finish.',
   },
   {
-    title: 'Sync across devices',
+    title: 'Spending charts',
     description:
-      'Your budget follows you. Update on mobile, check on web — stay consistent.',
+      'Bar, line, and donut views so you can spot what ate your salary.',
   },
   {
-    title: 'Personalized guidance',
+    title: 'Works offline',
     description:
-      'Get tailored tips based on your spending patterns and goals.',
+      'Log expenses on the go. Sync when you are back online.',
   },
 ]
 
@@ -69,43 +69,60 @@ function BudgetingToolPage() {
   return (
     <>
       <FeatureInsightLayout
-        title="Never Run Out of Money Before Month End"
-        tagline="Smart Budgeting"
-        description="See the exact date your money runs out if current spending continues. Your safe-to-spend figure, updated daily — so you always know where you stand."
+        title="Budget with clarity."
+        tagline="Budgeting"
+        description="See where your money goes and plan the month ahead. Built for cedis, MoMo, and real Ghana spending."
         icon={ChartLineDataIcon}
         iconBgColor="bg-primary/30"
         image="/assets/ios/img-2.webp"
         highlights={highlights}
       >
-        <h2>How it works</h2>
+        <h2>What this is</h2>
         <p>
-          Create a budget for each spending category — food, transport, utilities, savings, and more.
-          As you log transactions, CediWise shows you how much you&apos;ve spent versus your limit.
-          Simple progress bars and alerts help you stay within your plan.
+          A budget is just a plan for your money. You decide how much goes to rent, food, transport,
+          church, family support, savings, and everything else. Then you log what you actually spend.
+          CediWise shows the gap between the plan and reality before you are surprised on the 25th.
         </p>
 
-        <h2>The 50/30/20 approach</h2>
+        <h2>How it works (step by step)</h2>
         <p>
-          We guide you toward a balanced allocation: 50% Needs, 30% Wants, 20% Savings. You can
-          customize these ratios to fit your situation. The goal is clarity, not rigidity.
+          <strong>1. Start with your take-home pay.</strong> Use the salary calculator or type your net
+          income. That is the pot you are working with this month.
+        </p>
+        <p>
+          <strong>2. Split it into categories.</strong> Needs (rent, utilities, food), wants (eating out,
+          data bundles), and savings. You can use the 50/30/20 idea as a starting point or set your own
+          numbers.
+        </p>
+        <p>
+          <strong>3. Log spending as it happens.</strong> GHS 45 on trotro, GHS 200 MoMo transfer, GHS 80
+          at the market. Each entry updates your progress bars.
+        </p>
+        <p>
+          <strong>4. Check safe-to-spend.</strong> The app answers: &quot;If I keep going like this, when
+          does money run out?&quot; and &quot;How much can I spend today?&quot;
         </p>
 
-        <h2>Why it matters</h2>
+        <h2>Spending insights (built in)</h2>
         <p>
-          Most people don&apos;t run out of money because they spend too much on one big thing —
-          they run out because small daily spending adds up invisibly. Knowing the exact date your
-          money runs out, days in advance, changes the decision you make today. Not after the fact.
+          Charts break down spending by category and by week or month. That is how you catch the small
+          leaks: daily food, ride fares, subscriptions you forgot, repeated MoMo charges. No separate
+          tool to learn. It lives inside your budget.
         </p>
 
-        <h2>Works best with</h2>
+        <h2>Who this helps</h2>
+        <p>
+          Salaried workers who earn okay but still run dry before month end. People paid in cash and
+          MoMo who never see a bank statement. Anyone tired of opening Notes or Excel every evening.
+        </p>
+
+        <h2>Works well with</h2>
         <ul>
           <li>
-            <a href="/spending-insights">Spending Insights dashboard</a> to see trends and category
-            breakdowns for your budget.
+            <a href="/salary-calculator">Salary calculator</a> to start from the right net pay.
           </li>
           <li>
-            <a href="/debt-dashboard">Debt Dashboard</a> to understand how loans and debt payments
-            affect your monthly plan.
+            <a href="/debt-dashboard">Debt dashboard</a> so loan repayments sit inside your budget.
           </li>
         </ul>
       </FeatureInsightLayout>

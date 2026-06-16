@@ -127,3 +127,149 @@
     @apply font-sans;
     }
 }
+
+@keyframes feature-icon-blob {
+  0%,
+  100% {
+    border-radius: 60% 40% 44% 56% / 50% 50% 46% 54%;
+  }
+  12.5% {
+    border-radius: 56% 44% 48% 52% / 54% 46% 50% 50%;
+  }
+  25% {
+    border-radius: 52% 48% 52% 48% / 48% 52% 54% 46%;
+  }
+  37.5% {
+    border-radius: 48% 52% 56% 44% / 46% 54% 52% 48%;
+  }
+  50% {
+    border-radius: 44% 56% 60% 40% / 52% 48% 48% 52%;
+  }
+  62.5% {
+    border-radius: 48% 52% 56% 44% / 50% 50% 46% 54%;
+  }
+  75% {
+    border-radius: 52% 48% 52% 48% / 54% 46% 50% 50%;
+  }
+  87.5% {
+    border-radius: 56% 44% 48% 52% / 48% 52% 54% 46%;
+  }
+}
+
+@keyframes feature-icon-blob-ring {
+  0%,
+  100% {
+    border-radius: 44% 56% 60% 40% / 52% 48% 48% 52%;
+    transform: scale(1.04);
+  }
+  12.5% {
+    border-radius: 48% 52% 56% 44% / 50% 50% 46% 54%;
+    transform: scale(1.07);
+  }
+  25% {
+    border-radius: 52% 48% 52% 48% / 54% 46% 50% 50%;
+    transform: scale(1.02);
+  }
+  37.5% {
+    border-radius: 56% 44% 48% 52% / 48% 52% 54% 46%;
+    transform: scale(0.97);
+  }
+  50% {
+    border-radius: 60% 40% 44% 56% / 50% 50% 46% 54%;
+    transform: scale(1);
+  }
+  62.5% {
+    border-radius: 56% 44% 48% 52% / 54% 46% 50% 50%;
+    transform: scale(1.05);
+  }
+  75% {
+    border-radius: 52% 48% 52% 48% / 48% 52% 54% 46%;
+    transform: scale(1.08);
+  }
+  87.5% {
+    border-radius: 48% 52% 56% 44% / 46% 54% 52% 48%;
+    transform: scale(1.03);
+  }
+}
+
+.feature-icon-blob {
+  animation: feature-icon-blob var(--blob-duration, 4.12s) linear infinite;
+  animation-delay: calc(var(--blob-index, 0) * 0.15s);
+  will-change: border-radius;
+}
+
+.feature-icon-blob-ring {
+  animation: feature-icon-blob-ring var(--blob-ring-duration, 4.94s) linear infinite;
+  animation-delay: calc(var(--blob-index, 0) * 0.15s + 0.22s);
+  will-change: border-radius, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature-icon-blob,
+  .feature-icon-blob-ring {
+    animation: none;
+    border-radius: 1rem;
+    transform: none;
+  }
+}
+
+/* Hero phone reveal — pure CSS (no JS); fill-mode keeps phones hidden during delay */
+@keyframes hero-phone-reveal {
+  from {
+    opacity: 0;
+    filter: blur(18px);
+    transform: translateY(28px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hero-phone-reveal-primary {
+  from {
+    opacity: 0.01;
+    filter: blur(18px);
+    transform: translateY(28px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hero-phone-reveal-reduced {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.hero-phone-reveal-animate {
+  --hero-phone-delay: 0s;
+  animation: hero-phone-reveal 0.95s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--hero-phone-delay);
+  will-change: opacity, transform, filter;
+}
+
+.hero-phone-reveal-animate--primary {
+  animation-name: hero-phone-reveal-primary;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-phone-reveal-animate,
+  .hero-phone-reveal-animate--primary {
+    animation: hero-phone-reveal-reduced 0.4s ease both;
+    animation-delay: var(--hero-phone-delay);
+    filter: none;
+    transform: none;
+    will-change: opacity;
+  }
+}

@@ -16,8 +16,9 @@ const footerLinks = [
     links: [
       { name: 'Pricing', href: '/pricing' },
       { name: 'Salary Calculator', href: '/salary-calculator' },
+      { name: 'Try Salary Calculator', href: '/try-salary-calculator' },
       { name: 'Budgeting Tool', href: '/budgeting-tool' },
-  { name: 'Small & Medium Enterprise (SME) Ledger', href: '/sme-ledger' },
+      { name: 'SME Ledger', href: '/sme-ledger' },
       { name: 'Financial Literacy', href: '/financial-literacy' },
       { name: 'Feedback', href: '/feedback' },
     ],
@@ -58,8 +59,7 @@ export function Footer() {
               </span>
             </div>
             <p className="text-zinc-400 text-sm leading-relaxed max-w-xs mb-8">
-              Empowering Ghanaians with smart financial tools. Manage your
-            salary, track your small and medium enterprise (SME) expenses, and build wealth with confidence.
+              PAYE checks, budgeting, SME ledger. Built for Ghana, not imported templates.
             </p>
             <div className="flex gap-4">
               {socialLinks.map((social) => (
@@ -100,7 +100,7 @@ export function Footer() {
           <div className="lg:col-span-1">
             <h4 className="text-white font-bold mb-6">Newsletter</h4>
             <p className="text-zinc-400 text-sm mb-6">
-              Get financial tips and product updates directly in your inbox.
+              Occasional tips on money in Ghana. No spam.
             </p>
             <div className="relative group">
               <input

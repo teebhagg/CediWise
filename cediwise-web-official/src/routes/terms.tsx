@@ -10,7 +10,7 @@ export const Route = createFileRoute('/terms')({
       path: '/terms',
       title: 'Terms of Service',
       description:
-        'CediWise Terms of Service. Read the terms governing use of our financial tools and services.',
+        'Terms for using CediWise website and app. Salary tools, budgeting, and SME ledger for Ghana.',
     }),
 })
 
@@ -19,9 +19,14 @@ function TermsPage() {
     <>
       <ContentPageLayout
         title="Terms of Service"
-        subtitle="Effective date: February 21, 2026"
+        subtitle="Effective February 21, 2026"
       >
         <section className="space-y-6">
+          <p>
+            These terms apply when you use the CediWise website or mobile app. Read them before you
+            rely on salary, budget, or business tools for important decisions.
+          </p>
+
           <h2>1. Acceptance</h2>
           <p>
             By using the CediWise website or mobile app (&quot;Services&quot;)
@@ -31,9 +36,9 @@ function TermsPage() {
 
           <h2>2. Services & eligibility</h2>
           <p>
-            CediWise provides budgeting, salary, small and medium enterprise (SME) ledger, and financial
-            literacy tools. You must be at least 13 to use the Services (or have
-            parental permission). We may refuse service to anyone.
+            CediWise offers salary checks, budgeting, debt tracking, SME ledger, and money lessons
+            for users in Ghana. You must be at least 13 (or have a parent&apos;s permission). We may
+            refuse service.
           </p>
 
           <h2>3. Account registration</h2>

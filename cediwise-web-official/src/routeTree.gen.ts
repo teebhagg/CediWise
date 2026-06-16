@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TutorialsRouteImport } from './routes/tutorials'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SpendingInsightsRouteImport } from './routes/spending-insights'
 import { Route as SmeLedgerRouteImport } from './routes/sme-ledger'
@@ -21,9 +22,16 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as BudgetingToolRouteImport } from './routes/budgeting-tool'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TrySalaryCalculatorIndexRouteImport } from './routes/try-salary-calculator/index'
 import { Route as SalaryCalculatorIndexRouteImport } from './routes/salary-calculator/index'
+import { Route as TrySalaryCalculatorAmountRouteImport } from './routes/try-salary-calculator/$amount'
 import { Route as SalaryCalculatorAmountRouteImport } from './routes/salary-calculator/$amount'
 
+const TutorialsRoute = TutorialsRouteImport.update({
+  id: '/tutorials',
+  path: '/tutorials',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -84,11 +92,23 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrySalaryCalculatorIndexRoute =
+  TrySalaryCalculatorIndexRouteImport.update({
+    id: '/try-salary-calculator/',
+    path: '/try-salary-calculator/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const SalaryCalculatorIndexRoute = SalaryCalculatorIndexRouteImport.update({
   id: '/salary-calculator/',
   path: '/salary-calculator/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TrySalaryCalculatorAmountRoute =
+  TrySalaryCalculatorAmountRouteImport.update({
+    id: '/try-salary-calculator/$amount',
+    path: '/try-salary-calculator/$amount',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const SalaryCalculatorAmountRoute = SalaryCalculatorAmountRouteImport.update({
   id: '/salary-calculator/$amount',
   path: '/salary-calculator/$amount',
@@ -108,8 +128,11 @@ export interface FileRoutesByFullPath {
   '/sme-ledger': typeof SmeLedgerRoute
   '/spending-insights': typeof SpendingInsightsRoute
   '/terms': typeof TermsRoute
+  '/tutorials': typeof TutorialsRoute
   '/salary-calculator/$amount': typeof SalaryCalculatorAmountRoute
+  '/try-salary-calculator/$amount': typeof TrySalaryCalculatorAmountRoute
   '/salary-calculator/': typeof SalaryCalculatorIndexRoute
+  '/try-salary-calculator/': typeof TrySalaryCalculatorIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -124,8 +147,11 @@ export interface FileRoutesByTo {
   '/sme-ledger': typeof SmeLedgerRoute
   '/spending-insights': typeof SpendingInsightsRoute
   '/terms': typeof TermsRoute
+  '/tutorials': typeof TutorialsRoute
   '/salary-calculator/$amount': typeof SalaryCalculatorAmountRoute
+  '/try-salary-calculator/$amount': typeof TrySalaryCalculatorAmountRoute
   '/salary-calculator': typeof SalaryCalculatorIndexRoute
+  '/try-salary-calculator': typeof TrySalaryCalculatorIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -141,8 +167,11 @@ export interface FileRoutesById {
   '/sme-ledger': typeof SmeLedgerRoute
   '/spending-insights': typeof SpendingInsightsRoute
   '/terms': typeof TermsRoute
+  '/tutorials': typeof TutorialsRoute
   '/salary-calculator/$amount': typeof SalaryCalculatorAmountRoute
+  '/try-salary-calculator/$amount': typeof TrySalaryCalculatorAmountRoute
   '/salary-calculator/': typeof SalaryCalculatorIndexRoute
+  '/try-salary-calculator/': typeof TrySalaryCalculatorIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -159,8 +188,11 @@ export interface FileRouteTypes {
     | '/sme-ledger'
     | '/spending-insights'
     | '/terms'
+    | '/tutorials'
     | '/salary-calculator/$amount'
+    | '/try-salary-calculator/$amount'
     | '/salary-calculator/'
+    | '/try-salary-calculator/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -175,8 +207,11 @@ export interface FileRouteTypes {
     | '/sme-ledger'
     | '/spending-insights'
     | '/terms'
+    | '/tutorials'
     | '/salary-calculator/$amount'
+    | '/try-salary-calculator/$amount'
     | '/salary-calculator'
+    | '/try-salary-calculator'
   id:
     | '__root__'
     | '/'
@@ -191,8 +226,11 @@ export interface FileRouteTypes {
     | '/sme-ledger'
     | '/spending-insights'
     | '/terms'
+    | '/tutorials'
     | '/salary-calculator/$amount'
+    | '/try-salary-calculator/$amount'
     | '/salary-calculator/'
+    | '/try-salary-calculator/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -208,12 +246,22 @@ export interface RootRouteChildren {
   SmeLedgerRoute: typeof SmeLedgerRoute
   SpendingInsightsRoute: typeof SpendingInsightsRoute
   TermsRoute: typeof TermsRoute
+  TutorialsRoute: typeof TutorialsRoute
   SalaryCalculatorAmountRoute: typeof SalaryCalculatorAmountRoute
+  TrySalaryCalculatorAmountRoute: typeof TrySalaryCalculatorAmountRoute
   SalaryCalculatorIndexRoute: typeof SalaryCalculatorIndexRoute
+  TrySalaryCalculatorIndexRoute: typeof TrySalaryCalculatorIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/tutorials': {
+      id: '/tutorials'
+      path: '/tutorials'
+      fullPath: '/tutorials'
+      preLoaderRoute: typeof TutorialsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -298,11 +346,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/try-salary-calculator/': {
+      id: '/try-salary-calculator/'
+      path: '/try-salary-calculator'
+      fullPath: '/try-salary-calculator/'
+      preLoaderRoute: typeof TrySalaryCalculatorIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/salary-calculator/': {
       id: '/salary-calculator/'
       path: '/salary-calculator'
       fullPath: '/salary-calculator/'
       preLoaderRoute: typeof SalaryCalculatorIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/try-salary-calculator/$amount': {
+      id: '/try-salary-calculator/$amount'
+      path: '/try-salary-calculator/$amount'
+      fullPath: '/try-salary-calculator/$amount'
+      preLoaderRoute: typeof TrySalaryCalculatorAmountRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/salary-calculator/$amount': {
@@ -328,8 +390,11 @@ const rootRouteChildren: RootRouteChildren = {
   SmeLedgerRoute: SmeLedgerRoute,
   SpendingInsightsRoute: SpendingInsightsRoute,
   TermsRoute: TermsRoute,
+  TutorialsRoute: TutorialsRoute,
   SalaryCalculatorAmountRoute: SalaryCalculatorAmountRoute,
+  TrySalaryCalculatorAmountRoute: TrySalaryCalculatorAmountRoute,
   SalaryCalculatorIndexRoute: SalaryCalculatorIndexRoute,
+  TrySalaryCalculatorIndexRoute: TrySalaryCalculatorIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

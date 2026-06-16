@@ -10,21 +10,21 @@ export const Route = createFileRoute('/sme-ledger')({
   head: () =>
     createPageHead({
       path: '/sme-ledger',
-      title: 'SME Ledger — One GRA Audit Costs More Than 3 Years of CediWise',
+      title: 'Run your business smarter',
       description:
-        'Stay VAT-compliant and audit-ready without hiring an accountant. Automatic 20% VAT, GHS 750K threshold tracking, and GRA-ready records for Ghana SMEs.',
+        'Sales, expenses, VAT, and cash flow in one ledger for Ghana SMEs. Threshold alerts at GHS 750K turnover. CSV export for your accountant.',
       schemas: [
         getAppSchema(),
         getFAQSchema([
           {
             question: 'What is the VAT threshold for small businesses in Ghana?',
             answer:
-              'Under Act 1151, the mandatory VAT registration threshold for businesses dealing in goods is GHS 750,000 in annual turnover. Service providers are generally required to register regardless of turnover.',
+              'Under Act 1151, many goods businesses must register for VAT when annual turnover reaches GHS 750,000. Service businesses often register regardless of turnover. CediWise tracks your running total and warns you as you approach the limit.',
           },
           {
-            question: 'How does CediWise help with VAT calculations?',
+            question: 'How does CediWise calculate VAT?',
             answer:
-              'CediWise automatically calculates the 20% VAT (including NHIL, GETFund, and COVID-19 levies) for both inclusive and exclusive amounts, ensuring your SME records are compliant.',
+              'You log sales and expenses. The app applies 20% VAT rules (including NHIL, GETFund, and COVID-19 levies where relevant) for inclusive or exclusive amounts so you do not have to do it on a calculator each time.',
           },
         ]),
       ],
@@ -33,43 +33,43 @@ export const Route = createFileRoute('/sme-ledger')({
 
 const highlights = [
   {
-    title: 'Sales & expenses',
+    title: 'Sales and expenses',
     description:
-      'Log all business income and expenses in one place. Categorize transactions for clear reporting.',
+      'Record money in and money out. Tag by category so reports make sense later.',
   },
   {
-    title: 'Automatic 20% VAT',
+    title: 'VAT handled for you',
     description:
-      'VAT-inclusive and VAT-exclusive amounts calculated automatically under Act 1151. No manual math.',
+      '20% VAT calculated on eligible amounts. Less manual math, fewer mistakes.',
   },
   {
-    title: 'VAT threshold alert',
+    title: 'GHS 750K alert',
     description:
-      'Get notified as you approach the GHS 750,000 annual turnover threshold for VAT registration.',
+      'Running turnover total with a heads-up before you cross VAT registration territory.',
   },
   {
-    title: 'Monthly P&L summary',
+    title: 'Monthly profit snapshot',
     description:
-      'See total revenue, expenses, and profit at a glance. Export CSV for your accountant.',
+      'Revenue minus expenses for the month. See if the business actually made money.',
   },
   {
-    title: 'Business-ready',
+    title: 'CSV for your accountant',
     description:
-      'Designed for small businesses, traders, and side hustles. No accounting degree required.',
+      'Export records instead of handing over a worn notebook.',
   },
   {
-    title: 'All-in-one',
+    title: 'Side hustle friendly',
     description:
-      'Track your business finances alongside personal budgets. One app, full visibility.',
+      'For traders, freelancers, and small shops. No accounting degree required.',
   },
 ]
 
 function SMELedgerPage() {
   return (
     <FeatureInsightLayout
-      title="One GRA Audit Costs More Than 3 Years of CediWise."
-      tagline="Business Finance"
-      description="Stay VAT-compliant, audit-ready, and ahead of your GHS 750K threshold — without hiring an accountant. Automatic 20% VAT calculations under Act 1151."
+      title="Run your business smarter."
+      tagline="SME Ledger"
+      description="Stay on top of expenses and cash flow. Sales, costs, VAT, and records in one place."
       icon={Invoice02Icon}
       iconBgColor="bg-blue-500/30"
       image="/assets/ios/img-4.webp"
@@ -77,15 +77,15 @@ function SMELedgerPage() {
     >
       <div className="grid gap-6 md:grid-cols-2 mt-8">
         <GlassCard
-          label="VAT Rate (Act 1151)"
-          value="20.0% Automatic"
+          label="VAT rate (Act 1151)"
+          value="20% automatic"
           icon={<HugeIcon icon={PercentIcon} size={20} />}
           iconBgColor="bg-blue-500/20"
           iconColor="text-blue-400"
         />
         <GlassCard
-          label="Registration Threshold"
-          value="GHS 750K Turnover"
+          label="Turnover watch"
+          value="GHS 750K alert"
           icon={<HugeIcon icon={Target02Icon} size={20} />}
           iconBgColor="bg-orange-500/20"
           iconColor="text-orange-400"
@@ -93,37 +93,57 @@ function SMELedgerPage() {
       </div>
 
       <div className="mt-12 space-y-6">
-        <h2>How it works</h2>
+        <h2>What this is</h2>
         <p>
-          Add your sales and expenses with date, amount, and category. CediWise automatically applies
-          20% VAT where relevant and keeps a running total of your turnover. As you approach GHS
-          750,000 in annual turnover (for goods businesses), you&apos;ll get a heads-up — so you can plan for VAT registration
-          if needed. Service providers are always required to register regardless of turnover under Act 1151.
+          A simple business notebook inside your phone. You record sales (money coming in) and
+          expenses (money going out). CediWise adds up totals, applies VAT where needed, and shows
+          whether the month was profitable. Built for market women, online sellers, freelancers, and
+          anyone running a side business alongside a salary.
         </p>
 
-        <h2>Built for Ghanaian small &amp; medium enterprises (SMEs)</h2>
+        <h2>How it works (step by step)</h2>
         <p>
-          Many small business owners in Ghana manage money in notebooks or scattered spreadsheets. The
-          SME Ledger gives you a digital record that is professional and accountant-ready.
+          <strong>1. Log a sale.</strong> Amount, date, what you sold. Mark if VAT applies.
+        </p>
+        <p>
+          <strong>2. Log an expense.</strong> Stock, delivery, airtime, packaging, transport. Same
+          idea.
+        </p>
+        <p>
+          <strong>3. Check your dashboard.</strong> Total sales, total costs, estimated profit. VAT
+          collected or owed where relevant.
+        </p>
+        <p>
+          <strong>4. Watch turnover.</strong> If you sell goods and approach GHS 750,000 in annual
+          turnover, the app warns you. Service businesses often need VAT registration earlier; the
+          ledger still keeps your records straight.
         </p>
 
-        <h2>Why it matters</h2>
+        <h2>VAT in plain language</h2>
         <p>
-          A GRA audit without proper records can cost far more than any subscription — in penalties,
-          back taxes, and accountant fees. Under Act 915, late filing alone carries a GHS 500
-          initial penalty plus GHS 10 per day. The SME Ledger keeps you compliant from day one,
-          so an audit is never a crisis.
+          VAT is a tax on sales. Registered businesses charge it, file returns, and pay GRA. Getting
+          the maths wrong or missing registration can mean penalties. The ledger does the 20%
+          calculation on each entry so your notebook matches what an auditor would expect.
         </p>
 
-        <h2>Works best with</h2>
+        <h2>Why records matter</h2>
+        <p>
+          GRA can ask for proof of income and expenses. A fine for late filing or poor records costs
+          more than years of app subscription. Digital records also help when you apply for a loan or
+          need to show a partner how the business is doing.
+        </p>
+
+        <h2>Works well with</h2>
         <ul>
           <li>
-            <a href="/salary-calculator">Salary Calculator</a> to understand staff costs alongside your
-            SME revenue.
+            <a href="/salary-calculator">Salary calculator</a> if you also earn a wage.
           </li>
           <li>
-            <a href="/budgeting-tool">Budgeting Tool</a> to connect your business finances to your
-            personal plan.
+            <a href="/budgeting-tool">Budgeting tool</a> to separate personal spending from business
+            cash.
+          </li>
+          <li>
+            <a href="/financial-literacy">Financial literacy</a> for VAT and MoMo basics.
           </li>
         </ul>
       </div>

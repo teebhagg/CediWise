@@ -11,6 +11,7 @@ const ROUTES = [
   '/privacy',
   '/terms',
   '/salary-calculator',
+  '/try-salary-calculator',
   '/budgeting-tool',
   '/sme-ledger',
   '/financial-literacy',

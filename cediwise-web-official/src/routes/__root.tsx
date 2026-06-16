@@ -2,6 +2,7 @@ import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 
 import appCss from '../styles.css?url'
 import { Header } from '@/components/layout/Header'
+import { SalaryCalculatorBanner } from '@/components/layout/SalaryCalculatorBanner'
 import { OG_IMAGE, SITE_URL } from '@/lib/seo'
 
 export const Route = createRootRoute({
@@ -15,29 +16,29 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1, viewport-fit=cover',
       },
       {
-        title: 'CediWise — Personal Finance Companion for Ghana',
+        title: 'CediWise — Finance App for Ghana',
       },
       {
         name: 'description',
         content:
-          'Stop losing hundreds of cedis each month to untracked expenses and incorrect PAYE deductions. CediWise verifies your salary deductions, tracks your spending, and protects your business from GRA penalties.',
+          'Check PAYE and SSNIT, budget in cedis, track SME VAT. Free web salary calculator. App on Android and iOS.',
       },
       {
         name: 'keywords',
         content:
-          'CediWise, Ghana personal finance companion app, Ghana salary calculator, PAYE, SSNIT, SME ledger, budgeting, debt, SME expenses, financial literacy, PAYE verification Ghana, salary deduction checker, employer PAYE check, never run out of money Ghana, GRA audit protection, Ghana budgeting app, SME ledger Ghana, VAT threshold Ghana, PAYE calculator 2026, SSNIT calculator Ghana',
+          'CediWise, Ghana financial operating system, Ghana salary calculator, PAYE calculator Ghana, SSNIT, net salary Ghana, SME ledger, budgeting Ghana, debt tracker, financial literacy Ghana, PAYE verification, GRA tax calculator 2026',
       },
       { property: 'og:url', content: SITE_URL },
       { property: 'og:site_name', content: 'CediWise' },
       { property: 'og:locale', content: 'en_GH' },
       {
         property: 'og:title',
-        content: 'CediWise — Personal Finance Companion for Ghana',
+        content: 'CediWise — Finance App for Ghana',
       },
       {
         property: 'og:description',
         content:
-          'Stop losing hundreds of cedis each month to untracked expenses and incorrect PAYE deductions. CediWise verifies your salary deductions, tracks your spending, and protects your business from GRA penalties.',
+          'Check PAYE and SSNIT, budget in cedis, track SME VAT. Free salary calculator on the web.',
       },
       { property: 'og:image', content: OG_IMAGE },
       {
@@ -50,12 +51,12 @@ export const Route = createRootRoute({
       },
       {
         name: 'twitter:title',
-        content: 'CediWise — Personal Finance Companion for Ghana',
+        content: 'CediWise — Finance App for Ghana',
       },
       {
         name: 'twitter:description',
         content:
-          'CediWise is a personal finance companion for Ghana. Manage salary, PAYE, SSNIT, budgeting, debt, SME expenses, and financial literacy in one app.',
+          'PAYE checks, budgeting, SME ledger. Built for Ghana.',
       },
       { name: 'twitter:image', content: OG_IMAGE },
       {
@@ -99,7 +100,7 @@ const ORGANIZATION_JSON_LD = {
   name: 'CediWise',
   url: SITE_URL,
   description:
-    'CediWise is a personal finance companion for Ghana. Salary calculator, budgeting, small and medium enterprise (SME) ledger, debt tracking, and financial literacy tools.',
+    'CediWise is a finance app for Ghana: PAYE and SSNIT checks, budgeting, SME ledger, debt tracking, and money lessons.',
   areaServed: { '@type': 'Country', name: 'Ghana' },
 }
 
@@ -116,6 +117,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         />
       </head>
       <body>
+        <SalaryCalculatorBanner />
         <Header />
         {children}
         <Scripts />

@@ -78,14 +78,12 @@ export function FeatureInsightLayout({
               >
                 {image ? (
                   <div className="relative mx-auto max-w-sm">
-                    {/* <div className="aspect-[9/19] overflow-hidden rounded-[2.5rem] border border-white/10 bg-zinc-900/50 shadow-2xl"> */}
-                      <img
-                        src={image}
-                        alt={title}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                      />
-                    {/* </div> */}
+                    <img
+                      src={image}
+                      alt={title}
+                      className="mx-auto max-h-[500px] w-auto max-w-full object-contain lg:max-h-[650px] lg:object-cover"
+                      loading="lazy"
+                    />
                     <div className="absolute -inset-4 -z-10 rounded-[3rem] bg-primary/20 blur-3xl opacity-50" />
                   </div>
                 ) : (
@@ -113,7 +111,7 @@ export function FeatureInsightLayout({
                 viewport={{ once: true }}
                 className="text-2xl font-bold text-white mb-12"
               >
-                Key features
+                What you get
               </motion.h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {highlights.map((item, i) => (

@@ -38,17 +38,17 @@
 
 ### Mobile app (`cediwise-mobile-app`)
 
-| Category | Capabilities |
-| -------- | ------------ |
-| **Salary** | Basic salary input → SSNIT (5.5%), PAYE (7-tier), net take-home; tax & salary calculator; SSNIT/PAYE toggle on income sources |
-| **Budget** | Category budgets (Needs/Wants/Savings), spent vs remaining progress bars; Vitals wizard; multiple income sources; budget templates; spending insights |
-| **Debt** | Debt dashboard — add debts, record payments, payoff estimates, linked to budget cycles |
-| **Recurring expenses** | Weekly, bi-weekly, monthly, quarterly, annually |
-| **Auth** | Phone OTP (Firebase), Google Sign-In, Apple Sign-In (iOS) |
-| **Financial literacy** | Modules and lessons; glossary; calculators: PAYE & SSNIT, budget builder, savings goal, loan amortization, T-Bill projection, cash flow |
-| **Investment** | Tab placeholder — coming soon (GSE, T-Bill content in literacy) |
-| **Offline & sync** | Mutation queue for budget changes; local storage sync |
-| **Other** | Onboarding; guided tours; in-app update checks; push notifications; analytics (Firebase, PostHog); error reporting (Sentry) |
+| Category               | Capabilities                                                                                                                                          |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Salary**             | Basic salary input → SSNIT (5.5%), PAYE (7-tier), net take-home; tax & salary calculator; SSNIT/PAYE toggle on income sources                         |
+| **Budget**             | Category budgets (Needs/Wants/Savings), spent vs remaining progress bars; Vitals wizard; multiple income sources; budget templates; spending insights |
+| **Debt**               | Debt dashboard — add debts, record payments, payoff estimates, linked to budget cycles                                                                |
+| **Recurring expenses** | Weekly, bi-weekly, monthly, quarterly, annually                                                                                                       |
+| **Auth**               | Phone OTP (Firebase), Google Sign-In, Apple Sign-In (iOS)                                                                                             |
+| **Financial literacy** | Modules and lessons; glossary; calculators: PAYE & SSNIT, budget builder, savings goal, loan amortization, T-Bill projection, cash flow               |
+| **Investment**         | Tab placeholder — coming soon (GSE, T-Bill content in literacy)                                                                                       |
+| **Offline & sync**     | Mutation queue for budget changes; local storage sync                                                                                                 |
+| **Other**              | Onboarding; guided tours; in-app update checks; push notifications; analytics (Firebase, PostHog); error reporting (Sentry)                           |
 
 ### Web app — [cediwise.app](https://cediwise.app) (`cediwise-web-official`)
 
@@ -146,11 +146,11 @@ See [`supabase/README.md`](supabase/README.md) for `supabase link`, `supabase db
 
 Use **[Conventional Commits](https://www.conventionalcommits.org/)** (`type(scope): summary`) for readable history. CI also interprets the following:
 
-| Signal | Effect |
-| ------ | ------ |
-| **`[skip-deploy]`** in the **latest commit message** | Skips the **Android** and **iOS** deploy jobs (both workflows read the latest commit message). |
-| **`BREAKING CHANGE`** (footer), **`type(scope)!:`**, or **`[force-update]`** in commits since the previous `v*` tag | Sets `requires_update` when writing `app_versions` in Supabase (in-app update policy). |
-| Tag **`v*`** (e.g. `v0.2.6`) | Treated as a release ref for version extraction and always eligible for deploy paths that key off tags. |
+| Signal                                                                                                              | Effect                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| **`[skip-deploy]`** in the **latest commit message**                                                                | Skips the **Android** and **iOS** deploy jobs (both workflows read the latest commit message).          |
+| **`BREAKING CHANGE`** (footer), **`type(scope)!:`**, or **`[force-update]`** in commits since the previous `v*` tag | Sets `requires_update` when writing `app_versions` in Supabase (in-app update policy).                  |
+| Tag **`v*`** (e.g. `v0.2.6`)                                                                                        | Treated as a release ref for version extraction and always eligible for deploy paths that key off tags. |
 
 **Never commit secrets.** Use GitHub Actions secrets and/or Expo/EAS project secrets. `eas.json` in the repo should not hold production credentials (CI injects env at build time).
 
@@ -166,11 +166,11 @@ If this file is missing for the version being built, **Android** and **iOS** dep
 
 ### GitHub Actions (mobile)
 
-| Workflow | Purpose |
-| -------- | ------- |
-| [`mobile-app-pr-check.yml`](.github/workflows/mobile-app-pr-check.yml) | On PRs to `main` that touch `cediwise-mobile-app/**`: ESLint (errors fail), `tsc --noEmit`, PR comment with summary. |
-| [`build-android-release.yml`](.github/workflows/build-android-release.yml) | EAS **local** Android **AAB**, submit to **Google Play**, inject secrets into `eas.json` from GitHub Secrets, update **`app_versions`** for Android. Triggers: `push` to `main`, tags `v*`, `workflow_dispatch`. |
-| [`build-ios-release.yml`](.github/workflows/build-ios-release.yml) | EAS **iOS** production build with **`--auto-submit`** to App Store Connect, same secret injection pattern, update **`app_versions`** for iOS. Triggers: `push` to `main`, tags `v*`, `workflow_dispatch` (optional `skip_deploy`). |
+| Workflow                                                                   | Purpose                                                                                                                                                                                                                            |
+| -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`mobile-app-pr-check.yml`](.github/workflows/mobile-app-pr-check.yml)     | On PRs to `main` that touch `cediwise-mobile-app/**`: ESLint (errors fail), `tsc --noEmit`, PR comment with summary.                                                                                                               |
+| [`build-android-release.yml`](.github/workflows/build-android-release.yml) | EAS Android production **`eas build` + `--auto-submit`** to **Google Play** (cloud; mirrors iOS). Secrets injected into `eas.json`; **`app_versions`** updated for Android. Local build/submit steps kept commented in the workflow. Triggers: `push` to `main`, tags `v*`, `workflow_dispatch`. |
+| [`build-ios-release.yml`](.github/workflows/build-ios-release.yml)         | EAS **iOS** production build with **`--auto-submit`** to App Store Connect, same secret injection pattern, update **`app_versions`** for iOS. Triggers: `push` to `main`, tags `v*`, `workflow_dispatch` (optional `skip_deploy`). |
 
 **Android vs iOS on `push` to `main`:** The **Android** workflow builds only when `app.json` version is **newer** than the latest `v*` GitHub release tag (semver). The **iOS** workflow does **not** use that gate—it runs whenever the job is not skipped (`[skip-deploy]`, etc.) and release notes exist for the current version. Plan iOS pushes accordingly, or use `workflow_dispatch` / tags as needed.
 
@@ -195,15 +195,15 @@ More detail and historical notes: [`.github/README.md`](.github/README.md).
 
 Values differ by app. Mobile public keys are embedded at build time (`EXPO_PUBLIC_*`).
 
-| Variable | Used by | Description |
-| -------- | ------- | ----------- |
-| `EXPO_PUBLIC_SUPABASE_URL` | Mobile | Supabase project URL |
-| `EXPO_PUBLIC_SUPABASE_KEY` | Mobile | Supabase publishable / client key (see mobile README) |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Mobile | JWT for `createClient` — must be the **anon** key, not service role |
-| `EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY` | Mobile | Paystack **public** key (`pk_…`) |
-| `EXPO_PUBLIC_POSTHOG_*` | Mobile | Product analytics |
-| `FIREBASE_PROJECT_ID` | Mobile builds | Firebase project id |
-| `SENTRY_AUTH_TOKEN` | CI / EAS | Upload symbols (CI only; not for app runtime) |
+| Variable                          | Used by       | Description                                                         |
+| --------------------------------- | ------------- | ------------------------------------------------------------------- |
+| `EXPO_PUBLIC_SUPABASE_URL`        | Mobile        | Supabase project URL                                                |
+| `EXPO_PUBLIC_SUPABASE_KEY`        | Mobile        | Supabase publishable / client key (see mobile README)               |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY`   | Mobile        | JWT for `createClient` — must be the **anon** key, not service role |
+| `EXPO_PUBLIC_PAYSTACK_PUBLIC_KEY` | Mobile        | Paystack **public** key (`pk_…`)                                    |
+| `EXPO_PUBLIC_POSTHOG_*`           | Mobile        | Product analytics                                                   |
+| `FIREBASE_PROJECT_ID`             | Mobile builds | Firebase project id                                                 |
+| `SENTRY_AUTH_TOKEN`               | CI / EAS      | Upload symbols (CI only; not for app runtime)                       |
 
 Firebase config files: `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) live under `cediwise-mobile-app/` (see mobile README). Supabase **service role** must **only** exist on servers, CI secrets, or Edge Functions — never in the mobile app.
 
@@ -219,12 +219,12 @@ Firebase config files: `google-services.json` (Android) and `GoogleService-Info.
 
 ## Tech stack
 
-| Layer | Technologies |
-| ----- | ------------ |
-| **Mobile** | React Native, Expo (expo-router, dev client), Supabase, Firebase (auth, analytics), Google & Apple sign-in, Paystack (WebView), PostHog, Sentry, HeroUI Native, FlashList, Reanimated |
-| **Web** | TanStack Start, Vite, React, Tailwind CSS, shadcn-style UI |
-| **Dashboard** | Next.js, Supabase (SSR patterns), shadcn, Recharts |
-| **Backend** | Supabase (Postgres, RLS, Realtime, Edge Functions); phone auth bridge via Firebase |
+| Layer         | Technologies                                                                                                                                                                          |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Mobile**    | React Native, Expo (expo-router, dev client), Supabase, Firebase (auth, analytics), Google & Apple sign-in, Paystack (WebView), PostHog, Sentry, HeroUI Native, FlashList, Reanimated |
+| **Web**       | TanStack Start, Vite, React, Tailwind CSS, shadcn-style UI                                                                                                                            |
+| **Dashboard** | Next.js, Supabase (SSR patterns), shadcn, Recharts                                                                                                                                    |
+| **Backend**   | Supabase (Postgres, RLS, Realtime, Edge Functions); phone auth bridge via Firebase                                                                                                    |
 
 ---
 

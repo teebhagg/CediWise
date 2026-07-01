@@ -216,7 +216,12 @@ export default function BudgetTemplatesScreen() {
       keyExtractor={lifeStageKeyExtractor}
       renderItem={renderLifeStageFilter}
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ flexDirection: "row", gap: 10, alignItems: "center" }}
+      contentContainerStyle={{
+        flexDirection: "row",
+        gap: 10,
+        alignItems: "center",
+        paddingHorizontal: 8,
+      }}
     />
   );
 

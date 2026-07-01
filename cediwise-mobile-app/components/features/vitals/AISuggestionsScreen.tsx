@@ -12,6 +12,7 @@ import {
   WANTS_OTHERS_CATEGORY_ID,
 } from "./wantsOthersCategory";
 import type { AppliedAISelections, BudgetTemplateKey, RecurringExpense } from "./types";
+import { simulateVitalsBudgetPlan } from "@/utils/simulateVitalsBudgetPlan";
 
 const CONFIDENCE_PRESELECT = 0.7;
 
@@ -119,23 +120,50 @@ export function AISuggestionsScreen({
     setAmountOverrides(prev => ({ ...prev, [id]: amount }));
   };
 
-  // Monthly allocations only — goal targets are not monthly budget lines
-  const totalSelected = useMemo(() => {
-    let total = 0;
-    suggestions.categories.forEach((c) => {
-      if (selectedCategories.has(c.id)) {
-        total += amountOverrides[c.id] ?? c.suggestedLimit;
-      }
-    });
-    suggestions.recurringExpenses.forEach((r) => {
-      if (selectedRecurring.has(r.id) && r.bucket !== "savings") {
-        total += amountOverrides[r.id] ?? r.amount;
-      }
-    });
-    return total;
-  }, [selectedCategories, selectedRecurring, amountOverrides, suggestions]);
+  // Monthly allocations — simulate final minimal-seed budget (not selected lines only)
+  const simulatedPlan = useMemo(() => {
+    const split = suggestions.budgetSplit;
+    const needsPct = split?.needsPct ?? 0.5;
+    const wantsPct = split?.wantsPct ?? 0.3;
+    const savingsPct = split?.savingsPct ?? 0.2;
 
-  const isOverBudget = totalSelected > monthlyIncome;
+    const categoryRows = suggestions.categories
+      .filter((c) =>
+        isWantsOthersCategory(c.name, c.bucket) || selectedCategories.has(c.id),
+      )
+      .map((c) => ({
+        name: c.name,
+        bucket: c.bucket,
+        limit: amountOverrides[c.id] ?? c.suggestedLimit,
+      }));
+
+    const savingsRecurringAsCategories = suggestions.recurringExpenses
+      .filter((r) => selectedRecurring.has(r.id) && r.bucket === "savings")
+      .map((r) => ({
+        name: r.name,
+        bucket: "savings" as const,
+        limit: amountOverrides[r.id] ?? r.amount,
+      }));
+
+    return simulateVitalsBudgetPlan({
+      takeHome: monthlyIncome,
+      needsPct,
+      wantsPct,
+      savingsPct,
+      categories: [...categoryRows, ...savingsRecurringAsCategories],
+    });
+  }, [
+    amountOverrides,
+    monthlyIncome,
+    selectedCategories,
+    selectedRecurring,
+    suggestions.budgetSplit,
+    suggestions.categories,
+    suggestions.recurringExpenses,
+  ]);
+
+  const totalSelected = simulatedPlan.totalPlanned;
+  const isOverBudget = !simulatedPlan.valid;
   const remaining = Math.max(0, monthlyIncome - totalSelected);
   const totalSelectedCount = selectedCategories.size + selectedRecurring.size + selectedGoals.size;
 

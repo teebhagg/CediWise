@@ -8,15 +8,12 @@ import { usePersonalizationStore } from "../stores/personalizationStore";
 import { useProfileVitalsStore } from "../stores/profileVitalsStore";
 import { useRecurringExpensesStore } from "../stores/recurringExpensesStore";
 
-import {
-  computeWeightedCategoryLimits,
-  type CategoryLimitInput,
-} from "../calculators/category-weights";
 import type {
   BudgetBucket,
   BudgetCategory,
   BudgetCycle,
   BudgetEngineMode,
+  BudgetEnforcement,
   BudgetMutation,
   BudgetQueue,
   BudgetState,
@@ -30,13 +27,17 @@ import {
   isPrimaryIncomeCandidate,
 } from "../utils/incomeSourceHelpers";
 import {
-  blendAllocation,
-  getHistoricalAvgByCategory,
-} from "../utils/allocationBlending";
-import {
   isAutoApplySafeRules,
   normalizeBudgetEngineMode,
 } from "../utils/budgetEngine";
+import {
+  buildSetupBudgetCategories,
+  type BudgetSeedMode,
+} from "../utils/buildSetupBudgetCategories";
+import {
+  DEFAULT_BUDGET_ENFORCEMENT,
+  normalizeBudgetEnforcement,
+} from "../utils/budgetPlanConstants";
 import { hydrateBudgetStateFromRemote } from "../utils/budgetHydrate";
 import { recalculateBudgetFromAllocations } from "../utils/budgetRecalc";
 import {
@@ -132,65 +133,6 @@ function categoryToPayload(cat: BudgetCategory): Record<string, unknown> {
   };
 }
 
-function isWantsOthersCategory(bucket: BudgetBucket, name: string): boolean {
-  return bucket === "wants" && name.trim().toLowerCase() === "others";
-}
-
-function seedCategories(interests?: string[]) {
-  // NOTE: Keep categories small + stable; budgets are edited frequently on mobile.
-  // Wants are the main personalization surface (based on interests).
-  const wantsFromInterests = (interests?: string[]) => {
-    const base = ["Data Bundles"] as string[];
-    const map: Record<string, string[]> = {
-      Tech: ["Subscriptions", "Gadgets"],
-      Fashion: ["Clothing", "Shoes & Accessories"],
-      Fitness: ["Gym", "Supplements"],
-      Food: ["Dining Out"],
-      Travel: ["Travel"],
-      Gaming: ["Games"],
-      Music: ["Entertainment"],
-      Business: ["Skills & Courses"],
-      Beauty: ["Self-care"],
-    };
-
-    const picked: string[] = [];
-    for (const interest of interests ?? []) {
-      const items = map[String(interest)];
-      if (!items) continue;
-      for (const it of items) picked.push(it);
-    }
-
-    // Fill with sensible defaults if no/low interest signal.
-    const fallbacks = ["Dining Out", "Clothing", "Hobbies"] as const;
-    const out = [...base, ...picked, ...fallbacks, "Others"];
-    const uniq: string[] = [];
-    for (const name of out) {
-      const normalized = name.trim();
-      if (!normalized) continue;
-      if (!uniq.includes(normalized)) uniq.push(normalized);
-    }
-    const withoutOthers = uniq.filter((name) => name !== "Others");
-    return [...withoutOthers.slice(0, 4), "Others"];
-  };
-
-  return {
-    // Utilities live under Needs for v1.
-    needs: [
-      "Rent",
-      "School Fees",
-      "Transport",
-      "Groceries",
-      "Tithes/Church",
-      "Emergency",
-      "ECG",
-      "Ghana Water",
-      "Trash",
-    ],
-    wants: wantsFromInterests(interests),
-    savings: ["Savings"],
-  } satisfies Record<BudgetBucket, string[]>;
-}
-
 export type UseBudgetReturn = {
   state: BudgetState | null;
   queue: BudgetQueue | null;
@@ -222,7 +164,9 @@ export type UseBudgetReturn = {
     wantsPct?: number;
     savingsPct?: number;
     interests?: string[];
+    /** @deprecated Prefer `seedMode`. When true, uses full default category list. */
     seedCategories?: boolean;
+    seedMode?: BudgetSeedMode;
     /** Fixed amounts from vitals (e.g. Rent, ECG) for obligation-first allocation */
     fixedAmountsByCategory?: Record<string, number>;
     /** AI or vitals categories with explicit limits (merged into seeded lists) */
@@ -232,6 +176,8 @@ export type UseBudgetReturn = {
       limitAmount: number;
     }[];
     lifeStage?: "student" | "young_professional" | "family" | "retiree" | null;
+    seedMode?: BudgetSeedMode;
+    skipPlanValidation?: boolean;
   }) => Promise<void>;
   computeNewCyclePreview: () => {
     rollover: { needs: number; wants: number; savings: number };
@@ -321,6 +267,7 @@ export type UseBudgetReturn = {
     options?: { reallocationReason?: string },
   ) => Promise<BudgetState | void>;
   updateBudgetEngineMode: (mode: BudgetEngineMode) => Promise<void>;
+  updateBudgetEnforcement: (mode: BudgetEnforcement) => Promise<void>;
   applyTemplate: (
     cycleId: string,
     allocation: { needsPct: number; wantsPct: number; savingsPct: number },
@@ -527,9 +474,11 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       savingsPct = 0.2,
       interests,
       seedCategories: shouldSeedCategories = true,
+      seedMode: seedModeParam,
       fixedAmountsByCategory,
       customCategories,
       lifeStage,
+      skipPlanValidation,
     }: {
       paydayDay: number;
       needsPct?: number;
@@ -537,6 +486,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
       savingsPct?: number;
       interests?: string[];
       seedCategories?: boolean;
+      seedMode?: BudgetSeedMode;
       fixedAmountsByCategory?: Record<string, number>;
       customCategories?: {
         name: string;
@@ -549,6 +499,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         | "family"
         | "retiree"
         | null;
+      skipPlanValidation?: boolean;
     }) => {
       if (!userId) return;
       const latestState = await loadBudgetState(userId);
@@ -589,49 +540,9 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         updatedAt: new Date().toISOString(),
       };
 
-      let allNames: { bucket: BudgetBucket; name: string }[] = [];
-      let needsList: string[] = [];
-      let seeded: ReturnType<typeof seedCategories> | null = null;
-      if (shouldSeedCategories) {
-        seeded = seedCategories(interests ?? current.prefs?.interests);
-        needsList = [...seeded.needs];
-        if (
-          fixedAmountsByCategory?.["Debt Payments"] &&
-          !needsList.includes("Debt Payments")
-        ) {
-          needsList.push("Debt Payments");
-        }
-        allNames = [
-          ...needsList.map((name) => ({ bucket: "needs" as const, name })),
-          ...seeded.wants.map((name) => ({ bucket: "wants" as const, name })),
-          ...seeded.savings.map((name) => ({
-            bucket: "savings" as const,
-            name,
-          })),
-        ];
-      }
-
-      const categoryKey = (bucket: BudgetBucket, name: string) =>
-        `${bucket}:${name.trim().toLowerCase()}`;
-      const existingKeys = new Set(
-        allNames.map(({ bucket, name }) => categoryKey(bucket, name)),
-      );
-      for (const custom of customCategories ?? []) {
-        const normalized = custom.name.trim();
-        if (
-          !normalized ||
-          (custom.limitAmount <= 0 && !isWantsOthersCategory(custom.bucket, normalized))
-        ) {
-          continue;
-        }
-        const key = categoryKey(custom.bucket, normalized);
-        if (existingKeys.has(key)) continue;
-        existingKeys.add(key);
-        allNames.push({ bucket: custom.bucket, name: normalized });
-        if (custom.bucket === "needs" && !needsList.includes(normalized)) {
-          needsList.push(normalized);
-        }
-      }
+      const seedMode: BudgetSeedMode =
+        seedModeParam ??
+        (shouldSeedCategories === false ? "none" : "full");
 
       const recurringSnap =
         useRecurringExpensesStore.getState().recurringExpenses;
@@ -640,11 +551,6 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         recurringSnap,
         taxConfig ?? undefined,
       );
-      const bucketTotals: Record<BudgetBucket, number> = {
-        needs: disposableIncome * needsPct,
-        wants: disposableIncome * wantsPct,
-        savings: disposableIncome * savingsPct,
-      };
 
       const mergedFixed: Record<string, number> = {
         ...(fixedAmountsByCategory ?? {}),
@@ -661,91 +567,26 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         mergedFixed[key] = (mergedFixed[key] ?? 0) + monthly;
       }
 
-      const limitByKey = new Map<string, number>();
-      const historical = getHistoricalAvgByCategory(current);
-
-      for (const bucket of ["needs", "wants", "savings"] as const) {
-        if (!seeded) break;
-        const names =
-          bucket === "needs"
-            ? needsList
-            : bucket === "wants"
-              ? seeded.wants
-              : seeded.savings;
-        const inputs: CategoryLimitInput[] = names
-          .filter((name) => !isWantsOthersCategory(bucket, name))
-          .map((name) => ({
-            name,
-            bucket,
-            fixedAmount: mergedFixed[name],
-            manualOverride:
-              bucket === "needs" && name.trim().toLowerCase() === "emergency",
-          }));
-        const limits = computeWeightedCategoryLimits(
-          bucketTotals[bucket],
-          inputs,
-          lifeStage ?? null,
-        );
-        limits.forEach((templateLimit, name) => {
-          const hist = historical.get(`${bucket}:${name}`);
-          const blended = blendAllocation(
-            templateLimit,
-            hist?.avgSpent ?? null,
-            hist?.variance ?? 0,
-            hist?.cycleCount ?? 0,
-          );
-          limitByKey.set(`${bucket}:${name}`, blended);
-        });
-        for (const name of names) {
-          if (isWantsOthersCategory(bucket, name)) {
-            limitByKey.set(`${bucket}:${name}`, 0);
-          }
-        }
-      }
-
-      const customLimitByKey = new Map<string, number>();
-      for (const custom of customCategories ?? []) {
-        const normalized = custom.name.trim();
-        if (
-          !normalized ||
-          (custom.limitAmount <= 0 && !isWantsOthersCategory(custom.bucket, normalized))
-        ) {
-          continue;
-        }
-        customLimitByKey.set(
-          categoryKey(custom.bucket, normalized),
-          custom.limitAmount,
-        );
-        limitByKey.set(`${custom.bucket}:${normalized}`, custom.limitAmount);
-      }
-
-      const categories: BudgetCategory[] = allNames.map(
-        ({ bucket, name }, index) => {
-          const key = categoryKey(bucket, name);
-          const computedLimit = limitByKey.get(`${bucket}:${name}`) ?? 0;
-          const customLimit = customLimitByKey.get(key);
-          const limitAmount = customLimit ?? computedLimit;
-          const isFixed =
-            customLimit != null || (mergedFixed[name] ?? 0) > 0;
-          const isCustom = customLimit != null;
-          return {
-            id: uuidv4(),
-            userId,
-            cycleId,
-            bucket,
-            name,
-            limitAmount: Math.max(0, Math.round(limitAmount * 100) / 100),
-            isCustom,
-            parentId: null,
-            sortOrder: index,
-            suggestedLimit: null,
-            isArchived: false,
-            manualOverride: isFixed,
-            createdAt,
-            updatedAt: createdAt,
-          };
-        },
-      );
+      const categories =
+        seedMode === "none"
+          ? []
+          : buildSetupBudgetCategories({
+              userId,
+              cycleId,
+              createdAt,
+              needsPct,
+              wantsPct,
+              savingsPct,
+              seedMode,
+              interests: interests ?? current.prefs?.interests,
+              fixedAmountsByCategory,
+              customCategories,
+              lifeStage,
+              disposableIncome,
+              mergedFixed,
+              state: current,
+              skipValidation: skipPlanValidation,
+            });
 
       const next: BudgetState = {
         ...current,
@@ -756,6 +597,9 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           ...(lifeStage != null ? { lifeStage } : {}),
           budgetEngineMode: normalizeBudgetEngineMode(
             current.prefs?.budgetEngineMode ?? null,
+          ),
+          budgetEnforcement: normalizeBudgetEnforcement(
+            current.prefs?.budgetEnforcement ?? DEFAULT_BUDGET_ENFORCEMENT,
           ),
         },
         cycles: [cycle, ...current.cycles.filter((c) => c.id !== cycleId)],
@@ -797,10 +641,8 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
           savings_pct: savingsPct,
         },
       });
-      // categories
-      if (shouldSeedCategories) {
+      if (categories.length > 0) {
         for (const cat of categories) {
-          // Fire-and-forget; if offline, they stay queued
           await enqueueAndTry({
             id: makeQueueId(),
             userId,
@@ -811,7 +653,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         }
       }
     },
-    [enqueueAndTry, persistState, state, taxConfig, userId],
+    [enqueueAndTry, persistState, taxConfig, userId],
   );
 
   /**
@@ -2007,7 +1849,25 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
         },
       });
     },
-    [enqueueAndTry, persistState, state, userId],
+    [enqueueAndTry, persistState, userId],
+  );
+
+  const updateBudgetEnforcement = useCallback(
+    async (mode: BudgetEnforcement) => {
+      if (!userId) return;
+      const current =
+        useBudgetStore.getState().state ?? createEmptyBudgetState(userId);
+      const normalized = normalizeBudgetEnforcement(mode);
+      const next: BudgetState = {
+        ...current,
+        prefs: {
+          ...current.prefs,
+          budgetEnforcement: normalized,
+        },
+      };
+      await persistState(next);
+    },
+    [persistState, userId],
   );
 
   const insertDebt = useCallback(
@@ -2346,6 +2206,7 @@ export function useBudget(userId?: string | null): UseBudgetReturn {
     updateCycleDay,
     updateCycleAllocation,
     updateBudgetEngineMode,
+    updateBudgetEnforcement,
     applyTemplate,
     insertDebt,
     resetBudget,

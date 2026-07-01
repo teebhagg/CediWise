@@ -20,10 +20,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export const DEFAULT_EXPANDED_HEIGHT = 140;
 export const DEFAULT_STANDARD_HEIGHT = 64;
-export const DEFAULT_BOTTOM_HEIGHT = 52;
+/** Vertical padding inside the header bottom slot (below nav / above list). */
+export const HEADER_BOTTOM_SLOT_PADDING_TOP = 13;
+export const HEADER_BOTTOM_SLOT_PADDING_BOTTOM = 17;
+export const HEADER_BOTTOM_SLOT_PADDING_HORIZONTAL = 12;
+/** Reserved height for StandardHeader / ExpandedHeader bottom slot (includes slot padding). */
+export const DEFAULT_BOTTOM_HEIGHT =
+  HEADER_BOTTOM_SLOT_PADDING_TOP + 44 + HEADER_BOTTOM_SLOT_PADDING_BOTTOM;
 
 const HORIZONTAL_PADDING = 20;
-const BOTTOM_PADDING = 8;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -546,7 +551,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     justifyContent: "flex-end",
-    paddingBottom: 12,
+    paddingBottom: 14,
   },
   expandedInner: {
     width: "100%",
@@ -575,7 +580,9 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-    paddingHorizontal: BOTTOM_PADDING,
+    paddingTop: HEADER_BOTTOM_SLOT_PADDING_TOP,
+    paddingBottom: HEADER_BOTTOM_SLOT_PADDING_BOTTOM,
+    paddingHorizontal: HEADER_BOTTOM_SLOT_PADDING_HORIZONTAL,
     justifyContent: "center",
   },
 });

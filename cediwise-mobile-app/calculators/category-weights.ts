@@ -7,8 +7,15 @@
  */
 
 import type { BudgetBucket } from "@/types/budget";
+import type { LifeStage } from "@/calculators/budget-intelligence";
+import {
+  getProfileWeightMultiplier,
+  isCategoryRelevantForProfile,
+  type CategoryProfileContext,
+} from "@/utils/categoryProfileRelevance";
 
-/** Default weights for needs categories. Must sum to 1 within bucket. */
+export type { LifeStage };
+export type CategoryAllocationProfile = CategoryProfileContext;
 const NEEDS_WEIGHTS: Record<string, number> = {
   Rent: 0.35,
   "School Fees": 0.2,
@@ -62,8 +69,6 @@ const BUCKET_WEIGHT_MAPS: Record<BudgetBucket, Record<string, number>> = {
   savings: SAVINGS_WEIGHTS,
 };
 
-export type LifeStage = "student" | "young_professional" | "family" | "retiree";
-
 /**
  * Life-stage adjustments: multiply base weight by this factor for specific categories.
  * Used when certain categories are more relevant (e.g. School Fees for families).
@@ -79,7 +84,6 @@ const LIFE_STAGE_WEIGHT_BOOSTS: Partial<
     Rent: 0.9,
   },
   family: {
-    "School Fees": 1.8,
     Groceries: 1.3,
     "Family Outings": 1.5,
     Healthcare: 1.2,
@@ -91,6 +95,12 @@ const LIFE_STAGE_WEIGHT_BOOSTS: Partial<
     Groceries: 1.1,
     Entertainment: 1.2,
     Travel: 1.2,
+  },
+  young_professional: {
+    Transport: 1.1,
+    "Data Bundles": 1.15,
+    "Skills & Courses": 1.1,
+    Groceries: 1.05,
   },
 };
 
@@ -114,6 +124,38 @@ export function getCategoryWeight(
   return Math.max(0.01, weight);
 }
 
+function resolveAllocationWeight(
+  categoryName: string,
+  bucket: BudgetBucket,
+  lifeStage?: LifeStage | null,
+  profile?: CategoryAllocationProfile | null,
+): number {
+  if (
+    profile &&
+    !isCategoryRelevantForProfile(categoryName, bucket, {
+      ...profile,
+      lifeStage: profile.lifeStage ?? lifeStage ?? null,
+    })
+  ) {
+    return 0;
+  }
+
+  let weight = getCategoryWeight(
+    categoryName,
+    bucket,
+    profile?.lifeStage ?? lifeStage,
+  );
+
+  if (profile) {
+    weight *= getProfileWeightMultiplier(categoryName, bucket, {
+      ...profile,
+      lifeStage: profile.lifeStage ?? lifeStage ?? null,
+    });
+  }
+
+  return weight;
+}
+
 export type CategoryLimitInput = {
   name: string;
   bucket: BudgetBucket;
@@ -130,12 +172,14 @@ export type CategoryLimitInput = {
  * @param bucketTotal - Total budget for the bucket (e.g. needsLimit)
  * @param categories - List of categories in the bucket
  * @param lifeStage - Optional life stage for weight adjustments
+ * @param profile - Optional full vitals profile for relevance + weight multipliers
  * @returns Map of category name -> suggested limit amount
  */
 export function computeWeightedCategoryLimits(
   bucketTotal: number,
   categories: CategoryLimitInput[],
-  lifeStage?: LifeStage | null
+  lifeStage?: LifeStage | null,
+  profile?: CategoryAllocationProfile | null,
 ): Map<string, number> {
   const result = new Map<string, number>();
 
@@ -153,17 +197,18 @@ export function computeWeightedCategoryLimits(
 
   // 2. Categories that need allocation (no fixed amount, no manual override)
   const toAllocate = categories.filter(
-    (c) => (c.fixedAmount ?? 0) <= 0 && !c.manualOverride
+    (c) => (c.fixedAmount ?? 0) <= 0 && !c.manualOverride,
   );
 
   if (toAllocate.length === 0) {
     return result;
   }
 
-  // 3. Sum of weights for normalization
+  // 3. Sum of weights for normalization (profile-aware; irrelevant → weight 0)
   const totalWeight = toAllocate.reduce(
-    (s, c) => s + getCategoryWeight(c.name, c.bucket, lifeStage),
-    0
+    (s, c) =>
+      s + resolveAllocationWeight(c.name, c.bucket, lifeStage, profile),
+    0,
   );
 
   if (totalWeight <= 0) {
@@ -174,7 +219,7 @@ export function computeWeightedCategoryLimits(
 
   // 4. Distribute remainder by weight
   toAllocate.forEach((c) => {
-    const w = getCategoryWeight(c.name, c.bucket, lifeStage);
+    const w = resolveAllocationWeight(c.name, c.bucket, lifeStage, profile);
     const share = (w / totalWeight) * remainder;
     result.set(c.name, Math.max(0, Math.round(share * 100) / 100));
   });

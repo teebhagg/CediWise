@@ -25,6 +25,9 @@ const REMINDER_SCHEDULED_WEEK_KEY = "@cediwise_notification_reminder_scheduled_w
 const REMINDER_USED_AI_KEY = "@cediwise_notification_reminder_used_ai";
 /** Thursday slot (Expo weekday 5). Monday uses REMINDER_ID_KEY (Expo weekday 2). */
 const REMINDER_ID_THURSDAY_KEY = "@cediwise_notification_daily_reminder_id_2";
+/** Pre–0.3.1 daily reminder id (18:00 repeating). Orphaned after key rename to weekly_reminder_id. */
+const LEGACY_DAILY_REMINDER_ID_KEY = "@cediwise_notification_daily_reminder_id";
+const EXPENSE_REMINDER_DATA_TYPES = new Set(["expense_reminder", "daily_expense_reminder"]);
 const LAST_SYNC_KEY = "@cediwise_notification_last_sync";
 const TOKEN_KEY = "@cediwise_notification_expo_token";
 const GATE_COMPLETED_KEY = "@cediwise_notification_gate_completed";
@@ -148,26 +151,53 @@ export async function setReminderFrequency(_freq: ReminderFrequency): Promise<vo
   await AsyncStorage.removeItem(REMINDER_VERSION_KEY);
 }
 
+function isExpenseReminderData(data: unknown): boolean {
+  if (!data || typeof data !== "object") return false;
+  const type = (data as Record<string, unknown>).type;
+  return typeof type === "string" && EXPENSE_REMINDER_DATA_TYPES.has(type);
+}
+
+async function cancelScheduledNotificationId(id: string | null | undefined): Promise<void> {
+  if (!id) return;
+  try {
+    await Notifications.cancelScheduledNotificationAsync(id);
+  } catch {
+    // ignore stale IDs
+  }
+}
+
+/** Cancel every OS-level expense reminder (including orphaned daily schedules). */
+async function cancelAllExpenseReminderNotifications(): Promise<void> {
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    for (const request of scheduled) {
+      if (!isExpenseReminderData(request.content?.data)) continue;
+      await cancelScheduledNotificationId(request.identifier);
+    }
+  } catch (err) {
+    log.warn("Failed to sweep scheduled expense reminders", err);
+  }
+}
+
 /**
- * Cancel all scheduled local reminders.
+ * Cancel all scheduled local reminders, including legacy daily (18:00) orphans.
  */
 async function cancelAllReminders(): Promise<void> {
   const ids = [
     await AsyncStorage.getItem(REMINDER_ID_KEY),
     await AsyncStorage.getItem(REMINDER_ID_THURSDAY_KEY),
+    await AsyncStorage.getItem(LEGACY_DAILY_REMINDER_ID_KEY),
   ];
   for (const id of ids) {
-    if (id) {
-      try {
-        await Notifications.cancelScheduledNotificationAsync(id);
-      } catch {
-        // ignore stale IDs
-      }
-    }
+    await cancelScheduledNotificationId(id);
   }
+
+  await cancelAllExpenseReminderNotifications();
+
   await AsyncStorage.multiRemove([
     REMINDER_ID_KEY,
     REMINDER_ID_THURSDAY_KEY,
+    LEGACY_DAILY_REMINDER_ID_KEY,
     REMINDER_VERSION_KEY,
     REMINDER_SCHEDULED_WEEK_KEY,
     REMINDER_USED_AI_KEY,

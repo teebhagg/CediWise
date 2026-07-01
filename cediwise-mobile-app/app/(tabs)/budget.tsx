@@ -19,6 +19,11 @@ import { BudgetPendingSyncCard } from "@/components/features/budget/BudgetPendin
 import { BudgetPersonalizationCard } from "@/components/features/budget/BudgetPersonalizationCard";
 import { BudgetQuickActions } from "@/components/features/budget/BudgetQuickActions";
 import { BudgetReallocationBanner } from "@/components/features/budget/BudgetReallocationBanner";
+import { BudgetReconcileBanner } from "@/components/features/budget/BudgetReconcileBanner";
+import { BudgetUnassignedNudge } from "@/components/features/budget/BudgetUnassignedNudge";
+import { BudgetNwsAdjustSheet } from "@/components/features/budget/BudgetNwsAdjustSheet";
+import { BudgetSurvivalSheet } from "@/components/features/budget/BudgetSurvivalSheet";
+import { AssignRemainingSavingsPrompt } from "@/components/features/budget/AssignRemainingSavingsPrompt";
 import { BudgetSetupCycleCard } from "@/components/features/budget/BudgetSetupCycleCard";
 
 import { BudgetToolsCard } from "@/components/features/budget/BudgetToolsCard";
@@ -101,7 +106,7 @@ export default function BudgetScreen() {
     ui,
     modals,
   } = useBudgetScreenState();
-  const { canAccessBudget } = useTierContext();
+  const { canAccessBudget, canAccessAIChat } = useTierContext();
   const { recurringExpenses } = useRecurringExpenses();
 
   const nextCycleDate = useMemo(() => {
@@ -180,6 +185,7 @@ export default function BudgetScreen() {
   const pullHintAfterTourTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const [showAssignRemaining, setShowAssignRemaining] = useState(false);
 
   const showPostVitalsSkeleton =
     fromVitals &&
@@ -206,6 +212,31 @@ export default function BudgetScreen() {
     },
     [],
   );
+
+  useEffect(() => {
+    if (
+      !fromVitals ||
+      budget.isLoading ||
+      showPostVitalsSkeleton ||
+      !derived.planValidation
+    ) {
+      return;
+    }
+    if (derived.planValidation.unassigned <= 0) return;
+    const dismissed =
+      budget.state?.prefs?.assignRemainingSavingsDismissedForCycleId ===
+      derived.activeCycleId;
+    if (!dismissed) {
+      setShowAssignRemaining(true);
+    }
+  }, [
+    budget.isLoading,
+    budget.state?.prefs?.assignRemainingSavingsDismissedForCycleId,
+    derived.activeCycleId,
+    derived.planValidation,
+    fromVitals,
+    showPostVitalsSkeleton,
+  ]);
 
   const showPullSyncHintAfterTour = useCallback(() => {
     if (budget.isLoading || showPostVitalsSkeleton) return;
@@ -691,6 +722,23 @@ export default function BudgetScreen() {
                   }}
                 />
 
+                {derived.showReconcileBanner && derived.planValidation ? (
+                  <BudgetReconcileBanner
+                    validation={derived.planValidation}
+                    onFix={() => router.push("/budget/categories")}
+                    onDismiss={modals.handleDismissReconcileBanner}
+                  />
+                ) : null}
+
+                {derived.showUnassignedNudge && derived.planValidation ? (
+                  <BudgetUnassignedNudge
+                    unassigned={derived.planValidation.unassigned}
+                    takeHome={derived.planValidation.takeHome}
+                    onAssignToSavings={modals.handleAssignUnassignedToSavings}
+                    onDismiss={modals.handleDismissUnassignedNudge}
+                  />
+                ) : null}
+
                 <TourZone
                   stepKey="state2-budget-overview"
                   name="Your budget overview"
@@ -757,8 +805,6 @@ export default function BudgetScreen() {
                     <BudgetExpensesCard
                       visible={derived.cycleIsSet}
                       activeCycleId={derived.activeCycleId}
-                      filter={ui.filter}
-                      setFilter={ui.setFilter}
                       transactions={derived.cycleTransactions}
                       categories={derived.cycleCategories.map((c) => ({
                         id: c.id,
@@ -774,7 +820,7 @@ export default function BudgetScreen() {
                         }
                         modals.setShowTxModal(true);
                       }}
-                      onShowMore={() => router.push("/expenses")}
+                      onSeeAllPress={() => router.push("/expenses")}
                       previewCount={3}
                     />
                   </View>
@@ -787,10 +833,10 @@ export default function BudgetScreen() {
           </Animated.View>
         </Animated.ScrollView>
 
-        {user && canAccessBudget && derived.cycleIsSet ? (
+        {user && canAccessAIChat ? (
           <AIChatFAB
             remaining={chatRemaining}
-            disabled={!derived.activeCycleId}
+            disabled={false}
           />
         ) : null}
       </KeyboardAvoidingView>
@@ -886,6 +932,9 @@ export default function BudgetScreen() {
         setShowAllocationExceededModal={modals.setShowAllocationExceededModal}
         onConfirmAllocationExceeded={modals.onConfirmAllocationExceeded}
         onCloseAllocationExceeded={modals.handleCloseAllocationExceeded}
+        showFlexibleOverNetAck={modals.showFlexibleOverNetAck}
+        onTrimCategories={modals.handleTrimFromAllocationModal}
+        onAdjustSplit={modals.handleOpenNwsAdjust}
         showEditCycleModal={modals.showEditCycleModal}
         setShowEditCycleModal={modals.setShowEditCycleModal}
         activeCyclePaydayDay={derived.activeCycle?.paydayDay ?? 1}
@@ -944,6 +993,41 @@ export default function BudgetScreen() {
         }
         onClose={() => ui.setPendingRollover(null)}
         onConfirm={modals.handleRolloverConfirm}
+      />
+
+      <AssignRemainingSavingsPrompt
+        visible={showAssignRemaining}
+        unassigned={derived.planValidation?.unassigned ?? 0}
+        onAssign={async () => {
+          await modals.handleAssignUnassignedToSavings();
+          await modals.handleDismissAssignRemaining();
+          setShowAssignRemaining(false);
+        }}
+        onSkip={async () => {
+          await modals.handleDismissAssignRemaining();
+          setShowAssignRemaining(false);
+        }}
+      />
+
+      <BudgetNwsAdjustSheet
+        visible={modals.showNwsAdjustSheet}
+        preview={derived.nwsAdjustPreview}
+        onClose={() => modals.setShowNwsAdjustSheet(false)}
+        onApply={modals.handleApplyNwsAdjust}
+      />
+
+      <BudgetSurvivalSheet
+        visible={modals.showSurvivalSheet}
+        validation={derived.planValidation}
+        onReviewIncome={() => {
+          modals.setShowSurvivalSheet(false);
+          router.push("/budget/income");
+        }}
+        onReduceFixed={() => {
+          modals.setShowSurvivalSheet(false);
+          router.push("/budget/categories");
+        }}
+        onClose={() => {}}
       />
 
     </View>

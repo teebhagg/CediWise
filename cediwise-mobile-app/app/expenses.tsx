@@ -375,8 +375,7 @@ export default function ExpensesScreen() {
   }
 
   const categoryFilter = (
-    <View className="px-5">
-      <View className="mt-4 flex-row flex-wrap gap-2">
+    <View className="flex-row flex-wrap gap-2.5 px-1">
         {(["all", "needs", "wants", "savings"] as const).map((f) => (
           <Pressable
             key={f}
@@ -391,7 +390,6 @@ export default function ExpensesScreen() {
             </Text>
           </Pressable>
         ))}
-      </View>
     </View>
   );
 

@@ -24,6 +24,7 @@ type TierContextValue = {
   isOnTrial: boolean;
   trialEndsAt: string | null;
   canAccessBudget: boolean;
+  canAccessAIChat: boolean;
   canAccessSME: boolean;
   pendingTier: UserTier | null;
   pendingTierStartDate: string | null;
@@ -58,6 +59,7 @@ export function TierProvider({ children }: { children: React.ReactNode }) {
     isOnTrial: false,
     trialEndsAt: null,
     canAccessBudget: false,
+    canAccessAIChat: false,
     canAccessSME: false,
     pendingTier: null,
     pendingTierStartDate: null,
@@ -78,6 +80,7 @@ export function TierProvider({ children }: { children: React.ReactNode }) {
         isOnTrial: false,
         trialEndsAt: null,
         canAccessBudget: false,
+        canAccessAIChat: false,
         canAccessSME: false,
         pendingTier: null,
         pendingTierStartDate: null,
@@ -307,6 +310,7 @@ export function TierProvider({ children }: { children: React.ReactNode }) {
         isOnTrial: tierInfo.isOnTrial,
         trialEndsAt: tierInfo.trialEndsAt,
         canAccessBudget: tierInfo.canAccessBudget,
+        canAccessAIChat: tierInfo.canAccessAIChat,
         canAccessSME: tierInfo.canAccessSME,
         pendingTier: tierInfo.pendingTier ?? null,
         pendingTierStartDate: tierInfo.pendingTierStartDate ?? null,

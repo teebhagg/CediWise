@@ -5,6 +5,9 @@ export type BudgetEngineMode =
   | "auto_apply_safe_rules"
   | "manual_off";
 
+/** How strictly to block plans that exceed take-home pay. */
+export type BudgetEnforcement = "strict" | "flexible";
+
 export type IncomeSourceType = "primary" | "side";
 
 export type IncomeSource = {
@@ -80,6 +83,19 @@ export type BudgetProfilePrefs = {
   /** For weighted category allocation */
   lifeStage?: "student" | "young_professional" | "family" | "retiree" | null;
   budgetEngineMode?: BudgetEngineMode;
+  /** Block vs warn when category plan exceeds take-home (default strict). */
+  budgetEnforcement?: BudgetEnforcement;
+  /** Reconcile sheet dismissed for this cycle id (UX only). */
+  reconcileSheetDismissedForCycleId?: string;
+  lastReconcileBannerDismissedAt?: string;
+  /** Overflow amount when banner was dismissed (for re-show rules). */
+  lastReconcileBannerDismissedOverflow?: number;
+  /** Assign-remaining prompt dismissed for this cycle. */
+  assignRemainingSavingsDismissedForCycleId?: string;
+  /** When the unassigned-slack nudge was last dismissed. */
+  lastUnassignedNudgeDismissedAt?: string;
+  /** Cycle created-at used for 7-day unassigned nudge eligibility. */
+  unassignedNudgeCycleStartedAt?: string;
 };
 
 export type BudgetState = {

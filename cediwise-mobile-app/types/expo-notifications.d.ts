@@ -77,6 +77,14 @@ declare module "expo-notifications" {
   }): Promise<string>;
 
   export function cancelScheduledNotificationAsync(identifier: string): Promise<void>;
+  export function getAllScheduledNotificationsAsync(): Promise<
+    Array<{
+      identifier: string;
+      content: {
+        data?: Record<string, unknown>;
+      };
+    }>
+  >;
   export function addNotificationResponseReceivedListener(
     listener: (response: NotificationResponse) => void
   ): EventSubscription;

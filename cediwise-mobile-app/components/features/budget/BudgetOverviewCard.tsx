@@ -167,6 +167,21 @@ export function BudgetOverviewCard({
             Upgrade to Smart Budget for Needs/Wants/Savings breakdown, health score, and insights.
           </Text>
         </View>
+
+        {onOpenAIChat ? (
+          <Pressable
+            onPress={() => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+              onOpenAIChat();
+            }}
+            className="mt-3 pt-3 border-t border-slate-400/20 flex-row items-center gap-2 active:opacity-80">
+            <View className="w-5 h-5 rounded-full bg-emerald-500/20 items-center justify-center">
+              <Image source={FAB_AVATAR} style={{ width: 14, height: 14 }} contentFit="contain" />
+            </View>
+            <Text className="text-emerald-400 text-sm font-medium flex-1">Ask CediWise AI</Text>
+            <Text className="text-emerald-400 text-xs font-medium">Chat →</Text>
+          </Pressable>
+        ) : null}
       </Card>
     );
   }

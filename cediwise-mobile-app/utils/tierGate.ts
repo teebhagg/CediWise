@@ -11,6 +11,8 @@ export interface TierInfo {
   isOnTrial: boolean;
   trialEndsAt: string | null;
   canAccessBudget: boolean;
+  /** AI chat is available on all tiers; daily limits vary by effective tier. */
+  canAccessAIChat: boolean;
   canAccessSME: boolean;
   pendingTier: UserTier | null;
   pendingTierStartDate: string | null;
@@ -65,6 +67,7 @@ export function getTierInfo(
     isOnTrial,
     trialEndsAt,
     canAccessBudget: effectiveTier !== "free",
+    canAccessAIChat: true,
     canAccessSME: effectiveTier === "sme",
     pendingTier: pendingTier ?? null,
     pendingTierStartDate: pendingTierStartDate ?? null,

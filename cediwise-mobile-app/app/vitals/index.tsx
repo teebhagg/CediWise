@@ -743,7 +743,7 @@ export default function VitalsWizard() {
           wantsPct: finalWantsPct,
           savingsPct: finalSavingsPct,
           interests: draft.interests,
-          seedCategories: true,
+          seedMode: "minimal",
           fixedAmountsByCategory:
             Object.keys(fixedAmountsByCategory).length > 0
               ? fixedAmountsByCategory

@@ -15,10 +15,33 @@ describe("getCategoryWeight", () => {
     expect(w).toBeGreaterThan(0);
   });
 
-  it("applies life stage boost for School Fees in family", () => {
-    const base = getCategoryWeight("School Fees", "needs");
-    const family = getCategoryWeight("School Fees", "needs", "family");
-    expect(family).toBeGreaterThan(base);
+  it("excludes School Fees from allocation for non-student profiles", () => {
+    for (const lifeStage of ["young_professional", "family", "retiree"] as const) {
+      const limits = computeWeightedCategoryLimits(
+        1000,
+        [
+          { name: "School Fees", bucket: "needs", manualOverride: false },
+          { name: "Rent", bucket: "needs", manualOverride: false },
+        ],
+        lifeStage,
+        { lifeStage },
+      );
+      expect(limits.get("School Fees")).toBe(0);
+      expect(limits.get("Rent")).toBeGreaterThan(0);
+    }
+  });
+
+  it("allocates School Fees weight for student profile", () => {
+    const limits = computeWeightedCategoryLimits(
+      1000,
+      [
+        { name: "School Fees", bucket: "needs", manualOverride: false },
+        { name: "Rent", bucket: "needs", manualOverride: false },
+      ],
+      "student",
+      { lifeStage: "student" },
+    );
+    expect(limits.get("School Fees")).toBeGreaterThan(0);
   });
 });
 

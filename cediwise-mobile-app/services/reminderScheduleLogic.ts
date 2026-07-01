@@ -5,7 +5,7 @@ export type ReminderFrequency = "twice_weekly";
 
 export type ReminderSlotDay = "monday" | "thursday";
 
-export const REMINDER_SCHEDULE_VERSION = "v9";
+export const REMINDER_SCHEDULE_VERSION = "v10";
 
 /** Fixed reminder slots — users do not pick days. Expo weekday: 1=Sun, 2=Mon, 5=Thu. */
 export const REMINDER_SLOTS: ReadonlyArray<{
@@ -26,7 +26,7 @@ export function normalizeLegacyReminderFrequency(
 }
 
 export function shouldMigrateLegacyFrequency(stored: string | null): boolean {
-  return stored != null && stored !== "twice_weekly";
+  return stored !== "twice_weekly";
 }
 
 export type RescheduleEvaluationInput = {

@@ -2,7 +2,8 @@ const EXPENSE_ALIASES: Record<string, string[]> = {
   rent: ["rent", "housing", "accommodation", "landlord"],
   groceries: ["groceries", "grocery", "food", "market", "provisions"],
   transport: ["transport", "trotro", "uber", "fuel", "petrol", "troski", "commute"],
-  utilities: ["utilities", "ecg", "electricity", "water", "trash", "ghana water"],
+  utilities: ["utilities", "ecg", "electricity", "water", "ghana water"],
+  trash: ["trash", "garbage", "waste"],
   schoolfees: ["school fees", "school", "tuition", "education"],
   titheschurch: ["tithes", "church", "tithe", "offering"],
   databundles: ["data bundles", "data", "airtime", "internet", "wifi"],
@@ -19,6 +20,17 @@ const EXPENSE_ALIASES: Record<string, string[]> = {
 
 export function normalizeExpenseLabel(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+/** Canonical alias group key for expense dedupe (e.g. data + data bundles → databundles). */
+export function canonicalExpenseGroupKey(name: string): string {
+  const normalized = normalizeExpenseLabel(name);
+  for (const [key, aliases] of Object.entries(EXPENSE_ALIASES)) {
+    if (aliases.some((a) => normalized.includes(a) || a.includes(normalized))) {
+      return key;
+    }
+  }
+  return normalized;
 }
 
 function aliasKeysFor(label: string): string[] {

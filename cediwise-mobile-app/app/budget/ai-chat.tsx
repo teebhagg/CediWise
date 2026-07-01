@@ -11,7 +11,7 @@ import { ActivityIndicator, BackHandler, Text, View } from "react-native";
 export default function BudgetAIChatScreen() {
   const router = useRouter();
   const { user, budget, derived, ui } = useBudgetScreenState();
-  const { canAccessBudget } = useTierContext();
+  const { canAccessBudget, canAccessAIChat } = useTierContext();
   const { initialMessage, context_type, draftMessage } = useLocalSearchParams<{
     initialMessage?: string;
     context_type?: "budget" | "debt";
@@ -27,8 +27,7 @@ export default function BudgetAIChatScreen() {
     enabled: !!user && canAccessBudget && derived.cycleIsSet,
   });
 
-  const allowed =
-    !!user && canAccessBudget && derived.cycleIsSet && !!derived.activeCycleId;
+  const allowed = !!user && canAccessAIChat;
 
   const closeChat = useCallback(() => {
     router.back();

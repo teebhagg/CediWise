@@ -1,13 +1,16 @@
 import { AppDialog } from "@/components/AppDialog";
 import type { AllocationExceededResult } from "@/utils/allocationExceeded";
 import { AlertTriangle } from "lucide-react-native";
-import { StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 type Props = {
   visible: boolean;
   result: AllocationExceededResult | null;
   onClose: () => void;
   onConfirm: () => void;
+  showFlexibleAck?: boolean;
+  onTrimCategories?: () => void;
+  onAdjustSplit?: () => void;
 };
 
 export function AllocationExceededModal({
@@ -15,6 +18,9 @@ export function AllocationExceededModal({
   result,
   onClose,
   onConfirm,
+  showFlexibleAck = false,
+  onTrimCategories,
+  onAdjustSplit,
 }: Props) {
   if (!result) return null;
 
@@ -24,8 +30,18 @@ export function AllocationExceededModal({
 
   const handleConfirm = () => {
     onConfirm();
-    onClose();
+    if (!showFlexibleAck && !result.exceedsIncome) {
+      onClose();
+    }
   };
+
+  const primaryLabel = showFlexibleAck
+    ? "Save anyway"
+    : result.exceedsBucket && !result.exceedsIncome
+      ? "Save limit"
+      : result.exceedsIncome
+        ? "Continue"
+        : "Apply & continue";
 
   return (
     <AppDialog
@@ -38,9 +54,13 @@ export function AllocationExceededModal({
           <AlertTriangle color="#F59E0B" size={24} />
         </View>
       }
-      title="Budget exceeds allocation"
+      title={
+        result.exceedsIncome
+          ? "Above take-home pay"
+          : "Budget exceeds allocation"
+      }
       description={result.message}
-      primaryLabel="Apply & continue"
+      primaryLabel={primaryLabel}
       onPrimary={handleConfirm}
       secondaryLabel="Cancel"
       onSecondary={onClose}
@@ -48,8 +68,9 @@ export function AllocationExceededModal({
       {result.exceedsIncome && (
         <View style={styles.debtBanner}>
           <Text style={styles.debtBannerText}>
-            This will exceed your income. If you spend this much, you will overspend by GHS{" "}
-            {result.debtAmount.toFixed(2)}. Track any actual overspend in Debt when it happens.
+            {showFlexibleAck
+              ? "Your plan will stay above take-home. The summary will keep showing this until you adjust."
+              : `If you spent every limit, you'd be ₵${result.debtAmount.toFixed(2)} short this month. Track actual overspend when it happens.`}
           </Text>
         </View>
       )}
@@ -66,6 +87,21 @@ export function AllocationExceededModal({
 
       {allocationStr ? (
         <Text style={styles.allocationText}>Updated allocation: {allocationStr}</Text>
+      ) : null}
+
+      {result.exceedsBucket && !result.exceedsIncome && !showFlexibleAck ? (
+        <View style={styles.extraActions}>
+          {onTrimCategories ? (
+            <Pressable onPress={onTrimCategories} style={styles.extraAction}>
+              <Text style={styles.extraActionText}>Trim other categories</Text>
+            </Pressable>
+          ) : null}
+          {onAdjustSplit ? (
+            <Pressable onPress={onAdjustSplit} style={styles.extraAction}>
+              <Text style={styles.extraActionText}>Increase Needs %</Text>
+            </Pressable>
+          ) : null}
+        </View>
       ) : null}
     </AppDialog>
   );
@@ -107,5 +143,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#94A3B8",
     marginBottom: 0,
+  },
+  extraActions: {
+    marginTop: 12,
+    gap: 8,
+  },
+  extraAction: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: "rgba(51, 65, 85, 0.5)",
+    borderWidth: 1,
+    borderColor: "rgba(148, 163, 184, 0.25)",
+  },
+  extraActionText: {
+    color: "#E2E8F0",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center",
   },
 });

@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BackButton } from '@/components/BackButton';
 import { DEFAULT_STANDARD_HEIGHT, StandardHeader } from '@/components/CediWiseHeader';
 import { BudgetEngineModeList } from '@/components/features/budget/BudgetEngineModeList';
+import { BudgetEnforcementList } from '@/components/features/budget/BudgetEnforcementList';
+import { BudgetNwsAdjustSheet } from '@/components/features/budget/BudgetNwsAdjustSheet';
 import { BudgetModals } from '@/components/features/budget/BudgetModals';
 import { BudgetPersonalizationCard } from '@/components/features/budget/BudgetPersonalizationCard';
 import { DeleteAllBudgetDataModal } from '@/components/features/budget/DeleteAllBudgetDataModal';
@@ -101,6 +103,35 @@ export default function BudgetSettingsScreen() {
             </Text>
             <BudgetEngineModeList />
           </View>
+
+          <View>
+            <Text className="text-slate-400 text-xs uppercase tracking-wider mb-2.5 ml-1">
+              Take-home pay limits
+            </Text>
+            <Text className="text-slate-500 text-sm mb-3 leading-5 px-0.5">
+              Choose whether plans above your take-home pay are blocked or allowed with a warning.
+            </Text>
+            <BudgetEnforcementList />
+          </View>
+
+          {derived.cycleIsSet && derived.activeCycle ? (
+            <Pressable
+              onPress={() => modals.setShowNwsAdjustSheet(true)}
+              className="flex-row items-center justify-between py-4 px-4 rounded-sm bg-slate-500/10 border border-slate-400/20 active:bg-slate-500/20"
+            >
+              <View>
+                <Text className="text-white font-semibold">
+                  Adjust Needs / Wants / Savings
+                </Text>
+                <Text className="text-slate-400 text-sm mt-0.5">
+                  Current: {Math.round(derived.activeCycle.needsPct * 100)} /{' '}
+                  {Math.round(derived.activeCycle.wantsPct * 100)} /{' '}
+                  {Math.round(derived.activeCycle.savingsPct * 100)}
+                </Text>
+              </View>
+              <Settings size={18} color="#94A3B8" />
+            </Pressable>
+          ) : null}
 
           {derived.cycleIsSet && derived.activeCycle && (
             <Pressable
@@ -225,6 +256,13 @@ export default function BudgetSettingsScreen() {
           await budget.updateCycleDay(nextDay);
           await budget.reload();
         }}
+      />
+
+      <BudgetNwsAdjustSheet
+        visible={modals.showNwsAdjustSheet}
+        preview={derived.nwsAdjustPreview}
+        onClose={() => modals.setShowNwsAdjustSheet(false)}
+        onApply={modals.handleApplyNwsAdjust}
       />
 
       <DeleteAllBudgetDataModal

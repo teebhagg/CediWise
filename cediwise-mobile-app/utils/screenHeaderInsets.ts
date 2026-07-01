@@ -8,15 +8,18 @@ import {
 /** `ExpandedHeader` `expandedHeight` on Budget → Spending Insights. */
 export const INSIGHTS_EXPANDED_HEADER_HEIGHT = 130;
 
-/** Default gap between header chrome and first scroll row. */
-export const HEADER_CONTENT_GAP = 20;
+/** Extra space between header chrome (incl. bottom slot) and first scroll row. */
+export const HEADER_BODY_CONTENT_GAP = 12;
+
+/** Default gap below an `ExpandedHeader` (expanded state). */
+export const HEADER_CONTENT_GAP = 42;
 
 /** First content row starts below `StandardHeader` (no `bottom` slot). */
 export function getStandardHeaderBodyOffsetTop(
   insetTop: number,
   standardHeight: number = DEFAULT_STANDARD_HEIGHT,
 ): number {
-  return insetTop + standardHeight;
+  return insetTop + standardHeight + HEADER_BODY_CONTENT_GAP;
 }
 
 /** First content row starts below `StandardHeader` + `bottom` (e.g. filter chips). */
@@ -26,7 +29,7 @@ export function getStandardHeaderWithBottomBodyOffsetTop(
 ): number {
   const sh = options?.standardHeight ?? DEFAULT_STANDARD_HEIGHT;
   const bh = options?.bottomHeight ?? DEFAULT_BOTTOM_HEIGHT;
-  return insetTop + sh + bh;
+  return insetTop + sh + bh + HEADER_BODY_CONTENT_GAP;
 }
 
 /**

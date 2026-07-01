@@ -18,8 +18,34 @@ import { useBudget } from "../../../hooks/useBudget";
 import { useDebts } from "../../../hooks/useDebts";
 import { usePersonalizationStatus } from "../../../hooks/usePersonalizationStatus";
 import { useProfileVitals } from "../../../hooks/useProfileVitals";
-import type { BudgetBucket, BudgetEngineMode } from "../../../types/budget";
+import type { BudgetBucket, BudgetEngineMode, BudgetEnforcement } from "../../../types/budget";
 import { checkCategoryLimitImpact } from "../../../utils/allocationExceeded";
+import {
+  applyRebalancePreview,
+  buildRebalancePreview,
+  mergeAIRebalancePreview,
+  type RebalancePreview,
+} from "../../../utils/budgetRebalance";
+import { fetchAIRebalancePlan } from "../../../utils/fetchAIRebalancePlan";
+import {
+  trackBudgetOverNetAcknowledged,
+  trackBudgetReconcileApplied,
+  trackBudgetReconcileDismissed,
+  trackBudgetReconcileShown,
+  trackBudgetUnassignedSlack,
+} from "../../../utils/budgetAnalytics";
+import {
+  buildNwsAdjustPreview,
+} from "../../../utils/budgetNwsAdjust";
+import {
+  getPlanViolationOverflow,
+  shouldShowReconcileBanner,
+} from "../../../utils/budgetReconcileBanner";
+import {
+  DEFAULT_BUDGET_ENFORCEMENT,
+  normalizeBudgetEnforcement,
+} from "../../../utils/budgetPlanConstants";
+import { validateBudgetPlan, getPrimaryViolation } from "../../../utils/budgetPlanValidation";
 import {
   normalizeBudgetEngineMode,
   shouldShowBudgetEngineRecommendations,
@@ -43,6 +69,7 @@ import { getActiveTaxConfig, type TaxConfig } from "../../../utils/taxSync";
 import { DEFAULT_MIN_LIVING_BUFFER } from "../vitals/utils";
 import { useBudgetStore } from "@/stores/budgetStore";
 import { useProfileVitalsStore } from "@/stores/profileVitalsStore";
+import { useRecurringExpensesStore } from "@/stores/recurringExpensesStore";
 import { reportError } from "@/utils/telemetry";
 import { waitWhile } from "@/utils/waitWhile";
 
@@ -71,6 +98,7 @@ export function useBudgetScreenState() {
     updateCycleDay,
     updateCycleAllocation,
     updateBudgetEngineMode,
+    updateBudgetEnforcement,
     resetBudget,
     deleteAllBudgetData,
     computeNewCyclePreview,
@@ -95,7 +123,6 @@ export function useBudgetScreenState() {
   const [salaryError, setSalaryError] = useState<string | null>(null);
   const [applyDeductions, setApplyDeductions] = useState(true);
 
-  const [filter, setFilter] = useState<"all" | BudgetBucket>("all");
   const [showTxModal, setShowTxModal] = useState(false);
   const [pendingConfirm, setPendingConfirm] = useState<{
     bucket: BudgetBucket;
@@ -177,10 +204,17 @@ export function useBudgetScreenState() {
     summary: string;
   } | null>(null);
   const [taxConfig, setTaxConfig] = useState<TaxConfig | null>(null);
+  const recurringExpenses = useRecurringExpensesStore(
+    (s) => s.recurringExpenses,
+  );
 
   useEffect(() => {
     getActiveTaxConfig().then(setTaxConfig);
   }, []);
+
+  useEffect(() => {
+    void useRecurringExpensesStore.getState().initForUser(user?.id ?? null);
+  }, [user?.id]);
 
   const [spendingInsightsLoading, setSpendingInsightsLoading] = useState(false);
   const [pendingRollover, setPendingRollover] = useState<{
@@ -262,6 +296,14 @@ export function useBudgetScreenState() {
     [state?.prefs?.budgetEngineMode],
   );
 
+  const budgetEnforcement = useMemo<BudgetEnforcement>(
+    () =>
+      normalizeBudgetEnforcement(
+        state?.prefs?.budgetEnforcement ?? DEFAULT_BUDGET_ENFORCEMENT,
+      ),
+    [state?.prefs?.budgetEnforcement],
+  );
+
   const previousCycle = useMemo(() => {
     const sorted = [...(state?.cycles ?? [])].sort(
       (a, b) =>
@@ -340,6 +382,114 @@ export function useBudgetScreenState() {
     return state.categories.filter((c) => c.cycleId === activeCycleId);
   }, [activeCycleId, state]);
 
+  const planValidation = useMemo(() => {
+    if (!activeCycle || !state?.incomeSources?.length) return null;
+    return validateBudgetPlan({
+      cycle: activeCycle,
+      categories: cycleCategories,
+      incomeSources: state.incomeSources,
+    });
+  }, [activeCycle, cycleCategories, state?.incomeSources]);
+
+  const rebalanceContext = useMemo(() => {
+    const spentByCategoryId: Record<string, number> = {};
+    if (state?.transactions && activeCycleId) {
+      for (const tx of state.transactions) {
+        if (tx.cycleId !== activeCycleId || !tx.categoryId) continue;
+        spentByCategoryId[tx.categoryId] =
+          (spentByCategoryId[tx.categoryId] ?? 0) + tx.amount;
+      }
+    }
+    const preferredTrimCategoryIds = new Set<string>();
+    for (const rec of advisorRecommendations ?? []) {
+      if (
+        rec.type === "limit_adjustment" &&
+        rec.categoryId &&
+        rec.suggestedLimit != null &&
+        rec.currentLimit != null &&
+        rec.suggestedLimit < rec.currentLimit
+      ) {
+        preferredTrimCategoryIds.add(rec.categoryId);
+      }
+    }
+    return {
+      lifeStage:
+        state?.prefs?.lifeStage ?? profileVitals.vitals?.life_stage ?? null,
+      spendingStyle: profileVitals.vitals?.spending_style ?? null,
+      financialPriority: profileVitals.vitals?.financial_priority ?? null,
+      interests: state?.prefs?.interests,
+      spentByCategoryId,
+      preferredTrimCategoryIds,
+      recurringExpenses,
+    };
+  }, [
+    activeCycleId,
+    advisorRecommendations,
+    profileVitals.vitals?.financial_priority,
+    profileVitals.vitals?.life_stage,
+    profileVitals.vitals?.spending_style,
+    recurringExpenses,
+    state?.prefs?.interests,
+    state?.prefs?.lifeStage,
+    state?.transactions,
+  ]);
+
+  const [rebalancePreview, setRebalancePreview] = useState<RebalancePreview | null>(
+    null,
+  );
+  const [rebalanceLoading, setRebalanceLoading] = useState(false);
+
+  const isSurvivalMode = useMemo(
+    () => planValidation?.violations.some((v) => v.type === "L4") ?? false,
+    [planValidation],
+  );
+
+  const offendingBucket = useMemo((): BudgetBucket | null => {
+    if (!planValidation) return null;
+    const primary = getPrimaryViolation(planValidation);
+    if (primary?.type === "L2" && primary.bucket) return primary.bucket;
+    const overBucket = (["needs", "wants", "savings"] as const).find(
+      (b) => planValidation.buckets[b].status === "over",
+    );
+    return overBucket ?? null;
+  }, [planValidation]);
+
+  const showReconcileBanner = useMemo(
+    () =>
+      shouldShowReconcileBanner({
+        validation: planValidation,
+        dismissedAt: state?.prefs?.lastReconcileBannerDismissedAt,
+        dismissedOverflow: state?.prefs?.lastReconcileBannerDismissedOverflow,
+      }),
+    [
+      planValidation,
+      state?.prefs?.lastReconcileBannerDismissedAt,
+      state?.prefs?.lastReconcileBannerDismissedOverflow,
+    ],
+  );
+
+  const nwsAdjustPreview = useMemo(() => {
+    if (!activeCycle || !state?.incomeSources?.length) return null;
+    return buildNwsAdjustPreview({
+      cycle: activeCycle,
+      proposed: {
+        needsPct: activeCycle.needsPct,
+        wantsPct: activeCycle.wantsPct,
+        savingsPct: activeCycle.savingsPct,
+      },
+      categories: cycleCategories,
+      incomeSources: state.incomeSources,
+    });
+  }, [activeCycle, cycleCategories, state?.incomeSources]);
+
+  const showUnassignedNudge = false;
+
+  const [showReconcileSheet, setShowReconcileSheet] = useState(false);
+  const [showRebalancePreview, setShowRebalancePreview] = useState(false);
+  const [showFlexibleOverNetAck, setShowFlexibleOverNetAck] = useState(false);
+  const [showNwsAdjustSheet, setShowNwsAdjustSheet] = useState(false);
+  const [showSurvivalSheet, setShowSurvivalSheet] = useState(false);
+
   const categoriesByBucket = useMemo(() => {
     const buckets: Record<BudgetBucket, typeof cycleCategories> = {
       needs: [],
@@ -352,10 +502,8 @@ export function useBudgetScreenState() {
 
   const cycleTransactions = useMemo(() => {
     if (!state || !activeCycleId) return [];
-    const tx = state.transactions.filter((t) => t.cycleId === activeCycleId);
-    if (filter === "all") return tx;
-    return tx.filter((t) => t.bucket === filter);
-  }, [activeCycleId, filter, state]);
+    return state.transactions.filter((t) => t.cycleId === activeCycleId);
+  }, [activeCycleId, state]);
 
   useEffect(() => {
     if (
@@ -698,14 +846,239 @@ export function useBudgetScreenState() {
 
   const onConfirmAllocationExceeded = useCallback(async () => {
     if (!pendingCategoryAction || !allocationExceededResult) return;
+    if (
+      allocationExceededResult.exceedsIncome &&
+      budgetEnforcement === "flexible" &&
+      !showFlexibleOverNetAck
+    ) {
+      setShowFlexibleOverNetAck(true);
+      return;
+    }
+    if (showFlexibleOverNetAck && allocationExceededResult.exceedsIncome) {
+      trackBudgetOverNetAcknowledged({
+        overflowAmount: allocationExceededResult.debtAmount,
+        source: "edit",
+      });
+    }
     if (allocationExceededResult.suggestedAllocation && activeCycle) {
       await updateCycleAllocation(
         activeCycle.id,
         allocationExceededResult.suggestedAllocation,
       );
     }
-    // Debt is no longer auto-created from allocation overrun.
-    // Overspend → debt flow is expense-triggered (deficit prompt at rollover).
+    await proceedPendingCategoryAction();
+  }, [
+    activeCycle,
+    allocationExceededResult,
+    budgetEnforcement,
+    pendingCategoryAction,
+    proceedPendingCategoryAction,
+    showFlexibleOverNetAck,
+    updateCycleAllocation,
+  ]);
+
+  const onConfirmFlexibleOverNet = useCallback(async () => {
+    if (!pendingCategoryAction || !allocationExceededResult) return;
+    if (allocationExceededResult.suggestedAllocation && activeCycle) {
+      await updateCycleAllocation(
+        activeCycle.id,
+        allocationExceededResult.suggestedAllocation,
+      );
+    }
+    await proceedPendingCategoryAction();
+  }, [
+    activeCycle,
+    allocationExceededResult,
+    pendingCategoryAction,
+    proceedPendingCategoryAction,
+    updateCycleAllocation,
+  ]);
+
+  const handleCloseAllocationExceeded = useCallback(() => {
+    setShowAllocationExceededModal(false);
+    setAllocationExceededResult(null);
+    setPendingCategoryAction(null);
+    setShowFlexibleOverNetAck(false);
+  }, []);
+
+  const persistPrefsPatch = useCallback(
+    async (patch: Partial<import("../../../types/budget").BudgetProfilePrefs>) => {
+      if (!user?.id) return;
+      const current = useBudgetStore.getState().state;
+      if (!current) return;
+      await useBudgetStore.getState().persistState({
+        ...current,
+        prefs: { ...current.prefs, ...patch },
+      });
+    },
+    [user?.id],
+  );
+
+  const persistReconcileDismissed = useCallback(async () => {
+    if (!user?.id || !activeCycleId) return;
+    await persistPrefsPatch({
+      reconcileSheetDismissedForCycleId: activeCycleId,
+    });
+  }, [activeCycleId, persistPrefsPatch, user?.id]);
+
+  const handleDismissReconcileSheet = useCallback(async () => {
+    await persistReconcileDismissed();
+    trackBudgetReconcileDismissed({ enforcement: budgetEnforcement });
+    setShowReconcileSheet(false);
+    setShowRebalancePreview(false);
+  }, [budgetEnforcement, persistReconcileDismissed]);
+
+  /** Any close/backdrop dismiss — persist so the sheet stays closed for this cycle. */
+  const handleCloseReconcileSheet = useCallback(async () => {
+    await persistReconcileDismissed();
+    setShowReconcileSheet(false);
+    setShowRebalancePreview(false);
+  }, [persistReconcileDismissed]);
+
+  const handleDismissReconcileBanner = useCallback(async () => {
+    if (!planValidation) return;
+    await persistPrefsPatch({
+      lastReconcileBannerDismissedAt: new Date().toISOString(),
+      lastReconcileBannerDismissedOverflow: getPlanViolationOverflow(planValidation),
+    });
+  }, [persistPrefsPatch, planValidation]);
+
+  const handleApplyRebalance = useCallback(async () => {
+    if (!rebalancePreview?.rows.length) return;
+
+    for (const categoryId of rebalancePreview.deleteCategoryIds ?? []) {
+      await deleteCategory(categoryId);
+    }
+
+    const nextCategories = applyRebalancePreview(cycleCategories, rebalancePreview);
+    for (const row of rebalancePreview.rows) {
+      if (row.kind === "deleted") continue;
+      const updated = nextCategories.find((c) => c.id === row.categoryId);
+      if (updated) {
+        await updateCategoryLimit(row.categoryId, updated.limitAmount);
+      }
+    }
+    trackBudgetReconcileApplied({ method: "auto" });
+    setShowReconcileSheet(false);
+    setShowRebalancePreview(false);
+    setRebalancePreview(null);
+    await reload();
+  }, [cycleCategories, deleteCategory, rebalancePreview, reload, updateCategoryLimit]);
+
+  const handleBalanceForMe = useCallback(async () => {
+    if (!planValidation || !user?.id) return;
+    setRebalanceLoading(true);
+    try {
+      let preview = buildRebalancePreview(
+        cycleCategories,
+        planValidation,
+        rebalanceContext,
+      );
+
+      const ai = await fetchAIRebalancePlan({
+        categories: cycleCategories,
+        validation: planValidation,
+        context: rebalanceContext,
+        lockedCategoryIds: preview.lockedCategoryIds,
+        proposedByCategoryId: preview.proposedByCategoryId,
+        mergeIntoWinner: preview.mergeIntoWinner,
+      });
+
+      if (ai) {
+        preview = mergeAIRebalancePreview(
+          cycleCategories,
+          preview,
+          ai,
+          preview.lockedCategoryIds,
+        );
+      } else if (preview.totalAfter > preview.takeHome + 0.01) {
+        preview = {
+          ...preview,
+          note:
+            (preview.note ? preview.note + " " : "") +
+            "AI refinement unavailable — showing weighted plan from your recurring bills.",
+        };
+      }
+
+      setRebalancePreview(preview);
+      setShowRebalancePreview(true);
+    } finally {
+      setRebalanceLoading(false);
+    }
+  }, [
+    cycleCategories,
+    planValidation,
+    rebalanceContext,
+    user?.id,
+  ]);
+
+  const handleOpenReconcileSheet = useCallback(
+    (source: "categories" | "budget" | "edit") => {
+      trackBudgetReconcileShown({ source });
+      setShowReconcileSheet(true);
+    },
+    [],
+  );
+
+  const handleOpenNwsAdjust = useCallback(() => {
+    setShowAllocationExceededModal(false);
+    setShowNwsAdjustSheet(true);
+  }, []);
+
+  const handleApplyNwsAdjust = useCallback(
+    async (needsPct: number, wantsPct: number, savingsPct: number) => {
+      if (!activeCycle) return;
+      await updateCycleAllocation(activeCycle.id, {
+        needsPct,
+        wantsPct,
+        savingsPct,
+      });
+      await recalculateBudget();
+      trackBudgetReconcileApplied({ method: "split_adjust" });
+      setShowNwsAdjustSheet(false);
+      setShowReconcileSheet(false);
+      await reload();
+    },
+    [activeCycle, recalculateBudget, reload, updateCycleAllocation],
+  );
+
+  const handleAssignUnassignedToSavings = useCallback(async () => {
+    if (!planValidation || planValidation.unassigned <= 0) return;
+    const savingsCat = cycleCategories.find((c) => c.bucket === "savings");
+    if (!savingsCat) return;
+    const nextLimit = savingsCat.limitAmount + planValidation.unassigned;
+    await updateCategoryLimit(savingsCat.id, nextLimit);
+    trackBudgetUnassignedSlack({ amount: planValidation.unassigned });
+    await reload();
+  }, [cycleCategories, planValidation, reload, updateCategoryLimit]);
+
+  const handleDismissUnassignedNudge = useCallback(async () => {
+    await persistPrefsPatch({
+      lastUnassignedNudgeDismissedAt: new Date().toISOString(),
+    });
+  }, [persistPrefsPatch]);
+
+  const handleDismissAssignRemaining = useCallback(async () => {
+    if (!activeCycleId) return;
+    await persistPrefsPatch({
+      assignRemainingSavingsDismissedForCycleId: activeCycleId,
+    });
+  }, [activeCycleId, persistPrefsPatch]);
+
+  const handleTrimFromAllocationModal = useCallback(() => {
+    setShowAllocationExceededModal(false);
+    handleOpenReconcileSheet("edit");
+    void handleBalanceForMe();
+  }, [handleBalanceForMe, handleOpenReconcileSheet]);
+
+  useEffect(() => {
+    if (isSurvivalMode) {
+      setShowSurvivalSheet(true);
+    }
+  }, [isSurvivalMode]);
+
+  const proceedPendingCategoryAction = useCallback(async () => {
+    if (!pendingCategoryAction) return;
     if (pendingCategoryAction.type === "add") {
       await addCategory(pendingCategoryAction.params);
     } else {
@@ -718,24 +1091,10 @@ export function useBudgetScreenState() {
     setPendingCategoryAction(null);
     setAllocationExceededResult(null);
     setShowAllocationExceededModal(false);
+    setShowFlexibleOverNetAck(false);
     await syncNow();
     await reload();
-  }, [
-    activeCycle,
-    allocationExceededResult,
-    pendingCategoryAction,
-    addCategory,
-    updateCategoryLimit,
-    updateCycleAllocation,
-    syncNow,
-    reload,
-  ]);
-
-  const handleCloseAllocationExceeded = useCallback(() => {
-    setShowAllocationExceededModal(false);
-    setAllocationExceededResult(null);
-    setPendingCategoryAction(null);
-  }, []);
+  }, [addCategory, pendingCategoryAction, reload, syncNow, updateCategoryLimit]);
 
   const autoApplyRollover = useCallback(
     async (preview: NonNullable<ReturnType<typeof computeNewCyclePreview>>) => {
@@ -936,6 +1295,7 @@ export function useBudgetScreenState() {
       updateCategoryLimit,
       updateCycleAllocation,
       updateBudgetEngineMode,
+      updateBudgetEnforcement,
       updateCycleDay,
       resetBudget,
       deleteAllBudgetData,
@@ -979,10 +1339,15 @@ export function useBudgetScreenState() {
       incomeToggleChevronStyle,
       reallocationSuggestion,
       budgetEngineMode,
+      budgetEnforcement,
+      planValidation,
+      showReconcileBanner,
+      isSurvivalMode,
+      offendingBucket,
+      nwsAdjustPreview,
+      showUnassignedNudge,
     },
     ui: {
-      filter,
-      setFilter,
       showIncomeForm,
       toggleIncomeForm,
       categoriesOpen,
@@ -1029,7 +1394,31 @@ export function useBudgetScreenState() {
       showAllocationExceededModal,
       setShowAllocationExceededModal,
       onConfirmAllocationExceeded,
+      onConfirmFlexibleOverNet,
       handleCloseAllocationExceeded,
+      showFlexibleOverNetAck,
+      showReconcileSheet,
+      setShowReconcileSheet,
+      showRebalancePreview,
+      setShowRebalancePreview,
+      rebalancePreview,
+      rebalanceLoading,
+      handleApplyRebalance,
+      handleBalanceForMe,
+      handleDismissReconcileSheet,
+      handleCloseReconcileSheet,
+      handleDismissReconcileBanner,
+      handleOpenReconcileSheet,
+      handleOpenNwsAdjust,
+      handleApplyNwsAdjust,
+      handleTrimFromAllocationModal,
+      handleAssignUnassignedToSavings,
+      handleDismissUnassignedNudge,
+      handleDismissAssignRemaining,
+      showNwsAdjustSheet,
+      setShowNwsAdjustSheet,
+      showSurvivalSheet,
+      setShowSurvivalSheet,
       handleAddCategory,
       handleUpdateCategoryLimit,
       handleStartNewCycle,

@@ -20,7 +20,7 @@ describe("reminderScheduleLogic", () => {
     expect(shouldMigrateLegacyFrequency("daily")).toBe(true);
     expect(shouldMigrateLegacyFrequency("weekly")).toBe(true);
     expect(shouldMigrateLegacyFrequency("twice_weekly")).toBe(false);
-    expect(shouldMigrateLegacyFrequency(null)).toBe(false);
+    expect(shouldMigrateLegacyFrequency(null)).toBe(true);
   });
 
   it("evaluates reschedule reasons for both fixed slots", () => {

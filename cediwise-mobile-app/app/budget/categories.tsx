@@ -1,52 +1,80 @@
 import { BackButton } from '@/components/BackButton';
+import { AppDialog } from '@/components/AppDialog';
 import { Card } from '@/components/Card';
 import { CategoryIcon } from '@/components/CategoryIcon';
-import { DEFAULT_STANDARD_HEIGHT, StandardHeader } from '@/components/CediWiseHeader';
+import { StandardHeader } from '@/components/CediWiseHeader';
 import { CategorySelectBottomSheet } from '@/components/features/budget/CategorySelectBottomSheet';
+import { BudgetReconcileSheet } from '@/components/features/budget/BudgetReconcileSheet';
+import { BudgetNwsAdjustSheet } from '@/components/features/budget/BudgetNwsAdjustSheet';
+import { BudgetSurvivalSheet } from '@/components/features/budget/BudgetSurvivalSheet';
 import { EditCategoryLimitBottomSheet } from '@/components/features/budget/EditCategoryLimitBottomSheet';
 import { BudgetModals } from '@/components/features/budget/BudgetModals';
 import { useBudgetScreenState } from '@/components/features/budget/useBudgetScreenState';
 import { CATEGORY_ICON_COLORS, getCategoryIcon } from '@/constants/categoryIcons';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { useAuth } from '@/hooks/useAuth';
-import type { BudgetBucket } from '@/types/budget';
+import type { BudgetBucket, BudgetCategory } from '@/types/budget';
 import { computeSuggestedLimit } from '@/utils/spendingPatternsLogic';
 import { formatCurrency } from '@/utils/formatCurrency';
 import * as Haptics from 'expo-haptics';
-import { Check, MoreVertical } from 'lucide-react-native';
-import { useCallback, useMemo, useState } from 'react';
+import { Check, MoreVertical, AlertTriangle, Trash2 } from 'lucide-react-native';
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition } from 'react';
+import { isPlanOverTakeHomePay } from '@/utils/budgetPlanValidation';
 import {
-  LayoutAnimation,
-  Platform,
-  Pressable,
-  Text,
-  UIManager,
-  View,
-} from 'react-native';
-import { FlashList } from '@shopify/flash-list';
+  CategoryBucketFilterBar,
+  bucketFilterIcon,
+  bucketFilterLabel,
+  CATEGORY_FILTER_BAR_HEIGHT,
+  type CategoryFilterKey,
+} from '@/components/features/budget/CategoryBucketFilterBar';
+import { categoryListContentStyle } from '@/utils/categoryListLayout';
+import { getStandardHeaderWithBottomBodyOffsetTop, getStandardHeaderBodyOffsetTop } from '@/utils/screenHeaderInsets';
+import { Pressable, Text, View } from 'react-native';
+import { FlashList, type FlashListRef } from '@shopify/flash-list';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Button, Menu } from 'heroui-native';
 
-const FILTERS: { key: 'all' | BudgetBucket; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'needs', label: 'Needs' },
-  { key: 'wants', label: 'Wants' },
-  { key: 'savings', label: 'Savings' },
-];
+const BUCKET_ORDER: BudgetBucket[] = ['needs', 'wants', 'savings'];
+const CATEGORY_CARD_ESTIMATED_HEIGHT = 88;
+const SECTION_ROW_ESTIMATED_HEIGHT = 36;
+
+function categoryIconBackgroundColor(categoryId: string): string {
+  let hash = 0;
+  for (let i = 0; i < categoryId.length; i++) {
+    hash = (hash + categoryId.charCodeAt(i)) | 0;
+  }
+  return CATEGORY_ICON_COLORS[Math.abs(hash) % CATEGORY_ICON_COLORS.length];
+}
+
+type CategoryListRow =
+  | { kind: 'section'; id: string; bucket: BudgetBucket; count: number }
+  | { kind: 'category'; id: string; category: BudgetCategory };
 
 export default function BudgetCategoriesScreen() {
+  const router = useRouter();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const { modals, derived, budget, ui } = useBudgetScreenState();
-  const [filter, setFilter] = useState<'all' | BudgetBucket>('all');
+  const {
+    showReconcileSheet,
+    setShowReconcileSheet,
+    setShowRebalancePreview,
+    handleApplyRebalance,
+    handleDismissReconcileSheet,
+    handleCloseReconcileSheet,
+  } = modals;
+  const [filter, setFilter] = useState<CategoryFilterKey>('all');
+  const listRef = useRef<FlashListRef<CategoryListRow>>(null);
+  const skipInitialFilterScrollRef = useRef(true);
   const [showCategorySelectSheet, setShowCategorySelectSheet] = useState(false);
+  const [showAddCategoryBlockedDialog, setShowAddCategoryBlockedDialog] =
+    useState(false);
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [isManaging, setIsManaging] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showMultiDeleteConfirm, setShowMultiDeleteConfirm] = useState(false);
   const [multiDeleteLoading, setMultiDeleteLoading] = useState(false);
-
-  const headerPadding = DEFAULT_STANDARD_HEIGHT + insets.top;
 
   const flatCategories = useMemo(
     () => [
@@ -57,10 +85,90 @@ export default function BudgetCategoriesScreen() {
     [derived.categoriesByBucket],
   );
 
-  const visibleCategories = useMemo(() => {
-    if (filter === 'all') return flatCategories;
-    return flatCategories.filter((c) => c.bucket === filter);
-  }, [filter, flatCategories]);
+  const listRowsByFilter = useMemo(() => {
+    const toCategoryRows = (categories: BudgetCategory[]): CategoryListRow[] =>
+      categories.map((category) => ({
+        kind: 'category' as const,
+        id: category.id,
+        category,
+      }));
+
+    const allRows: CategoryListRow[] = [];
+    for (const bucket of BUCKET_ORDER) {
+      const bucketCategories = derived.categoriesByBucket[bucket];
+      if (bucketCategories.length === 0) continue;
+      allRows.push({
+        kind: 'section',
+        id: `section-${bucket}`,
+        bucket,
+        count: bucketCategories.length,
+      });
+      for (const category of bucketCategories) {
+        allRows.push({ kind: 'category', id: category.id, category });
+      }
+    }
+
+    return {
+      all: allRows,
+      needs: toCategoryRows(derived.categoriesByBucket.needs),
+      wants: toCategoryRows(derived.categoriesByBucket.wants),
+      savings: toCategoryRows(derived.categoriesByBucket.savings),
+    };
+  }, [derived.categoriesByBucket]);
+
+  const listRows = listRowsByFilter[filter];
+
+  const headerPadding = getStandardHeaderWithBottomBodyOffsetTop(insets.top, {
+    bottomHeight: CATEGORY_FILTER_BAR_HEIGHT,
+  });
+
+  const bucketCounts = useMemo(
+    () => ({
+      all: flatCategories.length,
+      needs: derived.categoriesByBucket.needs.length,
+      wants: derived.categoriesByBucket.wants.length,
+      savings: derived.categoriesByBucket.savings.length,
+    }),
+    [derived.categoriesByBucket, flatCategories.length],
+  );
+
+  const planOverTakeHome = useMemo(
+    () => isPlanOverTakeHomePay(derived.planValidation),
+    [derived.planValidation],
+  );
+
+  const handleFilterChange = useCallback((key: CategoryFilterKey) => {
+    startTransition(() => {
+      setFilter(key);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (skipInitialFilterScrollRef.current) {
+      skipInitialFilterScrollRef.current = false;
+      return;
+    }
+    listRef.current?.scrollToOffset({ offset: 0, animated: false });
+  }, [filter]);
+
+  const listContentStyle = useMemo(
+    () =>
+      categoryListContentStyle({
+        itemCount: listRows.length,
+        headerOffsetTop: headerPadding,
+      }),
+    [headerPadding, listRows.length],
+  );
+
+  const handleAddNewCategoryPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    setShowOptionsMenu(false);
+    if (planOverTakeHome) {
+      setShowAddCategoryBlockedDialog(true);
+      return;
+    }
+    setShowCategorySelectSheet(true);
+  }, [planOverTakeHome]);
 
   const selectedCategories = useMemo(
     () => flatCategories.filter((c) => selectedIds.has(c.id)),
@@ -68,22 +176,6 @@ export default function BudgetCategoriesScreen() {
   );
 
   const selectedCount = selectedCategories.length;
-
-  // M6 / Phase 8: Reanimated shared-element here was deprioritized; LayoutAnimation stays for
-  // filter-driven list changes (cheap, predictable on mid-range Android with experimental API on).
-  const handleFilterChange = useCallback((key: 'all' | BudgetBucket) => {
-    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-      UIManager.setLayoutAnimationEnabledExperimental(true);
-    }
-    LayoutAnimation.configureNext({
-      duration: 220,
-      update: { type: LayoutAnimation.Types.easeInEaseOut },
-      create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
-      delete: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity },
-    });
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setFilter(key);
-  }, []);
 
   const exitManageMode = () => {
     setIsManaging(false);
@@ -128,67 +220,48 @@ export default function BudgetCategoriesScreen() {
 
   const categoryListHeader = useMemo(
     () => (
-      <View className="gap-5">
+      <View className="gap-2 pb-1">
         <View>
           <Text className="text-white text-2xl font-bold">Budget Categories</Text>
           <Text className="text-slate-400 text-sm mt-2">
-            Keep this simple: pick a bucket filter, then add or edit limits.
+            Tap a bucket to jump or filter. Tap again to show all.
           </Text>
-        </View>
-
-        <View className="flex-row flex-wrap gap-1.5">
-          {FILTERS.map((item) => {
-            const selected = filter === item.key;
-            return (
-              <Pressable
-                key={item.key}
-                onPress={() => handleFilterChange(item.key)}
-                accessibilityRole="button"
-                accessibilityLabel={`Filter by ${item.label}`}
-                style={({ pressed }) => ({
-                  paddingHorizontal: 12,
-                  paddingVertical: 14,
-                  borderRadius: 16,
-                  backgroundColor: selected
-                    ? 'rgba(16,185,129,0.25)'
-                    : pressed
-                      ? 'rgba(71,85,105,0.35)'
-                      : 'rgba(71,85,105,0.2)',
-                  borderWidth: 1,
-                  borderColor: selected ? 'rgba(16,185,129,0.5)' : 'rgba(148,163,184,0.2)',
-                })}
-              >
-                <Text
-                  className={`text-sm font-medium ${selected ? 'text-emerald-400' : 'text-slate-400'}`}
-                >
-                  {item.label}
-                </Text>
-              </Pressable>
-            );
-          })}
         </View>
       </View>
     ),
-    [filter, handleFilterChange],
+    [],
   );
 
-  const categoryListEmpty = useMemo(
-    () => (
+  const categoryListEmpty = useMemo(() => {
+    const bucketLabel =
+      filter === 'all' ? null : bucketFilterLabel(filter);
+    return (
       <Card>
-        <Text className="text-white text-base font-semibold">No categories yet</Text>
+        <Text className="text-white text-base font-semibold">
+          {bucketLabel ? `No ${bucketLabel.toLowerCase()} categories` : 'No categories yet'}
+        </Text>
         <Text className="text-slate-400 text-sm mt-2">
-          Add your first category to start tracking this cycle.
+          {bucketLabel
+            ? `Add a ${bucketLabel.toLowerCase()} line or switch back to All.`
+            : 'Add your first category to start tracking this cycle.'}
         </Text>
       </Card>
-    ),
-    [],
+    );
+  }, [filter]);
+
+  const filterBar = (
+    <CategoryBucketFilterBar
+      active={filter}
+      counts={bucketCounts}
+      onChange={handleFilterChange}
+    />
   );
 
   if (!user?.id) {
     return (
       <View style={{ flex: 1, backgroundColor: 'black' }}>
         <StandardHeader title="Categories" leading={<BackButton />} centered />
-        <View className="px-5 py-4" style={{ paddingTop: headerPadding }}>
+        <View className="px-5 py-4" style={{ paddingTop: getStandardHeaderBodyOffsetTop(insets.top) }}>
           <Text className="text-slate-400 mt-8 text-center">Sign in to manage categories.</Text>
         </View>
       </View>
@@ -199,7 +272,7 @@ export default function BudgetCategoriesScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: 'black' }}>
         <StandardHeader title="Categories" leading={<BackButton />} centered />
-        <View className="px-5 py-4" style={{ paddingTop: headerPadding }}>
+        <View className="px-5 py-4" style={{ paddingTop: getStandardHeaderBodyOffsetTop(insets.top) }}>
           <Text className="text-slate-400 mt-8 text-center">
             Set up your budget cycle first.
           </Text>
@@ -233,31 +306,74 @@ export default function BudgetCategoriesScreen() {
           )
         }
         centered
+        bottom={filterBar}
+        bottomHeight={CATEGORY_FILTER_BAR_HEIGHT}
         actions={
           isManaging
             ? [
-                <Button
+                <Pressable
                   key="delete"
-                  size="sm"
-                  variant="danger-soft"
-                  isDisabled={!selectedCount || multiDeleteLoading}
-                  className={
-                    selectedCount
-                      ? 'bg-rose-500/15 border border-rose-400/60 rounded-full px-3 w-22'
-                      : 'opacity-60 rounded-full px-3 w-22'
-                  }
-                  onPress={async () => {
-                    if (!selectedCount) return;
+                  disabled={!selectedCount || multiDeleteLoading}
+                  onPress={() => {
+                    if (!selectedCount || multiDeleteLoading) return;
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
                     setShowMultiDeleteConfirm(true);
                   }}
                   accessibilityRole="button"
-                  accessibilityLabel="Delete selected categories"
+                  accessibilityLabel={
+                    selectedCount
+                      ? `Delete ${selectedCount} selected ${selectedCount === 1 ? 'category' : 'categories'}`
+                      : 'Delete selected categories'
+                  }
+                  style={({ pressed }) => ({
+                    width: 44,
+                    height: 44,
+                    borderRadius: 22,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: -8,
+                    backgroundColor: selectedCount
+                      ? 'rgba(244,63,94,0.15)'
+                      : 'rgba(244,63,94,0.08)',
+                    borderWidth: 1,
+                    borderColor: selectedCount
+                      ? 'rgba(251,113,133,0.6)'
+                      : 'rgba(251,113,133,0.28)',
+                    opacity: !selectedCount || multiDeleteLoading ? 0.5 : pressed ? 0.85 : 1,
+                    transform: [{ scale: pressed && selectedCount ? 0.97 : 1 }],
+                  })}
                 >
-                  <Text className="text-sm font-semibold text-rose-400">
-                    Delete ({selectedCount})
-                  </Text>
-                </Button>,
+                  <Trash2 size={20} color="#fb7185" strokeWidth={2.2} />
+                  {selectedCount > 0 ? (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        top: -4,
+                        right: -4,
+                        minWidth: 18,
+                        height: 18,
+                        paddingHorizontal: 4,
+                        borderRadius: 9,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(225,29,72,0.95)',
+                        borderWidth: 1,
+                        borderColor: 'rgba(254,205,211,0.55)',
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: '#fff',
+                          fontSize: 11,
+                          fontWeight: '700',
+                          lineHeight: 13,
+                        }}
+                      >
+                        {selectedCount}
+                      </Text>
+                    </View>
+                  ) : null}
+                </Pressable>,
               ]
             : [
                 <Menu
@@ -292,13 +408,7 @@ export default function BudgetCategoriesScreen() {
                       width={220}
                       className="bg-slate-800 border border-slate-600/50 rounded-[22px]"
                     >
-                      <Menu.Item
-                        onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-                          setShowOptionsMenu(false);
-                          setShowCategorySelectSheet(true);
-                        }}
-                      >
+                      <Menu.Item onPress={handleAddNewCategoryPress}>
                         <Menu.ItemTitle className="text-slate-100">
                           Add new category
                         </Menu.ItemTitle>
@@ -323,21 +433,48 @@ export default function BudgetCategoriesScreen() {
         }
       />
       <FlashList
+        ref={listRef}
         style={{ flex: 1 }}
         className="px-5"
-        data={visibleCategories}
-        keyExtractor={(c) => c.id}
+        data={listRows}
+        keyExtractor={(row) => row.id}
+        getItemType={(row) => row.kind}
+        estimatedItemSize={CATEGORY_CARD_ESTIMATED_HEIGHT}
+        overrideItemLayout={(layout, row) => {
+          layout.size =
+            row.kind === 'section'
+              ? SECTION_ROW_ESTIMATED_HEIGHT
+              : CATEGORY_CARD_ESTIMATED_HEIGHT;
+        }}
         ListHeaderComponent={categoryListHeader}
         ListEmptyComponent={categoryListEmpty}
         ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
         extraData={{ isManaging, selectedIds: [...selectedIds].sort().join(',') }}
-        contentContainerStyle={{ paddingTop: headerPadding + 10, paddingBottom: 100 }}
+        contentContainerStyle={listContentStyle}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item: cat, index: idx }) => {
+        renderItem={({ item: row }) => {
+          if (row.kind === 'section') {
+            const SectionIcon = bucketFilterIcon(row.bucket);
+            return (
+              <View className="flex-row items-center justify-between pt-2 pb-1">
+                <View className="flex-row items-center gap-2">
+                  <SectionIcon size={16} color="#94A3B8" strokeWidth={2.2} />
+                  <Text className="text-slate-300 text-sm font-semibold tracking-wide">
+                    {bucketFilterLabel(row.bucket)}
+                  </Text>
+                </View>
+                <Text className="text-slate-500 text-xs font-medium">
+                  {row.count} {row.count === 1 ? 'category' : 'categories'}
+                </Text>
+              </View>
+            );
+          }
+
+          const cat = row.category;
           const icon =
             (cat.icon as import('@/constants/categoryIcons').CategoryIconName) ??
             getCategoryIcon(cat.name);
-          const bgColor = CATEGORY_ICON_COLORS[idx % CATEGORY_ICON_COLORS.length];
+          const bgColor = categoryIconBackgroundColor(cat.id);
           const isSelected = isManaging && selectedIds.has(cat.id);
           return (
             <Pressable
@@ -390,9 +527,6 @@ export default function BudgetCategoriesScreen() {
                     <View className="flex-1 min-w-0">
                       <Text className="text-white text-base font-semibold" numberOfLines={1}>
                         {cat.name}
-                      </Text>
-                      <Text className="text-slate-400 text-xs mt-0.5 capitalize">
-                        {cat.bucket}
                       </Text>
                     </View>
                   </View>
@@ -582,10 +716,93 @@ export default function BudgetCategoriesScreen() {
         setShowAllocationExceededModal={modals.setShowAllocationExceededModal}
         onConfirmAllocationExceeded={modals.onConfirmAllocationExceeded}
         onCloseAllocationExceeded={modals.handleCloseAllocationExceeded}
+        showFlexibleOverNetAck={modals.showFlexibleOverNetAck}
+        onTrimCategories={modals.handleTrimFromAllocationModal}
+        onAdjustSplit={modals.handleOpenNwsAdjust}
         showEditCycleModal={false}
         setShowEditCycleModal={() => { }}
         activeCyclePaydayDay={derived.activeCycle?.paydayDay ?? 1}
         onUpdateCycleDay={async () => { }}
+      />
+
+      <BudgetReconcileSheet
+        visible={showReconcileSheet}
+        validation={derived.planValidation}
+        rebalancePreview={modals.rebalancePreview}
+        rebalanceLoading={modals.rebalanceLoading}
+        enforcement={derived.budgetEnforcement}
+        showRebalancePreview={modals.showRebalancePreview}
+        offendingBucket={derived.offendingBucket}
+        onBalanceForMe={modals.handleBalanceForMe}
+        onAdjustMyself={() => {
+          if (derived.offendingBucket) {
+            handleFilterChange(derived.offendingBucket);
+          }
+          void handleCloseReconcileSheet();
+        }}
+        onAdjustSplit={() => {
+          void handleCloseReconcileSheet();
+          modals.setShowNwsAdjustSheet(true);
+        }}
+        onApplyRebalance={handleApplyRebalance}
+        onDismiss={handleDismissReconcileSheet}
+        onBackFromPreview={() => modals.setShowRebalancePreview(false)}
+        onClose={() => {
+          void handleCloseReconcileSheet();
+        }}
+      />
+
+      <BudgetNwsAdjustSheet
+        visible={modals.showNwsAdjustSheet}
+        preview={derived.nwsAdjustPreview}
+        onClose={() => modals.setShowNwsAdjustSheet(false)}
+        onApply={modals.handleApplyNwsAdjust}
+      />
+
+      <BudgetSurvivalSheet
+        visible={modals.showSurvivalSheet}
+        validation={derived.planValidation}
+        onReviewIncome={() => {
+          modals.setShowSurvivalSheet(false);
+          router.push('/budget/income');
+        }}
+        onReduceFixed={() => {
+          modals.setShowSurvivalSheet(false);
+          if (derived.offendingBucket) {
+            handleFilterChange(derived.offendingBucket);
+          }
+        }}
+        onClose={() => {}}
+      />
+
+      <AppDialog
+        visible={showAddCategoryBlockedDialog}
+        onOpenChange={(open) => {
+          if (!open) setShowAddCategoryBlockedDialog(false);
+        }}
+        icon={
+          <View
+            style={{
+              width: 40,
+              height: 40,
+              borderRadius: 20,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(245, 158, 11, 0.15)',
+            }}
+          >
+            <AlertTriangle color="#F59E0B" size={24} />
+          </View>
+        }
+        title="Can't add a category"
+        description="A new category can't be created while your allocations exceed your take-home pay."
+        primaryLabel="Change now"
+        onPrimary={() => {
+          setShowAddCategoryBlockedDialog(false);
+          modals.handleOpenReconcileSheet('categories');
+        }}
+        secondaryLabel="Cancel"
+        onSecondary={() => setShowAddCategoryBlockedDialog(false)}
       />
     </View>
   );

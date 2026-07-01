@@ -85,9 +85,9 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
  * ExpandedHeader bottom slot: search + active filter pills row.
  */
 const SME_TX_FILTERS_SEARCH_H = 48;
-const SME_TX_FILTERS_GAP = 12;
+const SME_TX_FILTERS_GAP = 16;
 const SME_TX_FILTERS_PILLS_ROW_H = 40;
-const SME_TX_FILTERS_BOTTOM_BUFFER = 10;
+const SME_TX_FILTERS_BOTTOM_BUFFER = 24;
 
 const SME_TX_HEADER_BOTTOM_HEIGHT =
   SME_TX_FILTERS_SEARCH_H +
@@ -248,7 +248,7 @@ export default function TransactionsScreen() {
         expandedHeight: DEFAULT_EXPANDED_HEIGHT,
         bottomHeight: headerBottomHeight,
         insetTop: insets.top,
-      }) + 16,
+      }) + 28,
     [insets.top, headerBottomHeight]
   );
 

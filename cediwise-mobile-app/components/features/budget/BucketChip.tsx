@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Pressable, Text } from 'react-native';
 
 interface BucketChipProps {
@@ -6,7 +7,7 @@ interface BucketChipProps {
   onPress: () => void;
 }
 
-export function BucketChip({ label, active, onPress }: BucketChipProps) {
+function BucketChipInner({ label, active, onPress }: BucketChipProps) {
   return (
     <Pressable
       onPress={onPress}
@@ -23,3 +24,5 @@ export function BucketChip({ label, active, onPress }: BucketChipProps) {
     </Pressable>
   );
 }
+
+export const BucketChip = memo(BucketChipInner);

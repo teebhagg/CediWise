@@ -1,4 +1,6 @@
 export { ApplyVitalsCard } from "./ApplyVitalsCard";
+export { CategoryBucketFilterBar } from "./CategoryBucketFilterBar";
+export type { CategoryFilterKey } from "./CategoryBucketFilterBar";
 export { BucketChip } from "./BucketChip";
 export { BudgetAllocationCard } from "./BudgetAllocationCard";
 export { BudgetCategoriesCard } from "./BudgetCategoriesCard";

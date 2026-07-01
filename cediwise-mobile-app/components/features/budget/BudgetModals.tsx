@@ -90,6 +90,9 @@ interface BudgetModalsProps {
   setShowAllocationExceededModal: (v: boolean) => void;
   onConfirmAllocationExceeded: () => Promise<void>;
   onCloseAllocationExceeded: () => void;
+  showFlexibleOverNetAck?: boolean;
+  onTrimCategories?: () => void;
+  onAdjustSplit?: () => void;
 
   showEditCycleModal: boolean;
   setShowEditCycleModal: (v: boolean) => void;
@@ -141,6 +144,9 @@ export function BudgetModals({
   setShowAllocationExceededModal,
   onConfirmAllocationExceeded,
   onCloseAllocationExceeded,
+  showFlexibleOverNetAck,
+  onTrimCategories,
+  onAdjustSplit,
   showEditCycleModal,
   setShowEditCycleModal,
   activeCyclePaydayDay,
@@ -308,6 +314,9 @@ export function BudgetModals({
         result={allocationExceededResult}
         onClose={onCloseAllocationExceeded}
         onConfirm={onConfirmAllocationExceeded}
+        showFlexibleAck={showFlexibleOverNetAck}
+        onTrimCategories={onTrimCategories}
+        onAdjustSplit={onAdjustSplit}
       />
 
       <EditCycleDayModal

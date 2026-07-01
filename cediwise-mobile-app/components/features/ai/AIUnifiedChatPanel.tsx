@@ -213,8 +213,7 @@ export function AIUnifiedChatPanel(props: AIUnifiedChatPanelProps) {
         loadingRef.current ||
         limitMsg ||
         !supabaseUrl ||
-        !anonKey ||
-        !activeCycleId
+        !anonKey
       ) {
         return;
       }
@@ -634,7 +633,7 @@ export function AIUnifiedChatPanel(props: AIUnifiedChatPanelProps) {
       : undefined;
 
   const topChromeHeight = insets.top + 76;
-  const composerDisabled = busy || !!limitMsg || !activeCycleId;
+  const composerDisabled = busy || !!limitMsg;
 
   const lastAssistantMsgWithChips = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {

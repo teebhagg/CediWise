@@ -97,6 +97,13 @@ export default function AuthNameScreen() {
       });
       await refreshAuth();
       await onLoginSuccess(userId);
+    } catch (e) {
+      reportError(e, {
+        feature: 'auth',
+        operation: 'name_prompt_skip',
+        screen: '/auth/name',
+      });
+      setError("Something went wrong. Tap 'Skip for now' to try again.");
     } finally {
       setSkipLoading(false);
     }

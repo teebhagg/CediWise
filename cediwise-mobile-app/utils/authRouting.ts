@@ -7,7 +7,9 @@ import {
   setPendingNotificationRoute,
   shouldShowNotificationPermissionGate,
 } from "@/services/notifications";
+import type { StoredAuthData } from "./auth";
 import { log } from "./logger";
+import { shouldShowNamePrompt } from "./namePrompt";
 import { getPostAuthRoute } from "./profileVitals";
 
 /**
@@ -32,6 +34,21 @@ export function resetNavigationToAuth(): void {
     log.warn("resetNavigationToAuth: dismissAll failed", e);
   }
   router.replace("/auth");
+}
+
+/**
+ * After auth is persisted: optionally collect display name, then run post-login routing.
+ * Call after persisting auth and refreshing AuthContext (caller's responsibility).
+ */
+export async function routeAfterAuth(stored: StoredAuthData): Promise<void> {
+  const userId = stored.user.id;
+  if (!stored.user?.name?.trim()) {
+    if (await shouldShowNamePrompt(userId)) {
+      router.replace("/auth/name");
+      return;
+    }
+  }
+  await onLoginSuccess(userId);
 }
 
 /**

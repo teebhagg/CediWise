@@ -6,6 +6,10 @@ export const ANALYTICS_EVENTS = {
   authLoginCompleted: "auth_login_completed",
   budgetSyncFailed: "budget_sync_failed",
   literacyLessonCompleted: "literacy_lesson_completed",
+  namePromptCompleted: "name_prompt_completed",
+  namePromptShown: "name_prompt_shown",
+  namePromptSkipped: "name_prompt_skipped",
+  nameSaved: "name_saved",
   paystackCheckoutCancelled: "paystack_checkout_cancelled",
   subscriptionFetchFailed: "subscription_fetch_failed",
 } as const;

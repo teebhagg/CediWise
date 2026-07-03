@@ -8,7 +8,7 @@ import {
   persistAuthAndVerify,
   refreshStoredSession,
 } from "../utils/auth";
-import { onLoginSuccess } from "../utils/authRouting";
+import { routeAfterAuth } from "../utils/authRouting";
 import { log } from "../utils/logger";
 import { supabase } from "../utils/supabase";
 import { reportError } from "../utils/telemetry";
@@ -34,7 +34,7 @@ export default function Index() {
         log.debug("Using stored auth data for user:", storedAuth.user.email);
         await refreshAuth();
         if (cancelledRef.current) return;
-        await onLoginSuccess(storedAuth.user.id);
+        await routeAfterAuth(storedAuth);
         return;
       }
 
@@ -70,7 +70,7 @@ export default function Index() {
         }
         await refreshAuth();
         if (cancelledRef.current) return;
-        await onLoginSuccess(stored.user.id);
+        await routeAfterAuth(stored);
         return;
       }
 

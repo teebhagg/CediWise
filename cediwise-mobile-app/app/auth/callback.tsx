@@ -4,8 +4,9 @@ import {
   extractUserData,
   handleOAuthCallbackFromUrl,
   persistAuthAndVerify,
+  type StoredAuthData,
 } from '@/utils/auth';
-import { onLoginSuccess } from '@/utils/authRouting';
+import { routeAfterAuth } from '@/utils/authRouting';
 import { log } from '@/utils/logger';
 import { supabase } from '@/utils/supabase';
 import * as Linking from 'expo-linking';
@@ -29,14 +30,14 @@ export default function AuthCallback() {
   const linkingSubRef = useRef<{ remove: () => void } | undefined>(undefined);
 
   const finishWithStored = useCallback(
-    async (stored: { user: { id: string } } | null) => {
+    async (stored: StoredAuthData | null) => {
       if (!stored?.user?.id) {
         log.error('OAuth: auth not persisted to storage');
         setError("We couldn't save your sign-in on this device.");
         return false;
       }
       await refreshAuth();
-      await onLoginSuccess(stored.user.id);
+      await routeAfterAuth(stored);
       return true;
     },
     [refreshAuth],

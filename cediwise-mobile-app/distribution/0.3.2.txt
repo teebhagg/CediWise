@@ -1,3 +1,5 @@
-• Filter categories by Needs, Wants, or Savings. Tap again to see all.
-• Budget: "See all" for expenses is always one tap away, even when the list is empty.
-• If your plan doesn't add up, we'll flag it and help you fix it, including leftover pay after Vitals.
+• Budget doesn't add up? We'll flag it and help you fix it.
+• Sort spending into Needs, Wants, or Savings.
+• Open all expenses in one tap.
+• Apple sign-in: we save your name if you share it. You can skip.
+• Hide My Email shows as private Apple email in Profile.

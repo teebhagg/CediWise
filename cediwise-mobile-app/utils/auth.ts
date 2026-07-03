@@ -1005,7 +1005,8 @@ export async function signInWithApple(): Promise<AuthResult> {
     const session = data.session;
     let sessionUser = session.user;
 
-    if (credential.fullName) {
+    const hasExistingName = !!sessionUser.user_metadata?.full_name;
+    if (credential.fullName && !hasExistingName) {
       const fullName = [
         credential.fullName.givenName,
         credential.fullName.familyName,

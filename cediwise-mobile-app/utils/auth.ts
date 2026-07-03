@@ -9,6 +9,12 @@ import { log } from "./logger";
 import type { User as SupabaseAuthUser } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import * as Sentry from "@sentry/react-native";
+import {
+  formatAuthProviderDisplayValue,
+  isApplePrivateRelayEmail,
+} from "./authProviderDisplay";
+
+export { formatAuthProviderDisplayValue, isApplePrivateRelayEmail };
 
 /** Firebase Phone Auth: confirmation result stored after signInWithPhoneNumber for use on OTP screen. */
 let firebasePhoneConfirmation: {
@@ -373,6 +379,13 @@ export type AuthProviderInfo = {
   displayValue: string;
 };
 
+function formatProviderInfo(info: AuthProviderInfo): AuthProviderInfo {
+  return {
+    ...info,
+    displayValue: formatAuthProviderDisplayValue(info.displayValue),
+  };
+}
+
 /**
  * Infer sign-in method from local user when the server user is unavailable.
  */
@@ -380,20 +393,24 @@ export function getAuthProviderInfoFromStoredUser(
   user: StoredUserData | null | undefined,
 ): AuthProviderInfo {
   if (!user) {
-    return { kind: "unknown", label: "Account", displayValue: "" };
+    return formatProviderInfo({ kind: "unknown", label: "Account", displayValue: "" });
   }
   const contact = getDisplayContact(user);
   if (contact.isPhone) {
-    return {
+    return formatProviderInfo({
       kind: "phone",
       label: "Phone number",
       displayValue: contact.value,
-    };
+    });
   }
   if (user.email) {
-    return { kind: "email", label: "Email", displayValue: user.email };
+    return formatProviderInfo({ kind: "email", label: "Email", displayValue: user.email });
   }
-  return { kind: "unknown", label: "Account", displayValue: user.phone || "" };
+  return formatProviderInfo({
+    kind: "unknown",
+    label: "Account",
+    displayValue: user.phone || "",
+  });
 }
 
 function getAuthProviderInfoFromApiUser(
@@ -413,46 +430,46 @@ function getAuthProviderInfoFromApiUser(
   const phoneStored = stored?.phone;
 
   if (isCediwisePhone && (phoneFromApi || phoneStored)) {
-    return {
+    return formatProviderInfo({
       kind: "phone",
       label: "Phone number",
       displayValue: (phoneFromApi || phoneStored) as string,
-    };
+    });
   }
 
   if (raw === "google") {
-    return {
+    return formatProviderInfo({
       kind: "google",
       label: "Google",
       displayValue: email || stored?.email || "",
-    };
+    });
   }
   if (raw === "apple") {
-    return {
+    return formatProviderInfo({
       kind: "apple",
       label: "Apple",
       displayValue: email || stored?.email || "",
-    };
+    });
   }
   if (raw === "phone" || raw === "sms" || raw === "twilio") {
-    return {
+    return formatProviderInfo({
       kind: "phone",
       label: "Phone number",
       displayValue: phoneFromApi || phoneStored || "",
-    };
+    });
   }
   if (raw === "email" || firstIdentity?.provider === "email") {
-    return { kind: "email", label: "Email", displayValue: email || "" };
+    return formatProviderInfo({ kind: "email", label: "Email", displayValue: email || "" });
   }
   if (email && !isCediwisePhone) {
-    return { kind: "email", label: "Email", displayValue: email };
+    return formatProviderInfo({ kind: "email", label: "Email", displayValue: email });
   }
   if (phoneFromApi || phoneStored) {
-    return {
+    return formatProviderInfo({
       kind: "phone",
       label: "Phone number",
       displayValue: phoneFromApi || phoneStored || "",
-    };
+    });
   }
   return getAuthProviderInfoFromStoredUser(stored);
 }
@@ -986,7 +1003,30 @@ export async function signInWithApple(): Promise<AuthResult> {
     }
 
     const session = data.session;
-    const userData = extractUserData(session.user);
+    let sessionUser = session.user;
+
+    if (credential.fullName) {
+      const fullName = [
+        credential.fullName.givenName,
+        credential.fullName.familyName,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      if (fullName) {
+        const { data: updateData, error: updateError } =
+          await supabase.auth.updateUser({
+            data: { full_name: fullName },
+          });
+        if (updateError) {
+          log.error("Apple Sign-In: failed to save full_name", updateError);
+        } else if (updateData?.user) {
+          sessionUser = updateData.user;
+        }
+      }
+    }
+
+    const userData = extractUserData(sessionUser);
     const expiresIn = session.expires_in || 3600;
     const expiresAt =
       typeof (session as any).expires_at === "number"

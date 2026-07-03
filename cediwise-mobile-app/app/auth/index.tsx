@@ -12,7 +12,7 @@ import {
     signInWithApple,
     signInWithGoogle,
 } from '@/utils/auth';
-import { onLoginSuccess } from '@/utils/authRouting';
+import { routeAfterAuth } from '@/utils/authRouting';
 import { log } from '@/utils/logger';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -100,7 +100,7 @@ export default function AuthLandingScreen() {
             return;
         }
         await refreshAuth();
-        await onLoginSuccess(stored.user.id);
+        await routeAfterAuth(stored);
     };
 
     const onApple = async () => {
@@ -120,7 +120,7 @@ export default function AuthLandingScreen() {
             return;
         }
         await refreshAuth();
-        await onLoginSuccess(stored.user.id);
+        await routeAfterAuth(stored);
     };
 
     return (

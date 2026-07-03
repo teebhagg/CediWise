@@ -1,13 +1,16 @@
 import { AppTextField } from '@/components/AppTextField';
-import { BackButton } from '@/components/BackButton';
 import { Card } from '@/components/Card';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { SecondaryButton } from '@/components/SecondaryButton';
+import { ANALYTICS_EVENTS } from '@/constants/analyticsEvents';
 import { authTokens } from '@/constants/authTokens';
 import { useAuth } from '@/hooks/useAuth';
+import { getPostHogOptional } from '@/utils/analytics/posthogClientRef';
 import { getStoredAuthData, updateUserProfileName } from '@/utils/auth';
-import { reportError } from '@/utils/telemetry';
 import { onLoginSuccess } from '@/utils/authRouting';
-import { useEffect, useState } from 'react';
+import { recordNamePromptDismissed } from '@/utils/namePrompt';
+import { reportError } from '@/utils/telemetry';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -22,7 +25,10 @@ export default function AuthNameScreen() {
   const [name, setName] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
+  const [skipLoading, setSkipLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const promptTrackedRef = useRef(false);
   const { refreshAuth } = useAuth();
 
   useEffect(() => {
@@ -31,6 +37,16 @@ export default function AuthNameScreen() {
         if (auth?.user?.name?.trim() && auth?.user?.id) {
           await refreshAuth();
           await onLoginSuccess(auth.user.id);
+          return;
+        }
+        if (auth?.user?.id) {
+          setUserId(auth.user.id);
+          if (!promptTrackedRef.current) {
+            promptTrackedRef.current = true;
+            getPostHogOptional()?.capture(ANALYTICS_EVENTS.namePromptShown, {
+              source: 'auth_name_screen',
+            });
+          }
         }
       })
       .catch((e) => {
@@ -61,8 +77,29 @@ export default function AuthNameScreen() {
       setError("We couldn't save your sign-in on this device. Tap to try again.");
       return;
     }
+    getPostHogOptional()?.capture(ANALYTICS_EVENTS.namePromptCompleted, {
+      source: 'auth_name_screen',
+    });
+    getPostHogOptional()?.capture(ANALYTICS_EVENTS.nameSaved, {
+      source: 'auth_name_screen',
+    });
     await refreshAuth();
     await onLoginSuccess(stored.user.id);
+  };
+
+  const onSkip = async () => {
+    if (!userId || skipLoading || loading) return;
+    setSkipLoading(true);
+    try {
+      await recordNamePromptDismissed(userId);
+      getPostHogOptional()?.capture(ANALYTICS_EVENTS.namePromptSkipped, {
+        source: 'auth_name_screen',
+      });
+      await refreshAuth();
+      await onLoginSuccess(userId);
+    } finally {
+      setSkipLoading(false);
+    }
   };
 
   if (checkingAuth) {
@@ -84,12 +121,9 @@ export default function AuthNameScreen() {
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 80}
       >
-        <View className="mb-4">
-          <BackButton />
-        </View>
         <ScrollView
           className="flex-1 px-5"
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingTop: 16 }}
           scrollEnabled
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
@@ -97,7 +131,7 @@ export default function AuthNameScreen() {
           <Card className="space-y-4 gap-4">
             <View>
               <Text className="text-white text-2xl font-bold mb-1">
-                What&apos;s your name?
+                What should we call you?
               </Text>
               <Text className="text-muted-foreground mb-4 text-sm">
                 We&apos;ll use this to personalize your experience.
@@ -113,9 +147,17 @@ export default function AuthNameScreen() {
               onSubmitEditing={onSubmit}
             />
 
-            <PrimaryButton loading={loading} onPress={onSubmit}>
+            <PrimaryButton loading={loading} onPress={onSubmit} disabled={skipLoading}>
               Continue
             </PrimaryButton>
+
+            <SecondaryButton
+              onPress={onSkip}
+              disabled={loading || skipLoading || !userId}
+              accessibilityLabel="Skip for now"
+            >
+              {skipLoading ? 'Skipping…' : 'Skip for now'}
+            </SecondaryButton>
           </Card>
         </ScrollView>
       </KeyboardAvoidingView>

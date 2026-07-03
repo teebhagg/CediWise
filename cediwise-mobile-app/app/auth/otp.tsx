@@ -3,8 +3,8 @@ import { Card } from '@/components/Card';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { useAuth } from '@/hooks/useAuth';
 import { requestOtp, verifyOtp } from '@/utils/auth';
-import { onLoginSuccess } from '@/utils/authRouting';
-import { router, useLocalSearchParams } from 'expo-router';
+import { routeAfterAuth } from '@/utils/authRouting';
+import { useLocalSearchParams } from 'expo-router';
 import { InputOTP, REGEXP_ONLY_DIGITS } from 'heroui-native';
 import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
@@ -49,13 +49,8 @@ export default function OtpScreen() {
       setError("We couldn't save your sign-in on this device. Tap to try again.");
       return;
     }
-    const hasName = stored.user?.name?.trim();
-    if (!hasName) {
-      router.replace('/auth/name');
-      return;
-    }
     await refreshAuth();
-    await onLoginSuccess(stored.user.id);
+    await routeAfterAuth(stored);
   };
 
   const onResend = async () => {

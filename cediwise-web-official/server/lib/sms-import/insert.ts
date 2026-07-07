@@ -95,7 +95,7 @@ function parseOccurredAt(receivedAt: string | undefined): string {
   return new Date().toISOString()
 }
 
-async function findDuplicateLog(
+async function fetchImportLogByDedupeKey(
   admin: SupabaseClient,
   userId: string,
   dedupeKey: string,
@@ -108,38 +108,62 @@ async function findDuplicateLog(
     .maybeSingle()
 
   if (error) throw error
+  return data
+}
+
+function isStalePendingLog(row: ImportLogRow): boolean {
+  return row.parse_status === 'pending' && row.budget_transaction_id == null
+}
+
+async function repairPendingLogIfTransactionExists(
+  admin: SupabaseClient,
+  userId: string,
+  row: ImportLogRow,
+): Promise<ImportLogRow | null> {
+  if (!isStalePendingLog(row)) return row
+
+  const { data: tx, error: txLookupError } = await admin
+    .from('budget_transactions')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('sms_import_log_id', row.id)
+    .maybeSingle()
+
+  if (txLookupError) throw txLookupError
+  if (!tx?.id) return null
+
+  const { error: repairError } = await admin
+    .from('sms_import_logs')
+    .update({
+      parse_status: 'parsed',
+      budget_transaction_id: tx.id,
+    })
+    .eq('id', row.id)
+
+  if (repairError) throw repairError
+
+  return {
+    ...row,
+    parse_status: 'parsed',
+    budget_transaction_id: tx.id,
+  }
+}
+
+async function findDuplicateLog(
+  admin: SupabaseClient,
+  userId: string,
+  dedupeKey: string,
+): Promise<ImportLogRow | null> {
+  const data = await fetchImportLogByDedupeKey(admin, userId, dedupeKey)
   if (!data) return null
 
   // Recovery path: previous attempt may have created a transaction but failed to
   // finalize sms_import_logs. If so, repair the log and return the linked tx id.
-  if (data.parse_status === 'pending' && data.budget_transaction_id == null) {
-    const { data: tx, error: txLookupError } = await admin
-      .from('budget_transactions')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('sms_import_log_id', data.id)
-      .maybeSingle()
+  const repaired = await repairPendingLogIfTransactionExists(admin, userId, data)
+  if (repaired) return repaired
 
-    if (txLookupError) throw txLookupError
-
-    if (tx?.id) {
-      const { error: repairError } = await admin
-        .from('sms_import_logs')
-        .update({
-          parse_status: 'parsed',
-          budget_transaction_id: tx.id,
-        })
-        .eq('id', data.id)
-
-      if (repairError) throw repairError
-
-      return {
-        ...data,
-        parse_status: 'parsed',
-        budget_transaction_id: tx.id,
-      }
-    }
-  }
+  // Stale pending rows (crash before transaction insert) are recoverable, not duplicates.
+  if (isStalePendingLog(data)) return null
 
   return data
 }
@@ -185,7 +209,7 @@ async function insertImportLog(
 
   if (error) {
     if (isUniqueViolation(error)) {
-      const existing = await findDuplicateLog(admin, userId, dedupeKey)
+      const existing = await fetchImportLogByDedupeKey(admin, userId, dedupeKey)
       if (existing) return existing
     }
     throw error

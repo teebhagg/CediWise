@@ -108,6 +108,39 @@ async function findDuplicateLog(
     .maybeSingle()
 
   if (error) throw error
+  if (!data) return null
+
+  // Recovery path: previous attempt may have created a transaction but failed to
+  // finalize sms_import_logs. If so, repair the log and return the linked tx id.
+  if (data.parse_status === 'pending' && data.budget_transaction_id == null) {
+    const { data: tx, error: txLookupError } = await admin
+      .from('budget_transactions')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('sms_import_log_id', data.id)
+      .maybeSingle()
+
+    if (txLookupError) throw txLookupError
+
+    if (tx?.id) {
+      const { error: repairError } = await admin
+        .from('sms_import_logs')
+        .update({
+          parse_status: 'parsed',
+          budget_transaction_id: tx.id,
+        })
+        .eq('id', data.id)
+
+      if (repairError) throw repairError
+
+      return {
+        ...data,
+        parse_status: 'parsed',
+        budget_transaction_id: tx.id,
+      }
+    }
+  }
+
   return data
 }
 

@@ -86,23 +86,45 @@ export default defineEventHandler(async (event) => {
       : [])
 
   const results: SmsImportResult[] = []
+  const isBatchRequest = items.length > 1
 
-  try {
-    for (const item of items) {
+  for (const item of items) {
+    try {
       const result = await importOneSmsMessage(admin, auth.userId, item)
       results.push(result)
+    } catch (err) {
+      if (isBatchRequest) {
+        if (err instanceof NoActiveBudgetCycleError) {
+          results.push({
+            ok: true,
+            status: 'failed',
+            error:
+              'Set up an active budget cycle before importing MoMo expenses.',
+          })
+          continue
+        }
+
+        console.error('[sms-import]', err)
+        results.push({
+          ok: true,
+          status: 'failed',
+          error: 'internal_error',
+        })
+        continue
+      }
+
+      if (err instanceof NoActiveBudgetCycleError) {
+        return jsonResponse(event, 422, {
+          ok: false,
+          error: 'no_active_budget_cycle',
+          message:
+            'Set up an active budget cycle before importing MoMo expenses.',
+        })
+      }
+
+      console.error('[sms-import]', err)
+      return jsonResponse(event, 500, { ok: false, error: 'internal_error' })
     }
-  } catch (err) {
-    if (err instanceof NoActiveBudgetCycleError) {
-      return jsonResponse(event, 422, {
-        ok: false,
-        error: 'no_active_budget_cycle',
-        message:
-          'Set up an active budget cycle before importing MoMo expenses.',
-      })
-    }
-    console.error('[sms-import]', err)
-    return jsonResponse(event, 500, { ok: false, error: 'internal_error' })
   }
 
   if (results.length === 1) {

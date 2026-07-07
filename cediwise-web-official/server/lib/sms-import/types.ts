@@ -50,6 +50,9 @@ export type SmsImportResult = {
   transactionId?: string
   parsed?: ParsedSms
   error?: string
+  /** Present on unexpected server failures; callers may retry the item. */
+  errorCode?: 'internal_error'
+  retryable?: boolean
 }
 
 export type SmsImportBatchResult = {

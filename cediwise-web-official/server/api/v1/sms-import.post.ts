@@ -25,6 +25,16 @@ const CORS_HEADERS = {
     'authorization, content-type, x-client-info, apikey',
 }
 
+function retryableBatchFailure(): SmsImportResult {
+  return {
+    ok: true,
+    status: 'failed',
+    error: 'internal_error',
+    errorCode: 'internal_error',
+    retryable: true,
+  }
+}
+
 function jsonResponse(event: H3Event, status: number, body: unknown) {
   setResponseStatus(event, status)
   setResponseHeaders(event, {
@@ -105,11 +115,7 @@ export default defineEventHandler(async (event) => {
         }
 
         console.error('[sms-import]', err)
-        results.push({
-          ok: true,
-          status: 'failed',
-          error: 'internal_error',
-        })
+        results.push(retryableBatchFailure())
         continue
       }
 

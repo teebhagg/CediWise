@@ -25,6 +25,17 @@ describe('parseGhanaMoMoSms — MTN', () => {
     expect(parsed.confidence).toBe('high')
   })
 
+  it('parses payment made without period after name', () => {
+    const sms =
+      'Payment made for GHS 20.00 to JOSHUA ANSAH Current Balance: GHS 69.49 . Available Balance: GHS 69.49. Reference: . Transaction ID: 999888777'
+    const parsed = parseGhanaMoMoSms(sms, 'MTN')
+    expect(parsed.direction).toBe('expense')
+    expect(parsed.amount).toBe(20)
+    expect(parsed.counterparty).toBe('JOSHUA ANSAH')
+    expect(parsed.balanceAfter).toBe(69.49)
+    expect(parsed.txId).toBe('999888777')
+  })
+
   it('parses payment received (income)', () => {
     const sms =
       'Payment received for GHS 100.00 from JOHN DOE 0241234567. Current balance: GHS 300.00. Transaction ID: 555'
@@ -32,6 +43,16 @@ describe('parseGhanaMoMoSms — MTN', () => {
     expect(parsed.direction).toBe('income')
     expect(parsed.amount).toBe(100)
     expect(parsed.counterparty).toContain('JOHN DOE')
+  })
+
+  it('parses payment received without period after name', () => {
+    const sms =
+      'Payment received for GHS 20.00 from JOSHUA ANSAH  Current Balance: GHS 20.55 . Available Balance: GHS 20.55. Reference: . Transaction ID: 112233'
+    const parsed = parseGhanaMoMoSms(sms, 'MTN MoMo')
+    expect(parsed.direction).toBe('income')
+    expect(parsed.amount).toBe(20)
+    expect(parsed.counterparty).toBe('JOSHUA ANSAH')
+    expect(parsed.balanceAfter).toBe(20.55)
   })
 
   it('parses cash out (expense)', () => {
@@ -66,6 +87,33 @@ describe('parseGhanaMoMoSms — Telecel', () => {
     expect(parsed.direction).toBe('income')
     expect(parsed.amount).toBe(80)
   })
+
+  it('parses T-Cash Confirmed sent-to SMS (real format)', () => {
+    const sms =
+      '0000013645405283 Confirmed. GHS2.00 sent to 0534578211 - JOSHUA ANSAH on MTN MOBILE MONEY on 2026-07-08 at 15:19:37. Your Telecel Cash balance is GHS30.92. You were charged GHS0.00. Your E-levy charge is GHS0.00. Sending money from Telecel Cash to Telecel Cash remains FREE on the Telecel Play App. Download the App https://bit.ly/TelecelPlayGhana and continue to enjoy the convenience. Reference: Airtime. Sendi k3k3!'
+    const parsed = parseGhanaMoMoSms(sms, 'Telecel')
+    expect(parsed.provider).toBe('telecel_cash')
+    expect(parsed.direction).toBe('expense')
+    expect(parsed.amount).toBe(2)
+    expect(parsed.fee).toBe(0)
+    expect(parsed.txId).toBe('0000013645405283')
+    expect(parsed.counterparty).toContain('0534578211')
+    expect(parsed.counterparty).toContain('JOSHUA ANSAH')
+    expect(parsed.balanceAfter).toBe(30.92)
+    expect(parsed.reference).toBe('Airtime')
+    expect(parsed.confidence).toBe('high')
+  })
+
+  it('parses T-Cash Confirmed received-from SMS', () => {
+    const sms =
+      '0000013645405999 Confirmed. GHS15.50 received from 0244111222 - AMA MENSAH on MTN MOBILE MONEY on 2026-07-08 at 10:00:00. Your Telecel Cash balance is GHS100.00. You were charged GHS0.00.'
+    const parsed = parseGhanaMoMoSms(sms, 'T-Cash')
+    expect(parsed.provider).toBe('telecel_cash')
+    expect(parsed.direction).toBe('income')
+    expect(parsed.amount).toBe(15.5)
+    expect(parsed.txId).toBe('0000013645405999')
+    expect(parsed.counterparty).toContain('AMA MENSAH')
+  })
 })
 
 describe('parseGhanaMoMoSms — unknown', () => {
@@ -85,6 +133,13 @@ describe('buildDedupeKey', () => {
       'Payment made for GHS 10.00 to A. Transaction ID: 777',
     )
     expect(buildDedupeKey(parsed, 'raw')).toBe('mtn_momo:777')
+  })
+
+  it('uses Telecel confirm id for dedupe', () => {
+    const sms =
+      '0000013645405283 Confirmed. GHS2.00 sent to 0534578211 - JOSHUA ANSAH on MTN MOBILE MONEY on 2026-07-08 at 15:19:37. Your Telecel Cash balance is GHS30.92.'
+    const parsed = parseGhanaMoMoSms(sms, 'Telecel')
+    expect(buildDedupeKey(parsed, sms)).toBe('telecel_cash:0000013645405283')
   })
 
   it('falls back to hash prefix when no tx id', () => {

@@ -5,18 +5,27 @@ type PatternRule = {
   re: RegExp
   direction: SmsDirection
   provider: SmsProvider
+  /** Capture group index for amount (default 1). */
+  amountGroup?: number
   counterpartyGroup?: number
+  /** Capture group index for transaction / confirm ID. */
+  txIdGroup?: number
 }
 
+/**
+ * MTN MoMo patterns.
+ * Counterparty stops before Current/Available Balance so names without a trailing
+ * period still parse cleanly (common MTN format).
+ */
 const MTN_PATTERNS: PatternRule[] = [
   {
-    re: /Payment made for GHS\s*([\d,]+(?:\.\d{1,2})?)\s*to\s*(.+?)\./i,
+    re: /Payment made for GHS\s*([\d,]+(?:\.\d{1,2})?)\s*to\s*(.+?)(?=\s*(?:Current\s+Balance|Available\s+Balance|Fee:|Reference:|Transaction ID|\.|$))/i,
     direction: 'expense',
     provider: 'mtn_momo',
     counterpartyGroup: 2,
   },
   {
-    re: /Payment received for GHS\s*([\d,]+(?:\.\d{1,2})?)\s*from\s*(.+?)\./i,
+    re: /Payment received for GHS\s*([\d,]+(?:\.\d{1,2})?)\s*from\s*(.+?)(?=\s*(?:Current\s+Balance|Available\s+Balance|Fee:|Reference:|Transaction ID|\.|$))/i,
     direction: 'income',
     provider: 'mtn_momo',
     counterpartyGroup: 2,
@@ -32,22 +41,48 @@ const MTN_PATTERNS: PatternRule[] = [
     provider: 'mtn_momo',
   },
   {
-    re: /You have paid GHS\s*([\d,]+(?:\.\d{1,2})?)\s*to\s*(.+?)\./i,
+    re: /You have paid GHS\s*([\d,]+(?:\.\d{1,2})?)\s*to\s*(.+?)(?=\s*(?:Current\s+Balance|Available\s+Balance|Fee:|Reference:|Transaction ID|\.|$))/i,
     direction: 'expense',
     provider: 'mtn_momo',
     counterpartyGroup: 2,
   },
 ]
 
+/**
+ * Telecel Cash / Vodafone Cash patterns (including confirm-id style T-Cash SMS).
+ * Example: "0000013645405283 Confirmed. GHS2.00 sent to 0534… - NAME on MTN …"
+ */
 const TELECEL_PATTERNS: PatternRule[] = [
   {
-    re: /You have sent GHS\s*([\d,]+(?:\.\d{1,2})?)\s*to\s*(.+?)\./i,
+    re: /(\d{10,})\s+Confirmed\.\s*GHS\s*([\d,]+(?:\.\d{1,2})?)\s+sent to\s+(.+?)(?=\s+on\s+)/i,
+    direction: 'expense',
+    provider: 'telecel_cash',
+    amountGroup: 2,
+    counterpartyGroup: 3,
+    txIdGroup: 1,
+  },
+  {
+    re: /(\d{10,})\s+Confirmed\.\s*GHS\s*([\d,]+(?:\.\d{1,2})?)\s+(?:has been\s+)?received from\s+(.+?)(?=\s+on\s+|\.)/i,
+    direction: 'income',
+    provider: 'telecel_cash',
+    amountGroup: 2,
+    counterpartyGroup: 3,
+    txIdGroup: 1,
+  },
+  {
+    re: /GHS\s*([\d,]+(?:\.\d{1,2})?)\s+sent to\s+(.+?)(?=\s+on\s+|\.)/i,
     direction: 'expense',
     provider: 'telecel_cash',
     counterpartyGroup: 2,
   },
   {
-    re: /You have received GHS\s*([\d,]+(?:\.\d{1,2})?)\s*from\s*(.+?)\./i,
+    re: /You have sent GHS\s*([\d,]+(?:\.\d{1,2})?)\s*to\s*(.+?)(?=\.|Your\s)/i,
+    direction: 'expense',
+    provider: 'telecel_cash',
+    counterpartyGroup: 2,
+  },
+  {
+    re: /You have received GHS\s*([\d,]+(?:\.\d{1,2})?)\s*from\s*(.+?)(?=\.|Your\s)/i,
     direction: 'income',
     provider: 'telecel_cash',
     counterpartyGroup: 2,
@@ -61,17 +96,33 @@ const TELECEL_PATTERNS: PatternRule[] = [
 
 const TX_ID_RE =
   /(?:Transaction ID|Trans ID|Trans\.?\s*ID|Txn ID)[:\s#]+(\d+)/i
-const FEE_RE = /Fee[:\s]+GHS\s*([\d,]+(?:\.\d{1,2})?)/i
+const CONFIRM_ID_RE = /^(\d{10,})\s+Confirmed\./i
+/** Prefer transfer charge; e-levy matched separately if needed. */
+const FEE_RE =
+  /(?:Fee|You were charged)[:\s]+GHS\s*([\d,]+(?:\.\d{1,2})?)/i
 const BALANCE_RE =
-  /(?:Available balance|Current balance|balance)[:\s]+GHS\s*([\d,]+(?:\.\d{1,2})?)/i
+  /(?:Available\s+balance|Current\s+balance|Telecel\s+Cash\s+balance|balance)(?:\s+is)?[:\s]+GHS\s*([\d,]+(?:\.\d{1,2})?)/i
 const REFERENCE_RE = /Reference[:\s#]+(\S+)/i
 
-function extractTxId(text: string): string | null {
-  return text.match(TX_ID_RE)?.[1] ?? null
+function extractTxId(text: string, fromPattern?: string | null): string | null {
+  if (fromPattern) return fromPattern
+  return text.match(TX_ID_RE)?.[1] ?? text.match(CONFIRM_ID_RE)?.[1] ?? null
 }
 
 function extractReference(text: string): string | null {
-  return text.match(REFERENCE_RE)?.[1] ?? null
+  const raw = text.match(REFERENCE_RE)?.[1] ?? null
+  if (!raw) return null
+  return raw.replace(/[.,;]+$/, '') || null
+}
+
+function cleanCounterparty(raw: string | null): string | null {
+  if (!raw) return null
+  const cleaned = raw
+    .replace(/\s+/g, ' ')
+    .replace(/\s*(?:Current|Available)\s+Balance.*$/i, '')
+    .replace(/\s+on\s+(?:MTN|Telecel|Vodafone).*$/i, '')
+    .trim()
+  return cleaned || null
 }
 
 export function parseGhsAmount(raw: string | undefined | null): number | null {
@@ -86,6 +137,8 @@ function inferProvider(sender: string | undefined, text: string): SmsProvider {
   const haystack = `${sender ?? ''} ${text}`.toLowerCase()
   if (
     haystack.includes('telecel') ||
+    haystack.includes('t-cash') ||
+    haystack.includes('tcash') ||
     haystack.includes('vodafone cash') ||
     haystack.includes('vodafone')
   ) {
@@ -143,11 +196,14 @@ export function parseGhanaMoMoSms(
     const match = text.match(pattern.re)
     if (!match) continue
 
-    const amount = parseGhsAmount(match[1])
+    const amountGroup = pattern.amountGroup ?? 1
+    const amount = parseGhsAmount(match[amountGroup])
     const counterparty =
       pattern.counterpartyGroup != null
-        ? (match[pattern.counterpartyGroup]?.trim() ?? null)
+        ? cleanCounterparty(match[pattern.counterpartyGroup] ?? null)
         : null
+    const patternTxId =
+      pattern.txIdGroup != null ? (match[pattern.txIdGroup] ?? null) : null
 
     return {
       provider: pattern.provider,
@@ -156,7 +212,7 @@ export function parseGhanaMoMoSms(
       fee: parseGhsAmount(text.match(FEE_RE)?.[1]),
       counterparty,
       reference: extractReference(text),
-      txId: extractTxId(text),
+      txId: extractTxId(text, patternTxId),
       balanceAfter: parseGhsAmount(text.match(BALANCE_RE)?.[1]),
       confidence: amount != null ? 'high' : 'medium',
     }

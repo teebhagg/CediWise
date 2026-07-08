@@ -1,5 +1,5 @@
 import type { H3Event } from 'nitro/h3'
-import { getHeader } from 'nitro/h3'
+import { getHeaders } from 'nitro/h3'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createAdminClient, createAuthClient } from '../supabase/admin'
 import { secureCompareHex, sha256Hex } from './crypto'
@@ -14,22 +14,58 @@ export type AuthResult =
   | { ok: true; userId: string; method: 'jwt' | 'webhook_key' }
   | { ok: false; status: 401; message: string; code: AuthFailureCode }
 
-function extractBearerToken(header: string | undefined): string | null {
-  if (!header) return null
-  const match = /^Bearer\s+(.+)$/i.exec(header.trim())
-  const token = match?.[1]?.trim()
-  return token ? token : null
+const ACCESS_TOKEN_HEADER_NAMES = [
+  'authorization',
+  'x-supabase-access-token',
+  'x-access-token',
+] as const
+
+function normalizeAccessToken(value: string | undefined | null): string | null {
+  if (!value?.trim()) return null
+  const trimmed = value.trim()
+  const bearerMatch = /^Bearer\s+(.+)$/i.exec(trimmed)
+  if (bearerMatch?.[1]?.trim()) return bearerMatch[1].trim()
+  if (trimmed.startsWith('eyJ') && trimmed.split('.').length === 3) {
+    return trimmed
+  }
+  return null
 }
 
-export function readAuthorizationHeader(event: H3Event): string | undefined {
-  const fromH3 =
-    getHeader(event, 'authorization') ?? getHeader(event, 'Authorization')
+function tokenFromHeaderRecord(
+  headers: Record<string, string | undefined>,
+): string | null {
+  for (const name of ACCESS_TOKEN_HEADER_NAMES) {
+    const token = normalizeAccessToken(headers[name])
+    if (token) return token
+  }
+  return null
+}
+
+/** Read Supabase access token from request headers (Authorization or fallbacks). */
+export function readAccessTokenFromEvent(event: H3Event): string | null {
+  const merged = getHeaders(event) as Record<string, string | undefined>
+  const fromH3 = tokenFromHeaderRecord(merged)
   if (fromH3) return fromH3
 
-  const raw = event.node?.req?.headers?.authorization
-  if (typeof raw === 'string') return raw
-  if (Array.isArray(raw)) return raw[0]
-  return undefined
+  const reqHeaders = event.node?.req?.headers
+  if (reqHeaders) {
+    const normalized: Record<string, string | undefined> = {}
+    for (const [key, value] of Object.entries(reqHeaders)) {
+      normalized[key.toLowerCase()] = Array.isArray(value) ? value[0] : value
+    }
+    const fromNode = tokenFromHeaderRecord(normalized)
+    if (fromNode) return fromNode
+  }
+
+  const webRequest = (event as { web?: { request?: Request } }).web?.request
+  if (webRequest?.headers) {
+    for (const name of ACCESS_TOKEN_HEADER_NAMES) {
+      const token = normalizeAccessToken(webRequest.headers.get(name))
+      if (token) return token
+    }
+  }
+
+  return null
 }
 
 async function validateJwtWithClient(
@@ -119,12 +155,11 @@ async function authWithWebhookKey(
 }
 
 export async function authenticateSmsImportRequest(
-  authorizationHeader: string | undefined,
+  accessToken: string | null | undefined,
   body: SmsImportBody,
 ): Promise<AuthResult> {
-  const bearer = extractBearerToken(authorizationHeader)
-  if (bearer) {
-    return authWithJwt(bearer)
+  if (accessToken) {
+    return authWithJwt(accessToken)
   }
 
   if (!body.userId || !body.webhookApiKey) {

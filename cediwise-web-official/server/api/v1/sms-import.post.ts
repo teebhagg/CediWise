@@ -1,12 +1,11 @@
 import {
   defineEventHandler,
-  getHeader,
   readBody,
   setResponseHeaders,
   setResponseStatus,
   type H3Event,
 } from 'nitro/h3'
-import { authenticateSmsImportRequest, readAuthorizationHeader } from '../../lib/sms-import/auth'
+import { authenticateSmsImportRequest, readAccessTokenFromEvent } from '../../lib/sms-import/auth'
 import { createAdminClient } from '../../lib/supabase/admin'
 import {
   importOneSmsMessage,
@@ -22,7 +21,7 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers':
-    'authorization, content-type, x-client-info, apikey',
+    'authorization, content-type, x-client-info, apikey, x-supabase-access-token, x-access-token',
 }
 
 function retryableBatchFailure(): SmsImportResult {
@@ -72,10 +71,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = parsedBody.data
-  const auth = await authenticateSmsImportRequest(
-    readAuthorizationHeader(event),
-    body,
-  )
+  const accessToken = readAccessTokenFromEvent(event)
+  const auth = await authenticateSmsImportRequest(accessToken, body)
 
   if (!auth.ok) {
     return jsonResponse(event, auth.status, {

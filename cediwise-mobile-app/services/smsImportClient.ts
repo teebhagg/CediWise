@@ -1,9 +1,9 @@
-import {
-  getSmsImportApiUrl,
-  SMS_IMPORT_BATCH_MAX,
-} from "@/constants/smsImport";
+import { getSmsImportApiUrl, SMS_IMPORT_BATCH_MAX } from "@/constants/smsImport";
 import { getStoredAuthData, refreshStoredSession } from "@/utils/auth";
 import { log } from "@/utils/logger";
+
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? null;
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? null;
 
 export type SmsImportStatus = "parsed" | "duplicate" | "skipped" | "failed";
 
@@ -72,11 +72,12 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
   }
 }
 
-function logTokenDiagnostics(token: string): void {
+function logTokenDiagnostics(token: string): Record<string, unknown> {
   const claims = decodeJwtPayload(token);
   const exp = typeof claims?.exp === "number" ? claims.exp : null;
   const nowSec = Math.floor(Date.now() / 1000);
-  log.info("smsImportClient: token diagnostics", {
+  const diagnostics = {
+    supabaseUrl: SUPABASE_URL,
     tokenLength: token.length,
     tokenPrefix: token.slice(0, 8),
     sub: claims?.sub ?? null,
@@ -86,7 +87,13 @@ function logTokenDiagnostics(token: string): void {
     exp,
     expiresInSec: exp != null ? exp - nowSec : null,
     isExpired: exp != null ? exp <= nowSec : null,
-  });
+    issuerMatchesApp:
+      typeof claims?.iss === "string" && SUPABASE_URL
+        ? claims.iss.startsWith(SUPABASE_URL.replace(/\/$/, ""))
+        : null,
+  };
+  log.warn("smsImportClient: token diagnostics", diagnostics);
+  return diagnostics;
 }
 
 async function resolveAccessToken(): Promise<string> {
@@ -102,12 +109,19 @@ async function resolveAccessToken(): Promise<string> {
 function mapApiError(status: number, body: unknown): SmsImportClientError {
   const payload =
     body && typeof body === "object"
-      ? (body as { error?: string; message?: string })
+      ? (body as { error?: string; message?: string; code?: string })
       : {};
   const code = payload.error;
+  const authCode = payload.code;
 
   if (status === 401) {
-    return new SmsImportClientError("Unauthorized", "unauthorized", status);
+    const detail =
+      authCode === "missing_authorization"
+        ? "Missing Authorization header"
+        : authCode === "invalid_token"
+          ? "Invalid or expired session token"
+          : payload.error ?? "Unauthorized";
+    return new SmsImportClientError(detail, "unauthorized", status);
   }
   if (status === 422 || code === "no_active_budget_cycle") {
     return new SmsImportClientError(
@@ -141,23 +155,29 @@ async function postSmsImportBody(
 ): Promise<SmsImportApiResult | SmsImportBatchResult> {
   const token = await resolveAccessToken();
   const url = getSmsImportApiUrl();
+  const tokenDiagnostics = logTokenDiagnostics(token);
 
-  logTokenDiagnostics(token);
-  log.info("smsImportClient: POST request", {
+  log.warn("smsImportClient: POST request", {
     url,
     messageCount: Array.isArray((body as { messages?: unknown[] }).messages)
       ? ((body as { messages?: unknown[] }).messages as unknown[]).length
       : 1,
+    hasAnonKey: Boolean(SUPABASE_ANON_KEY),
   });
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+  if (SUPABASE_ANON_KEY) {
+    headers.apikey = SUPABASE_ANON_KEY;
+  }
 
   let response: Response;
   try {
     response = await fetch(url, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
+      headers,
       body: JSON.stringify(body),
     });
   } catch (error) {
@@ -181,11 +201,12 @@ async function postSmsImportBody(
       wwwAuthenticate: response.headers.get("www-authenticate"),
       contentType: response.headers.get("content-type"),
       body: json ?? rawText.slice(0, 500),
+      tokenDiagnostics,
     });
     throw mapApiError(response.status, json);
   }
 
-  log.info("smsImportClient: request ok", { url, status: response.status });
+  log.warn("smsImportClient: request ok", { url, status: response.status });
   return json as SmsImportApiResult | SmsImportBatchResult;
 }
 

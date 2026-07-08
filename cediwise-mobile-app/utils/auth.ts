@@ -137,12 +137,40 @@ const toNumber = (value: unknown): number | undefined => {
   return undefined;
 };
 
+function decodeJwtExpSeconds(token: string): number | null {
+  try {
+    const part = token.split(".")[1];
+    if (!part) return null;
+    const normalized = part.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      "=",
+    );
+    const decoded =
+      typeof atob === "function"
+        ? atob(padded)
+        : Buffer.from(padded, "base64").toString("binary");
+    const payload = JSON.parse(decoded) as { exp?: unknown };
+    return typeof payload.exp === "number" ? payload.exp : null;
+  } catch {
+    return null;
+  }
+}
+
+function isJwtExpired(token: string, bufferSec = 0): boolean {
+  const exp = decodeJwtExpSeconds(token);
+  if (exp == null) return false;
+  return exp <= Math.floor(Date.now() / 1000) + bufferSec;
+}
+
 const isAccessTokenExpired = (authData: StoredAuthData): boolean => {
+  if (isJwtExpired(authData.accessToken)) return true;
   if (!authData.expiresAt) return false;
   return Date.now() >= authData.expiresAt;
 };
 
 const shouldRefreshAccessToken = (authData: StoredAuthData): boolean => {
+  if (isJwtExpired(authData.accessToken, REFRESH_BUFFER_MS / 1000)) return true;
   if (!authData.expiresAt) return true;
   return authData.expiresAt - Date.now() <= REFRESH_BUFFER_MS;
 };

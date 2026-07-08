@@ -6,7 +6,7 @@ import {
   setResponseStatus,
   type H3Event,
 } from 'nitro/h3'
-import { authenticateSmsImportRequest } from '../../lib/sms-import/auth'
+import { authenticateSmsImportRequest, readAuthorizationHeader } from '../../lib/sms-import/auth'
 import { createAdminClient } from '../../lib/supabase/admin'
 import {
   importOneSmsMessage,
@@ -73,12 +73,16 @@ export default defineEventHandler(async (event) => {
 
   const body = parsedBody.data
   const auth = await authenticateSmsImportRequest(
-    getHeader(event, 'authorization'),
+    readAuthorizationHeader(event),
     body,
   )
 
   if (!auth.ok) {
-    return jsonResponse(event, auth.status, { ok: false, error: auth.message })
+    return jsonResponse(event, auth.status, {
+      ok: false,
+      error: auth.message,
+      code: auth.code,
+    })
   }
 
   const admin = createAdminClient()

@@ -167,6 +167,8 @@ async function postSmsImportBody(
 
   const headers: Record<string, string> = {
     Authorization: `Bearer ${token}`,
+    // Vercel/CDN may strip Authorization; send a fallback custom header too.
+    "X-Supabase-Access-Token": token,
     "Content-Type": "application/json",
   };
   if (SUPABASE_ANON_KEY) {

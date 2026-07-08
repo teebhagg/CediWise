@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { createAuthClient, createAdminClient } from '../supabase/admin'
+import { createAdminClient } from '../supabase/admin'
 import { secureCompareHex, sha256Hex } from './crypto'
 import type { SmsImportBody } from './types'
 
@@ -14,7 +14,9 @@ function extractBearerToken(header: string | undefined): string | null {
 }
 
 async function authWithJwt(token: string): Promise<AuthResult> {
-  const client = createAuthClient()
+  // Service-role client can validate user JWTs; avoids relying on a separate anon key
+  // being present in server env (common gap on Vercel vs mobile builds).
+  const client = createAdminClient()
   const { data, error } = await client.auth.getUser(token)
   if (error || !data.user?.id) {
     return { ok: false, status: 401, message: 'Unauthorized' }

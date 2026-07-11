@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildDedupeKey, parseGhanaMoMoSms, parseGhsAmount } from './parser'
+import { buildDedupeKey, isMoMoTransactionSms, parseGhanaMoMoSms, parseGhsAmount } from './parser'
 
 describe('parseGhsAmount', () => {
   it('parses comma-separated amounts', () => {
@@ -68,6 +68,34 @@ describe('parseGhanaMoMoSms — MTN', () => {
     expect(parsed.direction).toBe('transfer')
     expect(parsed.amount).toBe(150)
   })
+
+  it('parses your payment completed (expense)', () => {
+    const sms =
+      'Your payment of GHS 5.00 to ECG PREPAID has been completed at 2026-07-08 14:30:00. Your new balance is GHS 45.50. Transaction ID: 1234567890'
+    const parsed = parseGhanaMoMoSms(sms, 'MTN MoMo')
+    expect(parsed.provider).toBe('mtn_momo')
+    expect(parsed.direction).toBe('expense')
+    expect(parsed.amount).toBe(5)
+    expect(parsed.counterparty).toBe('ECG PREPAID')
+    expect(parsed.balanceAfter).toBe(45.5)
+    expect(parsed.txId).toBe('1234567890')
+    expect(parsed.confidence).toBe('high')
+  })
+
+  it('parses MTN airtime payment with Financial Transaction Id (real format)', () => {
+    const sms =
+      'Your payment of GHS 2.00 to MTN AIRTIME has been completed at 2026-07-08 21:56:07. Your new balance: GHS 20.55. Fee was GHS 0.00 Tax was GHS -. Reference: -. Financial Transaction Id: 85012132862. External Transaction Id: 85012132862.Download the MoMo App for a Faster & Easier Experience Click here: https://mtnmymomo.onelink.me/XJOt/MoMo'
+    const parsed = parseGhanaMoMoSms(sms, 'MTN MoMo')
+    expect(parsed.provider).toBe('mtn_momo')
+    expect(parsed.direction).toBe('expense')
+    expect(parsed.amount).toBe(2)
+    expect(parsed.counterparty).toBe('MTN AIRTIME')
+    expect(parsed.balanceAfter).toBe(20.55)
+    expect(parsed.fee).toBe(0)
+    expect(parsed.reference).toBeNull()
+    expect(parsed.txId).toBe('85012132862')
+    expect(isMoMoTransactionSms(sms, 'MTN MoMo')).toBe(true)
+  })
 })
 
 describe('parseGhanaMoMoSms — Telecel', () => {
@@ -124,6 +152,37 @@ describe('parseGhanaMoMoSms — unknown', () => {
     expect(parsed.direction).toBe('unknown')
     expect(parsed.amount).toBeNull()
     expect(parsed.confidence).toBe('low')
+  })
+})
+
+describe('isMoMoTransactionSms', () => {
+  it('returns true for MTN and Telecel transaction alerts', () => {
+    expect(
+      isMoMoTransactionSms(
+        'Your payment of GHS 5.00 to ECG PREPAID has been completed at 2026-07-08 14:30:00. Your new balance is GHS 45.50.',
+        'MTN',
+      ),
+    ).toBe(true)
+    expect(
+      isMoMoTransactionSms(
+        '0000013645405283 Confirmed. GHS2.00 sent to 0534578211 - JOSHUA ANSAH on MTN MOBILE MONEY',
+        'Telecel',
+      ),
+    ).toBe(true)
+  })
+
+  it('returns false for promos and non-transaction SMS', () => {
+    expect(
+      isMoMoTransactionSms(
+        'Enjoy 50% bonus on your next recharge. Dial *123# now!',
+      ),
+    ).toBe(false)
+    expect(
+      isMoMoTransactionSms(
+        'Your MoMo wallet balance is GHS 50.00. Dial *170# for more services.',
+        'MTN MoMo',
+      ),
+    ).toBe(false)
   })
 })
 

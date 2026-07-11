@@ -46,6 +46,12 @@ const MTN_PATTERNS: PatternRule[] = [
     provider: 'mtn_momo',
     counterpartyGroup: 2,
   },
+  {
+    re: /Your payment of GHS\s*([\d,]+(?:\.\d{1,2})?)\s+to\s+(.+?)(?=\s+has been(?:\s+successfully)?\s+completed)/i,
+    direction: 'expense',
+    provider: 'mtn_momo',
+    counterpartyGroup: 2,
+  },
 ]
 
 /**
@@ -94,25 +100,34 @@ const TELECEL_PATTERNS: PatternRule[] = [
   },
 ]
 
-const TX_ID_RE =
-  /(?:Transaction ID|Trans ID|Trans\.?\s*ID|Txn ID)[:\s#]+(\d+)/i
-const CONFIRM_ID_RE = /^(\d{10,})\s+Confirmed\./i
+const TX_ID_PATTERNS = [
+  /Financial\s+Transaction\s+Id[:\s]+(\d+)/i,
+  /External\s+Transaction\s+Id[:\s]+(\d+)/i,
+  /(?:Transaction\s+ID|Trans\.?\s*ID|Txn\s+ID)[:\s#]+(\d+)/i,
+  /^(\d{10,})\s+Confirmed\./i,
+] as const
 /** Prefer transfer charge; e-levy matched separately if needed. */
 const FEE_RE =
-  /(?:Fee|You were charged)[:\s]+GHS\s*([\d,]+(?:\.\d{1,2})?)/i
+  /(?:Fee|You were charged)(?:\s+was)?[:\s]+GHS\s*([\d,]+(?:\.\d{1,2})?)/i
 const BALANCE_RE =
-  /(?:Available\s+balance|Current\s+balance|Telecel\s+Cash\s+balance|balance)(?:\s+is)?[:\s]+GHS\s*([\d,]+(?:\.\d{1,2})?)/i
+  /(?:Your\s+new\s+balance|Available\s+balance|Current\s+balance|Telecel\s+Cash\s+balance|balance)(?:\s+is)?[:\s]+GHS\s*([\d,]+(?:\.\d{1,2})?)/i
 const REFERENCE_RE = /Reference[:\s#]+(\S+)/i
 
 function extractTxId(text: string, fromPattern?: string | null): string | null {
   if (fromPattern) return fromPattern
-  return text.match(TX_ID_RE)?.[1] ?? text.match(CONFIRM_ID_RE)?.[1] ?? null
+  for (const pattern of TX_ID_PATTERNS) {
+    const hit = text.match(pattern)?.[1]
+    if (hit) return hit
+  }
+  return null
 }
 
 function extractReference(text: string): string | null {
   const raw = text.match(REFERENCE_RE)?.[1] ?? null
   if (!raw) return null
-  return raw.replace(/[.,;]+$/, '') || null
+  const cleaned = raw.replace(/[.,;]+$/, '').trim()
+  if (!cleaned || /^-+$/.test(cleaned)) return null
+  return cleaned
 }
 
 function cleanCounterparty(raw: string | null): string | null {
@@ -219,6 +234,16 @@ export function parseGhanaMoMoSms(
   }
 
   return emptyParsed(providerHint)
+}
+
+/** True when the SMS body matches a known MTN or Telecel transaction alert format. */
+export function isMoMoTransactionSms(raw: string, sender?: string): boolean {
+  const parsed = parseGhanaMoMoSms(raw, sender)
+  return (
+    parsed.direction !== 'unknown' &&
+    parsed.amount != null &&
+    parsed.amount > 0
+  )
 }
 
 export function buildDedupeKey(parsed: ParsedSms, rawMessage: string): string {

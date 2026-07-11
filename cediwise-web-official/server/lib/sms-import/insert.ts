@@ -233,16 +233,22 @@ export async function importOneSmsMessage(
 
   if (parsed.direction !== 'expense' || parsed.amount == null || parsed.amount <= 0) {
     const status: ImportStatus =
-      parsed.direction === 'income' || parsed.direction === 'transfer'
+      parsed.direction === 'unknown' ||
+      parsed.direction === 'income' ||
+      parsed.direction === 'transfer'
         ? 'skipped'
         : 'failed'
 
+    const parseError =
+      parsed.direction === 'unknown'
+        ? 'Not a MoMo transaction SMS'
+        : status === 'failed'
+          ? 'Could not parse expense amount from SMS'
+          : `Skipped ${parsed.direction} message`
+
     const logRow = await insertImportLog(admin, userId, dedupeKey, parsed, input, {
       parse_status: status,
-      parse_error:
-        status === 'failed'
-          ? 'Could not parse expense amount from SMS'
-          : `Skipped ${parsed.direction} message`,
+      parse_error: parseError,
     })
 
     if (logRow.parse_status !== status) {

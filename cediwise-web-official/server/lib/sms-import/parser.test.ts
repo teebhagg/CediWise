@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { buildDedupeKey, isMoMoTransactionSms, parseGhanaMoMoSms, parseGhsAmount } from './parser'
+import {
+  buildDedupeKey,
+  isMoMoTransactionSms,
+  parseGhanaMoMoSms,
+  parseGhsAmount,
+} from './parser'
 
 describe('parseGhsAmount', () => {
   it('parses comma-separated amounts', () => {
@@ -55,10 +60,10 @@ describe('parseGhanaMoMoSms — MTN', () => {
     expect(parsed.balanceAfter).toBe(20.55)
   })
 
-  it('parses cash out (expense)', () => {
+  it('parses cash out as a transfer, not an expense', () => {
     const sms = 'Cash Out of GHS 200.00 from AGENT NAME. Transaction ID: 42'
     const parsed = parseGhanaMoMoSms(sms)
-    expect(parsed.direction).toBe('expense')
+    expect(parsed.direction).toBe('transfer')
     expect(parsed.amount).toBe(200)
   })
 
@@ -95,6 +100,28 @@ describe('parseGhanaMoMoSms — MTN', () => {
     expect(parsed.reference).toBeNull()
     expect(parsed.txId).toBe('85012132862')
     expect(isMoMoTransactionSms(sms, 'MTN MoMo')).toBe(true)
+  })
+})
+
+describe('parseGhanaMoMoSms — AT Money', () => {
+  it('parses a successful AT Money outgoing payment', () => {
+    const sms =
+      'You have sent GHS 18.50 to KOFI STORES. Your new balance is GHS 81.50. Transaction ID: 1234567890.'
+    const parsed = parseGhanaMoMoSms(sms, 'AT Money')
+    expect(parsed.provider).toBe('at_money')
+    expect(parsed.direction).toBe('expense')
+    expect(parsed.amount).toBe(18.5)
+    expect(parsed.counterparty).toBe('KOFI STORES')
+    expect(parsed.txId).toBe('1234567890')
+  })
+
+  it('does not classify an AT Money cash-out as spending', () => {
+    const parsed = parseGhanaMoMoSms(
+      'Cash Out of GHS 50.00 from AGENT. Transaction ID: 12345',
+      'AirtelTigo Money',
+    )
+    expect(parsed.provider).toBe('at_money')
+    expect(parsed.direction).toBe('transfer')
   })
 })
 

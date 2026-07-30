@@ -1,4 +1,9 @@
-import type { ParsedSms, ParseConfidence, SmsDirection, SmsProvider } from './types'
+import type {
+  ParsedSms,
+  ParseConfidence,
+  SmsDirection,
+  SmsProvider,
+} from './types'
 import { sha256Hex } from './crypto'
 
 type PatternRule = {
@@ -32,7 +37,7 @@ const MTN_PATTERNS: PatternRule[] = [
   },
   {
     re: /Cash Out of GHS\s*([\d,]+(?:\.\d{1,2})?)/i,
-    direction: 'expense',
+    direction: 'transfer',
     provider: 'mtn_momo',
   },
   {
@@ -51,6 +56,32 @@ const MTN_PATTERNS: PatternRule[] = [
     direction: 'expense',
     provider: 'mtn_momo',
     counterpartyGroup: 2,
+  },
+]
+
+const AT_MONEY_PATTERNS: PatternRule[] = [
+  {
+    re: /You have sent GHS\s*([\d,]+(?:\.\d{1,2})?)\s*to\s*(.+?)(?=\.|Your\s|Current\s+balance|Available\s+balance|$)/i,
+    direction: 'expense',
+    provider: 'at_money',
+    counterpartyGroup: 2,
+  },
+  {
+    re: /Payment made for GHS\s*([\d,]+(?:\.\d{1,2})?)\s*to\s*(.+?)(?=\.|Your\s|Current\s+balance|Available\s+balance|$)/i,
+    direction: 'expense',
+    provider: 'at_money',
+    counterpartyGroup: 2,
+  },
+  {
+    re: /Your payment of GHS\s*([\d,]+(?:\.\d{1,2})?)\s+to\s+(.+?)(?=\s+has been(?:\s+successfully)?\s+completed)/i,
+    direction: 'expense',
+    provider: 'at_money',
+    counterpartyGroup: 2,
+  },
+  {
+    re: /Cash Out of GHS\s*([\d,]+(?:\.\d{1,2})?)/i,
+    direction: 'transfer',
+    provider: 'at_money',
   },
 ]
 
@@ -166,8 +197,12 @@ function inferProvider(sender: string | undefined, text: string): SmsProvider {
   ) {
     return 'mtn_momo'
   }
-  if (haystack.includes('airteltigo') || haystack.includes('at money')) {
-    return 'airteltigo_money'
+  if (
+    haystack.includes('airteltigo') ||
+    haystack.includes('at money') ||
+    haystack.includes('at-money')
+  ) {
+    return 'at_money'
   }
   return 'unknown'
 }
@@ -175,7 +210,8 @@ function inferProvider(sender: string | undefined, text: string): SmsProvider {
 function patternsForProvider(provider: SmsProvider): PatternRule[] {
   if (provider === 'telecel_cash') return TELECEL_PATTERNS
   if (provider === 'mtn_momo') return MTN_PATTERNS
-  return [...MTN_PATTERNS, ...TELECEL_PATTERNS]
+  if (provider === 'at_money') return AT_MONEY_PATTERNS
+  return [...MTN_PATTERNS, ...TELECEL_PATTERNS, ...AT_MONEY_PATTERNS]
 }
 
 function emptyParsed(
@@ -195,10 +231,7 @@ function emptyParsed(
   }
 }
 
-export function parseGhanaMoMoSms(
-  raw: string,
-  sender?: string,
-): ParsedSms {
+export function parseGhanaMoMoSms(raw: string, sender?: string): ParsedSms {
   const text = raw.replace(/\s+/g, ' ').trim()
   if (text.length < 10) {
     return emptyParsed('unknown')
@@ -236,13 +269,11 @@ export function parseGhanaMoMoSms(
   return emptyParsed(providerHint)
 }
 
-/** True when the SMS body matches a known MTN or Telecel transaction alert format. */
+/** True when the SMS body matches a known MTN, Telecel, or AT Money transaction alert format. */
 export function isMoMoTransactionSms(raw: string, sender?: string): boolean {
   const parsed = parseGhanaMoMoSms(raw, sender)
   return (
-    parsed.direction !== 'unknown' &&
-    parsed.amount != null &&
-    parsed.amount > 0
+    parsed.direction !== 'unknown' && parsed.amount != null && parsed.amount > 0
   )
 }
 

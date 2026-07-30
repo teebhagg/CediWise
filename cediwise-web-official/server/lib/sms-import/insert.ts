@@ -1,4 +1,5 @@
 import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js'
+import { pickCategoryForSms } from './categoryRules'
 import { buildDedupeKey, parseGhanaMoMoSms } from './parser'
 import type { ImportStatus, ParsedSms, SmsImportResult } from './types'
 
@@ -12,6 +13,11 @@ type ImportLogRow = {
   id: string
   budget_transaction_id: string | null
   parse_status: string
+}
+
+type ResolvedCategory = {
+  id: string
+  bucket: string
 }
 
 export class NoActiveBudgetCycleError extends Error {
@@ -56,11 +62,13 @@ async function resolveActiveCycleId(
   return latest?.id ?? null
 }
 
-async function resolveCategoryId(
+async function resolveCategory(
   admin: SupabaseClient,
   userId: string,
   cycleId: string,
-): Promise<string | null> {
+  parsed: ParsedSms,
+  rawMessage: string,
+): Promise<ResolvedCategory | null> {
   const { data, error } = await admin
     .from('budget_categories')
     .select('id, name, bucket')
@@ -71,14 +79,9 @@ async function resolveCategoryId(
   if (error) throw error
   if (!data?.length) return null
 
-  const preferredNames = ['others', 'transport', 'groceries']
-  for (const name of preferredNames) {
-    const hit = data.find((row) => row.name?.toLowerCase() === name)
-    if (hit?.id) return hit.id
-  }
-
-  const wants = data.find((row) => row.bucket === 'wants')
-  return wants?.id ?? data[0]?.id ?? null
+  const hit = pickCategoryForSms(data, parsed, rawMessage)
+  if (!hit) return null
+  return { id: hit.id, bucket: hit.bucket }
 }
 
 function buildNote(parsed: ParsedSms): string {
@@ -288,7 +291,13 @@ export async function importOneSmsMessage(
     throw new NoActiveBudgetCycleError()
   }
 
-  const categoryId = await resolveCategoryId(admin, userId, cycleId)
+  const category = await resolveCategory(
+    admin,
+    userId,
+    cycleId,
+    parsed,
+    input.message,
+  )
   const occurredAt = parseOccurredAt(input.receivedAt)
 
   const logRow = await insertImportLog(admin, userId, dedupeKey, parsed, input, {
@@ -304,8 +313,10 @@ export async function importOneSmsMessage(
     .insert({
       user_id: userId,
       cycle_id: cycleId,
-      bucket: 'wants',
-      category_id: categoryId,
+      bucket: category?.bucket === 'needs' || category?.bucket === 'savings'
+        ? category.bucket
+        : 'wants',
+      category_id: category?.id ?? null,
       amount: parsed.amount,
       note: buildNote(parsed),
       occurred_at: occurredAt,

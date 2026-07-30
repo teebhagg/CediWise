@@ -1,11 +1,7 @@
 import { z } from 'zod'
 
 export type SmsDirection = 'expense' | 'income' | 'transfer' | 'unknown'
-export type SmsProvider =
-  | 'mtn_momo'
-  | 'telecel_cash'
-  | 'airteltigo_money'
-  | 'unknown'
+export type SmsProvider = 'mtn_momo' | 'telecel_cash' | 'at_money' | 'unknown'
 export type ParseConfidence = 'high' | 'medium' | 'low'
 
 export type ParsedSms = {

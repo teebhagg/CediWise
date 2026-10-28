@@ -31,6 +31,7 @@ import { Uniwind } from "uniwind";
 import { PaystackProvider } from "react-native-paystack-webview";
 import { AnalyticsIdentitySync } from "../components/AnalyticsIdentitySync";
 import { AnalyticsRouteObserver } from "../components/AnalyticsRouteObserver";
+import { MoMoSmsImportLifecycle } from "../components/features/profile/MoMoSmsImportLifecycle";
 import { RootErrorBoundary } from "../components/RootErrorBoundary";
 import { TourErrorBoundary } from "../components/tour/TourErrorBoundary";
 import { AuthProvider } from "../contexts/AuthContext";
@@ -147,6 +148,7 @@ function AppShell() {
   return (
     <View style={{ flex: 1, backgroundColor: "black" }}>
       <AnalyticsRouteObserver />
+      <MoMoSmsImportLifecycle />
       <StatusBar backgroundColor="black" translucent={true} />
       <SafeAreaListener
         onChange={({ insets }) => {

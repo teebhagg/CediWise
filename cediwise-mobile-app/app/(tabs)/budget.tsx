@@ -25,6 +25,7 @@ import { BudgetNwsAdjustSheet } from "@/components/features/budget/BudgetNwsAdju
 import { BudgetSurvivalSheet } from "@/components/features/budget/BudgetSurvivalSheet";
 import { AssignRemainingSavingsPrompt } from "@/components/features/budget/AssignRemainingSavingsPrompt";
 import { BudgetSetupCycleCard } from "@/components/features/budget/BudgetSetupCycleCard";
+import { MoMoImportStatusCard } from "@/components/features/momo/MoMoImportStatusCard";
 
 import { BudgetToolsCard } from "@/components/features/budget/BudgetToolsCard";
 import { CashFlowWidget } from "@/components/features/budget/CashFlowWidget";
@@ -793,6 +794,13 @@ export default function BudgetScreen() {
                     />
                   </View>
                 </TourZone>
+
+                <MoMoImportStatusCard
+                  userId={user?.id}
+                  variant="budget"
+                  transactions={budget.state?.transactions}
+                  activeCycleId={derived.activeCycleId}
+                />
 
                 <TourZone
                   stepKey="state2-budget-expenses"

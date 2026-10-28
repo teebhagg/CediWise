@@ -31,6 +31,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BackButton } from "@/components/BackButton";
 import { Card } from "@/components/Card";
+import { MoMoTrackingSetup } from "@/components/features/profile/MoMoTrackingSetup";
 import {
   DEFAULT_EXPANDED_HEIGHT,
   DEFAULT_STANDARD_HEIGHT,
@@ -548,6 +549,8 @@ export default function ProfileScreen() {
               </PressableFeedback>
             </ListGroup>
           </View>
+
+          <MoMoTrackingSetup userId={user?.id} />
 
           {/* Help */}
           <View>

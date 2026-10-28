@@ -15,6 +15,7 @@ type PatternRule = {
   counterpartyGroup?: number
   /** Capture group index for transaction / confirm ID. */
   txIdGroup?: number
+  eventType?: ParsedSms['eventType']
 }
 
 /**
@@ -25,6 +26,18 @@ type PatternRule = {
 const MTN_PATTERNS: PatternRule[] = [
   {
     re: /Payment made for GHS\s*([\d,]+(?:\.\d{1,2})?)\s*to\s*(.+?)(?=\s*(?:Current\s+Balance|Available\s+Balance|Fee:|Reference:|Transaction ID|\.|$))/i,
+    direction: 'expense',
+    provider: 'mtn_momo',
+    counterpartyGroup: 2,
+  },
+  {
+    re: /Payment for GHS\s*([\d,]+(?:\.\d{1,2})?)\s*(?:to\s+)?(.+?)(?=\s*(?:Current\s+Balance|Available\s+Balance|Fee:|Reference:|Ref\s*:|Transaction ID|\bon\s+\d{4}|\.|$))/i,
+    direction: 'expense',
+    provider: 'mtn_momo',
+    counterpartyGroup: 2,
+  },
+  {
+    re: /You have successfully purchased GHS\s*([\d,]+(?:\.\d{1,2})?)\s+(.+?)(?=\s+on\s+\d{4}|\s+Ref\s*:|\.|$)/i,
     direction: 'expense',
     provider: 'mtn_momo',
     counterpartyGroup: 2,
@@ -142,7 +155,7 @@ const FEE_RE =
   /(?:Fee|You were charged)(?:\s+was)?[:\s]+GHS\s*([\d,]+(?:\.\d{1,2})?)/i
 const BALANCE_RE =
   /(?:Your\s+new\s+balance|Available\s+balance|Current\s+balance|Telecel\s+Cash\s+balance|balance)(?:\s+is)?[:\s]+GHS\s*([\d,]+(?:\.\d{1,2})?)/i
-const REFERENCE_RE = /Reference[:\s#]+(\S+)/i
+const REFERENCE_RE = /(?:Reference|Ref)[:\s#]+(\S+)/i
 
 function extractTxId(text: string, fromPattern?: string | null): string | null {
   if (fromPattern) return fromPattern
@@ -228,6 +241,7 @@ function emptyParsed(
     txId: null,
     balanceAfter: null,
     confidence,
+    eventType: 'unknown',
   }
 }
 
@@ -263,6 +277,17 @@ export function parseGhanaMoMoSms(raw: string, sender?: string): ParsedSms {
       txId: extractTxId(text, patternTxId),
       balanceAfter: parseGhsAmount(text.match(BALANCE_RE)?.[1]),
       confidence: amount != null ? 'high' : 'medium',
+      eventType:
+        pattern.eventType ??
+        (pattern.direction === 'income'
+          ? 'incoming'
+          : pattern.direction === 'transfer'
+            ? 'cash_out'
+            : /airtime|data bundle/i.test(text)
+              ? 'airtime_data'
+              : /bill|utility|merchant|payment made|payment for|you have paid|your payment|purchased/i.test(text)
+                ? 'merchant_payment'
+                : 'p2p_send'),
     }
   }
 

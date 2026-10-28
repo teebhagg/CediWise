@@ -1,7 +1,18 @@
 import {
   importSmsBatch,
   importSmsMessage,
+  toImportPayload,
 } from "../smsImportClient";
+
+jest.mock("expo-crypto", () => {
+  const crypto = jest.requireActual<typeof import("crypto")>("crypto");
+  return {
+    CryptoDigestAlgorithm: { SHA256: "SHA-256" },
+    digestStringAsync: jest.fn(async (_algorithm: string, data: string) =>
+      crypto.createHash("sha256").update(data, "utf8").digest("hex"),
+    ),
+  };
+});
 
 jest.mock("@/utils/auth", () => ({
   getStoredAuthData: jest.fn(async () => ({
@@ -119,5 +130,63 @@ describe("smsImportClient", () => {
     expect(batch.summary.total).toBe(2);
     expect(batch.summary.parsed).toBe(1);
     expect(batch.summary.duplicate).toBe(1);
+  });
+
+  it("posts structured candidate fields without sending the source SMS", async () => {
+    fetchMock.mockResolvedValue(mockResponse({ ok: true, body: { ok: true, status: "parsed" } }));
+    const sourceMessage = "Payment made for GHS 10.00 to ECG.";
+    const payload = await toImportPayload({
+      address: "MTN MoMo",
+      body: sourceMessage,
+      date: 1_790_000_000_000,
+    });
+    if (!payload) throw new Error("Expected a structured candidate");
+
+    const crypto = jest.requireActual<typeof import("crypto")>("crypto");
+    expect("candidate" in payload && payload.candidate.legacyDedupeKey).toBe(
+      `hash:${crypto.createHash("sha256").update(sourceMessage, "utf8").digest("hex")}`,
+    );
+
+    await importSmsMessage(payload);
+
+    const requestBody = String(fetchMock.mock.calls[0]?.[1]?.body);
+    expect(requestBody).not.toContain(sourceMessage);
+    expect(requestBody).not.toContain("legacyMessage");
+    expect(requestBody).not.toContain("legacySender");
+  });
+
+  it("does not downgrade a rejected structured batch to raw SMS", async () => {
+    fetchMock.mockResolvedValue(
+      mockResponse({
+        ok: false,
+        status: 400,
+        body: { ok: false, error: "invalid_payload", message: "Structured candidates are not supported" },
+      }),
+    );
+    const first = await toImportPayload({
+      address: "MTN MoMo",
+      body: "Payment made for GHS 10.00 to A.",
+      date: 1_790_000_000_000,
+    });
+    const second = await toImportPayload({
+      address: "MTN MoMo",
+      body: "Payment made for GHS 20.00 to B.",
+      date: 1_790_000_001_000,
+    });
+    if (!first || !second) throw new Error("Expected structured candidates");
+
+    await expect(importSmsBatch([first, second])).rejects.toMatchObject({ code: "invalid_payload" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[1]?.body)).not.toContain("Payment made for GHS");
+  });
+
+  it("does not create a raw request payload for oversized inbox SMS", async () => {
+    const payload = await toImportPayload({
+      address: "MTN MoMo",
+      body: `Payment made for GHS 10.00 to A.${" ".repeat(4000)}`,
+      date: 1_790_000_000_000,
+    });
+
+    expect(payload).toBeNull();
   });
 });

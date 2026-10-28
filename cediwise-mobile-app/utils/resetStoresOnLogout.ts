@@ -9,6 +9,9 @@ import { useProfileVitalsStore } from "@/stores/profileVitalsStore";
 import { useProgressStore } from "@/stores/progressStore";
 import { useRecurringExpensesStore } from "@/stores/recurringExpensesStore";
 import { useSMELedgerStore } from "@/stores/smeLedgerStore";
+import { useSmsTrackingStore } from "@/stores/smsTrackingStore";
+import { stopMoMoSmsListener } from "@/services/androidSmsListener";
+import { stopAndClearNativeMoMoCapture } from "@/services/androidMoMoQueue";
 import { resetHydratedThisSession } from "@/utils/budgetHydrateSession";
 import { suspendOnboardingRemotePersist } from "@/utils/onboardingState";
 import { cancelTourPersistence } from "@/utils/tourSessionGuard";
@@ -18,12 +21,15 @@ import { cancelTourPersistence } from "@/utils/tourSessionGuard";
  * Keeps prior user data from persisting until hooks re-run.
  */
 export async function resetStoresOnLogout(): Promise<void> {
+  stopMoMoSmsListener();
+  await stopAndClearNativeMoMoCapture();
   suspendOnboardingRemotePersist();
   cancelTourPersistence();
   resetHydratedThisSession();
   useAIAnalysisStore.getState().clear();
   useAIChatShellStore.getState().resetForLogout();
   useAIChatFabTransitionStore.getState().reset();
+  await useSmsTrackingStore.getState().resetForUser(null);
   await Promise.all([
     useCashFlowStore.getState().resetForLogout(),
     usePersonalizationStore.getState().initForUser(null),

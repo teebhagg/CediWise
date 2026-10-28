@@ -9,12 +9,23 @@ declare module "expo-notifications" {
       };
     };
   };
+  export type Notification = {
+    request: {
+      content: {
+        data?: Record<string, unknown>;
+        title?: string;
+        body?: string;
+      };
+    };
+  };
 
   export const AndroidImportance: {
+    DEFAULT: number;
     HIGH: number;
   };
 
   export const AndroidNotificationVisibility: {
+    PRIVATE: number;
     PUBLIC: number;
   };
 
@@ -33,7 +44,7 @@ declare module "expo-notifications" {
     channel: {
       name: string;
       importance?: number;
-      sound?: string;
+      sound?: string | null;
       vibrationPattern?: number[];
       lockscreenVisibility?: number;
     }
@@ -48,8 +59,10 @@ declare module "expo-notifications" {
       title: string;
       body: string;
       data?: Record<string, unknown>;
+      channelId?: string;
     };
     trigger:
+      | null
       | {
           hour: number;
           minute: number;
@@ -88,6 +101,6 @@ declare module "expo-notifications" {
   export function addNotificationResponseReceivedListener(
     listener: (response: NotificationResponse) => void
   ): EventSubscription;
-  export function addNotificationReceivedListener(listener: () => void): EventSubscription;
+  export function addNotificationReceivedListener(listener: (notification: Notification) => void): EventSubscription;
   export function getLastNotificationResponseAsync(): Promise<NotificationResponse | null>;
 }

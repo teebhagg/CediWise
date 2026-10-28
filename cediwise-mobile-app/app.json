@@ -39,7 +39,10 @@
         "android.permission.NOTIFICATION_LISTENER_SERVICE",
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.ACCESS_NETWORK_STATE",
-        "android.permission.INTERNET"
+        "android.permission.INTERNET",
+        "android.permission.READ_SMS",
+        "android.permission.RECEIVE_SMS",
+        "android.permission.RECEIVE_BOOT_COMPLETED"
       ]
     },
     "web": {
@@ -91,6 +94,10 @@
       [
         "expo-build-properties",
         {
+          "android": {
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36
+          },
           "ios": {
             "useFrameworks": "static",
             "modularHeaders": true,
@@ -102,7 +109,8 @@
           }
         }
       ],
-      "expo-video"
+      "expo-video",
+      "./plugins/withCediWiseMoMoSms"
     ],
     "experiments": {
       "typedRoutes": true,

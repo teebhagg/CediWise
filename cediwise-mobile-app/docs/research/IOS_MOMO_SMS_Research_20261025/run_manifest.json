@@ -1,0 +1,34 @@
+{
+  "query": "How can CediWise add iOS MoMo SMS import comparable to the existing Android Expo flow?",
+  "mode": "quick",
+  "run_date": "2026-10-25",
+  "timezone": "Africa/Accra",
+  "assumptions": [
+    "The existing authenticated parser and import API remain the shared transaction path.",
+    "iOS automatic import requires explicit app-side consent and the existing release feature flag.",
+    "The first implementation targets new messages; history lookup is a later batch-import design."
+  ],
+  "retrieval_provider": "web search; primary Apple and Expo documentation",
+  "source_count": 14,
+  "evidence_count": 15,
+  "claim_count": 6,
+  "validation": {
+    "markdown_report": "passed",
+    "html_report": "passed",
+    "pdf_report": "generated",
+    "citation_url_checker": "network DNS was unavailable in the sandbox; source pages were manually opened through web search"
+  },
+  "deliverables": [
+    "research_report_20261025_ios_momo_shortcuts.md",
+    "research_report_20261025_ios_momo_shortcuts.html",
+    "research_report_20261025_ios_momo_shortcuts.pdf",
+    "sources.jsonl",
+    "evidence.jsonl",
+    "claims.jsonl"
+  ],
+  "limitations": [
+    "No iPhone build or Shortcuts automation was tested.",
+    "The absence of general iOS inbox access is inferred from documented API scope.",
+    "Historical Shortcuts message search handoff remains unverified."
+  ]
+}

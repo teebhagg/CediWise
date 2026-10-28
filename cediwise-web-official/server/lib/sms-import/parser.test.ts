@@ -87,6 +87,31 @@ describe('parseGhanaMoMoSms — MTN', () => {
     expect(parsed.confidence).toBe('high')
   })
 
+  it('parses payment for (expense)', () => {
+    const sms = 'Payment for GHS 40.00 to MELCOM. Transaction ID: 445566.'
+    const parsed = parseGhanaMoMoSms(sms, 'MobileMoney')
+    expect(parsed.provider).toBe('mtn_momo')
+    expect(parsed.direction).toBe('expense')
+    expect(parsed.amount).toBe(40)
+    expect(parsed.counterparty).toBe('MELCOM')
+    expect(parsed.txId).toBe('445566')
+    expect(parsed.eventType).toBe('merchant_payment')
+    expect(isMoMoTransactionSms(sms, 'MobileMoney')).toBe(true)
+  })
+
+  it('parses successfully purchased airtime', () => {
+    const sms =
+      'You have successfully purchased GHS 100.00 Airtime from MTN on 2026-09-03. Ref: 889900.'
+    const parsed = parseGhanaMoMoSms(sms, 'MobileMoney')
+    expect(parsed.provider).toBe('mtn_momo')
+    expect(parsed.direction).toBe('expense')
+    expect(parsed.amount).toBe(100)
+    expect(parsed.counterparty).toBe('Airtime from MTN')
+    expect(parsed.reference).toBe('889900')
+    expect(parsed.eventType).toBe('airtime_data')
+    expect(isMoMoTransactionSms(sms, 'MobileMoney')).toBe(true)
+  })
+
   it('parses MTN airtime payment with Financial Transaction Id (real format)', () => {
     const sms =
       'Your payment of GHS 2.00 to MTN AIRTIME has been completed at 2026-07-08 21:56:07. Your new balance: GHS 20.55. Fee was GHS 0.00 Tax was GHS -. Reference: -. Financial Transaction Id: 85012132862. External Transaction Id: 85012132862.Download the MoMo App for a Faster & Easier Experience Click here: https://mtnmymomo.onelink.me/XJOt/MoMo'

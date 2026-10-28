@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iOS MoMo SMS Import in CediWise - Deep Research Report</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #1a1a1a;
+            background: #ffffff;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+        }
+
+        .header {
+            background: #003d5c;
+            color: white;
+            padding: 25px 40px;
+            border-bottom: 3px solid #002840;
+        }
+
+        .header h1 {
+            font-size: 26px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .header-meta {
+            font-size: 13px;
+            color: #b8d4e6;
+            display: flex;
+            gap: 25px;
+        }
+
+        .metrics-dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0;
+            border-bottom: 2px solid #003d5c;
+        }
+
+        .metric {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-right: 1px solid #d1d5db;
+            text-align: center;
+        }
+
+        .metric:last-child {
+            border-right: none;
+        }
+
+        .metric-number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #003d5c;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #4a5568;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .content {
+            padding: 30px 40px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #003d5c;
+            margin: 32px 0 16px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #003d5c;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            line-height: 1.3;
+        }
+
+        .subsection-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 24px 0 12px 0;
+            line-height: 1.4;
+        }
+
+        .executive-summary {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 4px solid #003d5c;
+        }
+
+        .executive-summary p {
+            margin-bottom: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        p {
+            margin-bottom: 14px;
+            line-height: 1.7;
+            text-align: left;
+        }
+
+        /* Better paragraph spacing in content sections */
+        .content > p,
+        .section p {
+            margin-bottom: 16px;
+        }
+
+        .findings-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .finding-card {
+            background: #f8f9fa;
+            padding: 18px;
+            border-left: 3px solid #003d5c;
+        }
+
+        .finding-card h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #003d5c;
+            margin-bottom: 10px;
+        }
+
+        .finding-card p {
+            font-size: 13px;
+            line-height: 1.5;
+            margin-bottom: 8px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+
+        .data-table th {
+            background: #003d5c;
+            color: white;
+            padding: 10px 15px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .data-table td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        ul, ol {
+            margin: 16px 0 16px 28px;
+            padding-left: 0;
+        }
+
+        li {
+            margin-bottom: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+            padding-left: 8px;
+        }
+
+        /* Nested lists */
+        li ul, li ol {
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+        /* Better bullet/number spacing */
+        ol {
+            list-style-position: outside;
+            padding-left: 0;
+        }
+
+        ul {
+            list-style-position: outside;
+            padding-left: 0;
+        }
+
+        .key-insight {
+            background: white;
+            border: 1px solid #d1d5db;
+            border-left: 3px solid #003d5c;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .key-insight strong {
+            color: #003d5c;
+            font-weight: 600;
+        }
+
+        .citation {
+            color: #003d5c;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            position: relative;
+            padding: 2px 4px;
+            background: #f0f7fc;
+            border-radius: 2px;
+            transition: all 0.2s ease;
+        }
+
+        .citation:hover {
+            background: #003d5c;
+            color: white;
+        }
+
+        /* Attribution Gradients (2025 Enhancement) */
+        .citation-tooltip {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 8px;
+            background: white;
+            border: 2px solid #003d5c;
+            box-shadow: 0 4px 12px rgba(0, 61, 92, 0.15);
+            padding: 12px;
+            min-width: 300px;
+            max-width: 500px;
+            z-index: 1000;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+
+        .citation:hover .citation-tooltip {
+            display: block;
+        }
+
+        .tooltip-title {
+            font-weight: 700;
+            color: #003d5c;
+            margin-bottom: 8px;
+            font-size: 13px;
+            border-bottom: 1px solid #d1d5db;
+            padding-bottom: 6px;
+        }
+
+        .tooltip-source {
+            color: #4a5568;
+            margin-bottom: 8px;
+            font-style: italic;
+        }
+
+        .tooltip-claim {
+            background: #f8f9fa;
+            padding: 8px;
+            margin-top: 8px;
+            border-left: 3px solid #003d5c;
+            font-size: 11px;
+        }
+
+        .tooltip-claim-label {
+            font-weight: 600;
+            color: #003d5c;
+            text-transform: uppercase;
+            font-size: 10px;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .evidence-chain {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #d1d5db;
+        }
+
+        .evidence-chain-label {
+            font-weight: 600;
+            color: #003d5c;
+            font-size: 11px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .evidence-step {
+            padding: 6px;
+            background: #f8f9fa;
+            margin-bottom: 4px;
+            font-size: 11px;
+            border-left: 2px solid #d1d5db;
+            padding-left: 8px;
+        }
+
+        .bibliography {
+            background: #f8f9fa;
+            padding: 30px;
+            margin-top: 40px;
+            border-left: 4px solid #003d5c;
+        }
+
+        .bibliography-content {
+            background: #f8f9fa;
+            padding: 20px 0;
+        }
+
+        .bib-entry {
+            margin-bottom: 18px;
+            padding-left: 50px;
+            text-indent: -50px;
+            line-height: 1.6;
+            font-size: 13px;
+        }
+
+        .bib-number {
+            color: #003d5c;
+            font-weight: 700;
+            margin-right: 8px;
+        }
+
+        .bib-entry a {
+            color: #003d5c;
+            word-wrap: break-word;
+            text-decoration: none;
+        }
+
+        .bib-entry a:hover {
+            text-decoration: underline;
+        }
+
+        .compact-list {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .compact-list li {
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .info-box {
+            background: white;
+            border: 1px solid #d1d5db;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .info-box h4 {
+            font-size: 13px;
+            font-weight: 700;
+            color: #003d5c;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .highlight-stat {
+            font-weight: 700;
+            color: #003d5c;
+        }
+
+        strong {
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        @media print {
+            .container {
+                max-width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .metrics-dashboard {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .findings-grid {
+                grid-template-columns: 1fr;
+            }
+            .compact-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>iOS MoMo SMS Import in CediWise</h1>
+            <div class="header-meta">
+                <span>2026-10-25</span>
+                <span>•</span>
+                <span>14 Sources</span>
+            </div>
+        </div>
+
+        <div class="metric"><span class="metric-number">14</span><span class="metric-label">Sources</span></div><div class="metric"><span class="metric-number">4</span><span class="metric-label">Platform findings</span></div><div class="metric"><span class="metric-number">4,000</span><span class="metric-label">Max link characters</span></div><div class="metric"><span class="metric-number">0</span><span class="metric-label">iPhone device tests</span></div>
+
+        <div class="content">
+            <div class="section"><div class="executive-summary"><h2 class="section-title">Executive Summary</h2>
+
+<p>Apple does not expose an iOS API that lets an ordinary app scan a user’s Messages inbox or register an SMS receiver equivalent to Android’s <code>READ_SMS</code> and <code>RECEIVE_SMS</code> flow. Apple’s IdentityLookup framework is a narrow spam-filter extension: it receives a new SMS or MMS from an unknown sender for a filtering decision, excludes known contacts and iMessage, and restricts the extension from using the network directly or sharing a container with its app [1][2][3][4][5]. It cannot provide CediWise with an inbox reader.
+</p>
+
+<p>Apple Shortcuts offers a workable, user-configured route for new messages. A personal automation can trigger on a received message, apply sender or text criteria, and run automatically; an action can then open a CediWise URL carrying the message content [6][7][8]. Expo Router supports custom-scheme links and query parameters, so CediWise can pass that message into the existing import service [11][12]. This route requires the user to create the automation, and opening the URL brings CediWise to the foreground for each matching message. It does not give the app a silent background SMS listener.
+</p>
+
+<p>The current implementation adds an iOS opt-in, setup steps, a custom-link receiver on the import screen, and reuse of the existing authenticated <code>importOneMessage</code> flow. It imports only when the user has enabled tracking and the live-import feature flag is active. Incoming link content is limited to 4,000 characters and removed from route parameters before processing. Older messages still use manual paste. iOS 26 introduced a Shortcuts “Find Message” action, and iOS 27 adds message search actions, so historical import may be possible through a user-run Shortcut; that needs a separate batch handoff design and device validation [9][10].
+</p>
+
+<p>This is source-level implementation work. No iPhone build or Shortcuts automation has been exercised yet. The key product constraint is clear: iOS can support consented, new-message import through Shortcuts, but it cannot match Android’s direct inbox scanning or background receive behavior.
+</p>
+
+</div>
+<div class="section"><h2 class="section-title">Introduction</h2>
+
+<p>This research answers how CediWise can add iOS MoMo SMS import comparable to the current Android feature. The scope is platform access, a practical user experience, app integration, consent, and the next implementation gates. The comparison uses the existing CediWise Expo app as the baseline: Android has an inbox reader, an incoming-message listener, secure native queueing, and an import API; iOS currently has manual paste and a Shortcuts placeholder [14].
+</p>
+
+<p>The main assumption is that the first iOS release should preserve the current MoMo parser, authenticated API, deduplication, and budget refresh behavior instead of creating a second transaction pipeline. A matching Shortcuts message should enter the existing import path only after the user opts in. The current iteration focuses on new incoming messages. Historical scans, deployment, and App Store review are later gates.
+</p>
+
+<p>The method was a quick, primary-source review of Apple’s IdentityLookup documentation, Shortcuts user guides and release notes, App Store Review Guidelines, and Expo’s deep-link documentation. Claims about iOS access are stated as a conclusion from the documented API scope, not as a claim that Apple has published a single sentence saying “third-party apps cannot read the inbox.” The sources were retrieved on 2026-10-25. Product behavior described in this report is based on the current CediWise checkout, not a device test.
+</p>
+
+</div>
+<div class="section"><h2 class="section-title">Main Analysis</h2>
+
+<h3 class="subsection-title">1. Native inbox scanning has no supported app API</h3>
+
+<p>The Android flow uses Android-specific packages and native code to query inbox rows and receive new SMS events. In the current checkout, <code>androidSmsReader.ts</code> queries the inbox by date, <code>androidSmsListener.ts</code> subscribes to received messages, and <code>native/momo-sms/</code> stores and retries captured events [14]. That model depends on Android SMS permissions and cannot be carried across to iOS as a React Native package substitution.
+</p>
+
+<p>Apple’s documented message-content interface is IdentityLookup. Its request contains a sender and message body, but the request is explicitly for a message from an unknown sender [3][4][5]. Apple’s overview narrows the feature further: it applies to SMS and MMS from unknown senders, not messages from contacts or iMessage, and the extension’s purpose is to decide whether an incoming message is unwanted [1][2]. The extension cannot access the network directly and cannot write to a container shared with its containing app [1].
+</p>
+
+<p>Taken together, those documents support a practical engineering conclusion: IdentityLookup is not an inbox-reading interface and cannot act as CediWise’s general-purpose importer. It may see some incoming payment alerts, but it cannot guarantee coverage of all provider senders, share the content with the main app through an app-group queue, or upload transactions from that extension. Building a spam-filter extension for expense capture would also use a feature for a purpose outside its documented job. The correct product boundary is to avoid describing iOS as reading or scanning Messages.
+</p>
+
+<p>This limit changes parity expectations. Android can search a recent window and listen for events while the app is paused. iOS must receive selected messages through an Apple-supported handoff that the user configures. CediWise should keep manual paste available and name the iOS feature as Shortcuts import, rather than implying that the app has SMS permissions or inbox access.
+</p>
+
+<h3 class="subsection-title">2. Shortcuts supports a consented handoff for new messages</h3>
+
+<p>Apple documents a Message personal-automation trigger with sender and “Message Contains” criteria [6]. Message automations are eligible to run automatically, and Apple’s guide describes allowing them to run when the phone is locked [7]. That gives a user a way to select which new messages should be forwarded. The message trigger is broader than Ghanaian MoMo SMS, so CediWise still needs to validate the sender and body locally before sending a transaction to its API.
+</p>
+
+<p>The proposed handoff uses the existing app scheme and Expo Router route <code>/profile/import-sms</code>. Expo documents that a configured custom scheme opens a route in the app and that query parameters can be read with <code>useLocalSearchParams</code> [11][12]. The automation encodes the message and sender into query values, then uses an Open URLs action [8]. This avoids putting a long-lived CediWise API token in Shortcuts and lets the app use its existing signed-in Supabase session through <code>smsImportClient.ts</code> [14].
+</p>
+
+<p>The cost is visible foreground behavior: opening a CediWise URL launches or foregrounds the app. Apple’s documentation says message automations can run automatically, but does not promise that a third-party app opened by one will process a transaction invisibly or while locked. Therefore, the safe product statement is that Shortcuts can pass a matching message to CediWise and CediWise opens to process it. On-device validation must establish the exact locked-device behavior and whether the user sees an unlock or confirmation prompt.
+</p>
+
+<p>The implementation checks local tracking consent and the existing release-time live-import feature flag before automatic import. If either is off, the message is placed in the existing paste field for a manual action. If both are on, CediWise invokes the same <code>importOneMessage</code> method used by Android’s live listener, which preserves the current candidate parsing, authenticated upload, deduplication, and budget refresh behavior [14].
+</p>
+
+<h3 class="subsection-title">3. Historical lookup may be possible through Shortcuts, but it is a separate path</h3>
+
+<p>Apple’s iOS 26 Shortcuts release notes list “Find Message” and “Find Conversation” actions for Messages [9]. The iOS 27 release notes add “Search in Messages app” and describe sender filtering for Find Message [10]. These features suggest a user-run Shortcut can search some existing conversation history, which means manual paste may not be the only future fallback for older texts.
+</p>
+
+<p>The current evidence does not establish a direct inbox-reading entitlement for CediWise. The history search is an action inside the Shortcuts environment; its output still has to cross into the app. The new-message URL path can carry one message at a time, but repeatedly opening the app for every result would be a poor batch-import experience. A history feature should instead define a bounded date window, pass a small collection into one app handoff, run messages through the existing preview and deduplication path, and show a review step before writing expenses.
+</p>
+
+<p>The current implementation hides Android’s “Message history” scanner on iOS and keeps paste available. This is deliberate: presenting a 2/7/30-day scan button when the app cannot query the inbox would overstate the capability. A later Shortcuts history prototype should be tested on the minimum supported iOS version and current iOS release, including the number of results, sender/date fields, URL size, duplicate behavior, and the way Shortcuts handles large result lists. Until then, CediWise should describe the implemented behavior as new-message automation plus manual paste.
+</p>
+
+<h3 class="subsection-title">4. Consent and handoff data need clear boundaries</h3>
+
+<p>The Shortcuts route carries message text in a URL query parameter. Expo supports query parameters as route input [11][12], and Apple’s Shortcuts URL documentation requires URL-encoded text when putting text into a URL [8]. That makes encoding and size checks part of the feature boundary. The implementation accepts at most 4,000 characters, removes the message and sender from route state as soon as it receives them, avoids logging their contents, and uses the app’s existing API path only after a user opt-in and the live-import kill switch both pass [14].
+</p>
+
+<p>App Store Review Guidelines require explicit user permission for sharing app data and appropriate data security [13]. CediWise’s consent screen explains that the automation passes selected message text and sender details, that matching content may be processed by the import service and Supabase, and that import logs containing message text are retained for up to 180 days [14]. Users can turn the app-side setting off and must also remove or disable their personal automation in Shortcuts to stop the operating system from opening the app for future matches.
+</p>
+
+<p>Because the app link can be opened by any source, it must be treated as untrusted input. Automatic import is gated by the local opt-in, the release flag, the authenticated API session, and the existing MoMo parser. Messages that do not match supported Ghana provider formats fail through the established import error path. The URL is not a replacement for authentication and does not contain credentials. The remaining operational question is whether CediWise should auto-add directly on iOS or present a review card when a Shortcut opens it; this iteration follows Android live-import behavior for eligible transactions, while keeping manual and ambiguous cases visible.
+</p>
+
+</div>
+<div class="section"><h2 class="section-title">Synthesis & Insights</h2>
+
+<p>The best available iOS model is not a native SMS reader. It is a user-configured bridge: Shortcuts filters selected incoming messages, then opens CediWise with encoded content. This keeps CediWise’s server authentication and parser in the app while respecting Apple’s documented boundary around Message Filter extensions. It also gives the user control over the sender or text criteria.
+</p>
+
+<p>The first implementation is materially narrower than Android. It supports new messages that the user routes through an automation, foregrounds CediWise for each accepted message, and does not scan history. Those limits are part of the product behavior and should appear in setup copy and privacy language. The shared parser and API reduce backend divergence, while the explicit local opt-in and release flag make the iOS route independently controllable.
+</p>
+
+<p>Historical lookup is a promising second phase because Shortcuts has Messages search actions in current iOS releases. It should be treated as a separate batch import design rather than assumed to be a normal app permission. The route needs one bounded collection handoff and a review interface; the Android history UI should remain hidden on iOS until that path works.
+</p>
+
+</div>
+<div class="section"><h2 class="section-title">Limitations & Caveats</h2>
+
+<p>The research relies on public Apple and Expo documentation and does not inspect private iOS APIs or App Store reviewer decisions. The conclusion that no Android-like inbox reader is available is an inference from Apple’s documented API set and IdentityLookup’s explicit scope. Apple’s Shortcut release notes identify message search actions but do not document every field, limit, permission prompt, or edge case in their output.
+</p>
+
+<p>The custom-scheme route and current import handler have not been exercised on an iPhone. This report does not establish behavior when the device is locked, when CediWise is terminated, when an automation receives a non-SMS message, or when the user has not signed in. The current implementation also does not install a Shortcut automatically; users create the personal automation in Shortcuts.
+</p>
+
+<p>The app’s existing import endpoint, session refresh, raw-message retention, and category/reversal rules are reused from source code. This report is not a backend security audit, App Store approval, privacy-law review, or proof of deployed feature-flag configuration. A device test and a privacy-policy review remain necessary before enabling the feature broadly.
+</p>
+
+</div>
+<div class="section"><h2 class="section-title">Recommendations</h2>
+
+<p>Keep the native Android reader and iOS Shortcuts handoff as separate platform adapters over the shared MoMo parser and import API. Describe iOS as “Shortcuts import,” say that the user must create a Message automation, and state that CediWise opens for each matched message. Keep automatic import behind the existing release-time kill switch and require local opt-in before processing URL input.
+</p>
+
+<p>The next device pass should use an iPhone development build. Test a valid MTN, Telecel, and AT Money alert; an OTP and an unrelated text; sender/content URL encoding; app cold launch and warm launch; duplicate delivery; sign-out; disabled opt-in; feature flag off; locked device; and network loss. Confirm that malformed or oversized query values do not reach the API and that route parameters are cleared after handoff.
+</p>
+
+<p>After live-message behavior is proven, prototype historical import with the iOS 26+ Shortcuts Find Message action. Pass a small, date-bounded batch once, build review cards with the existing expense preview, and confirm deduplication against Android and manual imports. Do not describe historical scanning as available until that flow has been implemented and tested on supported devices.
+</p>
+
+</div>
+<div class="section"><h2 class="section-title">Methodology Appendix</h2>
+
+<p>The question was scoped to supported ways to bring MoMo payment messages into an Expo app on iOS. Retrieval prioritized first-party Apple and Expo sources because API scope, automation behavior, URL handling, and current platform support can change. Triangulation used Apple’s IdentityLookup overview, extension-creation guide, request model, and sender/body properties; Apple’s Shortcuts trigger and automation guides; current Shortcuts release notes; and Expo’s app-link and route-parameter documentation.
+</p>
+
+<p>The most important interpretation is that Shortcuts is an operating-system workflow the user configures, not an entitlement granted to CediWise. The recommended deep-link handoff is a design inference from Apple’s automation and URL features plus Expo’s documented route handling. The report does not claim App Store acceptance or device-level behavior. Research mode was quick, appropriate for initial implementation framing; no academic or market research was needed for this platform API question.
+</p>
+
+</div>
+
+            <div class="bibliography">
+                <div class="section-title">Bibliography</div>
+                <div class="bibliography-content"><div class="bib-entry"><span class="bib-number">[1]</span> Apple Developer. “SMS and MMS Message Filtering.” Apple Developer Documentation. https://developer.apple.com/documentation/identitylookup/sms-and-mms-message-filtering?changes=_5 (Retrieved: 2026-10-25).</div>
+<div class="bib-entry"><span class="bib-number">[2]</span> Apple Developer. “Creating a Message Filter App Extension.” Apple Developer Documentation. https://developer.apple.com/documentation/identitylookup/creating-a-message-filter-app-extension?language=objc (Retrieved: 2026-10-25).</div>
+<div class="bib-entry"><span class="bib-number">[3]</span> Apple Developer. “ILMessageFilterQueryRequest.” Apple Developer Documentation. https://developer.apple.com/documentation/identitylookup/ilmessagefilterqueryrequest?changes=__1&amp;language=objc (Retrieved: 2026-10-25).</div>
+<div class="bib-entry"><span class="bib-number">[4]</span> Apple Developer. “messageBody.” Apple Developer Documentation. https://developer.apple.com/documentation/identitylookup/ilmessagefilterqueryrequest/messagebody (Retrieved: 2026-10-25).</div>
+<div class="bib-entry"><span class="bib-number">[5]</span> Apple Developer. “sender.” Apple Developer Documentation. https://developer.apple.com/documentation/identitylookup/ilmessagefilterqueryrequest/sender?changes=_2 (Retrieved: 2026-10-25).</div>
+<div class="bib-entry"><span class="bib-number">[6]</span> Apple Support. “Communication triggers in Shortcuts on iPhone or iPad.” Shortcuts User Guide. https://support.apple.com/en-kw/guide/shortcuts/apdd711f9dff/ios (Retrieved: 2026-10-25).</div>
+<div class="bib-entry"><span class="bib-number">[7]</span> Apple Support. “Add automations to Shortcuts on iPhone or iPad.” Shortcuts User Guide. https://support.apple.com/guide/shortcuts/add-automations-apdfbdbd7123/ios (Retrieved: 2026-10-25).</div>
+<div class="bib-entry"><span class="bib-number">[8]</span> Apple Support. “Run a shortcut using a URL scheme on iPhone or iPad.” Shortcuts User Guide. https://support.apple.com/en-au/guide/shortcuts/apd624386f42/ios (Retrieved: 2026-10-25).</div>
+<div class="bib-entry"><span class="bib-number">[9]</span> Apple Support. “What’s new in Shortcuts for iOS, iPadOS, macOS, watchOS and visionOS 26.” https://support.apple.com/en-au/125148 (Retrieved: 2026-10-25).</div>
+<div class="bib-entry"><span class="bib-number">[10]</span> Apple Support. “New in iOS, iPadOS, macOS, watchOS, and visionOS 27.” https://support.apple.com/en-tm/149045 (Retrieved: 2026-10-25).</div>
+<div class="bib-entry"><span class="bib-number">[11]</span> Expo. “Linking into your app.” Expo Documentation. https://docs.expo.dev/linking/into-your-app/ (Retrieved: 2026-10-25).</div>
+<div class="bib-entry"><span class="bib-number">[12]</span> Expo. “Navigating between pages in Expo Router.” Expo Router Documentation. https://docs.expo.dev/router/basics/navigation/ (Retrieved: 2026-10-25).</div>
+<div class="bib-entry"><span class="bib-number">[13]</span> Apple Developer. “App Store Review Guidelines.” https://developer.apple.com/app-store/review/guidelines/ (Retrieved: 2026-10-25).</div>
+<div class="bib-entry"><span class="bib-number">[14]</span> CediWise repository, current checkout. `cediwise-mobile-app/services/androidSmsReader.ts`, `cediwise-mobile-app/services/androidSmsListener.ts`, `cediwise-mobile-app/services/androidMoMoQueue.ts`, `cediwise-mobile-app/services/smsImportClient.ts`, `cediwise-mobile-app/hooks/useSmsImport.ts`, `cediwise-mobile-app/components/features/profile/IosMoMoTrackingSetup.tsx`, and `cediwise-mobile-app/app/profile/import-sms.tsx`. Source inspection on 2026-10-25.</div></div>
+            </div>
+
+        </div>
+    </div>
+</body>
+</html>

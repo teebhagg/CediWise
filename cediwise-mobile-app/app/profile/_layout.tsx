@@ -30,6 +30,12 @@ export default function ProfileLayout() {
           headerShown: false,
         }}
       />
+      <Stack.Screen
+        name="import-sms"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

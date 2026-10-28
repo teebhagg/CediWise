@@ -11,6 +11,7 @@ import { deactivateCurrentDeviceToken } from "../services/notifications";
 import { clearAuthData, getStoredAuthData } from "../utils/auth";
 import { resetNavigationToAuth } from "../utils/authRouting";
 import { resetStoresOnLogout } from "../utils/resetStoresOnLogout";
+import { stopAndClearNativeMoMoCapture } from "../services/androidMoMoQueue";
 import { suspendOnboardingRemotePersist } from "../utils/onboardingState";
 import {
   cancelTourPersistence,
@@ -158,6 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoggingOutRef.current = true;
     authEventIdRef.current += 1;
     suspendOnboardingRemotePersist();
+    await stopAndClearNativeMoMoCapture();
     const userId = user?.id;
     if (userId) {
       await clearPostVitalsHomeFirstOnboarding(userId);

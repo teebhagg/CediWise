@@ -1,5 +1,8 @@
 global.__DEV__ = true;
 
+// Keep import-client tests deterministic when they intentionally mock fetch.
+process.env.EXPO_PUBLIC_SMS_IMPORT_URL ??= "https://example.invalid/api/v1/sms-import";
+
 /** Mutable OS for node tests that import `Platform` from `react-native` (e.g. services). */
 globalThis.__JEST_RN_PLATFORM_OS__ = "ios";
 

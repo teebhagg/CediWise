@@ -9,6 +9,7 @@ import { authenticateSmsImportRequest, readAccessTokenFromEvent } from '../../li
 import { createAdminClient } from '../../lib/supabase/admin'
 import {
   importOneSmsMessage,
+  importStructuredCandidate,
   NoActiveBudgetCycleError,
 } from '../../lib/sms-import/insert'
 import {
@@ -27,7 +28,7 @@ const CORS_HEADERS = {
 function retryableBatchFailure(): SmsImportResult {
   return {
     ok: true,
-    status: 'failed',
+    status: 'retryable',
     error: 'internal_error',
     errorCode: 'internal_error',
     retryable: true,
@@ -63,10 +64,14 @@ export default defineEventHandler(async (event) => {
 
   const parsedBody = smsImportBodySchema.safeParse(rawBody)
   if (!parsedBody.success) {
+    const isCandidateError = parsedBody.error.issues.some((issue) =>
+      issue.path[0] === 'candidate' || issue.path[0] === 'candidates',
+    )
     return jsonResponse(event, 400, {
       ok: false,
-      error: 'invalid_payload',
-      details: parsedBody.error.flatten(),
+      error: isCandidateError ? 'invalid_candidate' : 'invalid_payload',
+      code: isCandidateError ? 'invalid_candidate' : 'invalid_payload',
+      message: isCandidateError ? 'The structured transaction candidate is invalid.' : 'The SMS import payload is invalid.',
     })
   }
 
@@ -84,9 +89,8 @@ export default defineEventHandler(async (event) => {
 
   const admin = createAdminClient()
 
-  const items =
-    body.messages ??
-    (body.message
+  const rawItems =
+    body.messages ?? (body.message
       ? [
           {
             message: body.message,
@@ -95,11 +99,42 @@ export default defineEventHandler(async (event) => {
           },
         ]
       : [])
+  const structuredItems = body.candidates ?? (body.candidate ? [body.candidate] : [])
 
   const results: SmsImportResult[] = []
-  const isBatchRequest = items.length > 1
+  const isBatchRequest = rawItems.length + structuredItems.length > 1
 
-  for (const item of items) {
+  for (const candidate of structuredItems) {
+    try {
+      results.push(await importStructuredCandidate(admin, auth.userId, candidate))
+    } catch (err) {
+      if (err instanceof NoActiveBudgetCycleError && !isBatchRequest) {
+        return jsonResponse(event, 422, { ok: false, error: 'no_active_budget_cycle', message: 'Set up the budget cycle covering this transaction date before importing it.' })
+      }
+      if (err instanceof NoActiveBudgetCycleError) {
+        results.push({
+          ok: true,
+          status: 'retryable',
+          error: 'Set up a budget cycle covering this payment date, then retry.',
+          errorCode: 'no_active_budget_cycle',
+          retryable: true,
+        })
+        continue
+      }
+      console.error('[sms-import:structured]', err)
+      if (!isBatchRequest) {
+        return jsonResponse(event, 503, {
+          ok: false,
+          error: 'service_unavailable',
+          code: 'sms_import_unavailable',
+          retryable: true,
+        })
+      }
+      results.push(retryableBatchFailure())
+    }
+  }
+
+  for (const item of rawItems) {
     try {
       const result = await importOneSmsMessage(admin, auth.userId, item)
       results.push(result)
@@ -108,9 +143,10 @@ export default defineEventHandler(async (event) => {
         if (err instanceof NoActiveBudgetCycleError) {
           results.push({
             ok: true,
-            status: 'failed',
-            error:
-              'Set up an active budget cycle before importing MoMo expenses.',
+            status: 'retryable',
+            error: 'Set up a budget cycle covering this payment date, then retry.',
+            errorCode: 'no_active_budget_cycle',
+            retryable: true,
           })
           continue
         }
@@ -143,7 +179,7 @@ export default defineEventHandler(async (event) => {
       acc[row.status] += 1
       return acc
     },
-    { parsed: 0, duplicate: 0, skipped: 0, failed: 0 } as Record<
+    { parsed: 0, duplicate: 0, skipped: 0, failed: 0, needs_review: 0, retryable: 0, reversed: 0 } as Record<
       SmsImportResult['status'],
       number
     >,
@@ -158,6 +194,9 @@ export default defineEventHandler(async (event) => {
       duplicate: summary.duplicate,
       skipped: summary.skipped,
       failed: summary.failed,
+      needs_review: summary.needs_review,
+      retryable: summary.retryable,
+      reversed: summary.reversed,
     },
   }
 

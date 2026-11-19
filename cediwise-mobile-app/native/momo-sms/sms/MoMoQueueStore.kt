@@ -211,6 +211,28 @@ internal object MoMoQueueStore {
     } catch (_: Exception) {}
   }
 
+  private fun tombstone(userId: String): JSONObject = JSONObject()
+    .put("state", STATE_DISMISSED)
+    .put("userId", userId)
+    .put("dismissedAt", System.currentTimeMillis())
+
+  /**
+   * Replace an item the server has settled with the same payload-free marker used for dismissals.
+   * Deleting it outright let the overlapping catch-up scan queue the same payment for review again,
+   * and a second choice of "transfer" would then hide a payment that was already imported.
+   */
+  @Synchronized
+  fun complete(context: Context, key: String) {
+    val store = prefs(context)
+    val value = store.getString(key, null) ?: return
+    try {
+      val row = JSONObject(value)
+      // A row from a cleared or replaced account must never be written back.
+      if (row.optString("userId") != store.getString("userId", null)) return
+      store.edit().putString(key, tombstone(row.optString("userId")).toString()).apply()
+    } catch (_: Exception) {}
+  }
+
   @Synchronized
   fun resolveReview(context: Context, clientImportId: String, classification: String): Boolean {
     if (classification !in setOf("expense", "transfer")) return false
@@ -241,11 +263,7 @@ internal object MoMoQueueStore {
       if (row.optString("state") !in setOf("review", "failed_terminal")) return false
       // Keep a payload-free marker instead of deleting: add() dedupes on the key, so the same SMS
       // seen again by the overlapping catch-up scan stays dismissed.
-      val tombstone = JSONObject()
-        .put("state", STATE_DISMISSED)
-        .put("userId", row.optString("userId"))
-        .put("dismissedAt", System.currentTimeMillis())
-      store.edit().putString(key, tombstone.toString()).apply()
+      store.edit().putString(key, tombstone(row.optString("userId")).toString()).apply()
       true
     } catch (_: Exception) {
       false

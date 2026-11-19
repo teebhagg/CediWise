@@ -78,7 +78,7 @@ class MoMoUploadWorker(context: Context, params: WorkerParameters) : CoroutineWo
           if (status in 200..299) {
             val outcome = runCatching { JSONObject(response).optString("status") }.getOrNull()
             when (outcome) {
-              "parsed", "duplicate", "skipped", "reversed" -> MoMoQueueStore.remove(applicationContext, key)
+              "parsed", "duplicate", "skipped", "reversed" -> MoMoQueueStore.complete(applicationContext, key)
               "needs_review" -> MoMoQueueStore.mark(applicationContext, key, "review")
               "retryable" -> {
                 MoMoQueueStore.mark(applicationContext, key, "retryable")

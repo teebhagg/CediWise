@@ -79,6 +79,15 @@ describe("buildMoMoImportCandidate review fixes", () => {
       date,
     })?.principalPesewas).toBe(5000);
   });
+  it("keeps a send to a recipient named like a bill or airtime keyword in review", () => {
+    for (const recipient of ["BILL", "AIRTIME KIOSK", "UTILITY"]) {
+      expect(buildMoMoImportCandidate({
+        address: "AT Money",
+        body: `You have sent GHS 10.00 to ${recipient}. Transaction ID: 12345678.`,
+        date,
+      })).toMatchObject({ eventType: "p2p_send", classification: null });
+    }
+  });
   it("keeps person-to-person sends in review", () => {
     expect(buildMoMoImportCandidate({
       address: "MTN MoMo",

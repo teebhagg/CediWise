@@ -115,3 +115,14 @@ describe("formatSmsExpenseDate", () => {
     );
   });
 });
+
+describe("previewSmsExpense person-to-person wording", () => {
+  it("keeps a send to a recipient named like a keyword as a p2p send", () => {
+    const preview = previewSmsExpense({
+      address: "AT Money",
+      body: "You have sent GHS 10.00 to BILL. Transaction ID: 12345678.",
+      date: Date.UTC(2026, 6, 8, 15, 19),
+    });
+    expect(preview).toMatchObject({ eventType: "p2p_send", classification: null });
+  });
+});

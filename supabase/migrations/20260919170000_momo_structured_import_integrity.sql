@@ -134,6 +134,19 @@ begin
     raise exception 'client_import_id_conflict';
   end if;
 
+  -- An original and the reversal that names it can run at the same time with different client import
+  -- ids, and neither sees the other's uncommitted row under Read Committed. Both serialize on the
+  -- receipt instead: the reversal before its target lookup, the original before its insert and its
+  -- check for pending reversals. Whichever commits second then sees the first. The client id lock
+  -- above is always taken first, so two requests never wait on each other in a cycle.
+  if v_event_type = 'reversal' then
+    if v_reversed_receipt_id is not null then
+      perform pg_advisory_xact_lock(hashtextextended(p_user_id::text || ':' || v_provider || ':receipt:' || v_reversed_receipt_id, 0));
+    end if;
+  elsif v_receipt_id is not null then
+    perform pg_advisory_xact_lock(hashtextextended(p_user_id::text || ':' || v_provider || ':receipt:' || v_receipt_id, 0));
+  end if;
+
   if v_event_type = 'reversal' then
     insert into public.sms_import_logs(
       id, user_id, provider, sender, raw_message, parse_status, parsed, dedupe_key,

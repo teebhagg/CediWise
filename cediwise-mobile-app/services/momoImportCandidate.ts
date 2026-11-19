@@ -82,9 +82,11 @@ function inferEventType(rawBody: string): MoMoEventType {
   if (/cash out|withdraw/i.test(body)) return "cash_out";
   if (/bank transfer|\bto\s+bank\b/i.test(body)) return "bank_transfer";
   if (/wallet transfer|own account/i.test(body)) return "wallet_transfer";
+  // Explicit person-to-person wording wins over keywords that can sit in a recipient name
+  // ("You have sent GHS 10.00 to BILL"), so it always goes to expense-or-transfer review.
+  if (/sent to|you have sent/i.test(body)) return "p2p_send";
   if (/airtime|data bundle|bundle/i.test(body)) return "airtime_data";
   if (/bill|utility/i.test(body)) return "bill_payment";
-  if (/sent to|you have sent/i.test(body)) return "p2p_send";
   if (/merchant|payment made|payment for|you have paid|your payment|purchased/i.test(body)) return "merchant_payment";
   return "unknown";
 }

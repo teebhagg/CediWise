@@ -230,12 +230,13 @@ export function previewSmsExpense(
         ? formatSmsCategoryLabel(category.name)
         : "Uncategorized",
       categoryId: category?.id ?? null,
-      eventType: /airtime|data bundle|bundle/i.test(body)
-        ? "airtime_data"
-        : /bill|utility/i.test(body)
-          ? "bill_payment"
-          : /sent to|you have sent/i.test(body)
-            ? "p2p_send"
+      // Person-to-person wording first: a recipient called "BILL" must not become a bill payment.
+      eventType: /sent to|you have sent/i.test(body)
+        ? "p2p_send"
+        : /airtime|data bundle|bundle/i.test(body)
+          ? "airtime_data"
+          : /bill|utility/i.test(body)
+            ? "bill_payment"
             : "merchant_payment",
       classification: /sent to|you have sent/i.test(body) ? null : "expense",
       receivedAtLabel: formatSmsExpenseDate(message.date),

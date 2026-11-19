@@ -33,6 +33,11 @@ class MoMoUploadWorker(context: Context, params: WorkerParameters) : CoroutineWo
     var shouldRetry = false
     MoMoQueueStore.items(applicationContext).forEach { (key, row) ->
       if (row.optString("userId") != userId) {
+        // Another account may have configured capture since this snapshot: re-check before deleting.
+        val latest = MoMoQueueStore.settings(applicationContext)
+        if (!latest.optBoolean("enabled") || latest.optString("userId") != userId) {
+          return@withContext Result.success()
+        }
         MoMoQueueStore.remove(applicationContext, key)
         return@forEach
       }

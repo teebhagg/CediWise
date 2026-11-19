@@ -185,6 +185,21 @@ begin
       end if;
     end if;
 
+    -- Rows can commit between the count and the locking select. Re-count now that the
+    -- target is locked and treat any change as ambiguous instead of picking one row.
+    if v_reversal_target_count = 1 and v_reversed_log.id is not null then
+      select count(*) into v_reversal_target_count
+      from public.sms_import_logs
+      where user_id = p_user_id
+        and provider = v_provider
+        and parse_status in ('parsed', 'reversed')
+        and (
+          receipt_id = v_reversed_receipt_id
+          or (receipt_id is null and parsed->>'txId' = v_reversed_receipt_id)
+          or (receipt_id is null and parsed->>'reference' = v_reversed_receipt_id and id = v_reversed_log.id)
+        );
+    end if;
+
     if v_reversal_target_count <> 1 or v_reversed_log.id is null then
       update public.sms_import_logs
       set parse_status = 'needs_review', terminal_outcome = case
@@ -227,6 +242,25 @@ begin
     raise exception 'invalid_amount';
   end if;
   v_amount := v_principal_pesewas / 100;
+
+  -- A committed import must replay as a duplicate even if the user has since edited
+  -- their cycle dates, so resolve it before requiring an active cycle.
+  select id, budget_transaction_id, fee_transaction_id, parse_status
+    into v_existing
+  from public.sms_import_logs
+  where user_id = p_user_id
+    and client_import_id = v_client_id
+    and parse_status = 'parsed'
+    and budget_transaction_id is not null
+  order by created_at limit 1;
+  if found then
+    return jsonb_build_object(
+      'status', 'duplicate',
+      'importLogId', v_existing.id,
+      'transactionId', v_existing.budget_transaction_id,
+      'feeTransactionId', v_existing.fee_transaction_id
+    );
+  end if;
 
   select id into v_cycle_id
   from public.budget_cycles
@@ -447,7 +481,7 @@ begin
       user_id, cycle_id, bucket, category_id, amount, note, occurred_at, source,
       sms_import_log_id, sms_import_group_id, sms_import_role
     ) values (
-      p_user_id, v_cycle_id, 'wants', v_category_id, v_fee,
+      p_user_id, v_cycle_id, v_bucket, v_category_id, v_fee,
       'MoMo transaction fee', v_received_at, 'sms_webhook',
       v_log_id, v_group_id, 'fee'
     ) returning id into v_fee_tx_id;

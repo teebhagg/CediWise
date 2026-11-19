@@ -77,8 +77,13 @@ class MoMoSmsModule(private val context: ReactApplicationContext) : ReactContext
 
   @ReactMethod
   fun clearQueue(promise: Promise) {
-    MoMoQueueStore.clear(context)
-    promise.resolve(true)
+    try {
+      MoMoQueueStore.clear(context)
+      promise.resolve(true)
+    } catch (error: Exception) {
+      // Reject so JS teardown (logout) can continue instead of hanging forever.
+      promise.reject("momo_clear_failed", error)
+    }
   }
 
   private fun jsonToMap(json: JSONObject): WritableMap = Arguments.createMap().also { map ->

@@ -29,5 +29,6 @@ export function resolveLiveCatchUpMinDateMs(
     return Math.max(floor, nowMs - initialLookbackMs);
   }
 
-  return Math.max(floor, lastCatchUpAtMs - overlapMs);
+  // A watermark ahead of now (device clock moved back) must not invert the interval.
+  return Math.min(nowMs, Math.max(floor, lastCatchUpAtMs - overlapMs));
 }

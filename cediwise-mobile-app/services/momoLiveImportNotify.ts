@@ -34,13 +34,14 @@ export async function notifyMoMoLiveImport(options: {
       content: {
         title: options.title,
         body: options.body,
-        ...(Platform.OS === "android" ? { channelId: MOMO_CHANNEL_ID } : {}),
         data: {
           type: "momo_live_import",
           deep_link: "/profile/import-sms",
         },
       },
-      trigger: null,
+      trigger: (Platform.OS === "android"
+        ? { channelId: MOMO_CHANNEL_ID }
+        : null) as never, // expo-notifications reads channelId from the trigger on Android
     });
   } catch (error) {
     log.warn("notifyMoMoLiveImport failed", error);

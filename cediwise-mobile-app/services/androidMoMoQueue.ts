@@ -28,9 +28,13 @@ function module(): NativeMoMoModule | null {
   return (NativeModules.CediWiseMoMoSms as NativeMoMoModule | undefined) ?? null;
 }
 
+/** Bumped by every configure/teardown so an in-flight enable can detect a newer decision. */
+let captureConfigGeneration = 0;
+
 export async function configureNativeMoMoCapture(enabled: boolean, userId: string | null, providers: string[] = [...ALL_MOMO_NETWORKS]): Promise<boolean> {
   const native = module();
   if (!native) return false;
+  const generation = ++captureConfigGeneration;
   const apiUrl = getSmsImportApiUrl();
   if (!userId) {
     return native.configure(false, null, null, apiUrl, providers);
@@ -52,6 +56,8 @@ export async function configureNativeMoMoCapture(enabled: boolean, userId: strin
     await pauseNativeMoMoCapture(userId);
     return false;
   }
+  // Opt-out, logout or another configure ran while the session was refreshing: do not re-enable.
+  if (generation !== captureConfigGeneration) return false;
   return native.configure(true, userId, token, apiUrl, providers);
 }
 
@@ -88,10 +94,22 @@ export async function clearNativeMoMoQueue(): Promise<void> {
 export async function stopAndClearNativeMoMoCapture(): Promise<void> {
   const native = module();
   if (!native) return;
-  try {
-    await native.configure(false, null, null, getSmsImportApiUrl(), [...ALL_MOMO_NETWORKS]);
-  } catch {
-    // Continue with queue removal even if native configuration is unavailable during teardown.
+  captureConfigGeneration += 1;
+  let disabled = false;
+  for (let attempt = 0; attempt < 2 && !disabled; attempt += 1) {
+    try {
+      await native.configure(false, null, null, getSmsImportApiUrl(), [...ALL_MOMO_NETWORKS]);
+      disabled = true;
+    } catch {
+      // Retry once; teardown must not report success while capture may still hold the old token.
+    }
+  }
+  if (!disabled) {
+    try {
+      await native.pause("");
+    } catch {
+      // Best effort only; the queue is still cleared below so logout is not blocked.
+    }
   }
   try {
     await native.clearQueue();

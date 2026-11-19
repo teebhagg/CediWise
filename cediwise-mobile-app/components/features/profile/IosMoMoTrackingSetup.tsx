@@ -150,7 +150,7 @@ export function IosMoMoTrackingSetup({ userId }: IosMoMoTrackingSetupProps) {
           <ListGroup.ItemSuffix>
             <Switch
               value={enabled}
-              disabled={!liveImportAvailable || !userId || saving}
+              disabled={(!liveImportAvailable && !enabled) || !userId || saving}
               onValueChange={(value) => void handleToggle(value)}
               trackColor={{ false: "#334155", true: "#22C55E" }}
               thumbColor="#fff"
@@ -214,7 +214,6 @@ export function IosMoMoTrackingSetup({ userId }: IosMoMoTrackingSetupProps) {
         secondaryLabel="Not now"
         onSecondary={() => setShowConsent(false)}
         loading={saving}
-        scrollableChildren
       >
         <Text className="text-sm leading-6 text-slate-300">
           Your Shortcuts automation will pass selected message text and sender details to CediWise. Matching transaction details and message text may be sent to CediWise&apos;s import service and processed or stored by Supabase. Import logs that include message text are kept for up to 180 days. Turn this off here and remove the automation in Shortcuts to stop future imports.

@@ -7,6 +7,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.security.MessageDigest
 
+/** Queue mutations are synchronized so logout/clear cannot interleave with a worker's read-modify-write. */
 internal object MoMoQueueStore {
   private const val FILE = "cediwise_momo_queue_v1"
   private const val ITEM_PREFIX = "item:"
@@ -29,6 +30,7 @@ internal object MoMoQueueStore {
       store.getString("apiUrl", null)?.startsWith("https://") == true
   }
 
+  @Synchronized
   fun configure(context: Context, enabled: Boolean, userId: String?, token: String?, apiUrl: String?, providers: List<String>): Boolean {
     val store = prefs(context)
     val owner = userId?.takeIf { it.isNotBlank() }
@@ -72,6 +74,7 @@ internal object MoMoQueueStore {
   }
 
   /** Pause uploads for a release kill switch while preserving this user's queued imports. */
+  @Synchronized
   fun pause(context: Context, userId: String?): Boolean {
     val store = prefs(context)
     val owner = userId?.takeIf { it.isNotBlank() }
@@ -94,6 +97,7 @@ internal object MoMoQueueStore {
     prefs(context).getString("providers", "mtn_momo,telecel_cash,at_money")
       ?.split(",")?.contains(provider) == true
 
+  @Synchronized
   fun add(context: Context, candidate: JSONObject, requestedState: String? = null): Boolean {
     if (!canCapture(context)) return false
     val owner = prefs(context).getString("userId", null) ?: return false
@@ -117,6 +121,7 @@ internal object MoMoQueueStore {
     return add(context, candidate, "review")
   }
 
+  @Synchronized
   fun items(context: Context): List<Pair<String, JSONObject>> {
     val store = prefs(context)
     val editor = store.edit()
@@ -161,12 +166,16 @@ internal object MoMoQueueStore {
     .digest(value.toByteArray())
     .joinToString("") { "%02x".format(it) }
 
+  @Synchronized
   fun remove(context: Context, key: String) = prefs(context).edit().remove(key).apply()
 
+  @Synchronized
   fun mark(context: Context, key: String, state: String, errorCode: String? = null) {
     val value = prefs(context).getString(key, null) ?: return
     try {
       val row = JSONObject(value)
+      // A row from a cleared or replaced account must never be written back.
+      if (row.optString("userId") != prefs(context).getString("userId", null)) return
       row.put("state", state)
       if (errorCode == null) row.remove("errorCode") else row.put("errorCode", errorCode)
       row.put("attempts", row.optInt("attempts", 0) + 1)
@@ -174,6 +183,7 @@ internal object MoMoQueueStore {
     } catch (_: Exception) {}
   }
 
+  @Synchronized
   fun resolveReview(context: Context, clientImportId: String, classification: String): Boolean {
     if (classification !in setOf("expense", "transfer")) return false
     val key = ITEM_PREFIX + clientImportId
@@ -193,6 +203,7 @@ internal object MoMoQueueStore {
     }
   }
 
+  @Synchronized
   fun dismissQueueItem(context: Context, clientImportId: String): Boolean {
     val key = ITEM_PREFIX + clientImportId
     val store = prefs(context)
@@ -217,6 +228,7 @@ internal object MoMoQueueStore {
     items(context).forEach { (_, row) -> array.put(row) }
   }
 
+  @Synchronized
   fun clear(context: Context) {
     val editor = prefs(context).edit()
     prefs(context).all.keys.filter { it.startsWith(ITEM_PREFIX) }.forEach(editor::remove)

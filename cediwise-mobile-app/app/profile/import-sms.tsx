@@ -216,6 +216,7 @@ export default function ImportSmsScreen() {
   const [stepsOpen, setStepsOpen] = useState(false);
   const stepsMarkedFor = useRef<string | null>(null);
   const processedShortcutRef = useRef<string | null>(null);
+  const shortcutOperationRef = useRef(0);
   const processedShortcutHistoryRef = useRef(false);
   const steps = Platform.OS === "ios" ? IOS_IMPORT_STEPS : IMPORT_STEPS;
   const prepareShortcutHistory = sms.prepareShortcutHistory;
@@ -352,6 +353,7 @@ export default function ImportSmsScreen() {
         return;
       }
 
+      const operationId = ++shortcutOperationRef.current;
       setMessage(shortcutMessage);
       clearShortcutParams();
       if (!user?.id) {
@@ -372,7 +374,8 @@ export default function ImportSmsScreen() {
           { body: shortcutMessage, address: shortcutSender || undefined, date: Date.now() },
           { notify: true },
         );
-        setMessage("");
+        // Only the newest Shortcut message may clear the paste box.
+        if (operationId === shortcutOperationRef.current) setMessage("");
         if (result.status === "parsed") {
           showSuccess("Transaction added", "Your budget is up to date.");
         } else if (result.status === "duplicate") {

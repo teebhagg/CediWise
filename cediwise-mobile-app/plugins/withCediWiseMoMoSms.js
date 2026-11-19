@@ -14,11 +14,17 @@ module.exports = function withCediWiseMoMoSms(config) {
   config = withAndroidManifest(config, (mod) => {
     const application = AndroidConfig.Manifest.getMainApplicationOrThrow(mod.modResults);
     application.receiver = application.receiver || [];
+    // Release kill switch: a build without the live-import flag must not register a receiver
+    // that captures SMS without loading JavaScript.
+    const liveImportFlag = process.env.EXPO_PUBLIC_MOMO_SMS_LIVE_IMPORT;
+    const receiverEnabled = liveImportFlag === "1" || liveImportFlag === "true" ? "true" : "false";
+    const existing = application.receiver.find((receiver) => receiver.$?.["android:name"] === ".sms.MoMoSmsReceiver");
+    if (existing) existing.$["android:enabled"] = receiverEnabled;
     if (!application.receiver.some((receiver) => receiver.$?.["android:name"] === ".sms.MoMoSmsReceiver")) {
       application.receiver.push({
         $: {
           "android:name": ".sms.MoMoSmsReceiver",
-          "android:enabled": "true",
+          "android:enabled": receiverEnabled,
           "android:exported": "true",
           "android:permission": "android.permission.BROADCAST_SMS",
         },

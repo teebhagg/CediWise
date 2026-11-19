@@ -87,9 +87,11 @@ export type UseSmsImportOptions = {
 };
 
 async function hydrateBudgetAfterImport(userId: string): Promise<void> {
-  await hydrateBudgetStateFromRemote(userId, (state) =>
-    useBudgetStore.getState().persistState(state),
-  );
+  await hydrateBudgetStateFromRemote(userId, async (state) => {
+    // The fetch can outlive a logout or account switch: never publish another account's snapshot.
+    if (useBudgetStore.getState().userId !== userId) return;
+    await useBudgetStore.getState().persistState(state);
+  });
 }
 
 async function fetchProfileCreatedAtMs(userId: string): Promise<number | null> {
@@ -117,21 +119,45 @@ async function fetchProfileCreatedAtMs(userId: string): Promise<number | null> {
 /** Lower bound for SMS sync: later of lookback window start and profile creation. */
 export { resolveSmsSyncMinDateMs } from "@/utils/smsSyncWindow";
 
-function getActiveCycleCategories(): {
-  id: string;
-  name: string;
-  bucket: string;
-}[] {
+function toLocalDateString(ms: number): string {
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/**
+ * Build capture items suggesting categories from the budget cycle that covers each
+ * payment date. A category from another cycle is rejected by the server, so a payment
+ * outside every cycle gets no suggestion and is categorised server-side.
+ */
+function buildCaptureItemsByCycle(
+  messages: MoMoSmsMessage[],
+  range: { minDateMs: number; maxDateMs: number },
+): SmsExpenseCaptureItem[] {
   const state = useBudgetStore.getState().state;
-  if (!state?.cycles.length) return [];
-  const sorted = [...state.cycles].sort(
-    (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime(),
-  );
-  const activeCycleId = sorted[0]?.id;
-  if (!activeCycleId) return [];
-  return state.categories
-    .filter((c) => c.cycleId === activeCycleId && !c.isArchived)
-    .map((c) => ({ id: c.id, name: c.name, bucket: c.bucket }));
+  const cycles = state?.cycles ?? [];
+  const groups = new Map<string, MoMoSmsMessage[]>();
+  for (const message of messages) {
+    const day = toLocalDateString(message.date);
+    const cycle = cycles.find((c) => c.startDate <= day && (c.endDate ?? "9999-12-31") >= day);
+    const key = cycle?.id ?? "";
+    const list = groups.get(key);
+    if (list) list.push(message);
+    else groups.set(key, [message]);
+  }
+  const order = new Map(messages.map((m, i) => [m, i] as const));
+  const built: { item: SmsExpenseCaptureItem; index: number }[] = [];
+  for (const [cycleId, group] of groups) {
+    const categories = cycleId
+      ? (state?.categories ?? [])
+          .filter((c) => c.cycleId === cycleId && !c.isArchived)
+          .map((c) => ({ id: c.id, name: c.name, bucket: c.bucket }))
+      : [];
+    for (const item of buildSmsExpenseCaptureItems(group, { categories, ...range })) {
+      built.push({ item, index: order.get(item.message) ?? 0 });
+    }
+  }
+  return built.sort((x, y) => x.index - y.index).map((x) => x.item);
 }
 
 export function useSmsImport({ userId }: UseSmsImportOptions) {
@@ -139,6 +165,8 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
   const [importingOne, setImportingOne] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const liveStartedForUserRef = useRef<string | null>(null);
+  /** Bumped whenever consent/listener state is torn down so pending startups can abort. */
+  const consentGenerationRef = useRef(0);
   const catchUpInFlightRef = useRef(false);
 
   const optedIn = useSmsTrackingStore((s) => s.optedIn);
@@ -199,6 +227,7 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
 
   const disableTracking = useCallback(async () => {
     if (!userId) return;
+    consentGenerationRef.current += 1;
     stopMoMoSmsListener();
     liveStartedForUserRef.current = null;
     await clearLiveCatchUpAtMs(userId);
@@ -238,7 +267,7 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
           );
         }
         const result = await importSmsMessage(payload);
-        if (result.status === "parsed") {
+        if (result.status === "parsed" || result.status === "reversed") {
           await hydrateBudgetAfterImport(userId);
         }
         if (shouldNotify) {
@@ -302,8 +331,7 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
       const enabledMessages = messages.filter((message) =>
         isScanEligibleSender(message.address),
       );
-      const expenses = buildSmsExpenseCaptureItems(enabledMessages, {
-        categories: getActiveCycleCategories(),
+      const expenses = buildCaptureItemsByCycle(enabledMessages, {
         minDateMs,
         maxDateMs: nowMs,
       });
@@ -339,8 +367,7 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
 
     return {
       found: eligibleMessages.length,
-      expenses: buildSmsExpenseCaptureItems(eligibleMessages, {
-        categories: getActiveCycleCategories(),
+      expenses: buildCaptureItemsByCycle(eligibleMessages, {
         minDateMs,
         maxDateMs: nowMs,
       }),
@@ -408,7 +435,7 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
           console.error("[import-sms] add transactions item errors", itemErrors);
         }
 
-        if (batch.summary.parsed > 0) {
+        if (batch.summary.parsed > 0 || batch.summary.reversed > 0) {
           await hydrateBudgetAfterImport(userId);
         }
 
@@ -447,12 +474,14 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
         return;
       }
       await setLiveListenerEnabled(userId, enabled);
+      // Always pass the owner so turning Auto-add off pauses native capture and keeps queued reviews.
       await configureNativeMoMoCapture(
         enabled && optedIn,
-        enabled ? userId : null,
+        userId,
         [...ALL_MOMO_NETWORKS],
       );
       if (!enabled) {
+        consentGenerationRef.current += 1;
         stopMoMoSmsListener();
         liveStartedForUserRef.current = null;
         await clearLiveCatchUpAtMs(userId);
@@ -470,6 +499,7 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
     if (!userId || Platform.OS !== "android") return false;
     if (!optedIn || !liveListenerEnabled) return false;
     if (!isAndroidSmsListenerAvailable()) return false;
+    const generation = consentGenerationRef.current;
 
     const liveFlag = await isFeatureEnabled("momo_sms_live_import", userId);
     if (!liveFlag) {
@@ -488,7 +518,10 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
       return false;
     }
 
+    // Consent changed (opt-out, logout, Auto-add off) while permissions were being read.
+    if (generation !== consentGenerationRef.current) return false;
     await configureNativeMoMoCapture(true, userId, [...ALL_MOMO_NETWORKS]);
+    if (generation !== consentGenerationRef.current) return false;
 
     if (isMoMoSmsListenerActive() && liveStartedForUserRef.current === userId) {
       return true;
@@ -496,8 +529,9 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
 
     const started = startMoMoSmsListener(async (message) => {
       try {
+        // Do not advance the catch-up watermark here: only a completed inbox scan may,
+        // otherwise an earlier failed message would be skipped by the next catch-up.
         await importOneMessage(message, { notify: true });
-        await writeLiveCatchUpAtMs(userId, Date.now());
       } catch (error) {
         log.warn("useSmsImport: live import failed", error);
       }
@@ -517,36 +551,36 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
   const catchUpLiveImports = useCallback(async () => {
     if (!userId || Platform.OS !== "android") return;
     if (!optedIn || !liveListenerEnabled) return;
-
-    const liveFlag = await isFeatureEnabled("momo_sms_live_import", userId);
-    if (!liveFlag) {
-      stopMoMoSmsListener();
-      liveStartedForUserRef.current = null;
-      await pauseNativeMoMoCapture(userId);
-      return;
-    }
-
-    const receiveGranted = await getReceiveSmsPermissionGranted();
-    if (!receiveGranted) {
-      stopMoMoSmsListener();
-      liveStartedForUserRef.current = null;
-      await pauseNativeMoMoCapture(userId);
-      return;
-    }
-
+    // Acquire synchronously so overlapping triggers cannot both pass the guard.
     if (catchUpInFlightRef.current || syncing) return;
-    if (!isAndroidSmsReaderAvailable()) return;
-
-    const readGranted = await getReadSmsPermissionGranted();
-    if (!readGranted) {
-      stopMoMoSmsListener();
-      liveStartedForUserRef.current = null;
-      await pauseNativeMoMoCapture(userId);
-      return;
-    }
-
     catchUpInFlightRef.current = true;
     try {
+      const liveFlag = await isFeatureEnabled("momo_sms_live_import", userId);
+      if (!liveFlag) {
+        stopMoMoSmsListener();
+        liveStartedForUserRef.current = null;
+        await pauseNativeMoMoCapture(userId);
+        return;
+      }
+
+      const receiveGranted = await getReceiveSmsPermissionGranted();
+      if (!receiveGranted) {
+        stopMoMoSmsListener();
+        liveStartedForUserRef.current = null;
+        await pauseNativeMoMoCapture(userId);
+        return;
+      }
+
+      if (!isAndroidSmsReaderAvailable()) return;
+
+      const readGranted = await getReadSmsPermissionGranted();
+      if (!readGranted) {
+        stopMoMoSmsListener();
+        liveStartedForUserRef.current = null;
+        await pauseNativeMoMoCapture(userId);
+        return;
+      }
+
       const nowMs = Date.now();
       const lastCatchUpAtMs = await readLiveCatchUpAtMs(userId);
       const minDateMs = resolveLiveCatchUpMinDateMs(nowMs, lastCatchUpAtMs);
@@ -602,7 +636,7 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
 
       await recordSyncSummary(userId, summary);
 
-      if (batch.summary.parsed > 0) {
+      if (batch.summary.parsed > 0 || batch.summary.reversed > 0) {
         await hydrateBudgetAfterImport(userId);
       }
 
@@ -650,6 +684,7 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
   ]);
 
   const stopLiveListener = useCallback(() => {
+    consentGenerationRef.current += 1;
     stopMoMoSmsListener();
     clearMoMoSmsListenerDebounce();
     liveStartedForUserRef.current = null;

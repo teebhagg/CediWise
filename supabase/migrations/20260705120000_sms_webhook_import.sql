@@ -237,7 +237,7 @@ $$;
 comment on function public.purge_expired_sms_import_logs () is
   'Deletes sms_import_logs older than 180 days. Budget transactions are unaffected (FK ON DELETE SET NULL).';
 
-revoke all on function public.purge_expired_sms_import_logs () from public;
+revoke all on function public.purge_expired_sms_import_logs () from public, anon, authenticated;
 grant execute on function public.purge_expired_sms_import_logs () to service_role;
 
 -- Daily purge of import logs older than 180 days (2 AM UTC)

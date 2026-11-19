@@ -32,7 +32,7 @@ This feature is **off by default** and requires your explicit consent in the app
 * **Not sent:** unrelated SMS, contacts, call logs, or monitoring beyond MoMo-style filters you enable.
 * **Retention and processors:** import logs containing SMS text are retained for up to 180 days, then deleted. Budget transactions created from imports are kept like other transactions until you delete them or close your account. Vercel hosts the API and Supabase processes and stores import data.
 * **Accuracy:** parsing may miss or misclassify messages; review imported entries and correct them when needed.
-* **Disable anytime:** turn off tracking in Profile settings and revoke SMS permissions in your device settings.
+* **Disable anytime:** turn off tracking in Profile settings and revoke SMS permissions in your device settings. On iOS, also disable or delete the Message automation in the Shortcuts app, otherwise it can keep opening CediWise for matching messages.
 
 **5. Legal bases**
 * Performance of a contract (service delivery) — account and financial data.

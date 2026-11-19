@@ -12,7 +12,7 @@ import { pauseNativeMoMoCapture, stopAndClearNativeMoMoCapture } from "@/service
  * - Inbox catch-up on resume so payments made in MoMo/USSD still import
  */
 export function MoMoSmsImportLifecycle() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const sms = useSmsImport({ userId: user?.id });
   const {
     catchUpLiveImports,
@@ -23,6 +23,8 @@ export function MoMoSmsImportLifecycle() {
   const [trackingReadyForUser, setTrackingReadyForUser] = useState<string | null>(null);
 
   useEffect(() => {
+    // A null user during the cold-start session read is not a sign-out.
+    if (authLoading) return;
     if (!user?.id) {
       setTrackingReadyForUser(null);
       stopLiveListener();
@@ -41,7 +43,7 @@ export function MoMoSmsImportLifecycle() {
     return () => {
       active = false;
     };
-  }, [hydrateUserTracking, stopLiveListener, user?.id]);
+  }, [authLoading, hydrateUserTracking, stopLiveListener, user?.id]);
 
   useEffect(() => {
     if (
@@ -57,9 +59,15 @@ export function MoMoSmsImportLifecycle() {
         await pauseNativeMoMoCapture(user.id);
         return;
       }
-      if (!sms.optedIn || !sms.liveListenerEnabled) {
+      if (!sms.optedIn) {
         stopLiveListener();
         await stopAndClearNativeMoMoCapture();
+        return;
+      }
+      if (!sms.liveListenerEnabled) {
+        // Tracking is still on: pause capture but keep queued reviews.
+        stopLiveListener();
+        await pauseNativeMoMoCapture(user.id);
         return;
       }
       await ensureLiveListener();

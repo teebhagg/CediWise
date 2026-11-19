@@ -55,3 +55,42 @@ describe("buildMoMoImportCandidate", () => {
     })).toBeNull();
   });
 });
+
+describe("buildMoMoImportCandidate review fixes", () => {
+  const date = 1_789_000_000_000;
+  it("does not read reference text as direction", () => {
+    expect(buildMoMoImportCandidate({
+      address: "MTN MoMo",
+      body: "Payment made for GHS 25.00 to MELCOM. Reference: goods received. Transaction ID: 12345678.",
+      date,
+    })?.eventType).toBe("merchant_payment");
+  });
+  it("keeps person-to-person sends in review", () => {
+    expect(buildMoMoImportCandidate({
+      address: "MTN MoMo",
+      body: "Payment for GHS 10.00 sent to AMA. Transaction ID: 12345678.",
+      date,
+    })).toMatchObject({ eventType: "p2p_send", classification: null });
+  });
+  it("takes the principal from the transaction clause, not a balance", () => {
+    expect(buildMoMoImportCandidate({
+      address: "MTN MoMo",
+      body: "Your balance is GHS 500.00. Payment made for GHS 25.00. Transaction ID: 12345678.",
+      date,
+    })?.principalPesewas).toBe(2500);
+  });
+  it("rejects a zero principal", () => {
+    expect(buildMoMoImportCandidate({
+      address: "MTN MoMo",
+      body: "Payment made for GHS 0.00 to MELCOM. Transaction ID: 12345678.",
+      date,
+    })).toBeNull();
+  });
+  it("does not treat a merchant starting with Bank as a bank transfer", () => {
+    expect(buildMoMoImportCandidate({
+      address: "MTN MoMo",
+      body: "Payment made for GHS 50.00 to BANKU JOINT. Transaction ID: ABCD1234.",
+      date,
+    })?.eventType).toBe("merchant_payment");
+  });
+});

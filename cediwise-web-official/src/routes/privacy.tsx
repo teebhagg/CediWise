@@ -113,7 +113,9 @@ function PrivacyPage() {
             </li>
             <li>
               <strong>Disable anytime:</strong> turn off tracking in Profile
-              settings and revoke SMS permissions in your device settings.
+              settings and revoke SMS permissions in your device settings. On iOS, also
+              disable or delete the Message automation in the Shortcuts app,
+              otherwise it can keep opening CediWise for matching messages.
             </li>
           </ul>
 

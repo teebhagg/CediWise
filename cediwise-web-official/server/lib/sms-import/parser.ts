@@ -25,13 +25,13 @@ type PatternRule = {
  */
 const MTN_PATTERNS: PatternRule[] = [
   {
-    re: /Payment made for GHS\s*([\d,]+(?:\.\d{1,2})?)\s*to\s*(.+?)(?=\s*(?:Current\s+Balance|Available\s+Balance|Fee:|Reference:|Transaction ID|\.|$))/i,
+    re: /^\s*Payment made for GHS\s*([\d,]+(?:\.\d{1,2})?)\s*to\s*(.+?)(?=\s*(?:Current\s+Balance|Available\s+Balance|Fee:|Reference:|Transaction ID|\.|$))/i,
     direction: 'expense',
     provider: 'mtn_momo',
     counterpartyGroup: 2,
   },
   {
-    re: /Payment for GHS\s*([\d,]+(?:\.\d{1,2})?)\s*(?:to\s+)?(.+?)(?=\s*(?:Current\s+Balance|Available\s+Balance|Fee:|Reference:|Ref\s*:|Transaction ID|\bon\s+\d{4}|\.|$))/i,
+    re: /^\s*Payment for GHS\s*([\d,]+(?:\.\d{1,2})?)\s*(?:to\s+)?(.+?)(?=\s*(?:Current\s+Balance|Available\s+Balance|Fee:|Reference:|Ref\s*:|Transaction ID|\bon\s+\d{4}|\.|$))/i,
     direction: 'expense',
     provider: 'mtn_momo',
     counterpartyGroup: 2,
@@ -57,6 +57,8 @@ const MTN_PATTERNS: PatternRule[] = [
     re: /Cash In of GHS\s*([\d,]+(?:\.\d{1,2})?)/i,
     direction: 'transfer',
     provider: 'mtn_momo',
+    // The contract cannot represent cash-in yet; do not label it as cash_out.
+    eventType: 'unknown',
   },
   {
     re: /You have paid GHS\s*([\d,]+(?:\.\d{1,2})?)\s*to\s*(.+?)(?=\s*(?:Current\s+Balance|Available\s+Balance|Fee:|Reference:|Transaction ID|\.|$))/i,
@@ -155,7 +157,7 @@ const FEE_RE =
   /(?:Fee|You were charged)(?:\s+was)?[:\s]+GHS\s*([\d,]+(?:\.\d{1,2})?)/i
 const BALANCE_RE =
   /(?:Your\s+new\s+balance|Available\s+balance|Current\s+balance|Telecel\s+Cash\s+balance|balance)(?:\s+is)?[:\s]+GHS\s*([\d,]+(?:\.\d{1,2})?)/i
-const REFERENCE_RE = /(?:Reference|Ref)[:\s#]+(\S+)/i
+const REFERENCE_RE = /\b(?:Reference[:\s#]+|Ref\s*[:#]\s*)(\S+)/i
 
 function extractTxId(text: string, fromPattern?: string | null): string | null {
   if (fromPattern) return fromPattern

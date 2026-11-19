@@ -32,3 +32,10 @@ describe("resolveLiveCatchUpMinDateMs", () => {
     expect(min).toBe(NOW - 2 * 60 * 60 * 1000);
   });
 });
+
+describe("resolveLiveCatchUpMinDateMs clock skew", () => {
+  it("never returns a bound later than now", () => {
+    const now = 1_000_000_000;
+    expect(resolveLiveCatchUpMinDateMs(now, now + 3_600_000)).toBeLessThanOrEqual(now);
+  });
+});

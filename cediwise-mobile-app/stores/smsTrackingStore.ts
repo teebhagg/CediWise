@@ -108,15 +108,24 @@ async function writePersisted(
   await AsyncStorage.setItem(storageKey(userId), JSON.stringify(state));
 }
 
+/** Bumped on every state change so stale async completions can be discarded. */
+let stateGeneration = 0;
+let activeUserId: string | null = null;
+
 export const useSmsTrackingStore = create<SmsTrackingStore>((set, get) => ({
   ...DEFAULT_STATE,
   hydrated: false,
 
   hydrate: async (userId: string) => {
+    activeUserId = userId;
+    const generation = ++stateGeneration;
     const persisted = await readPersisted(userId);
     const { next, changed } = ensureAllProvidersEnabled(persisted);
+    // A logout, account switch or newer consent change happened while reading: drop this result.
+    if (generation !== stateGeneration || activeUserId !== userId) return;
     if (changed) {
       await writePersisted(userId, next);
+      if (generation !== stateGeneration || activeUserId !== userId) return;
     }
     set({ ...next, hydrated: true });
   },
@@ -127,6 +136,9 @@ export const useSmsTrackingStore = create<SmsTrackingStore>((set, get) => ({
       optedIn,
       liveListenerEnabled: optedIn ? get().liveListenerEnabled : false,
     };
+    if (activeUserId !== null && activeUserId !== userId) return;
+    activeUserId = userId;
+    stateGeneration += 1;
     set(next);
     await writePersisted(userId, next);
   },
@@ -136,6 +148,9 @@ export const useSmsTrackingStore = create<SmsTrackingStore>((set, get) => ({
       ...get(),
       liveListenerEnabled: enabled,
     };
+    if (activeUserId !== null && activeUserId !== userId) return;
+    activeUserId = userId;
+    stateGeneration += 1;
     set(next);
     await writePersisted(userId, next);
   },
@@ -145,21 +160,29 @@ export const useSmsTrackingStore = create<SmsTrackingStore>((set, get) => ({
       ...get(),
       providers: { ...get().providers, [provider]: enabled },
     };
+    if (activeUserId !== null && activeUserId !== userId) return;
+    activeUserId = userId;
+    stateGeneration += 1;
     set(next);
     await writePersisted(userId, next);
   },
 
   recordSyncSummary: async (userId, summary) => {
+    // An import started by another account must not write into the current account's settings.
+    if (activeUserId !== userId) return;
     const next: SmsTrackingPersistedState = {
       ...get(),
       lastSyncAt: new Date().toISOString(),
       lastSyncSummary: summary,
     };
+    stateGeneration += 1;
     set(next);
     await writePersisted(userId, next);
   },
 
   resetForUser: async (userId) => {
+    stateGeneration += 1;
+    activeUserId = null;
     set({ ...DEFAULT_STATE, hydrated: false });
     if (userId) {
       await AsyncStorage.removeItem(storageKey(userId));

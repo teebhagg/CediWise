@@ -110,7 +110,7 @@ describe("formatSmsExpenseDate", () => {
   it("uses weekday for recent dates and calendar date for older ones", () => {
     const threeDaysAgo = NOW - 3 * 24 * 60 * 60 * 1000;
     expect(formatSmsExpenseDate(threeDaysAgo, NOW)).toMatch(/ at /);
-    expect(formatSmsExpenseDate(Date.UTC(2026, 6, 8, 15, 19), NOW)).toBe(
+    expect(formatSmsExpenseDate(new Date(2026, 6, 8, 15, 19).getTime(), NOW)).toBe(
       "8 Jul at 3:19 PM",
     );
   });

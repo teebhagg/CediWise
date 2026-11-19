@@ -153,7 +153,6 @@ export function MoMoSmsPermissionDisclosureDialog({
       secondaryLabel="Not now"
       onSecondary={onCancel}
       loading={loading}
-      scrollableChildren
     >
       <View style={styles.enableStack}>
         <Text style={styles.bodyCopy}>
@@ -225,6 +224,7 @@ export function MoMoTrackingSettingsDialog({
       onTertiary={onOpenPermissions}
       secondaryLabel="Turn off tracking"
       onSecondary={onDisable}
+      onDismiss={() => onOpenChange(false)}
     >
       <View style={styles.settingsStack}>
         <StatusPanel
@@ -295,7 +295,6 @@ export function MoMoSmsExpenseReviewDialog({
       secondaryLabel="Cancel"
       onSecondary={onCancel}
       loading={saving}
-      scrollableChildren
       primaryButtonClassName="bg-emerald-500"
       primaryLabelClassName="text-slate-950"
       secondaryButtonClassName="bg-rose-500/15 border-0"

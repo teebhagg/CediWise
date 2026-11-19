@@ -507,6 +507,16 @@ export default function ImportSmsScreen() {
         await refreshStatus();
         return;
       }
+      if (result.retryable > 0 || result.failed > 0) {
+        // Historical items are not stored anywhere else, so keep the list: Add can be retried and
+        // payments that already went through come back as duplicates.
+        showInfo(
+          "Some payments were not saved",
+          `${message} They are still listed, so tap Add to try again.`,
+        );
+        await refreshStatus();
+        return;
+      }
       if (result.parsed > 0 || result.reversed > 0) showSuccess("Import processed", message);
       else showInfo(result.needsReview > 0 ? "Review needed" : "Nothing added", message);
       setReviewItems([]);

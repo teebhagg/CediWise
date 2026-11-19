@@ -170,8 +170,18 @@ internal object MoMoQueueStore {
           null
         }
       }
+      // Oldest first: the store is a map with no order, and a reversal uploaded before its
+      // original is recorded as target-not-found and never applied.
+      .sortedBy { receivedAtMs(it.second) }
     if (changed) editor.apply()
     return result
+  }
+
+  private fun receivedAtMs(row: JSONObject): Long = try {
+    java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX", java.util.Locale.US)
+      .parse(row.optJSONObject("candidate")?.optString("receivedAt") ?: "")?.time ?: 0L
+  } catch (_: Exception) {
+    0L
   }
 
   private fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")

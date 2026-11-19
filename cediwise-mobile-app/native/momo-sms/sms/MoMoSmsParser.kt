@@ -46,8 +46,10 @@ internal object MoMoSmsParser {
     body.contains(Regex("bank transfer|\\bto\\s+bank\\b", RegexOption.IGNORE_CASE)) -> "bank_transfer"
     body.contains(Regex("airtime|data bundle|bundle", RegexOption.IGNORE_CASE)) -> "airtime_data"
     body.contains(Regex("bill|utility", RegexOption.IGNORE_CASE)) -> "bill_payment"
-    body.contains(Regex("merchant|payment made|payment for|you have paid|your payment|purchased", RegexOption.IGNORE_CASE)) -> "merchant_payment"
+    // Person-to-person must win over the generic payment wording ("Payment for GHS 10.00 sent to AMA"),
+    // otherwise the native queue would upload it as an expense without asking. Mirrors the JS order.
     body.contains(Regex("sent to|you have sent", RegexOption.IGNORE_CASE)) -> "p2p_send"
+    body.contains(Regex("merchant|payment made|payment for|you have paid|your payment|purchased", RegexOption.IGNORE_CASE)) -> "merchant_payment"
     else -> "unknown"
     }
   }

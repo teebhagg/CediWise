@@ -377,14 +377,18 @@ export default function ImportSmsScreen() {
           { body: shortcutMessage, address: shortcutSender || undefined, date: Date.now() },
           { notify: true },
         );
-        // Only the newest Shortcut message may clear the paste box.
-        if (operationId === shortcutOperationRef.current) setMessage("");
+        // Only the newest Shortcut message may clear the paste box, and only once the payment is
+        // settled. Anything else (needs review, retryable) keeps the text so it can be added by hand.
+        const settled = result.status === "parsed" || result.status === "duplicate" || result.status === "reversed";
+        if (settled && operationId === shortcutOperationRef.current) setMessage("");
         if (result.status === "parsed") {
           showSuccess("Transaction added", "Your budget is up to date.");
         } else if (result.status === "duplicate") {
           showInfo("Already imported", "This MoMo payment is already in your budget.");
+        } else if (result.status === "reversed") {
+          showInfo("Payment already reversed", "A reversal for this payment was already received, so nothing was added.");
         } else {
-          showInfo("Message not added", result.error ?? "CediWise could not confirm a supported payment.");
+          showInfo("Message not added", `${result.error ?? "CediWise could not confirm a supported payment."} The text is kept below so you can add it yourself.`);
         }
       } catch (error) {
         showError("Could not import message", error instanceof SmsImportClientError ? error.message : error instanceof Error ? error.message : "Try again.");
@@ -596,6 +600,9 @@ export default function ImportSmsScreen() {
       const result = await sms.importOneMessage({ body: trimmed });
       if (result.status === "parsed" || result.status === "duplicate") {
         showSuccess(result.status === "parsed" ? "Transaction added" : "Already imported", "Your budget is up to date.");
+        setMessage("");
+      } else if (result.status === "reversed") {
+        showInfo("Payment already reversed", "A reversal for this payment was already received, so nothing was added.");
         setMessage("");
       } else showInfo("Review needed", result.error ?? "This message could not be added automatically.");
     } catch (error) {

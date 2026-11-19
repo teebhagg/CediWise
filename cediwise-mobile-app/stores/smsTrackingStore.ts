@@ -113,6 +113,8 @@ async function writePersisted(
 let stateGeneration = 0;
 let activeUserId: string | null = null;
 let inflightHydration: { userId: string; promise: Promise<boolean> } | null = null;
+/** Bumped by resetForUser so a setter that was waiting on hydration can tell logout ran meanwhile. */
+let resetGeneration = 0;
 
 /** The user whose tracking state the store currently holds, or null after logout. */
 export function getActiveTrackingUserId(): string | null {
@@ -164,7 +166,10 @@ export const useSmsTrackingStore = create<SmsTrackingStore>((set, get) => ({
   },
 
   setOptedIn: async (userId: string, optedIn: boolean) => {
+    const resetAtStart = resetGeneration;
     await settleHydration(userId);
+    // Logout or an account reset ran while waiting: do not write this user's state back.
+    if (resetAtStart !== resetGeneration) return;
     const next: SmsTrackingPersistedState = {
       ...get(),
       optedIn,
@@ -178,7 +183,10 @@ export const useSmsTrackingStore = create<SmsTrackingStore>((set, get) => ({
   },
 
   setLiveListenerEnabled: async (userId: string, enabled: boolean) => {
+    const resetAtStart = resetGeneration;
     await settleHydration(userId);
+    // Logout or an account reset ran while waiting: do not write this user's state back.
+    if (resetAtStart !== resetGeneration) return;
     const next: SmsTrackingPersistedState = {
       ...get(),
       liveListenerEnabled: enabled,
@@ -191,7 +199,10 @@ export const useSmsTrackingStore = create<SmsTrackingStore>((set, get) => ({
   },
 
   setProviderEnabled: async (userId, provider, enabled) => {
+    const resetAtStart = resetGeneration;
     await settleHydration(userId);
+    // Logout or an account reset ran while waiting: do not write this user's state back.
+    if (resetAtStart !== resetGeneration) return;
     const next: SmsTrackingPersistedState = {
       ...get(),
       providers: { ...get().providers, [provider]: enabled },
@@ -218,6 +229,7 @@ export const useSmsTrackingStore = create<SmsTrackingStore>((set, get) => ({
 
   resetForUser: async (userId) => {
     stateGeneration += 1;
+    resetGeneration += 1;
     activeUserId = null;
     inflightHydration = null;
     set({ ...DEFAULT_STATE, hydrated: false });

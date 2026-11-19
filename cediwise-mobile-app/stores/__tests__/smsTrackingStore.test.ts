@@ -5,6 +5,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SMS_TRACKING_STORAGE_KEY } from "@/constants/smsImport";
 import {
   ensureAllProvidersEnabled,
+  getActiveTrackingUserId,
   useSmsTrackingStore,
 } from "../smsTrackingStore";
 
@@ -128,5 +129,18 @@ describe("smsTrackingStore concurrent hydration", () => {
     expect(state.hydrated).toBe(true);
     const saved = JSON.parse((await AsyncStorage.getItem(storageKey(USER_ID))) ?? "{}");
     expect(saved.liveListenerEnabled).toBe(true);
+  });
+
+  it("does not write a waiting setter's state back after logout resets the store", async () => {
+    const store = useSmsTrackingStore.getState();
+    const hydrating = store.hydrate(USER_ID);
+    const setting = store.setOptedIn(USER_ID, true);
+    await store.resetForUser(null);
+    await Promise.all([hydrating, setting]);
+
+    expect(getActiveTrackingUserId()).toBeNull();
+    expect(useSmsTrackingStore.getState().optedIn).toBe(false);
+    const saved = JSON.parse((await AsyncStorage.getItem(storageKey(USER_ID))) ?? "{}");
+    expect(saved.optedIn).toBe(true); // the pre-existing persisted value is untouched, not rewritten
   });
 });

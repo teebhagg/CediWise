@@ -72,4 +72,24 @@ describe("configureNativeMoMoCapture", () => {
     expect(pause).toHaveBeenCalledWith("user-1");
     expect(configure).not.toHaveBeenCalled();
   });
+
+  it("lets a newer enable finish when an older one fails and pauses", async () => {
+    let releaseNewer: (value: { accessToken: string }) => void = () => {};
+    // Older call fails to get a token; newer call is still refreshing when that failure pauses.
+    mockGetStoredAuthData
+      .mockResolvedValueOnce(null)
+      .mockReturnValueOnce(new Promise((resolve) => { releaseNewer = resolve; }));
+
+    const newer = (async () => {
+      const older = configureNativeMoMoCapture(true, "user-1");
+      const second = configureNativeMoMoCapture(true, "user-1");
+      await older;
+      return second;
+    })();
+    await Promise.resolve();
+    releaseNewer({ accessToken: "tok" });
+
+    await expect(newer).resolves.toBe(true);
+    expect(configure).toHaveBeenCalledWith(true, "user-1", "tok", expect.any(String), expect.any(Array));
+  });
 });

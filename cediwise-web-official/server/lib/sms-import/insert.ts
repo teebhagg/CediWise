@@ -520,7 +520,8 @@ export async function importOneSmsMessage(
         .select('id')
         .eq('user_id', userId)
         .eq('sms_import_log_id', logRow.id)
-        .is('sms_import_group_id', null)
+        // The raw row, or the principal of a structured import that took this log over.
+        .or('sms_import_group_id.is.null,sms_import_role.eq.principal')
         .maybeSingle()
       if (lookupError) throw lookupError
       if (existingTx?.id) {

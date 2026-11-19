@@ -49,11 +49,12 @@ export async function configureNativeMoMoCapture(enabled: boolean, userId: strin
     await refreshStoredSession();
     token = (await getStoredAuthData({ allowExpired: false }))?.accessToken ?? null;
   } catch {
-    await pauseNativeMoMoCapture(userId);
+    // A failed attempt must not invalidate a newer enable that is still refreshing its session.
+    await pauseNativeCapture(userId);
     return false;
   }
   if (!token) {
-    await pauseNativeMoMoCapture(userId);
+    await pauseNativeCapture(userId);
     return false;
   }
   // Opt-out, logout or another configure ran while the session was refreshing: do not re-enable.
@@ -118,17 +119,21 @@ export async function stopAndClearNativeMoMoCapture(): Promise<void> {
   }
 }
 
-/** Pause the release-gated worker without discarding this signed-in user's queue. */
-export async function pauseNativeMoMoCapture(userId: string): Promise<void> {
+async function pauseNativeCapture(userId: string): Promise<void> {
   const native = module();
   if (!native) return;
-  // An enable still waiting on the session refresh must not arm capture after this pause.
-  captureConfigGeneration += 1;
   try {
     await native.pause(userId);
   } catch {
     // Do not erase recoverable imports when native pause is temporarily unavailable.
   }
+}
+
+/** Pause the release-gated worker without discarding this signed-in user's queue. */
+export async function pauseNativeMoMoCapture(userId: string): Promise<void> {
+  // An explicit pause: an enable still waiting on the session refresh must not arm capture after it.
+  captureConfigGeneration += 1;
+  await pauseNativeCapture(userId);
 }
 
 export function isNativeMoMoCaptureAvailable(): boolean {

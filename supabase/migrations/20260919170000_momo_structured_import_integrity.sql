@@ -73,6 +73,7 @@ declare
   v_fee_tx_id uuid;
   v_existing record;
   v_prior record;
+  v_pending_reversal_count integer;
   v_conflicting record;
   v_reversed_log record;
   v_raw_transaction_count integer;
@@ -111,6 +112,11 @@ begin
   -- A client import id is bound to the first payload accepted for it. Replaying the same id
   -- with a changed identity field (amount, fee, time, receipt, reversal target) is a client
   -- bug or tampering, not a retry: reject it instead of reporting the old outcome as a duplicate.
+  -- Serialize requests for the same user and client import id. Without this, two first requests can
+  -- both find no row, and the loser (its insert skipped by on conflict) would report the winner's
+  -- outcome as a duplicate without ever comparing payloads. The lock is released at commit, so the
+  -- loser's lookup below sees the winner.
+  perform pg_advisory_xact_lock(hashtextextended(p_user_id::text || ':' || v_client_id, 0));
   select parsed into v_prior
   from public.sms_import_logs
   where user_id = p_user_id and client_import_id = v_client_id;
@@ -165,6 +171,14 @@ begin
       where id = v_log_id;
       return jsonb_build_object('status', 'needs_review', 'importLogId', v_log_id);
     end if;
+
+    -- Give the record its shape up front. When no target exists it is never assigned, and PL/pgSQL
+    -- cannot even plan a later "v_reversed_log.id is null" check on an unassigned record; that
+    -- raised "record is not assigned yet" on a fresh connection. A no-row SELECT INTO sets it to nulls.
+    select id, import_group_id, budget_transaction_id, fee_transaction_id, parse_status
+      into v_reversed_log
+    from public.sms_import_logs
+    where false;
 
     -- Prefer an exact receipt or transaction id. A generic reference can be
     -- reused by a provider, so only use it when it resolves to one log.
@@ -527,6 +541,38 @@ begin
     parse_status = 'parsed', terminal_outcome = 'added',
     budget_transaction_id = v_tx_id, fee_transaction_id = v_fee_tx_id
   where id = v_log_id;
+
+  -- A reversal can arrive before its original (offline capture, or the original waited for the
+  -- user to classify it). Such a reversal was recorded as reversal_target_not_found and replays
+  -- return duplicate, so it would never apply. Apply it now that its target exists.
+  if v_receipt_id is not null then
+    select count(*) into v_pending_reversal_count
+    from public.sms_import_logs
+    where user_id = p_user_id
+      and provider = v_provider
+      and event_type = 'reversal'
+      and parse_status = 'needs_review'
+      and terminal_outcome = 'reversal_target_not_found'
+      and nullif(trim(parsed->>'reversedReceiptId'), '') = v_receipt_id;
+
+    if v_pending_reversal_count > 0 then
+      delete from public.budget_transactions
+      where user_id = p_user_id and sms_import_group_id = v_group_id;
+      update public.sms_import_logs set
+        parse_status = 'reversed', terminal_outcome = 'reversed',
+        budget_transaction_id = null, fee_transaction_id = null
+      where id = v_log_id;
+      update public.sms_import_logs set
+        parse_status = 'reversed', terminal_outcome = 'reversed'
+      where user_id = p_user_id
+        and provider = v_provider
+        and event_type = 'reversal'
+        and parse_status = 'needs_review'
+        and terminal_outcome = 'reversal_target_not_found'
+        and nullif(trim(parsed->>'reversedReceiptId'), '') = v_receipt_id;
+      return jsonb_build_object('status', 'reversed', 'importLogId', v_log_id);
+    end if;
+  end if;
 
   return jsonb_build_object(
     'status', 'parsed', 'importLogId', v_log_id,

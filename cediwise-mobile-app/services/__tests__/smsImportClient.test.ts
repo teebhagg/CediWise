@@ -214,4 +214,13 @@ describe("sortCandidatePayloadsOldestFirst", () => {
     expect(sorted[1]).toBe(b);
     expect(input).toEqual([a, b]);
   });
+
+  it("puts a payment before its reversal when their timestamps are equal", () => {
+    const at = "2026-07-08T15:19:00.000Z";
+    const sorted = sortCandidatePayloadsOldestFirst([
+      { candidate: { clientImportId: "reversal", eventType: "reversal", receivedAt: at } },
+      { candidate: { clientImportId: "payment", eventType: "merchant_payment", receivedAt: at } },
+    ] as never) as unknown as Array<{ candidate: { clientImportId: string } }>;
+    expect(sorted.map((row) => row.candidate.clientImportId)).toEqual(["payment", "reversal"]);
+  });
 });

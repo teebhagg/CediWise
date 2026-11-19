@@ -59,7 +59,12 @@ export function sortCandidatePayloadsOldestFirst(
     const ms = Date.parse(payload.candidate.receivedAt);
     return Number.isFinite(ms) ? ms : 0;
   };
-  return [...payloads].sort((a, b) => time(a) - time(b));
+  return [...payloads].sort((a, b) => {
+    const delta = time(a) - time(b);
+    if (delta !== 0) return delta;
+    // At equal timestamps, submit payments before the reversals that reference them.
+    return Number(a.candidate.eventType === "reversal") - Number(b.candidate.eventType === "reversal");
+  });
 }
 
 export class SmsImportClientError extends Error {

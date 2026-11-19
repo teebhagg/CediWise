@@ -172,7 +172,11 @@ internal object MoMoQueueStore {
       }
       // Oldest first: the store is a map with no order, and a reversal uploaded before its
       // original is recorded as target-not-found and never applied.
-      .sortedBy { receivedAtMs(it.second) }
+      .sortedWith(
+        compareBy<Pair<String, JSONObject>>({ receivedAtMs(it.second) })
+          // Same timestamp: payments before the reversals that reference them.
+          .thenBy { if (it.second.optJSONObject("candidate")?.optString("eventType") == "reversal") 1 else 0 }
+      )
     if (changed) editor.apply()
     return result
   }

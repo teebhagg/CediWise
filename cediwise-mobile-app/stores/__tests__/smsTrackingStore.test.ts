@@ -85,3 +85,48 @@ describe("smsTrackingStore.hydrate", () => {
     });
   });
 });
+
+describe("smsTrackingStore concurrent hydration", () => {
+  const persistedState = {
+    optedIn: true,
+    liveListenerEnabled: true,
+    lastSyncAt: "2026-07-08T15:19:00.000Z",
+    lastSyncSummary: null,
+    providers: { mtn_momo: true, telecel_cash: true, at_money: true },
+  };
+
+  beforeEach(async () => {
+    await AsyncStorage.clear();
+    await useSmsTrackingStore.getState().resetForUser(null);
+    await AsyncStorage.setItem(storageKey(USER_ID), JSON.stringify(persistedState));
+  });
+
+  it("shares one read between same-user callers and reports the accepted result to both", async () => {
+    const store = useSmsTrackingStore.getState();
+    const first = store.hydrate(USER_ID);
+    const second = store.hydrate(USER_ID);
+    expect(await Promise.all([first, second])).toEqual([true, true]);
+    expect(useSmsTrackingStore.getState().optedIn).toBe(true);
+  });
+
+  it("reports a discarded result as not accepted when another user takes over", async () => {
+    const store = useSmsTrackingStore.getState();
+    const stale = store.hydrate(USER_ID);
+    const other = store.hydrate("user-sms-2");
+    expect(await stale).toBe(false);
+    expect(await other).toBe(true);
+  });
+
+  it("keeps unread settings when consent changes while hydration is pending", async () => {
+    const store = useSmsTrackingStore.getState();
+    const hydrating = store.hydrate(USER_ID);
+    await store.setOptedIn(USER_ID, true);
+    await hydrating;
+    const state = useSmsTrackingStore.getState();
+    expect(state.liveListenerEnabled).toBe(true);
+    expect(state.lastSyncAt).toBe(persistedState.lastSyncAt);
+    expect(state.hydrated).toBe(true);
+    const saved = JSON.parse((await AsyncStorage.getItem(storageKey(USER_ID))) ?? "{}");
+    expect(saved.liveListenerEnabled).toBe(true);
+  });
+});

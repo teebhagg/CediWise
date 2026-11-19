@@ -213,6 +213,9 @@ export default function ImportSmsScreen() {
   const [showReadDisclosure, setShowReadDisclosure] = useState(false);
   const [requestingReadPermission, setRequestingReadPermission] = useState(false);
   const [savingReview, setSavingReview] = useState(false);
+  // State lags a render behind a tap; this ref makes scan and save mutually exclusive at entry,
+  // including while a scan is still waiting on the SMS permission.
+  const busyRef = useRef<"scan" | "save" | null>(null);
   const [stepsOpen, setStepsOpen] = useState(false);
   const stepsMarkedFor = useRef<string | null>(null);
   const processedShortcutRef = useRef<string | null>(null);
@@ -428,9 +431,8 @@ export default function ImportSmsScreen() {
   const scanButton = getScanButtonState(scanningInbox, savingReview);
   const pasteBusy = scanningInbox || savingReview || sms.importingOne;
 
-  const performScan = useCallback(async () => {
-    if (scanningInbox || savingReview) return;
-    setScanningInbox(true);
+  // Callers own the busy guard; this only runs the scan and publishes its result.
+  const runScan = useCallback(async () => {
     try {
       const result = await sms.scanHistory(days);
       setReviewItems(result.expenses);
@@ -439,22 +441,31 @@ export default function ImportSmsScreen() {
       await refreshStatus();
     } catch (error) {
       showError("Could not scan messages", error instanceof Error ? error.message : "Try again.");
-    } finally {
-      setScanningInbox(false);
     }
-  }, [days, refreshStatus, savingReview, scanningInbox, showError, showInfo, sms]);
+  }, [days, refreshStatus, showError, showInfo, sms]);
 
   const scanHistory = useCallback(async () => {
-    if (scanningInbox || savingReview) return;
-    if (!(await getReadSmsPermissionGranted())) {
-      setShowReadDisclosure(true);
-      return;
+    if (busyRef.current) return;
+    busyRef.current = "scan";
+    // Busy from the first tap, so Add is disabled while the permission check is pending.
+    setScanningInbox(true);
+    try {
+      if (!(await getReadSmsPermissionGranted())) {
+        setShowReadDisclosure(true);
+        return;
+      }
+      await runScan();
+    } finally {
+      busyRef.current = null;
+      setScanningInbox(false);
     }
-    await performScan();
-  }, [performScan, savingReview, scanningInbox]);
+  }, [runScan]);
 
   const confirmReadPermission = useCallback(async () => {
     setShowReadDisclosure(false);
+    if (busyRef.current) return;
+    busyRef.current = "scan";
+    setScanningInbox(true);
     setRequestingReadPermission(true);
     try {
       const result = await sms.requestReadSmsPermission();
@@ -463,21 +474,24 @@ export default function ImportSmsScreen() {
         if (result.status === "blocked") await Linking.openSettings();
         return;
       }
-      await performScan();
+      await runScan();
     } catch (error) {
       showError("Could not request SMS access", error instanceof Error ? error.message : "Try again.");
     } finally {
+      busyRef.current = null;
+      setScanningInbox(false);
       setRequestingReadPermission(false);
       await refreshStatus();
     }
-  }, [performScan, refreshStatus, showError, showInfo, sms]);
+  }, [refreshStatus, runScan, showError, showInfo, sms]);
 
   const saveReview = useCallback(async () => {
-    if (!selectedItems.length || scanningInbox || savingReview) return;
+    if (!selectedItems.length || busyRef.current) return;
     if (selectedNeedsClassification) {
       showInfo("Choose expense or transfer", "Classify each selected person-to-person payment before adding it.");
       return;
     }
+    busyRef.current = "save";
     setSavingReview(true);
     try {
       const result = await sms.saveCapturedExpenses(selectedItems);
@@ -502,9 +516,10 @@ export default function ImportSmsScreen() {
       console.error("[import-sms] add transactions failed", error);
       showError("Could not add transactions", error instanceof Error ? error.message : "Try again.");
     } finally {
+      busyRef.current = null;
       setSavingReview(false);
     }
-  }, [refreshStatus, savingReview, scanningInbox, selectedItems, selectedNeedsClassification, showError, showInfo, showSuccess, sms]);
+  }, [refreshStatus, selectedItems, selectedNeedsClassification, showError, showInfo, showSuccess, sms]);
 
   const resolveQueueItem = useCallback(async (
     item: NativeMoMoQueueItem,
@@ -556,7 +571,7 @@ export default function ImportSmsScreen() {
   }, [refreshStatus, showError, showInfo, sms]);
 
   const importPasted = useCallback(async () => {
-    if (scanningInbox || savingReview) return;
+    if (scanningInbox || savingReview || busyRef.current) return;
     const trimmed = message.trim();
     if (trimmed.length < 20) return showError("Message too short", PASTE_TOO_SHORT_MESSAGE);
     try {

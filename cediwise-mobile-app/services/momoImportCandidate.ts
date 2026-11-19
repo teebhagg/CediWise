@@ -1,6 +1,6 @@
 import type { MoMoSmsMessage } from "./momoSmsFilters";
 import { inferMoMoProviderFromContent, isMoMoTransactionBody, normalizeSmsBody } from "./momoSmsFilters";
-import { previewSmsExpense } from "./momoSmsExpensePreview";
+import { previewSmsExpense, stripReferenceText } from "./momoSmsExpensePreview";
 import { sha256Hex } from "@/utils/sha256";
 
 export type MoMoProvider = "mtn_momo" | "telecel_cash" | "at_money";
@@ -61,11 +61,6 @@ function amountToPesewas(value: string | undefined): number | null {
   return Number.isSafeInteger(pesewas) && pesewas >= 0 ? pesewas : null;
 }
 
-/** Drop free-text reference labels so words like "received" cannot change the direction. */
-function stripReferenceText(body: string): string {
-  return body.replace(/\bRef(?:erence)?\s*:[^.]*\.?/gi, " ");
-}
-
 /** Amount of the transaction clause itself, ignoring balances quoted earlier in the text. */
 function extractTransactionAmount(body: string): string | undefined {
   return body.match(
@@ -104,7 +99,7 @@ export function buildMoMoImportCandidate(
   const eventType = inferEventType(body);
   const amountMatch = eventType === "reversal"
     ? body.match(/GHS\s*([\d,]+(?:\.\d{1,2})?)/i)?.[1]
-    : extractTransactionAmount(body);
+    : extractTransactionAmount(stripReferenceText(body));
   const rawPrincipal = preview
     ? Math.round(preview.amount * 100)
     : amountMatch ? amountToPesewas(amountMatch) : null;

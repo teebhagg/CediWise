@@ -89,6 +89,7 @@ Inbox scan and save-review must not share one busy flag on the Scan button.
 
 - `scanningInbox` and `savingReview` are **screen-local** on Transaction import. Keep existing hook `syncing` for Profile / live catch-up. Do not reuse `syncing` for the Scan button or Add-N button.
 - `scanningInbox` drives **only** the Scan messages button: spinner, **Scanning…**, disabled, ignore second tap. Set it around `scanHistory`.
+- Scan and save exclude each other through a synchronous ref guard taken at entry, not only through state. `scanningInbox` is set on the first tap, before the SMS permission check or request is awaited, so Add-N is disabled and ignored for the whole permission wait. The guard is released in `finally`.
 - `savingReview` drives **only** the review **Add N transactions** loading state. Set it around `saveCapturedExpenses`.
 - Scan and save must not run together. While `scanningInbox`, Add-N is disabled and taps are ignored. While `savingReview`, Scan is disabled and taps are ignored. No overlapping writes; there is no winner rule because the second action never starts.
 - Paste (`Add this payment`) may run while scan or save is idle only. While `scanningInbox` or `savingReview`, disable paste submit.

@@ -157,7 +157,8 @@ const FEE_RE =
   /(?:Fee|You were charged)(?:\s+was)?[:\s]+GHS\s*([\d,]+(?:\.\d{1,2})?)/i
 const BALANCE_RE =
   /(?:Your\s+new\s+balance|Available\s+balance|Current\s+balance|Telecel\s+Cash\s+balance|balance)(?:\s+is)?[:\s]+GHS\s*([\d,]+(?:\.\d{1,2})?)/i
-const REFERENCE_RE = /\b(?:Reference[:\s#]+|Ref\s*[:#]\s*)(\S+)/i
+// "Ref 998877" is a label only when a number follows, so "REF STORE" stays a counterparty.
+const REFERENCE_RE = /\b(?:Reference[:\s#]+|Ref\s*[:#]\s*|Ref\s+(?=\d))(\S+)/i
 
 function extractTxId(text: string, fromPattern?: string | null): string | null {
   if (fromPattern) return fromPattern

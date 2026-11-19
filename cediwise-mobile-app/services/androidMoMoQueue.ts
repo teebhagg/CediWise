@@ -122,6 +122,8 @@ export async function stopAndClearNativeMoMoCapture(): Promise<void> {
 export async function pauseNativeMoMoCapture(userId: string): Promise<void> {
   const native = module();
   if (!native) return;
+  // An enable still waiting on the session refresh must not arm capture after this pause.
+  captureConfigGeneration += 1;
   try {
     await native.pause(userId);
   } catch {

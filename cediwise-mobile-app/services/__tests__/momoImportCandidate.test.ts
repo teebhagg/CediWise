@@ -65,6 +65,20 @@ describe("buildMoMoImportCandidate review fixes", () => {
       date,
     })?.eventType).toBe("merchant_payment");
   });
+  it("does not let a decimal inside the reference change the direction", () => {
+    expect(buildMoMoImportCandidate({
+      address: "MTN MoMo",
+      body: "Payment made for GHS 25.00 to MELCOM. Reference: invoice 12.50 received. Transaction ID: 12345678.",
+      date,
+    })).toMatchObject({ eventType: "merchant_payment", principalPesewas: 2500 });
+  });
+  it("ignores an amount quoted inside the reference field", () => {
+    expect(buildMoMoImportCandidate({
+      address: "Vodafone",
+      body: "Vodafone Cash: GHS 50.00 paid to merchant AMA. Reference: Payment for GHS 1.00. Transaction ID: 12345678.",
+      date,
+    })?.principalPesewas).toBe(5000);
+  });
   it("keeps person-to-person sends in review", () => {
     expect(buildMoMoImportCandidate({
       address: "MTN MoMo",

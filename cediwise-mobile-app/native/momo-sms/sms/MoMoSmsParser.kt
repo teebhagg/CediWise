@@ -8,7 +8,8 @@ internal object MoMoSmsParser {
   private val amount = Regex("GHS\\s*([\\d,]+(?:\\.\\d{1,2})?)", RegexOption.IGNORE_CASE)
   private val transactionAmount = Regex("(?:Payment\\s+(?:made\\s+)?for|You\\s+have\\s+(?:successfully\\s+)?(?:paid|sent|purchased)|payment\\s+of|Cash\\s+(?:Out|In)\\s+of|Confirmed\\.)\\s*GHS\\s*([\\d,]+(?:\\.\\d{1,2})?)", RegexOption.IGNORE_CASE)
   private val sentAmount = Regex("GHS\\s*([\\d,]+(?:\\.\\d{1,2})?)\\s+(?:sent|paid|debited)\\b", RegexOption.IGNORE_CASE)
-  private val referenceText = Regex("\\bRef(?:erence)?\\s*:[^.]*\\.?", RegexOption.IGNORE_CASE)
+  // Runs to the end of the sentence, so a decimal point inside the reference ("12.50") does not end it early.
+  private val referenceText = Regex("\\bRef(?:erence)?\\s*:.*?(?:\\.(?=\\s|$)|$)", RegexOption.IGNORE_CASE)
   private val fee = Regex("(?:Fee|You were charged)(?:\\s+was)?[:\\s]+GHS\\s*([\\d,]+(?:\\.\\d{1,2})?)", RegexOption.IGNORE_CASE)
   private val counterparty = Regex("(?:to|sent to)\\s+(.+?)(?=\\s+(?:Current|Available)\\s+Balance|\\s+on\\s+(?:MTN|Telecel|Vodafone)|\\s+Fee:|\\s+Reference:|\\.|$)", RegexOption.IGNORE_CASE)
   private val receiptPatterns = listOf(
@@ -94,10 +95,12 @@ internal object MoMoSmsParser {
     val provider = provider(sender) ?: return null
     if (!isConfirmedTransaction(provider, normalized)) return null
     val eventType = event(normalized)
+    // Free-text reference fields can quote another amount ("Reference: Payment for GHS 1.00").
+    val amountText = normalized.replace(referenceText, " ")
     val principalRaw = if (eventType == "reversal") {
       amount.find(normalized)?.groupValues?.get(1)
     } else {
-      (transactionAmount.find(normalized) ?: sentAmount.find(normalized))?.groupValues?.get(1)
+      (transactionAmount.find(amountText) ?: sentAmount.find(amountText))?.groupValues?.get(1)
     }
     val principal = pesewas(principalRaw)
     if (eventType == "unknown" || eventType == "failed" || eventType == "pending") return null

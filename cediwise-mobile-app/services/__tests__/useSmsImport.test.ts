@@ -64,11 +64,16 @@ jest.mock("@/services/smsImportClient", () => ({
   importSmsBatch: (...args: unknown[]) => mockImportSmsBatch(...args),
   importSmsMessage: (...args: unknown[]) => mockImportSmsMessage(...args),
   SmsImportClientError: class SmsImportClientError extends Error {},
+  sortCandidatePayloadsOldestFirst: (payloads: unknown[]) => payloads,
   toImportPayload: (...args: unknown[]) => mockToImportPayload(...args),
 }));
 
 jest.mock("@/stores/smsTrackingStore", () => ({
-  useSmsTrackingStore: (selector: (state: typeof mockTrackingState) => unknown) => selector(mockTrackingState),
+  useSmsTrackingStore: Object.assign(
+    (selector: (state: typeof mockTrackingState) => unknown) => selector(mockTrackingState),
+    { getState: () => mockTrackingState },
+  ),
+  getActiveTrackingUserId: () => "user-1",
 }));
 
 jest.mock("@/utils/budgetHydrate", () => ({ hydrateBudgetStateFromRemote: jest.fn() }));

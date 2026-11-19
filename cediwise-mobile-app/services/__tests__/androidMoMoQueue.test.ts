@@ -1,7 +1,7 @@
 /** @jest-environment node */
 
 import { ALL_MOMO_NETWORKS } from "@/constants/smsImport";
-import { configureNativeMoMoCapture } from "../androidMoMoQueue";
+import { configureNativeMoMoCapture, pauseNativeMoMoCapture } from "../androidMoMoQueue";
 
 const configure = jest.fn().mockResolvedValue(true);
 const pause = jest.fn().mockResolvedValue(true);
@@ -56,6 +56,19 @@ describe("configureNativeMoMoCapture", () => {
   it("pauses this user's queue when capture is disabled without an explicit opt-out", async () => {
     await configureNativeMoMoCapture(false, "user-1");
 
+    expect(pause).toHaveBeenCalledWith("user-1");
+    expect(configure).not.toHaveBeenCalled();
+  });
+
+  it("does not arm capture when a direct pause lands while the enable awaits the session", async () => {
+    let release: (value: { accessToken: string }) => void = () => {};
+    mockGetStoredAuthData.mockReturnValue(new Promise((resolve) => { release = resolve; }));
+
+    const enabling = configureNativeMoMoCapture(true, "user-1");
+    await pauseNativeMoMoCapture("user-1");
+    release({ accessToken: "tok" });
+
+    await expect(enabling).resolves.toBe(false);
     expect(pause).toHaveBeenCalledWith("user-1");
     expect(configure).not.toHaveBeenCalled();
   });

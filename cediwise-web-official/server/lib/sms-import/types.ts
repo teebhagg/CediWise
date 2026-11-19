@@ -132,7 +132,7 @@ export type SmsImportResult = {
   parsed?: ParsedSms
   error?: string
   /** Present on unexpected server failures; callers may retry the item. */
-  errorCode?: 'internal_error' | 'no_active_budget_cycle'
+  errorCode?: 'internal_error' | 'no_active_budget_cycle' | 'client_import_conflict'
   retryable?: boolean
 }
 

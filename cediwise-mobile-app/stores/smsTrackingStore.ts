@@ -30,7 +30,8 @@ export type SmsTrackingPersistedState = {
 
 type SmsTrackingStore = SmsTrackingPersistedState & {
   hydrated: boolean;
-  hydrate: (userId: string) => Promise<void>;
+  /** Resolves true only when this user's persisted state was accepted into the store. */
+  hydrate: (userId: string) => Promise<boolean>;
   setOptedIn: (userId: string, optedIn: boolean) => Promise<void>;
   setLiveListenerEnabled: (userId: string, enabled: boolean) => Promise<void>;
   setProviderEnabled: (userId: string, provider: keyof SmsTrackingPersistedState["providers"], enabled: boolean) => Promise<void>;
@@ -111,26 +112,59 @@ async function writePersisted(
 /** Bumped on every state change so stale async completions can be discarded. */
 let stateGeneration = 0;
 let activeUserId: string | null = null;
+let inflightHydration: { userId: string; promise: Promise<boolean> } | null = null;
+
+/** The user whose tracking state the store currently holds, or null after logout. */
+export function getActiveTrackingUserId(): string | null {
+  return activeUserId;
+}
+
+/** Let a pending read for this user finish so a write never starts from unread defaults. */
+async function settleHydration(userId: string): Promise<void> {
+  const pending = inflightHydration;
+  if (!pending || pending.userId !== userId) return;
+  try {
+    await pending.promise;
+  } catch {
+    // A failed read leaves defaults in place; the caller's write still proceeds.
+  }
+}
 
 export const useSmsTrackingStore = create<SmsTrackingStore>((set, get) => ({
   ...DEFAULT_STATE,
   hydrated: false,
 
-  hydrate: async (userId: string) => {
+  hydrate: (userId: string) => {
+    // Concurrent callers for the same user share one read, so none can report "ready"
+    // while another read is still pending and the store holds defaults.
+    if (inflightHydration?.userId === userId && activeUserId === userId) {
+      return inflightHydration.promise;
+    }
     activeUserId = userId;
     const generation = ++stateGeneration;
-    const persisted = await readPersisted(userId);
-    const { next, changed } = ensureAllProvidersEnabled(persisted);
-    // A logout, account switch or newer consent change happened while reading: drop this result.
-    if (generation !== stateGeneration || activeUserId !== userId) return;
-    if (changed) {
-      await writePersisted(userId, next);
-      if (generation !== stateGeneration || activeUserId !== userId) return;
-    }
-    set({ ...next, hydrated: true });
+    const promise = (async (): Promise<boolean> => {
+      const persisted = await readPersisted(userId);
+      const { next, changed } = ensureAllProvidersEnabled(persisted);
+      // A logout, account switch or newer consent change happened while reading: drop this result.
+      if (generation !== stateGeneration || activeUserId !== userId) return false;
+      if (changed) {
+        await writePersisted(userId, next);
+        if (generation !== stateGeneration || activeUserId !== userId) return false;
+      }
+      set({ ...next, hydrated: true });
+      return true;
+    })();
+    const entry = { userId, promise };
+    inflightHydration = entry;
+    const clear = () => {
+      if (inflightHydration === entry) inflightHydration = null;
+    };
+    promise.then(clear, clear);
+    return promise;
   },
 
   setOptedIn: async (userId: string, optedIn: boolean) => {
+    await settleHydration(userId);
     const next: SmsTrackingPersistedState = {
       ...get(),
       optedIn,
@@ -144,6 +178,7 @@ export const useSmsTrackingStore = create<SmsTrackingStore>((set, get) => ({
   },
 
   setLiveListenerEnabled: async (userId: string, enabled: boolean) => {
+    await settleHydration(userId);
     const next: SmsTrackingPersistedState = {
       ...get(),
       liveListenerEnabled: enabled,
@@ -156,6 +191,7 @@ export const useSmsTrackingStore = create<SmsTrackingStore>((set, get) => ({
   },
 
   setProviderEnabled: async (userId, provider, enabled) => {
+    await settleHydration(userId);
     const next: SmsTrackingPersistedState = {
       ...get(),
       providers: { ...get().providers, [provider]: enabled },
@@ -183,6 +219,7 @@ export const useSmsTrackingStore = create<SmsTrackingStore>((set, get) => ({
   resetForUser: async (userId) => {
     stateGeneration += 1;
     activeUserId = null;
+    inflightHydration = null;
     set({ ...DEFAULT_STATE, hydrated: false });
     if (userId) {
       await AsyncStorage.removeItem(storageKey(userId));

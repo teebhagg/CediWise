@@ -34,6 +34,14 @@ export class NoActiveBudgetCycleError extends Error {
   }
 }
 
+/** The import id was already used for a different payment; retrying cannot succeed. */
+export class ClientImportConflictError extends Error {
+  constructor() {
+    super('client_import_id_conflict')
+    this.name = 'ClientImportConflictError'
+  }
+}
+
 function canonicalCandidate(candidate: StructuredCandidate): string {
   return JSON.stringify([
     candidate.schemaVersion,
@@ -116,6 +124,9 @@ export async function importStructuredCandidate(
   if (error) {
     if (error.message.includes('no_active_budget_cycle')) {
       throw new NoActiveBudgetCycleError()
+    }
+    if (error.message.includes('client_import_id_conflict')) {
+      throw new ClientImportConflictError()
     }
     throw error
   }

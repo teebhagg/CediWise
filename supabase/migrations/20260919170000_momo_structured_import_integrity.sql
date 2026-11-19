@@ -14,6 +14,12 @@ alter table public.sms_import_logs add column if not exists deleted_at timestamp
 -- that is introduced only by a later migration.
 alter table public.sms_import_logs add column if not exists attempt_started_at timestamptz;
 
+-- The webhook migration declared an unnamed inline CHECK on parse_status (auto-named
+-- sms_import_logs_check) that only allows pending/parsed/skipped/failed/duplicate and requires every
+-- parsed row to keep its transaction link. It would reject the processing, needs_review, retryable
+-- and reversed rows written below, and the reversal flow nulls the link on a parsed row when it
+-- deletes the transaction. The named check below replaces it.
+alter table public.sms_import_logs drop constraint if exists sms_import_logs_check;
 alter table public.sms_import_logs drop constraint if exists sms_import_logs_parse_status_check;
 alter table public.sms_import_logs add constraint sms_import_logs_parse_status_check
   check (parse_status in ('pending', 'processing', 'parsed', 'skipped', 'failed', 'needs_review', 'retryable', 'reversed', 'deleted'));
@@ -66,6 +72,7 @@ declare
   v_tx_id uuid;
   v_fee_tx_id uuid;
   v_existing record;
+  v_prior record;
   v_conflicting record;
   v_reversed_log record;
   v_raw_transaction_count integer;
@@ -100,6 +107,26 @@ begin
     when v_receipt_id is not null then v_provider || ':' || v_receipt_id
     else 'client:' || v_client_id
   end;
+
+  -- A client import id is bound to the first payload accepted for it. Replaying the same id
+  -- with a changed identity field (amount, fee, time, receipt, reversal target) is a client
+  -- bug or tampering, not a retry: reject it instead of reporting the old outcome as a duplicate.
+  select parsed into v_prior
+  from public.sms_import_logs
+  where user_id = p_user_id and client_import_id = v_client_id;
+  if found
+     and v_prior.parsed->>'clientImportId' = v_client_id
+     and (
+       coalesce(v_prior.parsed->>'provider', '') <> v_provider
+       or coalesce(v_prior.parsed->>'eventType', '') <> v_event_type
+       or (v_prior.parsed->>'receivedAt')::timestamptz is distinct from v_received_at
+       or nullif(v_prior.parsed->>'principalPesewas', '')::numeric is distinct from v_principal_pesewas
+       or coalesce(nullif(v_prior.parsed->>'feePesewas', '')::numeric, 0) <> v_fee_pesewas
+       or nullif(trim(v_prior.parsed->>'receiptId'), '') is distinct from v_receipt_id
+       or nullif(trim(v_prior.parsed->>'reversedReceiptId'), '') is distinct from v_reversed_receipt_id
+     ) then
+    raise exception 'client_import_id_conflict';
+  end if;
 
   if v_event_type = 'reversal' then
     insert into public.sms_import_logs(
@@ -293,12 +320,15 @@ begin
   ) on conflict do nothing;
 
   if not found then
-    -- A prior raw-message parser may have logged this exact SMS as failed or
-    -- skipped without creating a transaction. Reuse that row so a higher
-    -- confidence structured parse can recover it without violating the legacy
-    -- dedupe key or creating a second import log.
-    if v_legacy_dedupe_key is not null then
-      select id, budget_transaction_id, fee_transaction_id, parse_status
+    -- A prior raw-message parser may have logged this exact SMS without creating a
+    -- transaction: as failed or skipped, or as an attempt that never finished (pending,
+    -- processing or retryable for longer than the raw path's own 15 minute reclaim window).
+    -- Reuse that row so a structured parse can recover it without violating the dedupe key or
+    -- creating a second import log. A row keyed by receipt id has the same dedupe key
+    -- (provider:receipt) as the raw parser wrote, so it is recoverable even without a legacy hash.
+    -- The row lock makes concurrent structured retries claim it one at a time.
+    if v_legacy_dedupe_key is not null or v_receipt_id is not null then
+      select id, budget_transaction_id, fee_transaction_id, parse_status, attempt_started_at, created_at
         into v_existing
       from public.sms_import_logs
       where user_id = p_user_id and dedupe_key = v_dedupe_key
@@ -307,7 +337,13 @@ begin
       if found then
         if v_existing.budget_transaction_id is null
            and v_existing.fee_transaction_id is null
-           and v_existing.parse_status in ('failed', 'skipped') then
+           and (
+             v_existing.parse_status in ('failed', 'skipped')
+             or (
+               v_existing.parse_status in ('pending', 'processing', 'retryable')
+               and coalesce(v_existing.attempt_started_at, v_existing.created_at) <= now() - interval '15 minutes'
+             )
+           ) then
           v_log_id := v_existing.id;
           select count(*) into v_raw_transaction_count
           from public.budget_transactions

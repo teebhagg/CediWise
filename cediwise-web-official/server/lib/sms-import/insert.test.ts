@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { importStructuredCandidate } from './insert'
+import { ClientImportConflictError, importStructuredCandidate } from './insert'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { StructuredCandidate } from './types'
 
@@ -61,4 +61,30 @@ describe('importStructuredCandidate', () => {
       }))
     },
   )
+
+  it('maps a reused client import id with a different payload to a terminal conflict', async () => {
+    const admin = {
+      from: vi.fn(),
+      rpc: vi.fn().mockResolvedValue({ data: null, error: { message: 'client_import_id_conflict' } }),
+    } as unknown as SupabaseClient
+    const candidate: StructuredCandidate = {
+      schemaVersion: 1,
+      clientImportId: 'sms-12345678',
+      provider: 'mtn_momo',
+      eventType: 'reversal',
+      principalPesewas: null,
+      feePesewas: 0,
+      receivedAt: '2026-10-01T10:00:00.000Z',
+      counterparty: null,
+      receiptId: null,
+      reversedReceiptId: 'R1',
+      parserVersion: '1',
+      confidence: 'high',
+      classification: null,
+      categoryId: 'category-1',
+    }
+    process.env.SMS_IMPORT_HMAC_SECRET = 'x'.repeat(32)
+
+    await expect(importStructuredCandidate(admin, 'user-1', candidate)).rejects.toBeInstanceOf(ClientImportConflictError)
+  })
 })

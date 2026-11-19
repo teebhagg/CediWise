@@ -11,6 +11,9 @@ import java.security.MessageDigest
 internal object MoMoQueueStore {
   private const val FILE = "cediwise_momo_queue_v1"
   private const val ITEM_PREFIX = "item:"
+  private const val STATE_DISMISSED = "dismissed"
+  /** Longer than the foreground catch-up lookback (2h), so a rescan cannot re-queue a decided item. */
+  private const val DISMISSED_TTL_MS = 24L * 60 * 60 * 1000
 
   private fun prefs(context: Context) = EncryptedSharedPreferences.create(
     context,
@@ -126,11 +129,20 @@ internal object MoMoQueueStore {
     val store = prefs(context)
     val editor = store.edit()
     var changed = false
+    val now = System.currentTimeMillis()
     val result = store.all
       .filterKeys { it.startsWith(ITEM_PREFIX) }
       .mapNotNull { (key, value) ->
         try {
           val row = JSONObject(value as String)
+          if (row.optString("state") == STATE_DISMISSED) {
+            // Tombstones only block re-queueing; they are never uploaded or shown, and expire.
+            if (now - row.optLong("dismissedAt", 0L) > DISMISSED_TTL_MS) {
+              editor.remove(key)
+              changed = true
+            }
+            return@mapNotNull null
+          }
           val candidate = row.optJSONObject("candidate")
           if (candidate != null) {
             val legacyMessage = candidate.optString("legacyMessage")
@@ -176,6 +188,8 @@ internal object MoMoQueueStore {
       val row = JSONObject(value)
       // A row from a cleared or replaced account must never be written back.
       if (row.optString("userId") != prefs(context).getString("userId", null)) return
+      // A dismissal marker must not be turned back into a live item by a late worker write.
+      if (row.optString("state") == STATE_DISMISSED) return
       row.put("state", state)
       if (errorCode == null) row.remove("errorCode") else row.put("errorCode", errorCode)
       row.put("attempts", row.optInt("attempts", 0) + 1)
@@ -211,7 +225,13 @@ internal object MoMoQueueStore {
     return try {
       val row = JSONObject(value)
       if (row.optString("state") !in setOf("review", "failed_terminal")) return false
-      store.edit().remove(key).apply()
+      // Keep a payload-free marker instead of deleting: add() dedupes on the key, so the same SMS
+      // seen again by the overlapping catch-up scan stays dismissed.
+      val tombstone = JSONObject()
+        .put("state", STATE_DISMISSED)
+        .put("userId", row.optString("userId"))
+        .put("dismissedAt", System.currentTimeMillis())
+      store.edit().putString(key, tombstone.toString()).apply()
       true
     } catch (_: Exception) {
       false

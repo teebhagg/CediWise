@@ -182,6 +182,15 @@ function buildDescription(counterparty: string | null, txId: string | null): str
   return `MoMo → ${who}${suffix}`;
 }
 
+/**
+ * Drop free-text reference fields so words or amounts quoted there ("goods received",
+ * "Payment for GHS 1.00") cannot change the direction or the principal. The field runs to the end
+ * of the sentence, so a decimal point inside it ("12.50") does not end it early.
+ */
+export function stripReferenceText(body: string): string {
+  return body.replace(/\bRef(?:erence)?\s*:.*?(?:\.(?=\s|$)|$)/gi, " ");
+}
+
 export function previewSmsExpense(
   message: MoMoSmsMessage,
   categories: SmsCategoryCandidate[] = [],
@@ -189,8 +198,9 @@ export function previewSmsExpense(
   const body = normalizeSmsBody(message.body);
   if (body.length < 10) return null;
 
+  const ruleBody = stripReferenceText(body);
   for (const rule of PREVIEW_RULES) {
-    const match = body.match(rule.re);
+    const match = ruleBody.match(rule.re);
     if (!match) continue;
     if (rule.direction !== "expense") return null;
 

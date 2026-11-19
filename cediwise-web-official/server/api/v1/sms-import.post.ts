@@ -10,6 +10,7 @@ import { createAdminClient } from '../../lib/supabase/admin'
 import {
   importOneSmsMessage,
   importStructuredCandidate,
+  ClientImportConflictError,
   NoActiveBudgetCycleError,
 } from '../../lib/sms-import/insert'
 import {
@@ -118,6 +119,17 @@ export default defineEventHandler(async (event) => {
           error: 'Set up a budget cycle covering this payment date, then retry.',
           errorCode: 'no_active_budget_cycle',
           retryable: true,
+        })
+        continue
+      }
+      if (err instanceof ClientImportConflictError) {
+        // Terminal: the same import id arrived with a different payment, so a retry cannot succeed.
+        results.push({
+          ok: true,
+          status: 'failed',
+          error: 'This import id was already used for a different payment.',
+          errorCode: 'client_import_conflict',
+          retryable: false,
         })
         continue
       }

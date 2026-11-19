@@ -112,6 +112,15 @@ describe('parseGhanaMoMoSms — MTN', () => {
     expect(isMoMoTransactionSms(sms, 'MobileMoney')).toBe(true)
   })
 
+  it('reads a whitespace-delimited numeric Ref but not a REF counterparty', () => {
+    expect(
+      parseGhanaMoMoSms('Payment made for GHS 20.00 to MELCOM. Ref 998877.', 'MTN MoMo').reference,
+    ).toBe('998877')
+    expect(
+      parseGhanaMoMoSms('Payment made for GHS 20.00 to REF STORE. Reference: 998877.', 'MTN MoMo').reference,
+    ).toBe('998877')
+  })
+
   it('parses MTN airtime payment with Financial Transaction Id (real format)', () => {
     const sms =
       'Your payment of GHS 2.00 to MTN AIRTIME has been completed at 2026-07-08 21:56:07. Your new balance: GHS 20.55. Fee was GHS 0.00 Tax was GHS -. Reference: -. Financial Transaction Id: 85012132862. External Transaction Id: 85012132862.Download the MoMo App for a Faster & Easier Experience Click here: https://mtnmymomo.onelink.me/XJOt/MoMo'

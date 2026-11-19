@@ -41,6 +41,11 @@ export interface HeaderProps {
   actions?: ReactNode[];
   /** Center the title instead of left-aligning */
   centered?: boolean;
+  /**
+   * When `centered`, width reserved on both the leading and actions sides.
+   * Raise it above the default when several actions sit on the right, so the title stays centred.
+   */
+  centeredSideWidth?: number;
   /** Height of the compact nav-bar band (excluding safe-area inset) */
   standardHeight?: number;
   /** Component rendered below the nav bar (e.g. search input) */
@@ -107,6 +112,7 @@ interface NavBarContentProps {
   leading?: ReactNode;
   actions?: ReactNode[];
   centered?: boolean;
+  centeredSideWidth?: number;
   titleStyle?: object | object[];
   titleComponent?: "text" | "animated";
   animatedTitleStyle?: object | object[];
@@ -122,6 +128,7 @@ const NavBarContent: React.FC<NavBarContentProps> = ({
   leading,
   actions,
   centered = false,
+  centeredSideWidth,
   titleStyle,
   animatedTitleStyle,
   isExpandedHeader = false,
@@ -135,7 +142,9 @@ const NavBarContent: React.FC<NavBarContentProps> = ({
    *  - Actions side: when centered, reserved to same width as leading side
    *    so the title is mathematically centred; otherwise wraps to content
    */
-  const leadingSideWidth = hasLeading || centered ? LEADING_WIDTH : 0;
+  const leadingSideWidth = hasLeading || centered
+    ? (centered ? centeredSideWidth ?? LEADING_WIDTH : LEADING_WIDTH)
+    : 0;
 
   return (
     <>
@@ -188,6 +197,7 @@ export const StandardHeader: React.FC<HeaderProps> = ({
   leading,
   actions,
   centered = false,
+  centeredSideWidth,
   bottom,
   standardHeight = DEFAULT_STANDARD_HEIGHT,
 }) => {
@@ -219,6 +229,7 @@ export const StandardHeader: React.FC<HeaderProps> = ({
           leading={leading}
           actions={actions}
           centered={centered}
+          centeredSideWidth={centeredSideWidth}
         />
       </View>
 
@@ -247,6 +258,7 @@ export const ExpandedHeader: React.FC<ExpandedHeaderProps> = ({
   bottom,
   bottomHeight: bottomHeightProp,
   centered = false,
+  centeredSideWidth,
   expandedHeight = DEFAULT_EXPANDED_HEIGHT,
   standardHeight = DEFAULT_STANDARD_HEIGHT,
   refreshing = false,
@@ -381,6 +393,7 @@ export const ExpandedHeader: React.FC<ExpandedHeaderProps> = ({
           leading={leading}
           actions={navActions}
           centered={centered}
+          centeredSideWidth={centeredSideWidth}
           animatedTitleStyle={compactTitleStyle}
           isExpandedHeader={true}
         />

@@ -1,0 +1,10 @@
+Release status: NO RELEASE / NO UPGRADE
+
+This is a planned release note for version 0.4.0 only. Do not publish or distribute this version, and do not prompt users to upgrade. The app version remains 0.3.2.
+
+• Import MoMo payment messages by scanning recent SMS or pasting one message, then review each match before saving.
+• Automatic capture is off by default and unavailable in this build. Manual scanning and paste import remain available whenever you choose.
+• On Android, supported MoMo messages can be filtered, queued, retried, and tracked with clear import status.
+• On iOS, bring supported messages into CediWise through an Apple Shortcut you set up yourself.
+• Import handling covers duplicates, retries, reversals, and budget-cycle attribution, with updated privacy and data-retention disclosures.
+• 0.4.0 is an initial SMS import milestone; more improvements are planned. This version has not been released.

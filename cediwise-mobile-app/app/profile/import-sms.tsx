@@ -87,6 +87,7 @@ function reviewKind(eventType: SmsExpenseCaptureItem["eventType"]): string | nul
   if (eventType === "airtime_data") return "Airtime";
   if (eventType === "bill_payment") return "Bill";
   if (eventType === "merchant_payment") return "Payment";
+  if (eventType === "reversal") return "Reversal";
   return null;
 }
 
@@ -126,7 +127,13 @@ function ReviewTransactionCard({
           <Text className="mt-0.5 text-sm text-slate-400">{item.receivedAtLabel}</Text>
           {reference ? <Text className="mt-0.5 text-sm text-slate-400">Ref {reference}</Text> : null}
         </View>
-        <Text className="shrink-0 text-base font-semibold text-rose-300">−₵{formatCurrency(item.amount)}</Text>
+        {item.eventType === "reversal" ? (
+          <Text className="shrink-0 text-base font-semibold text-emerald-300">
+            {item.amount > 0 ? `+₵${formatCurrency(item.amount)}` : "Refund"}
+          </Text>
+        ) : (
+          <Text className="shrink-0 text-base font-semibold text-rose-300">−₵{formatCurrency(item.amount)}</Text>
+        )}
       </View>
       {item.eventType === "p2p_send" ? (
         <View className="ml-9 mt-3">
@@ -431,7 +438,7 @@ export default function ImportSmsScreen() {
 
   const selectedItems = useMemo(() => reviewItems.filter((item) => selectedIds.has(item.id)), [reviewItems, selectedIds]);
   const selectedNeedsClassification = selectedItems.some((item) => item.eventType === "p2p_send" && item.classification == null);
-  const selectedTotal = selectedItems.reduce((sum, item) => sum + (item.classification === "transfer" ? 0 : item.amount), 0);
+  const selectedTotal = selectedItems.reduce((sum, item) => sum + (item.classification === "transfer" || item.eventType === "reversal" ? 0 : item.amount), 0);
   const scanButton = getScanButtonState(scanningInbox, savingReview);
   const pasteBusy = scanningInbox || savingReview || sms.importingOne;
 

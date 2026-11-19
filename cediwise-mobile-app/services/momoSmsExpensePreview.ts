@@ -106,7 +106,8 @@ export type SmsExpenseCaptureItem = {
   /** Category name that will be assigned on save. */
   categoryName: string;
   categoryId: string | null;
-  eventType: "merchant_payment" | "bill_payment" | "airtime_data" | "p2p_send";
+  /** "reversal" rows undo an earlier payment; they carry no category and no spend of their own. */
+  eventType: "merchant_payment" | "bill_payment" | "airtime_data" | "p2p_send" | "reversal";
   classification: "expense" | "transfer" | null;
   /** Human-readable occurred-at label. */
   receivedAtLabel: string;

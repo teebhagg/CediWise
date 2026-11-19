@@ -1,6 +1,11 @@
 import type { MoMoSmsMessage } from "./momoSmsFilters";
 import { inferMoMoProviderFromContent, isMoMoTransactionBody, normalizeSmsBody } from "./momoSmsFilters";
-import { previewSmsExpense, stripReferenceText } from "./momoSmsExpensePreview";
+import {
+  formatSmsExpenseDate,
+  previewSmsExpense,
+  stripReferenceText,
+  type SmsExpenseCaptureItem,
+} from "./momoSmsExpensePreview";
 import { sha256Hex } from "@/utils/sha256";
 
 export type MoMoProvider = "mtn_momo" | "telecel_cash" | "at_money";
@@ -137,4 +142,33 @@ export function buildMoMoImportCandidate(
     classification: autoEligible ? "expense" : null,
     categoryId,
   };
+}
+
+/**
+ * Review rows for reversal alerts that name the payment they undo. History scans and Shortcut
+ * batches only listed expenses, so a reversal never reached the server and the original stayed
+ * counted. These rows ride along with Add; the import sorts them after their originals.
+ */
+export function buildSmsReversalCaptureItems(
+  messages: MoMoSmsMessage[],
+  range: { minDateMs: number; maxDateMs: number },
+): SmsExpenseCaptureItem[] {
+  const items: SmsExpenseCaptureItem[] = [];
+  for (const message of messages) {
+    if (message.date < range.minDateMs || message.date > range.maxDateMs) continue;
+    const candidate = buildMoMoImportCandidate(message);
+    if (!candidate || candidate.eventType !== "reversal" || !candidate.reversedReceiptId) continue;
+    items.push({
+      id: `${message.date}-reversal-${candidate.reversedReceiptId}`,
+      message,
+      amount: (candidate.principalPesewas ?? 0) / 100,
+      description: `Reversal of payment (#${candidate.reversedReceiptId})`,
+      categoryName: "Undoes an earlier payment",
+      categoryId: null,
+      eventType: "reversal",
+      classification: null,
+      receivedAtLabel: formatSmsExpenseDate(message.date),
+    });
+  }
+  return items;
 }

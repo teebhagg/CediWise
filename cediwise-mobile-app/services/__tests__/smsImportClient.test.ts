@@ -192,6 +192,17 @@ describe("smsImportClient", () => {
   });
 });
 
+describe("toImportPayload for a reversal row", () => {
+  it("builds a reversal candidate that names the payment it undoes", async () => {
+    const payload = await toImportPayload({
+      address: "MTN MoMo",
+      body: "Reversal of transaction ID 12345678 for GHS 25.00 has been completed.",
+      date: 1_789_000_000_000,
+    });
+    expect(payload?.candidate).toMatchObject({ eventType: "reversal", reversedReceiptId: "12345678" });
+  });
+});
+
 describe("sortCandidatePayloadsOldestFirst", () => {
   const payload = (id: string, receivedAt: string) =>
     ({ candidate: { clientImportId: id, receivedAt } }) as never;

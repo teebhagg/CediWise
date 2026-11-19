@@ -1,4 +1,4 @@
-import { buildMoMoImportCandidate } from "../momoImportCandidate";
+import { buildMoMoImportCandidate, buildSmsReversalCaptureItems } from "../momoImportCandidate";
 
 describe("buildMoMoImportCandidate", () => {
   it("creates the same client id for the same reference-free inbox message", () => {
@@ -106,5 +106,28 @@ describe("buildMoMoImportCandidate review fixes", () => {
       body: "Payment made for GHS 50.00 to BANKU JOINT. Transaction ID: ABCD1234.",
       date,
     })?.eventType).toBe("merchant_payment");
+  });
+});
+
+describe("buildSmsReversalCaptureItems", () => {
+  const range = { minDateMs: 0, maxDateMs: Number.MAX_SAFE_INTEGER };
+  const date = 1_789_000_000_000;
+
+  it("lists a reversal that names the payment it undoes", () => {
+    const items = buildSmsReversalCaptureItems([
+      { address: "MTN MoMo", body: "Reversal of transaction ID 12345678 for GHS 25.00 has been completed.", date },
+    ], range);
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ eventType: "reversal", categoryId: null, classification: null, amount: 25 });
+    expect(items[0]!.description).toContain("12345678");
+  });
+
+  it("skips a reversal with no target, ordinary payments and out-of-range messages", () => {
+    const items = buildSmsReversalCaptureItems([
+      { address: "MTN MoMo", body: "Reversal completed for your account.", date },
+      { address: "MTN MoMo", body: "Payment made for GHS 25.00 to MELCOM. Transaction ID: 12345678.", date },
+      { address: "MTN MoMo", body: "Reversal of transaction ID 87654321 for GHS 5.00 has been completed.", date: 10 },
+    ], { minDateMs: 1000, maxDateMs: Number.MAX_SAFE_INTEGER });
+    expect(items).toEqual([]);
   });
 });

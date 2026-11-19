@@ -30,6 +30,7 @@ import {
   buildSmsExpenseCaptureItems,
   type SmsExpenseCaptureItem,
 } from "@/services/momoSmsExpensePreview";
+import { buildSmsReversalCaptureItems } from "@/services/momoImportCandidate";
 import { notifyMoMoLiveImport } from "@/services/momoLiveImportNotify";
 import { formatLiveImportResultBody } from "@/utils/formatLiveImportResultBody";
 import {
@@ -146,7 +147,8 @@ function buildCaptureItemsByCycle(
     if (list) list.push(message);
     else groups.set(key, [message]);
   }
-  const order = new Map(messages.map((m, i) => [m, i] as const));
+  // Items carry a normalized copy of the message, so order by its timestamp, not by identity.
+  const order = new Map(messages.map((m, i) => [m.date, i] as const));
   const built: { item: SmsExpenseCaptureItem; index: number }[] = [];
   for (const [cycleId, group] of groups) {
     const categories = cycleId
@@ -155,8 +157,12 @@ function buildCaptureItemsByCycle(
           .map((c) => ({ id: c.id, name: c.name, bucket: c.bucket }))
       : [];
     for (const item of buildSmsExpenseCaptureItems(group, { categories, ...range })) {
-      built.push({ item, index: order.get(item.message) ?? 0 });
+      built.push({ item, index: order.get(item.message.date) ?? 0 });
     }
+  }
+  // Reversals that name their original ride along, so Add can undo a payment that was imported.
+  for (const item of buildSmsReversalCaptureItems(messages, range)) {
+    built.push({ item, index: order.get(item.message.date) ?? 0 });
   }
   return built.sort((x, y) => x.index - y.index).map((x) => x.item);
 }

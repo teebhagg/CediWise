@@ -1,6 +1,7 @@
 import {
   importSmsBatch,
   importSmsMessage,
+  sortCandidatePayloadsOldestFirst,
   toImportPayload,
 } from "../smsImportClient";
 
@@ -188,5 +189,29 @@ describe("smsImportClient", () => {
     });
 
     expect(payload).toBeNull();
+  });
+});
+
+describe("sortCandidatePayloadsOldestFirst", () => {
+  const payload = (id: string, receivedAt: string) =>
+    ({ candidate: { clientImportId: id, receivedAt } }) as never;
+
+  it("puts the original payment before its later reversal", () => {
+    const reversal = payload("reversal", "2026-07-08T15:30:00.000Z");
+    const original = payload("original", "2026-07-08T15:19:00.000Z");
+    const sorted = sortCandidatePayloadsOldestFirst([reversal, original]) as unknown as Array<{
+      candidate: { clientImportId: string };
+    }>;
+    expect(sorted.map((row) => row.candidate.clientImportId)).toEqual(["original", "reversal"]);
+  });
+
+  it("keeps input order for equal timestamps and does not mutate the input", () => {
+    const a = payload("a", "2026-07-08T15:19:00.000Z");
+    const b = payload("b", "2026-07-08T15:19:00.000Z");
+    const input = [a, b];
+    const sorted = sortCandidatePayloadsOldestFirst(input);
+    expect(sorted[0]).toBe(a);
+    expect(sorted[1]).toBe(b);
+    expect(input).toEqual([a, b]);
   });
 });

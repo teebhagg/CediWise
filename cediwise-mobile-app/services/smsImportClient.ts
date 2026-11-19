@@ -46,6 +46,22 @@ export type SmsImportCandidatePayload = {
 };
 export type SmsImportPayload = SmsImportMessagePayload | SmsImportCandidatePayload;
 
+/**
+ * Oldest first, so a reversal is never submitted before the payment it reverses.
+ * The server records a reversal with no matching original as needs_review, and a replay of
+ * the same client import id then returns duplicate, leaving the original counted as spending.
+ * Array.prototype.sort is stable, so equal timestamps keep their input order.
+ */
+export function sortCandidatePayloadsOldestFirst(
+  payloads: SmsImportCandidatePayload[],
+): SmsImportCandidatePayload[] {
+  const time = (payload: SmsImportCandidatePayload) => {
+    const ms = Date.parse(payload.candidate.receivedAt);
+    return Number.isFinite(ms) ? ms : 0;
+  };
+  return [...payloads].sort((a, b) => time(a) - time(b));
+}
+
 export class SmsImportClientError extends Error {
   constructor(
     message: string,

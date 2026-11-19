@@ -36,6 +36,7 @@ import {
   importSmsBatch,
   importSmsMessage,
   SmsImportClientError,
+  sortCandidatePayloadsOldestFirst,
   toImportPayload,
   type SmsImportCandidatePayload,
   type SmsImportApiResult,
@@ -396,8 +397,10 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
         const builtPayloads = await Promise.all(
           importItems.map((item) => toImportPayload(item.message, item.categoryId, item.classification)),
         );
-        const uploadPayloads = builtPayloads.filter(
-          (payload): payload is SmsImportCandidatePayload => payload != null,
+        const uploadPayloads = sortCandidatePayloadsOldestFirst(
+          builtPayloads.filter(
+            (payload): payload is SmsImportCandidatePayload => payload != null,
+          ),
         );
         const locallyUnimportable = builtPayloads.length - uploadPayloads.length;
 
@@ -618,7 +621,7 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
           throw new Error("Could not save a MoMo payment for review. Reopen the import screen and try again.");
         }
       }
-      const batch = await importSmsBatch(uploadPayloads);
+      const batch = await importSmsBatch(sortCandidatePayloadsOldestFirst(uploadPayloads));
 
       const summary: SmsSyncSummary = {
         found: messages.length,
@@ -636,7 +639,13 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
 
       await recordSyncSummary(userId, summary);
 
-      if (batch.summary.parsed > 0 || batch.summary.reversed > 0) {
+      // A duplicate may be a payment the native worker imported while the app was in the
+      // background. The worker writes to Postgres only, so reconcile the local budget here too.
+      if (
+        batch.summary.parsed > 0 ||
+        batch.summary.reversed > 0 ||
+        batch.summary.duplicate > 0
+      ) {
         await hydrateBudgetAfterImport(userId);
       }
 

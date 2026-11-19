@@ -267,8 +267,18 @@ export function AndroidMoMoTrackingSetup({ userId }: AndroidMoMoTrackingSetupPro
         );
         return;
       }
-      closeReview();
       const message = formatSyncResultMessage(summary);
+      if (summary.retryable > 0 || summary.failed > 0) {
+        // Historical items are not stored anywhere else, so keep the review open: Save can be
+        // retried, and payments that already went through come back as duplicates.
+        setSavingReview(false);
+        showInfo(
+          "Some payments were not saved",
+          `${message} They are still listed, so tap Save to try again.`,
+        );
+        return;
+      }
+      closeReview();
       if (summary.parsed > 0 || summary.reversed > 0) {
         showSuccess("Import processed", message);
       } else {

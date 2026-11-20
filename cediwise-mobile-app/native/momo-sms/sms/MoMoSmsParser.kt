@@ -37,14 +37,15 @@ internal object MoMoSmsParser {
   }
 
   // Drops the recipient/sender name after "to" / "from" so keywords inside a merchant name
-  // ("CASH INN", "BILL ARTS") cannot decide the event type. Mirrors withoutPartyName in JS.
+  // ("CASH INN", "PENDING CO") cannot decide the event type. The name stops before a status clause,
+  // which is kept. Mirrors withoutPartyName in JS.
   private val partyName = Regex(
-    "\\b(to|from)\\s+(?!bank\\b|own\\b|wallet\\b)[^.]*?((?:\\s+(?:is|has\\s+been|was))?\\s+(?:failed|declined|unsuccessful|pending|processing|cancelled|canceled))?(?=\\.(?:\\s|$)|\\s+on\\s|$)",
+    "\\b(to|from)\\s+(?!bank\\b|own\\b|wallet\\b)[^.]*?(?=\\s+(?:is\\s+|has\\s+been\\s+|was\\s+)?(?:failed|declined|unsuccessful|pending|processing|cancelled|canceled)\\b|\\.(?:\\s|$)|\\s+on\\s|$)",
     RegexOption.IGNORE_CASE,
   )
 
   private fun event(rawBody: String): String {
-    val body = rawBody.replace(referenceText, " ").replace(partyName) { "${it.groupValues[1]} ${it.groupValues[2]}" }
+    val body = rawBody.replace(referenceText, " ").replace(partyName) { "${it.groupValues[1]} " }
     return when {
     body.contains(Regex("revers(?:al|ed)", RegexOption.IGNORE_CASE)) -> "reversal"
     body.contains(Regex("failed|declined|unsuccessful", RegexOption.IGNORE_CASE)) -> "failed"
@@ -75,7 +76,7 @@ internal object MoMoSmsParser {
     // Status words inside a merchant or recipient name ("PENDING CO") do not make it pending either.
     val withoutReference = body.replace(referenceText, " ")
     if (otp.containsMatchIn(withoutReference) ||
-      status.containsMatchIn(withoutReference.replace(partyName) { "${it.groupValues[1]} ${it.groupValues[2]}" })) return false
+      status.containsMatchIn(withoutReference.replace(partyName) { "${it.groupValues[1]} " })) return false
     if (reversal.containsMatchIn(body)) return amount.containsMatchIn(body) || reversedReceiptPatterns.any { it.containsMatchIn(body) }
     val patterns = when (provider) {
       "mtn_momo" -> listOf(

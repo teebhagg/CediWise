@@ -184,6 +184,8 @@ describe("buildSmsReversalCaptureItems", () => {
   it("still rejects genuine failed or pending transaction wording", () => {
     for (const body of [
       "Payment made for GHS 25.00 to MELCOM failed. Transaction ID: 12345678.",
+      "Payment made for GHS 25.00 to MELCOM failed due to insufficient funds. Transaction ID: 12345678.",
+      "Payment made for GHS 25.00 to MELCOM is pending confirmation. Transaction ID: 12345678.",
       "Transaction failed. Payment made for GHS 25.00 to MELCOM. Transaction ID: 12345678.",
       "Payment made for GHS 25.00 to MELCOM is pending. Transaction ID: 12345678.",
       "Your OTP is 123456. Payment made for GHS 25.00 to PENDING CO.",

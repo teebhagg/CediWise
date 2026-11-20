@@ -82,12 +82,13 @@ export function stripReferenceText(body: string): string {
 
 // Drops the free-text recipient/sender name after "to" / "from" so keywords inside a merchant
 // name ("CASH INN", "PENDING CO", "BILL ARTS") cannot decide the event type. "to bank" and
-// "to own/wallet" are kept because they are transaction wording, not names. A status word that
-// closes the clause ("to MELCOM failed", "to MELCOM is pending") is transaction wording and stays.
+// "to own/wallet" are kept because they are transaction wording, not names. The name stops before
+// a status clause ("to MELCOM failed due to ...", "to MELCOM is pending ...") and that clause is
+// kept, so a failed or pending payment is still recognised as one.
 export function withoutPartyName(body: string): string {
   return body.replace(
-    /\b(to|from)\s+(?!bank\b|own\b|wallet\b)[^.]*?((?:\s+(?:is|has\s+been|was))?\s+(?:failed|declined|unsuccessful|pending|processing|cancelled|canceled))?(?=\.(?:\s|$)|\s+on\s|$)/gi,
-    "$1 $2",
+    /\b(to|from)\s+(?!bank\b|own\b|wallet\b)[^.]*?(?=\s+(?:is\s+|has\s+been\s+|was\s+)?(?:failed|declined|unsuccessful|pending|processing|cancelled|canceled)\b|\.(?:\s|$)|\s+on\s|$)/gi,
+    "$1 ",
   );
 }
 

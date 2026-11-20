@@ -3,6 +3,7 @@ import {
   type BudgetCategoryRow,
 } from './categoryRules'
 import type { ParsedSms } from './types'
+import { describe, expect, it } from 'vitest'
 
 function parsed(partial: Partial<ParsedSms> & { counterparty: string | null }): ParsedSms {
   return {

@@ -8,8 +8,31 @@ import { Platform } from "react-native";
 import "react-native-url-polyfill/auto";
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const key = process.env.EXPO_PUBLIC_SUPABASE_KEY;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const configuredSupabaseKey = process.env.EXPO_PUBLIC_SUPABASE_KEY?.trim() ?? "";
+
+function isSafePublicKey(value: string): boolean {
+  if (value.startsWith("sb_publishable_")) return true;
+
+  const payload = value.split(".")[1];
+  if (!payload || typeof globalThis.atob !== "function") return false;
+
+  try {
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(
+      normalized.length + ((4 - (normalized.length % 4)) % 4),
+      "=",
+    );
+    return JSON.parse(globalThis.atob(padded)).role === "anon";
+  } catch {
+    return false;
+  }
+}
+
+/** Public app key only. Never fall back to the legacy *_ANON_KEY env name. */
+export const supabasePublicKey =
+  configuredSupabaseKey && isSafePublicKey(configuredSupabaseKey)
+    ? configuredSupabaseKey
+    : null;
 
 /**
  * Web: keep processLock (multi-tab coordination).
@@ -43,8 +66,8 @@ const authLock =
  * which would otherwise throw at createClient() and crash the app.
  */
 export const supabase: SupabaseClient | null =
-  url && key && supabaseAnonKey
-    ? createClient(url, supabaseAnonKey, {
+  url && supabasePublicKey
+    ? createClient(url, supabasePublicKey, {
         auth: {
           detectSessionInUrl: false,
           autoRefreshToken: false,

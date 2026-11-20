@@ -1,11 +1,13 @@
+import * as Crypto from "expo-crypto";
 import { getSmsImportApiUrl, SMS_IMPORT_BATCH_MAX } from "@/constants/smsImport";
 import { getStoredAuthData, refreshStoredSession } from "@/utils/auth";
 import { log } from "@/utils/logger";
+import { buildMoMoImportCandidate, type MoMoImportCandidate } from "@/services/momoImportCandidate";
+import { supabasePublicKey } from "@/utils/supabase";
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? null;
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? null;
 
-export type SmsImportStatus = "parsed" | "duplicate" | "skipped" | "failed";
+export type SmsImportStatus = "parsed" | "duplicate" | "skipped" | "failed" | "needs_review" | "retryable" | "reversed";
 
 export type SmsImportApiResult = {
   ok: true;
@@ -14,6 +16,7 @@ export type SmsImportApiResult = {
   transactionId?: string;
   parsed?: Record<string, unknown>;
   error?: string;
+  errorCode?: "internal_error" | "no_active_budget_cycle";
 };
 
 export type SmsImportBatchSummary = {
@@ -22,6 +25,9 @@ export type SmsImportBatchSummary = {
   duplicate: number;
   skipped: number;
   failed: number;
+  needs_review: number;
+  retryable: number;
+  reversed: number;
 };
 
 export type SmsImportBatchResult = {
@@ -35,6 +41,31 @@ export type SmsImportMessagePayload = {
   sender?: string;
   receivedAt?: string;
 };
+export type SmsImportCandidatePayload = {
+  candidate: MoMoImportCandidate;
+};
+export type SmsImportPayload = SmsImportMessagePayload | SmsImportCandidatePayload;
+
+/**
+ * Oldest first, so a reversal is never submitted before the payment it reverses.
+ * The server records a reversal with no matching original as needs_review, and a replay of
+ * the same client import id then returns duplicate, leaving the original counted as spending.
+ * Array.prototype.sort is stable, so equal timestamps keep their input order.
+ */
+export function sortCandidatePayloadsOldestFirst(
+  payloads: SmsImportCandidatePayload[],
+): SmsImportCandidatePayload[] {
+  const time = (payload: SmsImportCandidatePayload) => {
+    const ms = Date.parse(payload.candidate.receivedAt);
+    return Number.isFinite(ms) ? ms : 0;
+  };
+  return [...payloads].sort((a, b) => {
+    const delta = time(a) - time(b);
+    if (delta !== 0) return delta;
+    // At equal timestamps, submit payments before the reversals that reference them.
+    return Number(a.candidate.eventType === "reversal") - Number(b.candidate.eventType === "reversal");
+  });
+}
 
 export class SmsImportClientError extends Error {
   constructor(
@@ -43,6 +74,7 @@ export class SmsImportClientError extends Error {
       | "unauthorized"
       | "no_active_budget_cycle"
       | "invalid_payload"
+      | "invalid_candidate"
       | "network"
       | "server"
       | "unknown",
@@ -77,13 +109,6 @@ function logTokenDiagnostics(token: string): Record<string, unknown> {
   const exp = typeof claims?.exp === "number" ? claims.exp : null;
   const nowSec = Math.floor(Date.now() / 1000);
   const diagnostics = {
-    supabaseUrl: SUPABASE_URL,
-    tokenLength: token.length,
-    tokenPrefix: token.slice(0, 8),
-    sub: claims?.sub ?? null,
-    role: claims?.role ?? null,
-    iss: claims?.iss ?? null,
-    aud: claims?.aud ?? null,
     exp,
     expiresInSec: exp != null ? exp - nowSec : null,
     isExpired: exp != null ? exp <= nowSec : null,
@@ -133,7 +158,9 @@ function mapApiError(status: number, body: unknown): SmsImportClientError {
   if (status === 400) {
     return new SmsImportClientError(
       payload.message ?? "Invalid SMS payload",
-      "invalid_payload",
+      authCode === "invalid_candidate" || code === "invalid_candidate"
+        ? "invalid_candidate"
+        : "invalid_payload",
       status,
     );
   }
@@ -153,8 +180,14 @@ function mapApiError(status: number, body: unknown): SmsImportClientError {
 async function postSmsImportBody(
   body: Record<string, unknown>,
 ): Promise<SmsImportApiResult | SmsImportBatchResult> {
-  const token = await resolveAccessToken();
   const url = getSmsImportApiUrl();
+  if (!url) {
+    throw new SmsImportClientError(
+      "MoMo SMS import is not configured for this build.",
+      "server",
+    );
+  }
+  const token = await resolveAccessToken();
   const tokenDiagnostics = logTokenDiagnostics(token);
 
   log.warn("smsImportClient: POST request", {
@@ -162,7 +195,7 @@ async function postSmsImportBody(
     messageCount: Array.isArray((body as { messages?: unknown[] }).messages)
       ? ((body as { messages?: unknown[] }).messages as unknown[]).length
       : 1,
-    hasAnonKey: Boolean(SUPABASE_ANON_KEY),
+    hasPublicKey: Boolean(supabasePublicKey),
   });
 
   const headers: Record<string, string> = {
@@ -171,8 +204,8 @@ async function postSmsImportBody(
     "X-Supabase-Access-Token": token,
     "Content-Type": "application/json",
   };
-  if (SUPABASE_ANON_KEY) {
-    headers.apikey = SUPABASE_ANON_KEY;
+  if (supabasePublicKey) {
+    headers.apikey = supabasePublicKey;
   }
 
   let response: Response;
@@ -212,24 +245,36 @@ async function postSmsImportBody(
   return json as SmsImportApiResult | SmsImportBatchResult;
 }
 
-export async function importSmsMessage(
-  payload: SmsImportMessagePayload,
-): Promise<SmsImportApiResult> {
-  const result = await postSmsImportBody(payload);
+function isCandidatePayload(payload: SmsImportPayload): payload is SmsImportCandidatePayload {
+  return "candidate" in payload;
+}
+
+function candidateForApi(payload: SmsImportCandidatePayload): Record<string, unknown> {
+  return { ...payload.candidate };
+}
+
+function unwrapImportResult(result: SmsImportApiResult | SmsImportBatchResult): SmsImportApiResult {
   if ("results" in result) {
     return result.results[0] ?? { ok: true, status: "failed", error: "empty_batch" };
   }
   return result;
 }
 
+export async function importSmsMessage(
+  payload: SmsImportPayload,
+): Promise<SmsImportApiResult> {
+  const result = await postSmsImportBody(isCandidatePayload(payload) ? { candidate: candidateForApi(payload) } : payload);
+  return unwrapImportResult(result);
+}
+
 export async function importSmsBatch(
-  messages: SmsImportMessagePayload[],
+  messages: SmsImportPayload[],
 ): Promise<SmsImportBatchResult> {
   if (messages.length === 0) {
     return {
       ok: true,
       results: [],
-      summary: { total: 0, parsed: 0, duplicate: 0, skipped: 0, failed: 0 },
+      summary: { total: 0, parsed: 0, duplicate: 0, skipped: 0, failed: 0, needs_review: 0, retryable: 0, reversed: 0 },
     };
   }
 
@@ -244,18 +289,26 @@ export async function importSmsBatch(
         duplicate: single.status === "duplicate" ? 1 : 0,
         skipped: single.status === "skipped" ? 1 : 0,
         failed: single.status === "failed" ? 1 : 0,
+        needs_review: single.status === "needs_review" ? 1 : 0,
+        retryable: single.status === "retryable" ? 1 : 0,
+        reversed: single.status === "reversed" ? 1 : 0,
       },
     };
   }
 
-  const chunks: SmsImportMessagePayload[][] = [];
+  const chunks: SmsImportPayload[][] = [];
   for (let i = 0; i < messages.length; i += SMS_IMPORT_BATCH_MAX) {
     chunks.push(messages.slice(i, i + SMS_IMPORT_BATCH_MAX));
   }
 
   const results: SmsImportApiResult[] = [];
   for (const chunk of chunks) {
-    const batch = await postSmsImportBody({ messages: chunk });
+    const rawMessages = chunk.filter((item): item is SmsImportMessagePayload => !isCandidatePayload(item));
+    const candidates = chunk.filter(isCandidatePayload).map(candidateForApi);
+    const batch = await postSmsImportBody({
+      ...(rawMessages.length ? { messages: rawMessages } : {}),
+      ...(candidates.length ? { candidates } : {}),
+    });
     if ("results" in batch) {
       results.push(...batch.results);
     } else {
@@ -268,7 +321,7 @@ export async function importSmsBatch(
       acc[row.status] += 1;
       return acc;
     },
-    { parsed: 0, duplicate: 0, skipped: 0, failed: 0 },
+    { parsed: 0, duplicate: 0, skipped: 0, failed: 0, needs_review: 0, retryable: 0, reversed: 0 },
   );
 
   return {
@@ -282,16 +335,40 @@ export async function importSmsBatch(
 }
 
 export function toImportPayload(message: {
-  address?: string;
+  address?: string | null;
   body: string;
   date?: number;
-}): SmsImportMessagePayload {
+}, categoryId: string | null = null, classification?: "expense" | "transfer" | null): Promise<SmsImportCandidatePayload | null> {
+  return buildImportPayload(message, categoryId, classification);
+}
+
+async function buildImportPayload(
+  message: { address?: string | null; body: string; date?: number },
+  categoryId: string | null,
+  classification?: "expense" | "transfer" | null,
+): Promise<SmsImportCandidatePayload | null> {
+  const receivedAt = message.date != null && Number.isFinite(message.date)
+    ? new Date(message.date)
+    : null;
+  const hasValidDate = receivedAt != null && Number.isFinite(receivedAt.getTime());
+  if (!hasValidDate || !receivedAt || message.body.length > 4000) return null;
+  const candidate = buildMoMoImportCandidate(
+    { address: message.address ?? undefined, body: message.body, date: receivedAt.getTime() },
+    categoryId,
+  );
+  if (!candidate) return null;
+
+  const legacyDedupeKey = candidate.eventType !== "reversal" && !candidate.receiptId
+    ? `hash:${await Crypto.digestStringAsync(
+      Crypto.CryptoDigestAlgorithm.SHA256,
+      message.body.replace(/\s+/g, " ").trim(),
+    )}`
+    : undefined;
   return {
-    message: message.body,
-    sender: message.address,
-    receivedAt:
-      message.date != null && Number.isFinite(message.date)
-        ? new Date(message.date).toISOString()
-        : undefined,
+    candidate: {
+      ...candidate,
+      ...(legacyDedupeKey ? { legacyDedupeKey } : {}),
+      ...(classification === undefined ? {} : { classification }),
+    },
   };
 }

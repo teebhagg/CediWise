@@ -71,7 +71,7 @@ export type BudgetTransaction = {
   amount: number;
   note?: string;
   occurredAt: string; // ISO
-  source: "manual";
+  source: "manual" | "sms_webhook";
   /** When set, this transaction represents a payment toward a specific debt */
   debtId?: string | null;
   createdAt: string;

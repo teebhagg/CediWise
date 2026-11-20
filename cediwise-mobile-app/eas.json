@@ -6,15 +6,25 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_MOMO_SMS_LIVE_IMPORT": "false"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_MOMO_SMS_LIVE_IMPORT": "false"
+      }
     },
     "production": {
       "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_SMS_IMPORT_URL": "https://cediwise.app/api/v1/sms-import",
+        "EXPO_PUBLIC_MOMO_SMS_LIVE_IMPORT": "false"
       }
     }
   },

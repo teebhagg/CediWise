@@ -27,6 +27,14 @@ export type AppDialogProps = {
   secondaryLabel?: string;
   onSecondary?: () => void;
   onClose?: () => void;
+  /** Optional middle action rendered between primary and secondary */
+  tertiaryLabel?: string;
+  onTertiary?: () => void;
+  /**
+   * Close-only path for the header close button and backdrop tap.
+   * When set, dismissal never invokes onSecondary (e.g. destructive secondary actions).
+   */
+  onDismiss?: () => void;
   loading?: boolean;
   /** Optional extra content between description and buttons */
   children?: React.ReactNode;
@@ -34,6 +42,10 @@ export type AppDialogProps = {
   primaryButtonClassName?: string;
   /** Override primary label text class (e.g. text-white on red). */
   primaryLabelClassName?: string;
+  /** Override secondary button container. */
+  secondaryButtonClassName?: string;
+  /** Override secondary label text class. */
+  secondaryLabelClassName?: string;
   /** Disable the primary button. */
   primaryDisabled?: boolean;
   /** Override the glass backdrop intensity on iOS */
@@ -55,10 +67,15 @@ export function AppDialog({
   secondaryLabel,
   onSecondary,
   onClose,
+  tertiaryLabel,
+  onTertiary,
+  onDismiss,
   loading = false,
   children,
   primaryButtonClassName = 'bg-emerald-500',
   primaryLabelClassName = 'text-slate-950',
+  secondaryButtonClassName = 'bg-slate-600/80 border-0',
+  secondaryLabelClassName = 'text-white font-semibold',
   primaryDisabled = false,
   backdropIntensity = 7,
   customHeader,
@@ -101,6 +118,30 @@ export function AppDialog({
     }
   };
 
+  const handleDismiss = async () => {
+    if (!onDismiss) {
+      await handleSecondary();
+      return;
+    }
+    if (loading) return;
+    try {
+      await Haptics.selectionAsync();
+    } catch {
+      // ignore
+    }
+    onDismiss();
+  };
+
+  const handleTertiary = async () => {
+    if (loading || !onTertiary) return;
+    try {
+      await Haptics.selectionAsync();
+    } catch {
+      // ignore
+    }
+    onTertiary();
+  };
+
   const handlePrimary = async () => {
     if (loading || primaryDisabled || !onPrimary) return;
     try {
@@ -130,7 +171,7 @@ export function AppDialog({
             intensity={backdropIntensity}
             tint="dark"
             className="absolute inset-0"
-            onTouchEnd={handleSecondary}
+            onTouchEnd={handleDismiss}
           />
         ) : null}
         <KeyboardAvoidingView
@@ -153,7 +194,7 @@ export function AppDialog({
                 variant="ghost"
                 className="absolute top-4 right-4 w-10 h-10 rounded-full z-10 bg-slate-600/60 border border-slate-500/50"
                 iconProps={{ size: 20, color: "#e2e8f0" }}
-                onPress={handleSecondary}
+                onPress={handleDismiss}
               />
             )}
             <ScrollShadow color="#121621" LinearGradientComponent={LinearGradient}>
@@ -187,7 +228,7 @@ export function AppDialog({
                     <View style={styles.loaderWrap}>
                       <ActivityIndicator size="large" color="#10b981" />
                     </View>
-                  ) : (primaryLabel || secondaryLabel) ? (
+                  ) : (primaryLabel || secondaryLabel || tertiaryLabel) ? (
                     <View style={styles.actions}>
                       {primaryLabel && (
                         <Button
@@ -202,14 +243,26 @@ export function AppDialog({
                           </Button.Label>
                         </Button>
                       )}
+                      {tertiaryLabel && onTertiary && (
+                        <Button
+                          variant="ghost"
+                          size="md"
+                          onPress={handleTertiary}
+                          className="w-full h-12 rounded-xl bg-slate-700/60 border-0"
+                        >
+                          <Button.Label className="text-white font-semibold">
+                            {tertiaryLabel}
+                          </Button.Label>
+                        </Button>
+                      )}
                       {secondaryLabel && (
                         <Button
                           variant="ghost"
                           size="md"
                           onPress={handleSecondary}
-                          className="w-full h-12 rounded-xl bg-slate-600/80 border-0"
+                          className={`w-full h-12 rounded-xl ${secondaryButtonClassName}`}
                         >
-                          <Button.Label className="text-white font-semibold">
+                          <Button.Label className={secondaryLabelClassName}>
                             {secondaryLabel}
                           </Button.Label>
                         </Button>

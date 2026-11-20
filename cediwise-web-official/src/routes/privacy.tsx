@@ -66,13 +66,16 @@ function PrivacyPage() {
             </li>
             <li>
               <strong>Optional MoMo SMS import (mobile, opt-in):</strong> if you
-              enable Mobile Money (MoMo) auto-tracking, the app reads SMS on your
-              device that match MoMo payment alerts from Ghanaian carriers (e.g.
-              MTN MoMo, Telecel Cash)—not your full message history. Message
-              text, sender, and timestamp may be sent to our servers to parse
-              amount and transaction details and create budget entries. You may
-              also paste a single MoMo SMS manually. On iOS, similar import may
-              use Apple Shortcuts you configure (optional, when available).
+              enable Mobile Money (MoMo) import, Android permissions let
+              CediWise read or receive SMS on this device. CediWise filters for
+              MTN MoMo, Telecel Cash, and AT Money alerts on-device. Matching
+              message text, sender, time, and parsed transaction details may be
+              sent to CediWise&apos;s API hosted by Vercel and processed or stored
+              by Supabase to identify, deduplicate, and add budget transactions.
+              Import logs containing message text are retained for up to 180
+              days. Unrelated SMS are not sent. You may also paste a single
+              MoMo SMS manually. On iOS, similar import may use Apple Shortcuts
+              you configure (optional, when available).
             </li>
           </ul>
 
@@ -83,19 +86,25 @@ function PrivacyPage() {
           </p>
           <ul>
             <li>
-              <strong>On-device:</strong> filtered MoMo alert SMS only (Android:
-              with your permission, <code>READ_SMS</code> /{' '}
-              <code>RECEIVE_SMS</code>); we do not request access to unrelated
-              messages.
+              <strong>On-device:</strong> Android permissions allow access to
+              SMS on this device; CediWise filters for MoMo alert senders and
+              patterns before sending anything.
             </li>
             <li>
-              <strong>Sent to CediWise:</strong> SMS body, sender ID, received
-              time, and parsed fields (amount, counterparty, reference where
-              available) to log expenses you choose to track.
+              <strong>Sent to CediWise:</strong> matching SMS body, sender ID,
+              received time, and parsed fields (amount, counterparty, reference
+              where available) may be sent to our Vercel-hosted API and
+              processed or stored by Supabase to identify transactions,
+              prevent duplicates, and create budget entries.
             </li>
             <li>
               <strong>Not sent:</strong> unrelated SMS, contacts, call logs, or
               continuous monitoring beyond MoMo-style filters you enable.
+            </li>
+            <li>
+              <strong>Retention and processors:</strong> import logs containing
+              SMS text are retained for up to 180 days. Vercel hosts the API and
+              Supabase processes and stores import data.
             </li>
             <li>
               <strong>Accuracy:</strong> parsing may miss or misclassify
@@ -104,7 +113,9 @@ function PrivacyPage() {
             </li>
             <li>
               <strong>Disable anytime:</strong> turn off tracking in Profile
-              settings and revoke SMS permissions in your device settings.
+              settings and revoke SMS permissions in your device settings. On iOS, also
+              disable or delete the Message automation in the Shortcuts app,
+              otherwise it can keep opening CediWise for matching messages.
             </li>
           </ul>
 

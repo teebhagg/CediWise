@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const privacyContent = `
 # Privacy Policy for CediWise
-Last updated: **February 21, 2026**
+Last updated: **July 5, 2026**
 
 **1. Introduction**
 CediWise (“we”, “us”, “our”) provides a salary calculator, budgeting, SME ledger, and financial literacy tools via web and mobile applications (the “Services”). This Privacy Policy describes what personal information we collect, how we use it, with whom we share it, and your rights. By using our Services you agree to the terms below.
@@ -23,26 +23,38 @@ Contact: **privacy@cediwise.app**
 * **Device & technical data:** device model, OS version, app version, IP address, crash reports. (Collected for troubleshooting and analytics.)
 * **Analytics & telemetry:** we collect analytics data (via Firebase Analytics) to understand usage patterns and improve the app.
 * **Communications:** emails you send to us, newsletter sign-ups (email), and responses to support requests.
+* **Optional MoMo SMS import (opt-in):** Android permissions let CediWise read or receive SMS on this device. CediWise filters for MTN MoMo, Telecel Cash, and AT Money alerts on-device. Matching message text, sender, time, and parsed transaction details may be sent to CediWise's API hosted by Vercel and processed or stored by Supabase to identify, deduplicate, and add budget transactions. Import logs containing message text are retained for up to 180 days. Unrelated SMS are not sent. You may also paste a single MoMo SMS manually. On iOS, similar import may use Apple Shortcuts you configure (optional, when available).
 
-**4. Legal bases**
+**4. MoMo SMS auto-tracking (optional)**
+This feature is **off by default** and requires your explicit consent in the app.
+* **On-device:** the Android permission allows access to SMS on this device; CediWise filters for MoMo alert senders and patterns before sending anything.
+* **Sent to CediWise:** matching SMS body, sender ID, received time, and parsed fields (amount, counterparty, reference where available) may be sent to our Vercel-hosted API and processed or stored by Supabase to identify transactions, prevent duplicates, and create budget entries.
+* **Not sent:** unrelated SMS, contacts, call logs, or monitoring beyond MoMo-style filters you enable.
+* **Retention and processors:** import logs containing SMS text are retained for up to 180 days, then deleted. Budget transactions created from imports are kept like other transactions until you delete them or close your account. Vercel hosts the API and Supabase processes and stores import data.
+* **Accuracy:** parsing may miss or misclassify messages; review imported entries and correct them when needed.
+* **Disable anytime:** turn off tracking in Profile settings and revoke SMS permissions in your device settings. On iOS, also disable or delete the Message automation in the Shortcuts app, otherwise it can keep opening CediWise for matching messages.
+
+**5. Legal bases**
 * Performance of a contract (service delivery) — account and financial data.
 * Legitimate interests — security, product improvement, analytics.
 * Consent — marketing emails and newsletters.
+* Consent — optional MoMo SMS import and related device permissions (withdraw by disabling the feature).
 
-**5. How we use your data**
+**6. How we use your data**
 * Provide, operate, and maintain the Services.
 * Authenticate you (OTP via SMS, Google Sign-In). 
 * Improve and personalize the Services (analytics). 
 * Communicate about account, support, updates, or legal notices.
 * Detect and prevent fraud and misuse.
+* Parse optional MoMo SMS you provide (automatically or by paste) to suggest or create budget transactions.
 
-**6. Third parties & processors**
+**7. Third parties & processors**
 We use trusted third-party providers to operate the Services. Primary providers include: **Supabase** (database/auth), **Firebase** (analytics), **Google** (Google Sign-In), **Arkesel** (SMS OTP), **Vercel/GitHub** (hosting/releases).
 
-**7. Your rights**
+**8. Your rights**
 You have rights to request: access to your personal data, correction, deletion (right to be forgotten), portability, restriction of processing, and to object to processing where applicable. To exercise these rights, contact **privacy@cediwise.app**.
 
-**8. Security**
+**9. Security**
 We use industry-standard measures (encryption in transit, secure storage, least privilege access) to protect data. However, no internet transmission is 100% secure.
 `;
 

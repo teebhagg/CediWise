@@ -191,7 +191,10 @@ export async function fetchBudgetStateRemote(
       occurredAt: String(
         r.occurred_at ?? r.created_at ?? new Date().toISOString()
       ),
-      source: "manual",
+      source:
+        r.source === "sms_webhook" || r.source === "manual"
+          ? r.source
+          : "manual",
       debtId: r.debt_id ? String(r.debt_id) : null,
       createdAt: String(r.created_at ?? new Date().toISOString()),
     })

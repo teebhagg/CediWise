@@ -1,7 +1,7 @@
 import { useRouter, useFocusEffect } from "expo-router";
 import { useAnnouncementInboxStore } from "@/stores/notificationsStore";
-import { Bell, WifiOff } from "lucide-react-native";
-import { useCallback, useEffect, useMemo } from "react";
+import { Bell, MessageSquareText, RefreshCw, Smartphone, WifiOff } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Platform,
   Pressable,
@@ -33,13 +33,43 @@ import { VaultHeroCard } from "@/components/features/home/VaultHeroCard";
 import { VitalHeroCard } from "@/components/features/home/VitalHeroCard";
 import { VitalHeroSkeleton } from "@/components/features/home/VitalHeroSkeleton";
 import { useHomeScreenState } from "@/components/features/home/useHomeScreenState";
+import { MoMoImportStatusCard } from "@/components/features/momo/MoMoImportStatusCard";
+import { CustomBottomSheet } from "@/components/common/CustomBottomSheet";
 import { PeriodicFeedbackPromptModal } from "@/components/feedback/PeriodicFeedbackPromptModal";
+import { PrimaryButton } from "@/components/PrimaryButton";
+import { SecondaryButton } from "@/components/SecondaryButton";
 import { useTourContext } from "@/contexts/TourContext";
 import { useUpdateCheckContext } from "@/contexts/UpdateCheckContext";
 import { useAppToast } from "@/hooks/useAppToast";
 import { useConnectivity } from "@/hooks/useConnectivity";
 import { usePeriodicFeedbackPrompt } from "@/hooks/usePeriodicFeedbackPrompt";
 import { TourZone, useTour } from "react-native-lumen";
+import {
+  markMomoImportHomeIntroSeen,
+  readMomoImportHomeIntroSeen,
+  shouldShowMoMoImportIntro,
+} from "@/utils/momoImportIntro";
+
+const MOMO_INTRO_POINTS = [
+  {
+    icon: RefreshCw,
+    iconColor: "#34D399",
+    title: "Scan SMS",
+    detail: "Pick 2, 7, or 30 days. We list the MoMo expenses we find. Nothing is logged yet.",
+  },
+  {
+    icon: MessageSquareText,
+    iconColor: "#60A5FA",
+    title: "Or paste one",
+    detail: "Paste one MoMo SMS to log that expense in your budget.",
+  },
+  {
+    icon: Smartphone,
+    iconColor: "#E2E8F0",
+    title: "Capture settings",
+    detail: "The phone icon turns on automatic logging of new MoMo expenses.",
+  },
+] as const;
 
 const styles = StyleSheet.create({
   container: {
@@ -100,6 +130,7 @@ export default function DashboardScreen() {
     activeOnboardingState,
     state1Status,
     state2Status,
+    isTourActive,
   } = useTourContext();
   const { scrollViewRef } = useTour();
   const scrollY = useSharedValue(0);
@@ -216,6 +247,43 @@ export default function DashboardScreen() {
     void useAnnouncementInboxStore.getState().refresh(user.id);
   }, [user?.id]);
 
+  const [homeIntroSeen, setHomeIntroSeen] = useState<boolean | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id) {
+        setHomeIntroSeen(null);
+        return;
+      }
+      let cancelled = false;
+      void readMomoImportHomeIntroSeen(user.id).then((seen) => {
+        if (!cancelled) setHomeIntroSeen(seen);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [user?.id]),
+  );
+
+  const showMoMoImportIntro =
+    homeIntroSeen === false &&
+    shouldShowMoMoImportIntro({
+      userId: user?.id,
+      seen: false,
+      onboardingLoaded,
+      isTourActive,
+      onboardingStatus: setupCompleted ? state2Status : state1Status,
+      feedbackPromptVisible,
+    });
+
+  const dismissMoMoImportIntro = useCallback(
+    (openImport: boolean) => {
+      if (user?.id) void markMomoImportHomeIntroSeen(user.id);
+      setHomeIntroSeen(true);
+      if (openImport) router.push("/profile/import-sms" as never);
+    },
+    [router, user?.id],
+  );
+
   return (
     <View style={styles.container} collapsable={false} className="flex-1 bg-background">
       <PeriodicFeedbackPromptModal
@@ -226,6 +294,40 @@ export default function DashboardScreen() {
         submitQuickRating={submitQuickRatingWithThanks}
         onSubmitError={(title, message) => showError(title, message)}
       />
+      {showMoMoImportIntro ? (
+        <CustomBottomSheet
+          title="Import MoMo"
+          titleIcon={<Smartphone color="#34D399" size={22} />}
+          description="Scan your SMS for MoMo expenses, then log them in your budget. You check each one first."
+          isOpen
+          onOpenChange={(open) => {
+            if (!open) dismissMoMoImportIntro(false);
+          }}
+        >
+          <View className="mb-5 gap-4">
+            {MOMO_INTRO_POINTS.map((point) => {
+              const Icon = point.icon;
+              return (
+                <View key={point.title} className="flex-row items-start gap-3">
+                  <Icon color={point.iconColor} size={20} style={{ marginTop: 1 }} />
+                  <View className="min-w-0 flex-1">
+                    <Text className="font-semibold text-white">{point.title}</Text>
+                    <Text className="mt-0.5 text-sm leading-5 text-slate-400">{point.detail}</Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+          <View className="flex-row gap-3">
+            <View className="flex-1">
+              <SecondaryButton onPress={() => dismissMoMoImportIntro(false)}>Not now</SecondaryButton>
+            </View>
+            <View className="min-w-0 flex-1">
+              <PrimaryButton onPress={() => dismissMoMoImportIntro(true)}>Import MoMo</PrimaryButton>
+            </View>
+          </View>
+        </CustomBottomSheet>
+      ) : null}
       <ExpandedHeader
         scrollY={scrollY}
         title={headerTitle}
@@ -344,6 +446,12 @@ export default function DashboardScreen() {
               </TourZone>
               <VaultHeroCard
                 animatedStyle={overviewAnimStyle as StyleProp<ViewStyle>}
+              />
+              <MoMoImportStatusCard
+                userId={user?.id}
+                variant="home"
+                transactions={budgetState?.transactions}
+                activeCycleId={activeCycleId}
               />
               <TourZone
                 stepKey="state2-home-activities"

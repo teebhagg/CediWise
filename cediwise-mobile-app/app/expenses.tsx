@@ -291,14 +291,28 @@ export default function ExpensesScreen() {
                   {bucketLabel(t.bucket)}
                 </Text>
               </View>
+              {t.source === "sms_webhook" ? (
+                <View className="bg-emerald-500/15 px-2 py-0.5 rounded">
+                  <Text className="text-emerald-300 text-xs font-medium">
+                    Auto-imported
+                  </Text>
+                </View>
+              ) : null}
             </View>
-            <Text className="text-slate-500 text-xs">
-              {new Date(t.occurredAt).toLocaleDateString("en-GB", {
-                month: "short",
-                day: "numeric",
-              })}
-              {t.note?.trim() ? ` • ${t.note.trim()}` : ""}
-            </Text>
+            <View className="mt-1 flex-row flex-wrap items-center gap-2">
+              {t.source === "sms_webhook" ? (
+                <View className="rounded-md border border-emerald-500/25 bg-emerald-500/10 px-2 py-0.5">
+                  <Text className="text-[10px] font-semibold uppercase tracking-wider text-emerald-300">MoMo</Text>
+                </View>
+              ) : null}
+              <Text className="text-slate-500 text-xs">
+                {new Date(t.occurredAt).toLocaleDateString("en-GB", {
+                  month: "short",
+                  day: "numeric",
+                })}
+                {t.note?.trim() ? ` • ${t.note.trim()}` : ""}
+              </Text>
+            </View>
           </View>
           <View className="flex-row items-center gap-2">
             <Text className="text-red-300 font-bold">

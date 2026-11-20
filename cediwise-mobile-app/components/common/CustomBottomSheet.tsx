@@ -11,6 +11,8 @@ const AnimatedGlassView = Animated.createAnimatedComponent(GlassView);
 
 type CustomBottomSheetProps = {
   title: string;
+  /** Optional icon shown before the title. */
+  titleIcon?: React.ReactNode;
   description?: string;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -20,6 +22,7 @@ type CustomBottomSheetProps = {
 
 export function CustomBottomSheet({
   title,
+  titleIcon,
   description,
   isOpen: controlledIsOpen,
   onOpenChange,
@@ -251,7 +254,14 @@ export function CustomBottomSheet({
               <View style={styles.dragPill} />
               <View style={styles.header}>
                 <View style={styles.titleRow}>
-                  <Text style={styles.titleText}>{title}</Text>
+                  {titleIcon ? (
+                    <View style={styles.titleWithIcon}>
+                      {titleIcon}
+                      <Text style={[styles.titleText, styles.titleWithIconText]}>{title}</Text>
+                    </View>
+                  ) : (
+                    <Text style={styles.titleText}>{title}</Text>
+                  )}
                   {description ? (
                     <Text style={styles.descriptionText}>{description}</Text>
                   ) : null}
@@ -319,6 +329,14 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontFamily: "Figtree-Bold",
     color: "#f1f5f9",
+  },
+  titleWithIcon: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  titleWithIconText: {
+    flexShrink: 1,
   },
   descriptionText: {
     fontSize: 14,

@@ -1,7 +1,19 @@
 import {
   importSmsBatch,
   importSmsMessage,
+  sortCandidatePayloadsOldestFirst,
+  toImportPayload,
 } from "../smsImportClient";
+
+jest.mock("expo-crypto", () => {
+  const crypto = jest.requireActual<typeof import("crypto")>("crypto");
+  return {
+    CryptoDigestAlgorithm: { SHA256: "SHA-256" },
+    digestStringAsync: jest.fn(async (_algorithm: string, data: string) =>
+      crypto.createHash("sha256").update(data, "utf8").digest("hex"),
+    ),
+  };
+});
 
 jest.mock("@/utils/auth", () => ({
   getStoredAuthData: jest.fn(async () => ({
@@ -119,5 +131,107 @@ describe("smsImportClient", () => {
     expect(batch.summary.total).toBe(2);
     expect(batch.summary.parsed).toBe(1);
     expect(batch.summary.duplicate).toBe(1);
+  });
+
+  it("posts structured candidate fields without sending the source SMS", async () => {
+    fetchMock.mockResolvedValue(mockResponse({ ok: true, body: { ok: true, status: "parsed" } }));
+    const sourceMessage = "Payment made for GHS 10.00 to ECG.";
+    const payload = await toImportPayload({
+      address: "MTN MoMo",
+      body: sourceMessage,
+      date: 1_790_000_000_000,
+    });
+    if (!payload) throw new Error("Expected a structured candidate");
+
+    const crypto = jest.requireActual<typeof import("crypto")>("crypto");
+    expect("candidate" in payload && payload.candidate.legacyDedupeKey).toBe(
+      `hash:${crypto.createHash("sha256").update(sourceMessage, "utf8").digest("hex")}`,
+    );
+
+    await importSmsMessage(payload);
+
+    const requestBody = String(fetchMock.mock.calls[0]?.[1]?.body);
+    expect(requestBody).not.toContain(sourceMessage);
+    expect(requestBody).not.toContain("legacyMessage");
+    expect(requestBody).not.toContain("legacySender");
+  });
+
+  it("does not downgrade a rejected structured batch to raw SMS", async () => {
+    fetchMock.mockResolvedValue(
+      mockResponse({
+        ok: false,
+        status: 400,
+        body: { ok: false, error: "invalid_payload", message: "Structured candidates are not supported" },
+      }),
+    );
+    const first = await toImportPayload({
+      address: "MTN MoMo",
+      body: "Payment made for GHS 10.00 to A.",
+      date: 1_790_000_000_000,
+    });
+    const second = await toImportPayload({
+      address: "MTN MoMo",
+      body: "Payment made for GHS 20.00 to B.",
+      date: 1_790_000_001_000,
+    });
+    if (!first || !second) throw new Error("Expected structured candidates");
+
+    await expect(importSmsBatch([first, second])).rejects.toMatchObject({ code: "invalid_payload" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[1]?.body)).not.toContain("Payment made for GHS");
+  });
+
+  it("does not create a raw request payload for oversized inbox SMS", async () => {
+    const payload = await toImportPayload({
+      address: "MTN MoMo",
+      body: `Payment made for GHS 10.00 to A.${" ".repeat(4000)}`,
+      date: 1_790_000_000_000,
+    });
+
+    expect(payload).toBeNull();
+  });
+});
+
+describe("toImportPayload for a reversal row", () => {
+  it("builds a reversal candidate that names the payment it undoes", async () => {
+    const payload = await toImportPayload({
+      address: "MTN MoMo",
+      body: "Reversal of transaction ID 12345678 for GHS 25.00 has been completed.",
+      date: 1_789_000_000_000,
+    });
+    expect(payload?.candidate).toMatchObject({ eventType: "reversal", reversedReceiptId: "12345678" });
+  });
+});
+
+describe("sortCandidatePayloadsOldestFirst", () => {
+  const payload = (id: string, receivedAt: string) =>
+    ({ candidate: { clientImportId: id, receivedAt } }) as never;
+
+  it("puts the original payment before its later reversal", () => {
+    const reversal = payload("reversal", "2026-07-08T15:30:00.000Z");
+    const original = payload("original", "2026-07-08T15:19:00.000Z");
+    const sorted = sortCandidatePayloadsOldestFirst([reversal, original]) as unknown as Array<{
+      candidate: { clientImportId: string };
+    }>;
+    expect(sorted.map((row) => row.candidate.clientImportId)).toEqual(["original", "reversal"]);
+  });
+
+  it("keeps input order for equal timestamps and does not mutate the input", () => {
+    const a = payload("a", "2026-07-08T15:19:00.000Z");
+    const b = payload("b", "2026-07-08T15:19:00.000Z");
+    const input = [a, b];
+    const sorted = sortCandidatePayloadsOldestFirst(input);
+    expect(sorted[0]).toBe(a);
+    expect(sorted[1]).toBe(b);
+    expect(input).toEqual([a, b]);
+  });
+
+  it("puts a payment before its reversal when their timestamps are equal", () => {
+    const at = "2026-07-08T15:19:00.000Z";
+    const sorted = sortCandidatePayloadsOldestFirst([
+      { candidate: { clientImportId: "reversal", eventType: "reversal", receivedAt: at } },
+      { candidate: { clientImportId: "payment", eventType: "merchant_payment", receivedAt: at } },
+    ] as never) as unknown as Array<{ candidate: { clientImportId: string } }>;
+    expect(sorted.map((row) => row.candidate.clientImportId)).toEqual(["payment", "reversal"]);
   });
 });

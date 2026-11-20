@@ -153,4 +153,23 @@ describe("buildSmsReversalCaptureItems", () => {
     ], { minDateMs: 1000, maxDateMs: Number.MAX_SAFE_INTEGER });
     expect(items).toEqual([]);
   });
+
+  it("treats Vodafone paid/debited wording as a merchant expense and keeps sent-to as p2p", () => {
+    for (const verb of ["paid to AMA", "debited to MELCOM"]) {
+      expect(buildMoMoImportCandidate({
+        address: "Vodafone Cash",
+        body: `Vodafone Cash: GHS 50.00 ${verb}. Transaction ID: 12345678.`,
+        date: Date.now(),
+      })).toMatchObject({
+        eventType: "merchant_payment",
+        principalPesewas: 5000,
+        classification: "expense",
+      });
+    }
+    expect(buildMoMoImportCandidate({
+      address: "Vodafone Cash",
+      body: "Vodafone Cash: GHS 50.00 sent to AMA. Transaction ID: 12345678.",
+      date: Date.now(),
+    })).toMatchObject({ eventType: "p2p_send", classification: null });
+  });
 });

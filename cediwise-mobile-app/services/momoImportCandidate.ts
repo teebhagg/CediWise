@@ -87,7 +87,7 @@ function inferEventType(rawBody: string): MoMoEventType {
   if (/sent to|you have sent/i.test(body)) return "p2p_send";
   if (/airtime|data bundle|bundle/i.test(body)) return "airtime_data";
   if (/bill|utility/i.test(body)) return "bill_payment";
-  if (/merchant|payment made|payment for|you have paid|your payment|purchased/i.test(body)) return "merchant_payment";
+  if (/merchant|payment made|payment for|you have paid|your payment|purchased|paid to|debited/i.test(body)) return "merchant_payment";
   return "unknown";
 }
 

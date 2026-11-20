@@ -50,7 +50,7 @@ internal object MoMoSmsParser {
     body.contains(Regex("sent to|you have sent", RegexOption.IGNORE_CASE)) -> "p2p_send"
     body.contains(Regex("airtime|data bundle|bundle", RegexOption.IGNORE_CASE)) -> "airtime_data"
     body.contains(Regex("bill|utility", RegexOption.IGNORE_CASE)) -> "bill_payment"
-    body.contains(Regex("merchant|payment made|payment for|you have paid|your payment|purchased", RegexOption.IGNORE_CASE)) -> "merchant_payment"
+    body.contains(Regex("merchant|payment made|payment for|you have paid|your payment|purchased|paid to|debited", RegexOption.IGNORE_CASE)) -> "merchant_payment"
     else -> "unknown"
     }
   }

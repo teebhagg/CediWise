@@ -63,7 +63,8 @@ internal object MoMoSmsParser {
   }
 
   private fun isConfirmedTransaction(provider: String, body: String): Boolean {
-    if (nonTransaction.containsMatchIn(body)) return false
+    // Status words inside a free-text reference do not make a successful payment pending.
+    if (nonTransaction.containsMatchIn(body.replace(referenceText, " "))) return false
     if (reversal.containsMatchIn(body)) return amount.containsMatchIn(body) || reversedReceiptPatterns.any { it.containsMatchIn(body) }
     val patterns = when (provider) {
       "mtn_momo" -> listOf(

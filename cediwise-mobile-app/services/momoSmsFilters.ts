@@ -69,6 +69,15 @@ export function canonicalizeSmsSender(address: string | undefined | null): strin
     .replace(/[^A-Z0-9]/g, "");
 }
 
+/**
+ * Drop free-text reference fields so words or amounts quoted there ("goods received",
+ * "Payment for GHS 1.00") cannot change the direction or the principal. The field runs to the end
+ * of the sentence, so a decimal point inside it ("12.50") does not end it early.
+ */
+export function stripReferenceText(body: string): string {
+  return body.replace(/\bRef(?:erence)?\s*:.*?(?:\.(?=\s|$)|$)/gi, " ");
+}
+
 export function normalizeSmsBody(body: string | undefined | null): string {
   return (body ?? "").replace(/\s+/g, " ").trim();
 }
@@ -164,7 +173,10 @@ export function isMoMoTransactionBody(body: string, sender?: string): boolean {
   const isReversal = REVERSAL_PATTERN.test(text);
   if (!/GHS/i.test(text) && !(isReversal && REVERSAL_REFERENCE_PATTERN.test(text))) return false;
   const provider = sender ? inferMoMoSender(normalizeSmsAddress(sender)) : "unknown";
-  if (NON_TRANSACTION_PATTERNS.some((pattern) => pattern.test(text))) {
+  // Status words inside a free-text reference ("Reference: pending invoice") do not make a
+  // successful payment pending; only the transaction clause is checked.
+  const withoutReference = stripReferenceText(text);
+  if (NON_TRANSACTION_PATTERNS.some((pattern) => pattern.test(withoutReference))) {
     return false;
   }
   if (isReversal) return true;

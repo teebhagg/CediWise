@@ -6,6 +6,7 @@ import {
   isMoMoTransactionBody,
   isScanEligibleSender,
   type MoMoSmsMessage,
+  isMoMoTransactionBody as isBody,
   resolvePastedSender,
 } from "../momoSmsFilters";
 
@@ -216,5 +217,17 @@ describe("resolvePastedSender", () => {
   it("returns nothing without a source or sender", () => {
     expect(resolvePastedSender(null, source.body)).toBeUndefined();
     expect(resolvePastedSender({ sender: "", body: source.body }, source.body)).toBeUndefined();
+  });
+});
+
+describe("isMoMoTransactionBody status words", () => {
+  const MTN = "MTN MoMo";
+  it("ignores status words that only appear in the free-text reference", () => {
+    expect(isBody("Payment made for GHS 25.00 to MELCOM. Reference: pending invoice. Transaction ID: 12345678.", MTN)).toBe(true);
+    expect(isBody("Payment made for GHS 25.00 to MELCOM. Reference: failed order retry. Transaction ID: 12345678.", MTN)).toBe(true);
+  });
+  it("still rejects a genuinely pending or failed transaction", () => {
+    expect(isBody("Your payment of GHS 25.00 to MELCOM is pending. Transaction ID: 12345678.", MTN)).toBe(false);
+    expect(isBody("Payment for GHS 25.00 to MELCOM failed. Reference: invoice. Transaction ID: 12345678.", MTN)).toBe(false);
   });
 });

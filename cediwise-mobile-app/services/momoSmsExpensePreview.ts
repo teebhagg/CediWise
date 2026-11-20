@@ -1,7 +1,7 @@
 import moment from "moment";
 
 import type { MoMoSmsMessage } from "./momoSmsFilters";
-import { normalizeSmsAddress, normalizeSmsBody } from "./momoSmsFilters";
+import { normalizeSmsAddress, normalizeSmsBody, stripReferenceText } from "./momoSmsFilters";
 import {
   formatSmsCategoryLabel,
   pickCategoryForSmsPreview,
@@ -22,6 +22,9 @@ type PreviewRule = {
  * Expense/income/transfer patterns aligned with the server Ghana MoMo parser.
  * Used only for on-device review UI before the user confirms import.
  */
+// Kept as an export here for callers that already import it from the preview module.
+export { stripReferenceText };
+
 const PREVIEW_RULES: PreviewRule[] = [
   {
     re: /Payment made for GHS\s*([\d,]+(?:\.\d{1,2})?)\s*to\s*(.+?)(?=\s*(?:Current\s+Balance|Available\s+Balance|Fee:|Reference:|Transaction ID|\.|$))/i,
@@ -181,15 +184,6 @@ function buildDescription(counterparty: string | null, txId: string | null): str
   const who = counterparty?.trim() || "Unknown";
   const suffix = txId ? ` (#${txId})` : "";
   return `MoMo → ${who}${suffix}`;
-}
-
-/**
- * Drop free-text reference fields so words or amounts quoted there ("goods received",
- * "Payment for GHS 1.00") cannot change the direction or the principal. The field runs to the end
- * of the sentence, so a decimal point inside it ("12.50") does not end it early.
- */
-export function stripReferenceText(body: string): string {
-  return body.replace(/\bRef(?:erence)?\s*:.*?(?:\.(?=\s|$)|$)/gi, " ");
 }
 
 export function previewSmsExpense(

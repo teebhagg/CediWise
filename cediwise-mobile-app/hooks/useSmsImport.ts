@@ -45,7 +45,7 @@ import {
 } from "@/services/smsImportClient";
 import { getActiveTrackingUserId, useSmsTrackingStore } from "@/stores/smsTrackingStore";
 import { hydrateBudgetStateFromRemote } from "@/utils/budgetHydrate";
-import { loadBudgetState } from "@/utils/budgetStorage";
+import { loadBudgetQueue, loadBudgetState } from "@/utils/budgetStorage";
 import { isFeatureEnabled } from "@/utils/featureFlags";
 import { log } from "@/utils/logger";
 import {
@@ -90,6 +90,10 @@ export type UseSmsImportOptions = {
 };
 
 async function hydrateBudgetAfterImport(userId: string): Promise<void> {
+  // Same policy as useBudget.hydrateFromRemote: with unsynced local mutations queued, merge the
+  // remote snapshot into local state instead of replacing it, so pending expenses, edits and
+  // deletions are not reverted in the displayed budget.
+  const queue = await loadBudgetQueue(userId);
   await hydrateBudgetStateFromRemote(userId, async (state) => {
     // The fetch can outlive a logout or account switch: never publish another account's snapshot.
     if (useBudgetStore.getState().userId !== userId) return;
@@ -97,6 +101,7 @@ async function hydrateBudgetAfterImport(userId: string): Promise<void> {
   }, {
     // Keep local-only preferences (budget engine mode): without the local state, hydration writes the
     // remote defaults over them and an import would re-enable automatic budget adjustments.
+    mode: queue.items.length > 0 ? "merge" : "replace",
     getLocalState: () => loadBudgetState(userId),
   });
 }

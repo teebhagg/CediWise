@@ -78,6 +78,11 @@ jest.mock("@/stores/smsTrackingStore", () => ({
 }));
 
 jest.mock("@/utils/budgetHydrate", () => ({ hydrateBudgetStateFromRemote: jest.fn() }));
+const mockLoadBudgetQueue = jest.fn();
+jest.mock("@/utils/budgetStorage", () => ({
+  loadBudgetState: jest.fn(),
+  loadBudgetQueue: (...args: unknown[]) => mockLoadBudgetQueue(...args),
+}));
 jest.mock("@/utils/featureFlags", () => ({ isFeatureEnabled: jest.fn(async () => false) }));
 jest.mock("@/utils/momoLiveCatchUpStorage", () => ({
   clearLiveCatchUpAtMs: jest.fn(),
@@ -101,6 +106,7 @@ jest.mock("@/services/iosMomoHistoryHandoff", () => ({ IOS_MOMO_HISTORY_MAX_DAYS
 describe("useSmsImport saveCapturedExpenses", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockLoadBudgetQueue.mockResolvedValue({ items: [] });
     mockImportSmsBatch.mockResolvedValue({
       ok: true,
       results: [],
@@ -182,7 +188,36 @@ describe("useSmsImport saveCapturedExpenses", () => {
     expect(hydrateBudgetStateFromRemote).toHaveBeenCalledWith(
       "user-1",
       expect.any(Function),
-      expect.objectContaining({ getLocalState: expect.any(Function) }),
+      expect.objectContaining({ getLocalState: expect.any(Function), mode: "replace" }),
+    );
+  });
+
+  it("merges the remote budget instead of replacing it while local mutations are still queued", async () => {
+    mockLoadBudgetQueue.mockResolvedValue({ items: [{ id: "pending-1" }] });
+    mockToImportPayload.mockResolvedValueOnce({ candidate: { clientImportId: "sms-12345678" } });
+    mockImportSmsBatch.mockResolvedValue({
+      ok: true,
+      results: [],
+      summary: { total: 1, parsed: 1, duplicate: 0, skipped: 0, failed: 0, needs_review: 0, retryable: 0, reversed: 0 },
+    });
+    const hook = useSmsImport({ userId: "user-1" });
+
+    await hook.saveCapturedExpenses([{
+      id: "structured",
+      message: { address: "MTN", body: "supported structured payment", date: 1_760_000_000_001 },
+      amount: 1,
+      description: "Payment",
+      categoryName: "Others",
+      categoryId: null,
+      eventType: "merchant_payment",
+      classification: "expense",
+      receivedAtLabel: "",
+    }] satisfies SmsExpenseCaptureItem[]);
+
+    expect(hydrateBudgetStateFromRemote).toHaveBeenCalledWith(
+      "user-1",
+      expect.any(Function),
+      expect.objectContaining({ mode: "merge" }),
     );
   });
 });

@@ -35,8 +35,15 @@ internal object MoMoSmsParser {
     }
   }
 
+  // Drops the recipient/sender name after "to" / "from" so keywords inside a merchant name
+  // ("CASH INN", "BILL ARTS") cannot decide the event type. Mirrors withoutPartyName in JS.
+  private val partyName = Regex(
+    "\\b(to|from)\\s+(?!bank\\b|own\\b|wallet\\b)[^.]*?(?=\\.(?:\\s|$)|\\s+on\\s|$)",
+    RegexOption.IGNORE_CASE,
+  )
+
   private fun event(rawBody: String): String {
-    val body = rawBody.replace(referenceText, " ")
+    val body = rawBody.replace(referenceText, " ").replace(partyName) { "${it.groupValues[1]} " }
     return when {
     body.contains(Regex("revers(?:al|ed)", RegexOption.IGNORE_CASE)) -> "reversal"
     body.contains(Regex("failed|declined|unsuccessful", RegexOption.IGNORE_CASE)) -> "failed"

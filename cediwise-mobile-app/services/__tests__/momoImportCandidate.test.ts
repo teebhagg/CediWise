@@ -172,4 +172,12 @@ describe("buildSmsReversalCaptureItems", () => {
       date: Date.now(),
     })).toMatchObject({ eventType: "p2p_send", classification: null });
   });
+
+  it("ignores event keywords that appear inside the merchant or recipient name", () => {
+    const body = (name: string) => `Payment made for GHS 25.00 to ${name}. Transaction ID: 12345678.`;
+    for (const name of ["CASH INN", "BILL ARTS", "AIRTIME SHOP", "WITHDRAW MART"]) {
+      expect(buildMoMoImportCandidate({ address: "MTN MoMo", body: body(name), date: Date.now() }))
+        .toMatchObject({ eventType: "merchant_payment", classification: "expense" });
+    }
+  });
 });

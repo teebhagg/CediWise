@@ -73,8 +73,18 @@ function extractTransactionAmount(body: string): string | undefined {
   )?.[1] ?? body.match(/GHS\s*([\d,]+(?:\.\d{1,2})?)\s+(?:sent|paid|debited)\b/i)?.[1];
 }
 
+// Drops the free-text recipient/sender name after "to" / "from" so keywords inside a merchant
+// name ("CASH INN", "PENDING CO", "BILL ARTS") cannot decide the event type. "to bank" and
+// "to own/wallet" are kept because they are transaction wording, not names.
+function withoutPartyName(body: string): string {
+  return body.replace(
+    /\b(to|from)\s+(?!bank\b|own\b|wallet\b)[^.]*?(?=\.(?:\s|$)|\s+on\s|$)/gi,
+    "$1 ",
+  );
+}
+
 function inferEventType(rawBody: string): MoMoEventType {
-  const body = stripReferenceText(rawBody);
+  const body = withoutPartyName(stripReferenceText(rawBody));
   if (/revers(?:al|ed)|reversal/i.test(body)) return "reversal";
   if (/failed|declined|unsuccessful/i.test(body)) return "failed";
   if (/pending|processing/i.test(body)) return "pending";

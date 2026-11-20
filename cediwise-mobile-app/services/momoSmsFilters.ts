@@ -73,6 +73,19 @@ export function normalizeSmsBody(body: string | undefined | null): string {
   return (body ?? "").replace(/\s+/g, " ").trim();
 }
 
+/**
+ * The Shortcut sender for pasted text, but only while that text is still the Shortcut message.
+ * Whitespace-only edits keep it; replacing the message drops it, so a sender is never attached to
+ * a different SMS.
+ */
+export function resolvePastedSender(
+  source: { sender: string; body: string } | null,
+  pastedText: string,
+): string | undefined {
+  if (!source || !source.sender) return undefined;
+  return normalizeSmsBody(pastedText) === source.body ? source.sender : undefined;
+}
+
 export function isLikelyMoMoSender(address: string): boolean {
   return inferMoMoSender(address) !== "unknown";
 }

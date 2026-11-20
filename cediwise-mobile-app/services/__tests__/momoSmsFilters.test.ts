@@ -6,6 +6,7 @@ import {
   isMoMoTransactionBody,
   isScanEligibleSender,
   type MoMoSmsMessage,
+  resolvePastedSender,
 } from "../momoSmsFilters";
 
 const MTN_PAYMENT_COMPLETED: MoMoSmsMessage = {
@@ -193,5 +194,27 @@ describe("momoSmsFilters", () => {
       "Telecel",
       "Telecel",
     ]);
+  });
+});
+
+describe("resolvePastedSender", () => {
+  const source = {
+    sender: "Telecel Cash",
+    body: "You have sent GHS 10.00 to AMA. Transaction ID: ABCD1234.",
+  };
+
+  it("keeps the sender when only whitespace changes", () => {
+    expect(resolvePastedSender(source, `${source.body} `)).toBe("Telecel Cash");
+    expect(resolvePastedSender(source, "  You have sent GHS 10.00\nto AMA.  Transaction ID: ABCD1234.")).toBe("Telecel Cash");
+  });
+
+  it("drops the sender once the message is replaced or edited", () => {
+    expect(resolvePastedSender(source, "Payment made for GHS 5.00 to MELCOM. Transaction ID: 99999999.")).toBeUndefined();
+    expect(resolvePastedSender(source, source.body.replace("10.00", "20.00"))).toBeUndefined();
+  });
+
+  it("returns nothing without a source or sender", () => {
+    expect(resolvePastedSender(null, source.body)).toBeUndefined();
+    expect(resolvePastedSender({ sender: "", body: source.body }, source.body)).toBeUndefined();
   });
 });

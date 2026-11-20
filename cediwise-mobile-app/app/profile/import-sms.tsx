@@ -20,6 +20,7 @@ import { formatSyncResultMessage, MoMoSmsPermissionDisclosureDialog } from "@/co
 import type { NativeMoMoQueueItem } from "@/services/androidMoMoQueue";
 import { getReadSmsPermissionGranted, getReceiveSmsPermissionGranted, getSmsPermissionStatus } from "@/services/androidSmsPermissions";
 import { previewSmsExpense, type SmsExpenseCaptureItem } from "@/services/momoSmsExpensePreview";
+import { normalizeSmsBody, resolvePastedSender } from "@/services/momoSmsFilters";
 import { SmsImportClientError } from "@/services/smsImportClient";
 import { formatCurrency } from "@/utils/formatCurrency";
 import { clearMomoImportIntros, markMomoImportStepsSeen, readMomoImportStepsSeen } from "@/utils/momoImportIntro";
@@ -210,7 +211,7 @@ export default function ImportSmsScreen() {
   const [message, setMessage] = useState("");
   // Sender of a Shortcut message. Kept next to the pasted text so the manual fallback (review and
   // save) still knows the provider; without it "You have sent GHS ..." is guessed as AT Money.
-  const [pastedSender, setPastedSender] = useState("");
+  const [pastedSource, setPastedSource] = useState<{ sender: string; body: string } | null>(null);
   const [days, setDays] = useState<ScanDays>(2);
   const [permission, setPermission] = useState<string>("checking");
   const [receivePermissionGranted, setReceivePermissionGranted] = useState(false);
@@ -368,7 +369,7 @@ export default function ImportSmsScreen() {
 
       const operationId = ++shortcutOperationRef.current;
       setMessage(shortcutMessage);
-      setPastedSender(shortcutSender);
+      setPastedSource(shortcutSender ? { sender: shortcutSender, body: normalizeSmsBody(shortcutMessage) } : null);
       clearShortcutParams();
       if (!user?.id) {
         showInfo("Sign in to import", "The message is ready below. Sign in, then add it to your budget.");
@@ -393,7 +394,7 @@ export default function ImportSmsScreen() {
         const settled = result.status === "parsed" || result.status === "duplicate" || result.status === "reversed";
         if (settled && operationId === shortcutOperationRef.current) {
           setMessage("");
-          setPastedSender("");
+          setPastedSource(null);
         }
         if (result.status === "parsed") {
           showSuccess("Transaction added", "Your budget is up to date.");
@@ -600,7 +601,7 @@ export default function ImportSmsScreen() {
 
   const clearPaste = useCallback(() => {
     setMessage("");
-    setPastedSender("");
+    setPastedSource(null);
   }, []);
 
   const importPasted = useCallback(async () => {
@@ -608,7 +609,8 @@ export default function ImportSmsScreen() {
     const trimmed = message.trim();
     if (trimmed.length < 20) return showError("Message too short", PASTE_TOO_SHORT_MESSAGE);
     try {
-      const preview = previewSmsExpense({ address: pastedSender || undefined, body: trimmed, date: Date.now() });
+      const address = resolvePastedSender(pastedSource, trimmed);
+      const preview = previewSmsExpense({ address, body: trimmed, date: Date.now() });
       if (preview?.eventType === "p2p_send") {
         const id = `paste-${Date.now()}`;
         setReviewItems([{ id, ...preview }]);
@@ -616,7 +618,7 @@ export default function ImportSmsScreen() {
         clearPaste();
         return;
       }
-      const result = await sms.importOneMessage({ body: trimmed, address: pastedSender || undefined });
+      const result = await sms.importOneMessage({ body: trimmed, address });
       if (result.status === "parsed" || result.status === "duplicate") {
         showSuccess(result.status === "parsed" ? "Transaction added" : "Already imported", "Your budget is up to date.");
         clearPaste();
@@ -627,7 +629,7 @@ export default function ImportSmsScreen() {
     } catch (error) {
       showError("Import failed", error instanceof SmsImportClientError ? error.message : error instanceof Error ? error.message : "Try again.");
     }
-  }, [clearPaste, message, pastedSender, savingReview, scanningInbox, showError, showInfo, showSuccess, sms]);
+  }, [clearPaste, message, pastedSource, savingReview, scanningInbox, showError, showInfo, showSuccess, sms]);
 
   const toggleSelected = (id: string) => setSelectedIds((current) => {
     const next = new Set(current);
@@ -909,7 +911,7 @@ export default function ImportSmsScreen() {
             <Text className="mb-2 ml-1 text-xs font-semibold uppercase tracking-widest text-slate-500">Add a payment yourself</Text>
             <Card className="mb-5">
               <View className="mb-4 flex-row items-center gap-3"><View className="h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10"><MessageSquareText color="#60A5FA" size={20} /></View><View className="flex-1"><Text className="text-sm leading-5 text-slate-300">Paste one MoMo SMS to log that expense in your budget.</Text><Text className="mt-1 text-sm text-slate-400">Available even when SMS permission is off.</Text></View></View>
-              <AppTextField label="Message" placeholder="Paste the complete transaction message" value={message} onChangeText={(text) => { setMessage(text); setPastedSender(""); }} multiline numberOfLines={6} textAlignVertical="top" inputClassName="min-h-[132px] py-3" containerClassName="mb-3" />
+              <AppTextField label="Message" placeholder="Paste the complete transaction message" value={message} onChangeText={setMessage} multiline numberOfLines={6} textAlignVertical="top" inputClassName="min-h-[132px] py-3" containerClassName="mb-3" />
               <PrimaryButton loading={sms.importingOne} disabled={pasteBusy || message.trim().length < 20} onPress={() => void importPasted()}>Add this payment</PrimaryButton>
             </Card>
           </>

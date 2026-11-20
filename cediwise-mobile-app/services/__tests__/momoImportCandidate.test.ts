@@ -193,4 +193,12 @@ describe("buildSmsReversalCaptureItems", () => {
       expect(buildMoMoImportCandidate({ address: "MTN MoMo", body, date: Date.now() })).toBeNull();
     }
   });
+
+  it("classifies own-account moves as wallet transfers, not spending", () => {
+    expect(buildMoMoImportCandidate({
+      address: "MTN MoMo",
+      body: "Payment made for GHS 25.00 to own account. Transaction ID: 12345678.",
+      date: Date.now(),
+    })).toMatchObject({ eventType: "wallet_transfer", classification: null });
+  });
 });

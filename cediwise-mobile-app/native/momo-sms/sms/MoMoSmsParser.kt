@@ -53,6 +53,8 @@ internal object MoMoSmsParser {
     body.contains(Regex("received|cash in", RegexOption.IGNORE_CASE)) -> "incoming"
     body.contains(Regex("cash out|withdraw", RegexOption.IGNORE_CASE)) -> "cash_out"
     body.contains(Regex("bank transfer|\\bto\\s+bank\\b", RegexOption.IGNORE_CASE)) -> "bank_transfer"
+    // Own-account moves are not spending. Mirrors the JS order, which checks wallet wording before p2p.
+    body.contains(Regex("wallet transfer|own account", RegexOption.IGNORE_CASE)) -> "wallet_transfer"
     // Person-to-person must win over the airtime/bill keywords and the generic payment wording
     // ("You have sent GHS 10.00 to BILL", "Payment for GHS 10.00 sent to AMA"), otherwise the native
     // queue would upload it as an expense without asking. Mirrors the JS order.

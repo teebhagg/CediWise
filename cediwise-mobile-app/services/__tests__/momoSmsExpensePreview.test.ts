@@ -125,4 +125,11 @@ describe("previewSmsExpense person-to-person wording", () => {
     });
     expect(preview).toMatchObject({ eventType: "p2p_send", classification: null });
   });
+
+  it("previews AT Money paid/debited alerts and keeps sent-to as person-to-person", () => {
+    const at = (body: string) => previewSmsExpense({ address: "AirtelTigo Money", body, date: Date.now() } as never);
+    expect(at("AT Money: GHS 50.00 paid to MELCOM. Transaction ID: 12345678.")).toMatchObject({ amount: 50, eventType: "merchant_payment", classification: "expense" });
+    expect(at("AT Money: GHS 50.00 debited to MELCOM. Transaction ID: 12345678.")).toMatchObject({ amount: 50, eventType: "merchant_payment", classification: "expense" });
+    expect(at("AT Money: GHS 50.00 sent to MELCOM. Transaction ID: 12345678.")).toMatchObject({ eventType: "p2p_send" });
+  });
 });

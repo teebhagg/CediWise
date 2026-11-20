@@ -97,6 +97,13 @@ const PREVIEW_RULES: PreviewRule[] = [
     re: /Vodafone Cash.*?GHS\s*([\d,]+(?:\.\d{1,2})?)\s*(?:sent|paid|debited)/i,
     direction: "expense",
   },
+  // Wallet alerts worded "paid to" / "debited to" (AT Money and others) without a provider prefix.
+  // Placed after the sent-to rules so explicit person-to-person wording still wins.
+  {
+    re: /GHS\s*([\d,]+(?:\.\d{1,2})?)\s+(?:paid|debited)\s+to\s+(.+?)(?=\s+on\s+\d{4}|\s+Ref\s*:|\.|$)/i,
+    direction: "expense",
+    counterpartyGroup: 2,
+  },
 ];
 
 export type SmsExpenseCaptureItem = {

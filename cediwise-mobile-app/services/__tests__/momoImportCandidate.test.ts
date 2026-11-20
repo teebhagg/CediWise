@@ -88,6 +88,20 @@ describe("buildMoMoImportCandidate review fixes", () => {
       })).toMatchObject({ eventType: "p2p_send", classification: null });
     }
   });
+  it("reads the fee from the transaction clause, not a fee quoted in the reference", () => {
+    expect(buildMoMoImportCandidate({
+      address: "MTN MoMo",
+      body: "Payment made for GHS 25.00 to MELCOM. Reference: Fee: GHS 10.00. Fee: GHS 0.50. Transaction ID: 12345678.",
+      date,
+    })).toMatchObject({ feePesewas: 50, principalPesewas: 2500 });
+  });
+  it("reads the receipt from the transaction clause, not an id quoted in the reference", () => {
+    expect(buildMoMoImportCandidate({
+      address: "MTN MoMo",
+      body: "Payment made for GHS 25.00 to MELCOM. Reference: Transaction ID: 99999999. Transaction ID: 12345678.",
+      date,
+    })?.receiptId).toBe("12345678");
+  });
   it("keeps person-to-person sends in review", () => {
     expect(buildMoMoImportCandidate({
       address: "MTN MoMo",

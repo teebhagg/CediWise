@@ -1,5 +1,6 @@
 import { useSmsImport } from "@/hooks/useSmsImport";
 import type { SmsExpenseCaptureItem } from "@/services/momoSmsExpensePreview";
+import { hydrateBudgetStateFromRemote } from "@/utils/budgetHydrate";
 
 const mockImportSmsBatch = jest.fn()
 const mockImportSmsMessage = jest.fn()
@@ -155,5 +156,33 @@ describe("useSmsImport saveCapturedExpenses", () => {
     expect(mockImportSmsMessage).not.toHaveBeenCalled();
     expect(summary).toMatchObject({ found: 2, skipped: 1, parsed: 0 });
     expect(mockRecordSyncSummary).toHaveBeenCalledWith("user-1", summary);
+  });
+
+  it("hydrates the budget with the local state so local-only preferences survive an import", async () => {
+    mockToImportPayload.mockResolvedValueOnce({ candidate: { clientImportId: "sms-12345678" } });
+    mockImportSmsBatch.mockResolvedValue({
+      ok: true,
+      results: [],
+      summary: { total: 1, parsed: 1, duplicate: 0, skipped: 0, failed: 0, needs_review: 0, retryable: 0, reversed: 0 },
+    });
+    const hook = useSmsImport({ userId: "user-1" });
+
+    await hook.saveCapturedExpenses([{
+      id: "structured",
+      message: { address: "MTN", body: "supported structured payment", date: 1_760_000_000_001 },
+      amount: 1,
+      description: "Payment",
+      categoryName: "Others",
+      categoryId: null,
+      eventType: "merchant_payment",
+      classification: "expense",
+      receivedAtLabel: "",
+    }] satisfies SmsExpenseCaptureItem[]);
+
+    expect(hydrateBudgetStateFromRemote).toHaveBeenCalledWith(
+      "user-1",
+      expect.any(Function),
+      expect.objectContaining({ getLocalState: expect.any(Function) }),
+    );
   });
 });

@@ -45,6 +45,7 @@ import {
 } from "@/services/smsImportClient";
 import { getActiveTrackingUserId, useSmsTrackingStore } from "@/stores/smsTrackingStore";
 import { hydrateBudgetStateFromRemote } from "@/utils/budgetHydrate";
+import { loadBudgetState } from "@/utils/budgetStorage";
 import { isFeatureEnabled } from "@/utils/featureFlags";
 import { log } from "@/utils/logger";
 import {
@@ -93,6 +94,10 @@ async function hydrateBudgetAfterImport(userId: string): Promise<void> {
     // The fetch can outlive a logout or account switch: never publish another account's snapshot.
     if (useBudgetStore.getState().userId !== userId) return;
     await useBudgetStore.getState().persistState(state);
+  }, {
+    // Keep local-only preferences (budget engine mode): without the local state, hydration writes the
+    // remote defaults over them and an import would re-enable automatic budget adjustments.
+    getLocalState: () => loadBudgetState(userId),
   });
 }
 

@@ -111,9 +111,9 @@ internal object MoMoSmsParser {
     if (eventType != "reversal" && (principal == null || principal <= 0)) return null
     if (eventType == "reversal" && principal == null && reversedReceiptPatterns.none { it.containsMatchIn(normalized) }) return null
     val reversedReceipt = reversedReceiptPatterns.firstNotNullOfOrNull { it.find(normalized)?.groupValues?.get(1) }
-    val parsedReceipt = receiptPatterns.firstNotNullOfOrNull { it.find(normalized)?.groupValues?.get(1) }
+    val parsedReceipt = receiptPatterns.firstNotNullOfOrNull { it.find(amountText)?.groupValues?.get(1) }
     val receipt = if (eventType == "reversal" && parsedReceipt == reversedReceipt) null else parsedReceipt
-    val feeMatch = fee.find(normalized)?.groupValues?.get(1)
+    val feeMatch = fee.find(amountText)?.groupValues?.get(1)
     val feePesewas = feeMatch?.let(::pesewas) ?: if (feeMatch == null) 0L else return null
     val counterpartyValue = counterparty.find(normalized)?.groupValues?.get(1)?.trim()?.takeIf { it.isNotBlank() }
     val identity = "$provider|${receipt ?: "no-ref"}|$receivedAt|${hash(normalized)}"

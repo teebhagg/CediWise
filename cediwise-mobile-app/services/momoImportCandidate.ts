@@ -114,11 +114,15 @@ export function buildMoMoImportCandidate(
   // The server schema rejects a zero principal: drop the amount on reversals, skip other events.
   if (rawPrincipal === 0 && eventType !== "reversal") return null;
   const principalPesewas = rawPrincipal === 0 ? null : rawPrincipal;
-  const feeMatch = body.match(/(?:Fee|You were charged)(?:\s+was)?[:\s]+GHS\s*([\d,]+(?:\.\d{1,2})?)/i);
+  // Fee and receipt come from the text without free-text reference fields: a reference can quote
+  // another fee ("Reference: Fee: GHS 10.00") or transaction id, which would book the wrong fee
+  // or make two payments collide on one receipt.
+  const bodyWithoutReference = stripReferenceText(body);
+  const feeMatch = bodyWithoutReference.match(/(?:Fee|You were charged)(?:\s+was)?[:\s]+GHS\s*([\d,]+(?:\.\d{1,2})?)/i);
   const feePesewas = feeMatch ? amountToPesewas(feeMatch[1]) : 0;
   if (feePesewas == null) return null;
   const reversedReceiptId = eventType === "reversal" ? extractReversedReceiptId(body) : null;
-  const parsedReceiptId = extractReceiptId(body);
+  const parsedReceiptId = extractReceiptId(bodyWithoutReference);
   const receiptId = eventType === "reversal" && parsedReceiptId === reversedReceiptId
     ? null
     : parsedReceiptId;

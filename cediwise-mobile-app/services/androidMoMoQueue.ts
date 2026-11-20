@@ -49,12 +49,12 @@ export async function configureNativeMoMoCapture(enabled: boolean, userId: strin
     await refreshStoredSession();
     token = (await getStoredAuthData({ allowExpired: false }))?.accessToken ?? null;
   } catch {
-    // A failed attempt must not invalidate a newer enable that is still refreshing its session.
-    await pauseNativeCapture(userId);
+    // A failed attempt must not invalidate, or pause, a newer enable that already took over.
+    if (generation === captureConfigGeneration) await pauseNativeCapture(userId);
     return false;
   }
   if (!token) {
-    await pauseNativeCapture(userId);
+    if (generation === captureConfigGeneration) await pauseNativeCapture(userId);
     return false;
   }
   // Opt-out, logout or another configure ran while the session was refreshing: do not re-enable.

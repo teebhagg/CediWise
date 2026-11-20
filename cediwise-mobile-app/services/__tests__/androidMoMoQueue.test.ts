@@ -92,4 +92,22 @@ describe("configureNativeMoMoCapture", () => {
     await expect(newer).resolves.toBe(true);
     expect(configure).toHaveBeenCalledWith(true, "user-1", "tok", expect.any(String), expect.any(Array));
   });
+
+  it.each([
+    ["returns no token", (r: { resolve: (v: null) => void; reject: (e: Error) => void }) => r.resolve(null)],
+    ["throws", (r: { resolve: (v: null) => void; reject: (e: Error) => void }) => r.reject(new Error("offline"))],
+  ])("does not pause a newer configured enable when an older one %s afterwards", async (_label, settle) => {
+    const handle = { resolve: (_v: null) => {}, reject: (_e: Error) => {} };
+    mockGetStoredAuthData
+      .mockReturnValueOnce(new Promise((resolve, reject) => { handle.resolve = resolve; handle.reject = reject; }))
+      .mockResolvedValueOnce({ accessToken: "tok" });
+
+    const older = configureNativeMoMoCapture(true, "user-1");
+    await expect(configureNativeMoMoCapture(true, "user-1")).resolves.toBe(true);
+    settle(handle);
+
+    await expect(older).resolves.toBe(false);
+    expect(pause).not.toHaveBeenCalled();
+    expect(configure).toHaveBeenCalledTimes(1);
+  });
 });

@@ -175,9 +175,20 @@ describe("buildSmsReversalCaptureItems", () => {
 
   it("ignores event keywords that appear inside the merchant or recipient name", () => {
     const body = (name: string) => `Payment made for GHS 25.00 to ${name}. Transaction ID: 12345678.`;
-    for (const name of ["CASH INN", "BILL ARTS", "AIRTIME SHOP", "WITHDRAW MART"]) {
+    for (const name of ["CASH INN", "PENDING CO", "FAILED TRADERS", "BILL ARTS", "AIRTIME SHOP", "WITHDRAW MART"]) {
       expect(buildMoMoImportCandidate({ address: "MTN MoMo", body: body(name), date: Date.now() }))
         .toMatchObject({ eventType: "merchant_payment", classification: "expense" });
+    }
+  });
+
+  it("still rejects genuine failed or pending transaction wording", () => {
+    for (const body of [
+      "Payment made for GHS 25.00 to MELCOM failed. Transaction ID: 12345678.",
+      "Transaction failed. Payment made for GHS 25.00 to MELCOM. Transaction ID: 12345678.",
+      "Payment made for GHS 25.00 to MELCOM is pending. Transaction ID: 12345678.",
+      "Your OTP is 123456. Payment made for GHS 25.00 to PENDING CO.",
+    ]) {
+      expect(buildMoMoImportCandidate({ address: "MTN MoMo", body, date: Date.now() })).toBeNull();
     }
   });
 });

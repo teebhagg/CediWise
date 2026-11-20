@@ -1,5 +1,5 @@
 import type { MoMoSmsMessage } from "./momoSmsFilters";
-import { inferMoMoProviderFromContent, isMoMoTransactionBody, normalizeSmsBody } from "./momoSmsFilters";
+import { inferMoMoProviderFromContent, isMoMoTransactionBody, normalizeSmsBody, withoutPartyName } from "./momoSmsFilters";
 import {
   formatSmsExpenseDate,
   previewSmsExpense,
@@ -71,16 +71,6 @@ function extractTransactionAmount(body: string): string | undefined {
   return body.match(
     /(?:Payment\s+(?:made\s+)?for|You\s+have\s+(?:successfully\s+)?(?:paid|sent|purchased)|payment\s+of|Cash\s+(?:Out|In)\s+of|Confirmed\.)\s*GHS\s*([\d,]+(?:\.\d{1,2})?)/i,
   )?.[1] ?? body.match(/GHS\s*([\d,]+(?:\.\d{1,2})?)\s+(?:sent|paid|debited)\b/i)?.[1];
-}
-
-// Drops the free-text recipient/sender name after "to" / "from" so keywords inside a merchant
-// name ("CASH INN", "PENDING CO", "BILL ARTS") cannot decide the event type. "to bank" and
-// "to own/wallet" are kept because they are transaction wording, not names.
-function withoutPartyName(body: string): string {
-  return body.replace(
-    /\b(to|from)\s+(?!bank\b|own\b|wallet\b)[^.]*?(?=\.(?:\s|$)|\s+on\s|$)/gi,
-    "$1 ",
-  );
 }
 
 function inferEventType(rawBody: string): MoMoEventType {

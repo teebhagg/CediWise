@@ -22,7 +22,8 @@ internal object MoMoSmsParser {
     Regex("reversal\\s+of\\s+(?:the\\s+)?(?:original\\s+)?(?:transaction\\s+)?(?:id|reference)\\s*[:#]?\\s*([A-Z0-9-]{4,})", RegexOption.IGNORE_CASE),
     Regex("\\b(?:reversed|reversal)\\b[\\s\\S]{0,80}\\boriginal\\s+(?:transaction\\s+)?(?:id|reference)\\s*[:#]?\\s*([A-Z0-9-]{4,})", RegexOption.IGNORE_CASE),
   )
-  private val nonTransaction = Regex("\\bOTP\\b|verification code|one[- ]time password|\\b(?:failed|declined|unsuccessful|pending|processing|cancelled|canceled)\\b", RegexOption.IGNORE_CASE)
+  private val otp = Regex("\\bOTP\\b|verification code|one[- ]time password", RegexOption.IGNORE_CASE)
+  private val status = Regex("\\b(?:failed|declined|unsuccessful|pending|processing|cancelled|canceled)\\b", RegexOption.IGNORE_CASE)
   private val reversal = Regex("\\b(?:reversal|reversed)\\b", RegexOption.IGNORE_CASE)
 
   private fun provider(sender: String): String? {
@@ -38,12 +39,12 @@ internal object MoMoSmsParser {
   // Drops the recipient/sender name after "to" / "from" so keywords inside a merchant name
   // ("CASH INN", "BILL ARTS") cannot decide the event type. Mirrors withoutPartyName in JS.
   private val partyName = Regex(
-    "\\b(to|from)\\s+(?!bank\\b|own\\b|wallet\\b)[^.]*?(?=\\.(?:\\s|$)|\\s+on\\s|$)",
+    "\\b(to|from)\\s+(?!bank\\b|own\\b|wallet\\b)[^.]*?((?:\\s+(?:is|has\\s+been|was))?\\s+(?:failed|declined|unsuccessful|pending|processing|cancelled|canceled))?(?=\\.(?:\\s|$)|\\s+on\\s|$)",
     RegexOption.IGNORE_CASE,
   )
 
   private fun event(rawBody: String): String {
-    val body = rawBody.replace(referenceText, " ").replace(partyName) { "${it.groupValues[1]} " }
+    val body = rawBody.replace(referenceText, " ").replace(partyName) { "${it.groupValues[1]} ${it.groupValues[2]}" }
     return when {
     body.contains(Regex("revers(?:al|ed)", RegexOption.IGNORE_CASE)) -> "reversal"
     body.contains(Regex("failed|declined|unsuccessful", RegexOption.IGNORE_CASE)) -> "failed"
@@ -71,7 +72,10 @@ internal object MoMoSmsParser {
 
   private fun isConfirmedTransaction(provider: String, body: String): Boolean {
     // Status words inside a free-text reference do not make a successful payment pending.
-    if (nonTransaction.containsMatchIn(body.replace(referenceText, " "))) return false
+    // Status words inside a merchant or recipient name ("PENDING CO") do not make it pending either.
+    val withoutReference = body.replace(referenceText, " ")
+    if (otp.containsMatchIn(withoutReference) ||
+      status.containsMatchIn(withoutReference.replace(partyName) { "${it.groupValues[1]} ${it.groupValues[2]}" })) return false
     if (reversal.containsMatchIn(body)) return amount.containsMatchIn(body) || reversedReceiptPatterns.any { it.containsMatchIn(body) }
     val patterns = when (provider) {
       "mtn_momo" -> listOf(

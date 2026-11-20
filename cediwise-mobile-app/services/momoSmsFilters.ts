@@ -44,10 +44,12 @@ const TRANSACTION_PATTERNS = [
   ...AT_MONEY_TRANSACTION_PATTERNS,
 ] as const;
 
-const NON_TRANSACTION_PATTERNS = [
+const OTP_PATTERNS = [
   /\bOTP\b/i,
   /verification\s+code/i,
   /one[\s-]?time\s+password/i,
+] as const;
+const STATUS_PATTERNS = [
   /\b(?:failed|declined|unsuccessful|pending|processing|cancelled|canceled)\b/i,
 ] as const;
 const REVERSAL_PATTERN = /\b(?:reversal|reversed)\b/i;
@@ -76,6 +78,17 @@ export function canonicalizeSmsSender(address: string | undefined | null): strin
  */
 export function stripReferenceText(body: string): string {
   return body.replace(/\bRef(?:erence)?\s*:.*?(?:\.(?=\s|$)|$)/gi, " ");
+}
+
+// Drops the free-text recipient/sender name after "to" / "from" so keywords inside a merchant
+// name ("CASH INN", "PENDING CO", "BILL ARTS") cannot decide the event type. "to bank" and
+// "to own/wallet" are kept because they are transaction wording, not names. A status word that
+// closes the clause ("to MELCOM failed", "to MELCOM is pending") is transaction wording and stays.
+export function withoutPartyName(body: string): string {
+  return body.replace(
+    /\b(to|from)\s+(?!bank\b|own\b|wallet\b)[^.]*?((?:\s+(?:is|has\s+been|was))?\s+(?:failed|declined|unsuccessful|pending|processing|cancelled|canceled))?(?=\.(?:\s|$)|\s+on\s|$)/gi,
+    "$1 $2",
+  );
 }
 
 export function normalizeSmsBody(body: string | undefined | null): string {
@@ -176,7 +189,12 @@ export function isMoMoTransactionBody(body: string, sender?: string): boolean {
   // Status words inside a free-text reference ("Reference: pending invoice") do not make a
   // successful payment pending; only the transaction clause is checked.
   const withoutReference = stripReferenceText(text);
-  if (NON_TRANSACTION_PATTERNS.some((pattern) => pattern.test(withoutReference))) {
+  // Status words inside a merchant or recipient name ("PENDING CO") do not make it pending either.
+  const statusText = withoutPartyName(withoutReference);
+  if (
+    OTP_PATTERNS.some((pattern) => pattern.test(withoutReference)) ||
+    STATUS_PATTERNS.some((pattern) => pattern.test(statusText))
+  ) {
     return false;
   }
   if (isReversal) return true;

@@ -1,6 +1,6 @@
 import { NativeModules, Platform } from "react-native";
 
-import { ALL_MOMO_NETWORKS, getSmsImportApiUrl } from "@/constants/smsImport";
+import { ALL_MOMO_NETWORKS, ANDROID_AUTOMATIC_CAPTURE_ENABLED, getSmsImportApiUrl } from "@/constants/smsImport";
 import type { MoMoImportCandidate } from "@/services/momoImportCandidate";
 import { getStoredAuthData, refreshStoredSession } from "@/utils/auth";
 
@@ -39,7 +39,8 @@ export async function configureNativeMoMoCapture(enabled: boolean, userId: strin
   if (!userId) {
     return native.configure(false, null, null, apiUrl, providers);
   }
-  if (!enabled || !apiUrl.startsWith("https://")) {
+  // Automatic capture is off for now: arming native capture is refused, and any pause keeps the queue.
+  if (!enabled || !ANDROID_AUTOMATIC_CAPTURE_ENABLED || !apiUrl.startsWith("https://")) {
     await pauseNativeMoMoCapture(userId);
     return false;
   }

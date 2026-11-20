@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Platform } from "react-native";
 
-import { ALL_MOMO_NETWORKS } from "@/constants/smsImport";
+import { ALL_MOMO_NETWORKS, ANDROID_AUTOMATIC_CAPTURE_ENABLED } from "@/constants/smsImport";
 import {
   clearMoMoSmsListenerDebounce,
   isAndroidSmsListenerAvailable,
@@ -238,7 +238,7 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
       await setOptedIn(userId, true);
       const liveFlag = await isFeatureEnabled("momo_sms_live_import", userId);
       await configureNativeMoMoCapture(
-        liveFlag && snapshot.receiveSms === "granted" && liveListenerEnabled,
+        ANDROID_AUTOMATIC_CAPTURE_ENABLED && liveFlag && snapshot.receiveSms === "granted" && liveListenerEnabled,
         userId,
         [...ALL_MOMO_NETWORKS],
       );
@@ -496,6 +496,7 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
   const toggleLiveListener = useCallback(
     async (enabled: boolean) => {
       if (!userId) return;
+      if (enabled && Platform.OS === "android" && !ANDROID_AUTOMATIC_CAPTURE_ENABLED) return;
       if (
         enabled &&
         (!optedIn ||
@@ -529,6 +530,12 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
 
   const ensureLiveListener = useCallback(async () => {
     if (!userId || Platform.OS !== "android") return false;
+    if (!ANDROID_AUTOMATIC_CAPTURE_ENABLED) {
+      stopMoMoSmsListener();
+      liveStartedForUserRef.current = null;
+      await pauseNativeMoMoCapture(userId);
+      return false;
+    }
     if (!optedIn || !liveListenerEnabled) return false;
     if (!isAndroidSmsListenerAvailable()) return false;
     const generation = consentGenerationRef.current;
@@ -584,6 +591,7 @@ export function useSmsImport({ userId }: UseSmsImportOptions) {
    */
   const catchUpLiveImports = useCallback(async () => {
     if (!userId || Platform.OS !== "android") return;
+    if (!ANDROID_AUTOMATIC_CAPTURE_ENABLED) return;
     if (!optedIn || !liveListenerEnabled) return;
     // Acquire synchronously so overlapping triggers cannot both pass the guard.
     if (catchUpInFlightRef.current || syncing) return;

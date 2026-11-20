@@ -79,6 +79,14 @@ export function getSmsImportApiUrl(): string {
   return configured ? configured.replace(/\/$/, "") : "";
 }
 
+/**
+ * Android background SMS capture: the native receiver, the JS live listener and the automatic
+ * inbox catch-up on foreground. Turned off for now. Manual history scans are not affected.
+ * Re-enable only after the Android release, policy and device-readiness checks in the MoMo import
+ * docs pass.
+ */
+export const ANDROID_AUTOMATIC_CAPTURE_ENABLED = false;
+
 export function isMoMoSmsLiveImportEnvEnabled(): boolean {
   const raw = process.env.EXPO_PUBLIC_MOMO_SMS_LIVE_IMPORT;
   return raw === "1" || raw === "true";

@@ -21,6 +21,12 @@ jest.mock("react-native", () => {
   };
 });
 
+// These cases cover the arming and generation logic, which runs only while automatic capture is on.
+jest.mock("@/constants/smsImport", () => ({
+  ...jest.requireActual("@/constants/smsImport"),
+  ANDROID_AUTOMATIC_CAPTURE_ENABLED: true,
+}));
+
 jest.mock("@/utils/auth", () => ({
   refreshStoredSession: jest.fn().mockResolvedValue(undefined),
   getStoredAuthData: (...args: unknown[]) => mockGetStoredAuthData(...args),

@@ -1,7 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { LandingPage } from '@/components/landing/LandingPage'
 import { HERO_LCP_IMAGE_SRC } from '@/lib/heroAssets'
-import { createPageHead, getAppSchema } from '@/lib/seo'
+import { createPageHead, getAppSchema, getFAQSchema } from '@/lib/seo'
+import { HOME_FAQ } from '@/components/landing/HomeFaq'
 
 export const Route = createFileRoute('/')({
   component: App,
@@ -11,7 +12,11 @@ export const Route = createFileRoute('/')({
       title: 'CediWise — PAYE Calculator & Budget App for Ghana',
       description:
         'Check PAYE and SSNIT against GRA 2026 tables, budget in cedis, and track SME VAT. Free salary calculator on the web. Android and iOS app.',
-      schemas: [getAppSchema()],
+      schemas: [getAppSchema(), getFAQSchema(HOME_FAQ)],
+      extraLinks: [
+        { rel: 'alternate', type: 'text/markdown', href: '/index.md' },
+        { rel: 'ard', href: '/.well-known/ard.json' },
+      ],
     })
 
     return {

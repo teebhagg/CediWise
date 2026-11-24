@@ -25,12 +25,14 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { createPageHead } from '@/lib/seo'
+import { markdownAlternateLinks } from '@/lib/agent/twins'
 
 export const Route = createFileRoute('/feedback')({
   component: FeedbackPage,
   head: () =>
     createPageHead({
       path: '/feedback',
+      extraLinks: markdownAlternateLinks('/feedback'),
       title: 'Feedback',
       description:
         'Tell us what worked, what broke, or what you want next. Helps us fix CediWise faster.',

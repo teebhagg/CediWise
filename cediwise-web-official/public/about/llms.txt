@@ -1,0 +1,10 @@
+# About CediWise
+
+> CediWise is a finance app for Ghana, built by Joshua Ansah. It checks PAYE and SSNIT, helps you budget in cedis, keeps SME records, and teaches money skills.
+
+Markdown version: https://www.cediwise.app/about.md
+
+## Related
+
+- Site index: https://www.cediwise.app/llms.txt
+- Contact: https://www.cediwise.app/contact (Markdown: https://www.cediwise.app/contact.md)

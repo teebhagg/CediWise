@@ -1,0 +1,10 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "cediwise",
+  "version": "1.0.0",
+  "description": "Ghana salary and budgeting tools from CediWise: PAYE and SSNIT estimates, pages for budgeting and the SME ledger, and read-only site search.",
+  "author": { "name": "CediWise", "url": "https://www.cediwise.app" },
+  "homepage": "https://www.cediwise.app",
+  "repository": "https://github.com/teebhagg/CediWise",
+  "keywords": ["ghana", "paye", "ssnit", "budgeting", "vat", "mcp"]
+}

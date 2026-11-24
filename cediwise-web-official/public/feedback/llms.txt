@@ -1,0 +1,15 @@
+# CediWise feedback
+
+> Send a bug report, feature request, or general comment about the CediWise website or app. The form is at https://www.cediwise.app/feedback.
+
+Markdown version: https://www.cediwise.app/feedback.md
+
+## Categories
+
+- Bug Report
+- Feature Request
+- General Comment
+
+## Related
+
+- Site index: https://www.cediwise.app/llms.txt

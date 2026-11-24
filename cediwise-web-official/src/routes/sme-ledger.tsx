@@ -4,12 +4,14 @@ import { createFileRoute } from '@tanstack/react-router'
 import { GlassCard } from '@/components/ui/glass-card'
 import { FeatureInsightLayout } from '@/components/features/FeatureInsightLayout'
 import { createPageHead, getAppSchema, getFAQSchema } from '@/lib/seo'
+import { markdownAlternateLinks } from '@/lib/agent/twins'
 
 export const Route = createFileRoute('/sme-ledger')({
   component: SMELedgerPage,
   head: () =>
     createPageHead({
       path: '/sme-ledger',
+      extraLinks: markdownAlternateLinks('/sme-ledger'),
       title: 'Run your business smarter',
       description:
         'Sales, expenses, VAT, and cash flow in one ledger for Ghana SMEs. Threshold alerts at GHS 750K turnover. CSV export for your accountant.',

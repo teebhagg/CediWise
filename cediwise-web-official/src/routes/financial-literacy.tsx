@@ -2,12 +2,14 @@ import { FeatureInsightLayout } from '@/components/features/FeatureInsightLayout
 import { createPageHead } from '@/lib/seo'
 import { Book04Icon } from '@hugeicons/core-free-icons'
 import { createFileRoute } from '@tanstack/react-router'
+import { markdownAlternateLinks } from '@/lib/agent/twins'
 
 export const Route = createFileRoute('/financial-literacy')({
   component: FinancialLiteracyPage,
   head: () =>
     createPageHead({
       path: '/financial-literacy',
+      extraLinks: markdownAlternateLinks('/financial-literacy'),
       title: 'Learn while you grow',
       description:
         'Short money lessons for Ghana: budgeting, MoMo fees, savings, scams, and PAYE basics. Most under five minutes. Free.',

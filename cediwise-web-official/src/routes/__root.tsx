@@ -1,6 +1,7 @@
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 
 import appCss from '../styles.css?url'
+import { WebMcpRegistrar } from '@/components/agent/WebMcpRegistrar'
 import { Header } from '@/components/layout/Header'
 import { SalaryCalculatorBanner } from '@/components/layout/SalaryCalculatorBanner'
 import { OG_IMAGE, SITE_URL, getOrganizationSchema } from '@/lib/seo'
@@ -110,6 +111,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         />
       </head>
       <body>
+        <WebMcpRegistrar />
         <SalaryCalculatorBanner />
         <Header />
         {children}

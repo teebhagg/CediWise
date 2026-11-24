@@ -55,3 +55,17 @@ describe('getOrganizationSchema', () => {
     expect(JSON.parse(JSON.stringify(schema))).toEqual(schema)
   })
 })
+
+describe('createPageHead extraLinks', () => {
+  it('adds extra links after the canonical link', async () => {
+    const { createPageHead } = await import('@/lib/seo')
+    const head = createPageHead({
+      path: '/pricing',
+      title: 'Pricing',
+      description: 'Plans',
+      extraLinks: [{ rel: 'alternate', type: 'text/markdown', href: '/pricing.md' }],
+    })
+    expect(head.links[0]).toEqual({ rel: 'canonical', href: expect.stringMatching(/\/pricing$/) })
+    expect(head.links[1]).toEqual({ rel: 'alternate', type: 'text/markdown', href: '/pricing.md' })
+  })
+})

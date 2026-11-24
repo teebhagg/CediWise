@@ -3,12 +3,14 @@ import { GRA_PAYE_REFERENCE_URL } from '@/lib/ghanaTax'
 import { createPageHead, getAppSchema, getFAQSchema } from '@/lib/seo'
 import { CreditCardIcon } from '@hugeicons/core-free-icons'
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { markdownAlternateLinks } from '@/lib/agent/twins'
 
 export const Route = createFileRoute('/salary-calculator/')({
   component: SalaryCalculatorPage,
   head: () =>
     createPageHead({
       path: '/salary-calculator',
+      extraLinks: markdownAlternateLinks('/salary-calculator'),
       title: 'Understand your salary',
       description:
         'How PAYE, SSNIT, and take-home pay work in Ghana. Check your numbers against 2026 GRA tables. Free web calculator.',

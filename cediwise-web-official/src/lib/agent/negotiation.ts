@@ -1,5 +1,9 @@
+import { agentViewJson } from './agentView'
 import {
   getMarkdownPage,
+  getStaticMarkdownDocument,
+  markdownTwinRoute,
+  noMarkdownTwinMarkdown,
   notAcceptableMarkdown,
   notFoundMarkdown,
 } from './markdown'
@@ -7,10 +11,12 @@ import {
 const MARKDOWN_TYPE = 'text/markdown'
 const HTML_TYPE = 'text/html'
 const MARKDOWN_CONTENT_TYPE = 'text/markdown; charset=utf-8'
+const JSON_CONTENT_TYPE = 'application/json; charset=utf-8'
 
 export type AgentDecision =
   | { kind: 'pass' }
   | { kind: 'markdown'; status: 200 | 404 | 406; body: string }
+  | { kind: 'json'; body: string }
 
 /**
  * Parses an Accept header into media type → quality value (RFC 9110 §12.4.2).
@@ -59,7 +65,50 @@ function normalizePathname(pathname: string): string {
 }
 
 /**
- * Decides whether a request should get a Markdown response.
+ * Decides responses addressed by URL rather than Accept: static agent
+ * documents (`/auth.md`), `.md` twins (`/index.md`, `/pricing.md`), and the
+ * structured agent view (`/?mode=agent`).
+ */
+export function decidePathResponse(input: {
+  pathname: string
+  search: string
+  isKnownRoute: (pathname: string) => boolean
+}): AgentDecision {
+  const staticDocument = getStaticMarkdownDocument(input.pathname)
+  if (staticDocument !== undefined) {
+    return { kind: 'markdown', status: 200, body: staticDocument }
+  }
+
+  const twin = markdownTwinRoute(input.pathname)
+  if (twin !== undefined) {
+    const route = normalizePathname(twin)
+    if (!input.isKnownRoute(route)) {
+      return { kind: 'markdown', status: 404, body: notFoundMarkdown() }
+    }
+    const page = getMarkdownPage(route)
+    if (page === undefined) {
+      return {
+        kind: 'markdown',
+        status: 404,
+        body: noMarkdownTwinMarkdown(route),
+      }
+    }
+    return { kind: 'markdown', status: 200, body: page }
+  }
+
+  if (
+    normalizePathname(input.pathname) === '/' &&
+    new URLSearchParams(input.search).get('mode') === 'agent'
+  ) {
+    return { kind: 'json', body: agentViewJson() }
+  }
+
+  return { kind: 'pass' }
+}
+
+/**
+ * Decides whether a request should get a Markdown response from its Accept
+ * header.
  *
  * Markdown is used only when the client prefers it over HTML. Browsers
  * (`text/html`, `*\/*`) and clients that never mention Markdown keep the
@@ -98,18 +147,69 @@ export function decideAgentResponse(input: {
   return { kind: 'pass' }
 }
 
-/** Builds the Response for a Markdown decision. */
-export function buildMarkdownResponse(
-  decision: Extract<AgentDecision, { kind: 'markdown' }>,
+/** Builds the Response for a Markdown or JSON decision. */
+export function buildAgentResponse(
+  decision: Exclude<AgentDecision, { kind: 'pass' }>,
   method: string,
 ): Response {
-  return new Response(method === 'HEAD' ? null : decision.body, {
+  const body = method === 'HEAD' ? null : decision.body
+  if (decision.kind === 'json') {
+    return new Response(body, {
+      status: 200,
+      headers: {
+        'Content-Type': JSON_CONTENT_TYPE,
+        'Cache-Control': 'public, max-age=0, must-revalidate',
+      },
+    })
+  }
+  return new Response(body, {
     status: decision.status,
     headers: {
       'Content-Type': MARKDOWN_CONTENT_TYPE,
       Vary: 'Accept',
       'Cache-Control': 'public, max-age=0, must-revalidate',
     },
+  })
+}
+
+/** Builds the Response for a Markdown decision. */
+export function buildMarkdownResponse(
+  decision: Extract<AgentDecision, { kind: 'markdown' }>,
+  method: string,
+): Response {
+  return buildAgentResponse(decision, method)
+}
+
+/** RFC 8288 Link values advertised on HTML document responses. */
+const DISCOVERY_LINKS: Record<string, string> = {
+  '/': [
+    '</index.md>; rel="alternate"; type="text/markdown"',
+    '</sitemap.xml>; rel="sitemap"',
+    '</.well-known/ard.json>; rel="ard"',
+    '</.well-known/api-catalog>; rel="api-catalog"',
+  ].join(', '),
+  '/pricing': [
+    '</pricing.md>; rel="alternate"; type="text/markdown"',
+    '</sitemap.xml>; rel="sitemap"',
+  ].join(', '),
+}
+
+/** Adds RFC 8288 Link headers to the homepage and pricing HTML responses. */
+export function withDiscoveryLinks(
+  response: Response,
+  pathname: string,
+): Response {
+  if (response.status >= 300 && response.status < 400) return response
+  const value = DISCOVERY_LINKS[normalizePathname(pathname)]
+  if (!value) return response
+
+  const headers = new Headers(response.headers)
+  const existing = headers.get('Link')
+  headers.set('Link', existing ? `${existing}, ${value}` : value)
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
   })
 }
 

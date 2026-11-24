@@ -23,6 +23,7 @@ export const Route = createFileRoute('/pricing')({
       title: 'Pricing',
       description:
         'Free salary calculator. Smart Budget from GH¢ 15/mo. SME Ledger from GH¢ 25/mo. 30-day free trial on paid plans.',
+      extraLinks: [{ rel: 'alternate', type: 'text/markdown', href: '/pricing.md' }],
     }),
 })
 

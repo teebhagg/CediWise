@@ -1,0 +1,21 @@
+# CediWise pricing
+
+> CediWise prices are in Ghana cedis (GH¢). The salary calculator is free. Smart Budget and SME Ledger are paid plans with a 30-day free trial.
+
+Markdown version: https://www.cediwise.app/pricing.md
+
+## Plans
+
+- Free: GH¢ 0 (forever). 2026 PAYE and SSNIT calculator, financial literacy lessons, future GRA tax updates.
+- Smart Budget: GH¢ 15 per month or GH¢ 39 per quarter. Budgeting, debt dashboard, spending charts, offline mode.
+- SME Ledger: GH¢ 25 per month or GH¢ 65 per quarter. Sales and expenses ledger, automatic 20% VAT, GH¢ 750K turnover alert, CSV export.
+
+## Notes
+
+- Smart Budget and SME Ledger include a 30-day free trial.
+- Quarterly billing saves about 13%.
+- The free calculator allows 3 checks per day on the website.
+
+## Related
+
+- Site index: https://www.cediwise.app/llms.txt

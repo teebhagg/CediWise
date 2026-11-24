@@ -1,0 +1,15 @@
+# Contact CediWise
+
+> Questions about PAYE calculations, feature ideas, bugs, privacy, or legal matters. Replies usually within a few days.
+
+Markdown version: https://www.cediwise.app/contact.md
+
+## Channels
+
+- Email: joshua.ansah@cediwise.app (general questions, privacy, legal)
+- Bugs and feature ideas: https://github.com/teebhagg/CediWise/issues
+- Feedback form: https://www.cediwise.app/feedback
+
+## Related
+
+- Site index: https://www.cediwise.app/llms.txt

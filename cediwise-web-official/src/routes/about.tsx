@@ -8,12 +8,14 @@ import { Footer } from '@/components/layout/Footer'
 import { buttonVariants } from '@/components/ui/button'
 import { createPageHead } from '@/lib/seo'
 import { cn } from '@/lib/utils'
+import { markdownAlternateLinks } from '@/lib/agent/twins'
 
 export const Route = createFileRoute('/about')({
   component: AboutPage,
   head: () =>
     createPageHead({
       path: '/about',
+      extraLinks: markdownAlternateLinks('/about'),
       title: 'About CediWise',
       description:
         'CediWise helps Ghanaians check PAYE, budget in cedis, and run a small business ledger. Built by Joshua Ansah.',

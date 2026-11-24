@@ -9,6 +9,23 @@ const read = (name: string) => readFileSync(resolve(publicDir, name), 'utf8')
 describe.each(['llms.txt', 'llms-full.txt'])('%s', (file) => {
   const text = read(file)
 
+  it('lists the machine interfaces and the section indexes', () => {
+    expect(text).toMatch(/^## Machine interfaces$/m)
+    expect(text).toMatch(/^## Section indexes$/m)
+    expect(text).toContain('https://www.cediwise.app/mcp/server-card')
+    expect(text).toContain('https://www.cediwise.app/openapi.json')
+    expect(text).toContain('https://www.cediwise.app/pricing/llms.txt')
+  })
+
+  it('lists the agent resources and the source repository', () => {
+    expect(text).toMatch(/^## Agent resources$/m)
+    expect(text).toContain('https://www.cediwise.app/index.md')
+    expect(text).toContain('https://www.cediwise.app/pricing.md')
+    expect(text).toContain('https://www.cediwise.app/auth.md')
+    expect(text).toContain('https://www.cediwise.app/.well-known/ard.json')
+    expect(text).toContain('https://github.com/teebhagg/CediWise')
+  })
+
   it('has a when-to-use section for agents', () => {
     expect(text).toMatch(/^## When to use CediWise$/m)
     expect(text).toContain('There is no public API')

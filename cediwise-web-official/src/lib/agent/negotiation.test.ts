@@ -12,7 +12,7 @@ const BROWSER_ACCEPT =
 const knownOnly = (known: Array<string>) => (pathname: string) =>
   known.includes(pathname)
 
-const KNOWN = knownOnly(['/', '/about', '/pricing'])
+const KNOWN = knownOnly(['/', '/about', '/pricing', '/changelog'])
 
 describe('parseAcceptHeader', () => {
   it('reads media types and q-values', () => {
@@ -105,7 +105,7 @@ describe('decideAgentResponse', () => {
     expect(
       decideAgentResponse({
         accept: 'text/markdown, text/html;q=0.9',
-        pathname: '/about',
+        pathname: '/changelog',
         isKnownRoute: KNOWN,
       }),
     ).toEqual({ kind: 'pass' })
@@ -114,7 +114,7 @@ describe('decideAgentResponse', () => {
   it('returns 406 Markdown when HTML is not accepted and the page has no Markdown', () => {
     const decision = decideAgentResponse({
       accept: 'text/markdown',
-      pathname: '/about',
+      pathname: '/changelog',
       isKnownRoute: KNOWN,
     })
     expect(decision.kind).toBe('markdown')

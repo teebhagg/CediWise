@@ -1,0 +1,16 @@
+# CediWise financial literacy
+
+> Short, Ghana-specific money lessons: MTN MoMo, Vodafone Cash, Treasury Bills, GSE, banks, PAYE, SSNIT. Free in the CediWise app.
+
+Markdown version: https://www.cediwise.app/financial-literacy.md
+
+## Topics
+
+- Budgeting and the 50/30/20 rule for Ghanaian incomes
+- Savings, emergency funds, bank savings versus Treasury Bills
+- Mobile money: how MoMo works, fees, limits, avoiding overpayment
+- Fraud and safety: scams, phishing, fake investment pitches
+
+## Related
+
+- Site index: https://www.cediwise.app/llms.txt

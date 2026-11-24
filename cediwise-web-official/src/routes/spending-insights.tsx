@@ -2,12 +2,14 @@ import { FeatureInsightLayout } from '@/components/features/FeatureInsightLayout
 import { absoluteUrl, createPageHead } from '@/lib/seo'
 import { ChartLineDataIcon } from '@hugeicons/core-free-icons'
 import { createFileRoute } from '@tanstack/react-router'
+import { markdownAlternateLinks } from '@/lib/agent/twins'
 
 export const Route = createFileRoute('/spending-insights')({
   component: SpendingInsightsPage,
   head: () =>
     createPageHead({
       path: '/spending-insights',
+      extraLinks: markdownAlternateLinks('/spending-insights'),
       title: 'Spending insights',
       description:
         'Charts that show where your cedis went: by category, week, or month. Part of CediWise budgeting. Built for Ghana spending patterns.',

@@ -2,12 +2,14 @@ import { createFileRoute } from '@tanstack/react-router'
 import { ContentPageLayout } from '@/components/layout/ContentPageLayout'
 import { Footer } from '@/components/layout/Footer'
 import { createPageHead } from '@/lib/seo'
+import { markdownAlternateLinks } from '@/lib/agent/twins'
 
 export const Route = createFileRoute('/privacy')({
   component: PrivacyPage,
   head: () =>
     createPageHead({
       path: '/privacy',
+      extraLinks: markdownAlternateLinks('/privacy'),
       title: 'Privacy Policy',
       description:
         'How CediWise handles your data: salary inputs, budgets, SME records, optional MoMo SMS import, and account info.',

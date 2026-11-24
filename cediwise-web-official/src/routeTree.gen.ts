@@ -9,83 +9,28 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TutorialsRouteImport } from './routes/tutorials'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as SpendingInsightsRouteImport } from './routes/spending-insights'
-import { Route as SmeLedgerRouteImport } from './routes/sme-ledger'
-import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as PricingRouteImport } from './routes/pricing'
-import { Route as FinancialLiteracyRouteImport } from './routes/financial-literacy'
-import { Route as FeedbackRouteImport } from './routes/feedback'
-import { Route as DebtDashboardRouteImport } from './routes/debt-dashboard'
-import { Route as ContactRouteImport } from './routes/contact'
-import { Route as ChangelogRouteImport } from './routes/changelog'
-import { Route as BudgetingToolRouteImport } from './routes/budgeting-tool'
-import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as TrySalaryCalculatorIndexRouteImport } from './routes/try-salary-calculator/index'
+import { Route as AboutRouteImport } from './routes/about'
+import { Route as BudgetingToolRouteImport } from './routes/budgeting-tool'
+import { Route as ChangelogRouteImport } from './routes/changelog'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as DebtDashboardRouteImport } from './routes/debt-dashboard'
+import { Route as FeedbackRouteImport } from './routes/feedback'
+import { Route as FinancialLiteracyRouteImport } from './routes/financial-literacy'
+import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as SmeLedgerRouteImport } from './routes/sme-ledger'
+import { Route as SpendingInsightsRouteImport } from './routes/spending-insights'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as TutorialsRouteImport } from './routes/tutorials'
 import { Route as SalaryCalculatorIndexRouteImport } from './routes/salary-calculator/index'
-import { Route as TrySalaryCalculatorAmountRouteImport } from './routes/try-salary-calculator/$amount'
 import { Route as SalaryCalculatorAmountRouteImport } from './routes/salary-calculator/$amount'
+import { Route as TrySalaryCalculatorIndexRouteImport } from './routes/try-salary-calculator/index'
+import { Route as TrySalaryCalculatorAmountRouteImport } from './routes/try-salary-calculator/$amount'
 
-const TutorialsRoute = TutorialsRouteImport.update({
-  id: '/tutorials',
-  path: '/tutorials',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SpendingInsightsRoute = SpendingInsightsRouteImport.update({
-  id: '/spending-insights',
-  path: '/spending-insights',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SmeLedgerRoute = SmeLedgerRouteImport.update({
-  id: '/sme-ledger',
-  path: '/sme-ledger',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacyRoute = PrivacyRouteImport.update({
-  id: '/privacy',
-  path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PricingRoute = PricingRouteImport.update({
-  id: '/pricing',
-  path: '/pricing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FinancialLiteracyRoute = FinancialLiteracyRouteImport.update({
-  id: '/financial-literacy',
-  path: '/financial-literacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FeedbackRoute = FeedbackRouteImport.update({
-  id: '/feedback',
-  path: '/feedback',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DebtDashboardRoute = DebtDashboardRouteImport.update({
-  id: '/debt-dashboard',
-  path: '/debt-dashboard',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContactRoute = ContactRouteImport.update({
-  id: '/contact',
-  path: '/contact',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChangelogRoute = ChangelogRouteImport.update({
-  id: '/changelog',
-  path: '/changelog',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BudgetingToolRoute = BudgetingToolRouteImport.update({
-  id: '/budgeting-tool',
-  path: '/budgeting-tool',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -93,9 +38,74 @@ const AboutRoute = AboutRouteImport.update({
   path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const BudgetingToolRoute = BudgetingToolRouteImport.update({
+  id: '/budgeting-tool',
+  path: '/budgeting-tool',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChangelogRoute = ChangelogRouteImport.update({
+  id: '/changelog',
+  path: '/changelog',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DebtDashboardRoute = DebtDashboardRouteImport.update({
+  id: '/debt-dashboard',
+  path: '/debt-dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedbackRoute = FeedbackRouteImport.update({
+  id: '/feedback',
+  path: '/feedback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinancialLiteracyRoute = FinancialLiteracyRouteImport.update({
+  id: '/financial-literacy',
+  path: '/financial-literacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PricingRoute = PricingRouteImport.update({
+  id: '/pricing',
+  path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SmeLedgerRoute = SmeLedgerRouteImport.update({
+  id: '/sme-ledger',
+  path: '/sme-ledger',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SpendingInsightsRoute = SpendingInsightsRouteImport.update({
+  id: '/spending-insights',
+  path: '/spending-insights',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TutorialsRoute = TutorialsRouteImport.update({
+  id: '/tutorials',
+  path: '/tutorials',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SalaryCalculatorIndexRoute = SalaryCalculatorIndexRouteImport.update({
+  id: '/salary-calculator/',
+  path: '/salary-calculator/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SalaryCalculatorAmountRoute = SalaryCalculatorAmountRouteImport.update({
+  id: '/salary-calculator/$amount',
+  path: '/salary-calculator/$amount',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TrySalaryCalculatorIndexRoute =
@@ -104,22 +114,12 @@ const TrySalaryCalculatorIndexRoute =
     path: '/try-salary-calculator/',
     getParentRoute: () => rootRouteImport,
   } as any)
-const SalaryCalculatorIndexRoute = SalaryCalculatorIndexRouteImport.update({
-  id: '/salary-calculator/',
-  path: '/salary-calculator/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const TrySalaryCalculatorAmountRoute =
   TrySalaryCalculatorAmountRouteImport.update({
     id: '/try-salary-calculator/$amount',
     path: '/try-salary-calculator/$amount',
     getParentRoute: () => rootRouteImport,
   } as any)
-const SalaryCalculatorAmountRoute = SalaryCalculatorAmountRouteImport.update({
-  id: '/salary-calculator/$amount',
-  path: '/salary-calculator/$amount',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -268,88 +268,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/tutorials': {
-      id: '/tutorials'
-      path: '/tutorials'
-      fullPath: '/tutorials'
-      preLoaderRoute: typeof TutorialsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/spending-insights': {
-      id: '/spending-insights'
-      path: '/spending-insights'
-      fullPath: '/spending-insights'
-      preLoaderRoute: typeof SpendingInsightsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sme-ledger': {
-      id: '/sme-ledger'
-      path: '/sme-ledger'
-      fullPath: '/sme-ledger'
-      preLoaderRoute: typeof SmeLedgerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacy': {
-      id: '/privacy'
-      path: '/privacy'
-      fullPath: '/privacy'
-      preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pricing': {
-      id: '/pricing'
-      path: '/pricing'
-      fullPath: '/pricing'
-      preLoaderRoute: typeof PricingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/financial-literacy': {
-      id: '/financial-literacy'
-      path: '/financial-literacy'
-      fullPath: '/financial-literacy'
-      preLoaderRoute: typeof FinancialLiteracyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/feedback': {
-      id: '/feedback'
-      path: '/feedback'
-      fullPath: '/feedback'
-      preLoaderRoute: typeof FeedbackRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/debt-dashboard': {
-      id: '/debt-dashboard'
-      path: '/debt-dashboard'
-      fullPath: '/debt-dashboard'
-      preLoaderRoute: typeof DebtDashboardRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contact': {
-      id: '/contact'
-      path: '/contact'
-      fullPath: '/contact'
-      preLoaderRoute: typeof ContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/changelog': {
-      id: '/changelog'
-      path: '/changelog'
-      fullPath: '/changelog'
-      preLoaderRoute: typeof ChangelogRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/budgeting-tool': {
-      id: '/budgeting-tool'
-      path: '/budgeting-tool'
-      fullPath: '/budgeting-tool'
-      preLoaderRoute: typeof BudgetingToolRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -359,18 +282,88 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/budgeting-tool': {
+      id: '/budgeting-tool'
+      path: '/budgeting-tool'
+      fullPath: '/budgeting-tool'
+      preLoaderRoute: typeof BudgetingToolRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/try-salary-calculator/': {
-      id: '/try-salary-calculator/'
-      path: '/try-salary-calculator'
-      fullPath: '/try-salary-calculator/'
-      preLoaderRoute: typeof TrySalaryCalculatorIndexRouteImport
+    '/changelog': {
+      id: '/changelog'
+      path: '/changelog'
+      fullPath: '/changelog'
+      preLoaderRoute: typeof ChangelogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/debt-dashboard': {
+      id: '/debt-dashboard'
+      path: '/debt-dashboard'
+      fullPath: '/debt-dashboard'
+      preLoaderRoute: typeof DebtDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feedback': {
+      id: '/feedback'
+      path: '/feedback'
+      fullPath: '/feedback'
+      preLoaderRoute: typeof FeedbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/financial-literacy': {
+      id: '/financial-literacy'
+      path: '/financial-literacy'
+      fullPath: '/financial-literacy'
+      preLoaderRoute: typeof FinancialLiteracyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pricing': {
+      id: '/pricing'
+      path: '/pricing'
+      fullPath: '/pricing'
+      preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sme-ledger': {
+      id: '/sme-ledger'
+      path: '/sme-ledger'
+      fullPath: '/sme-ledger'
+      preLoaderRoute: typeof SmeLedgerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/spending-insights': {
+      id: '/spending-insights'
+      path: '/spending-insights'
+      fullPath: '/spending-insights'
+      preLoaderRoute: typeof SpendingInsightsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tutorials': {
+      id: '/tutorials'
+      path: '/tutorials'
+      fullPath: '/tutorials'
+      preLoaderRoute: typeof TutorialsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/salary-calculator/': {
@@ -380,18 +373,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SalaryCalculatorIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/try-salary-calculator/$amount': {
-      id: '/try-salary-calculator/$amount'
-      path: '/try-salary-calculator/$amount'
-      fullPath: '/try-salary-calculator/$amount'
-      preLoaderRoute: typeof TrySalaryCalculatorAmountRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/salary-calculator/$amount': {
       id: '/salary-calculator/$amount'
       path: '/salary-calculator/$amount'
       fullPath: '/salary-calculator/$amount'
       preLoaderRoute: typeof SalaryCalculatorAmountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/try-salary-calculator/': {
+      id: '/try-salary-calculator/'
+      path: '/try-salary-calculator'
+      fullPath: '/try-salary-calculator/'
+      preLoaderRoute: typeof TrySalaryCalculatorIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/try-salary-calculator/$amount': {
+      id: '/try-salary-calculator/$amount'
+      path: '/try-salary-calculator/$amount'
+      fullPath: '/try-salary-calculator/$amount'
+      preLoaderRoute: typeof TrySalaryCalculatorAmountRouteImport
       parentRoute: typeof rootRouteImport
     }
   }

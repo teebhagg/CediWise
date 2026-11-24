@@ -26,6 +26,7 @@ User-agent: CCBot
 Disallow: /
 
 Sitemap: https://www.cediwise.app/sitemap.xml
+Schemamap: https://www.cediwise.app/schemamap.xml
 
 # LLM content overview
 # https://www.cediwise.app/llms.txt

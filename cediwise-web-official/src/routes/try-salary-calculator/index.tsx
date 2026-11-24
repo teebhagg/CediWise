@@ -7,12 +7,14 @@ import { ArrowLeft01Icon } from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
+import { markdownAlternateLinks } from '@/lib/agent/twins'
 
 export const Route = createFileRoute('/try-salary-calculator/')({
   component: TrySalaryCalculatorPage,
   head: () =>
     createPageHead({
       path: '/try-salary-calculator',
+      extraLinks: markdownAlternateLinks('/try-salary-calculator'),
       title: 'Try free salary calculator — Ghana 2026',
       description:
         'Enter gross pay, see SSNIT, PAYE, and net take-home. 2026 GRA rates. Three free checks per day on the web.',

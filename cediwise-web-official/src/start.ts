@@ -1,20 +1,24 @@
 import { createMiddleware, createStart } from '@tanstack/react-start'
 
 import {
-  buildMarkdownResponse,
+  buildAgentResponse,
   decideAgentResponse,
+  decidePathResponse,
+  withDiscoveryLinks,
   withVaryAccept,
 } from '@/lib/agent/negotiation'
 import { isKnownRoute } from '@/lib/agent/routeMatch'
 
 /**
- * Agent-facing content negotiation for document requests.
+ * Agent-facing responses for document requests.
  *
- * - `Accept: text/markdown` (preferred over HTML) gets Markdown for the
- *   homepage, Markdown 404s for unknown paths, and Markdown 406s for pages
- *   with no Markdown version when HTML is not accepted.
- * - Every other document response gets `Vary: Accept`, so caches keep the
- *   HTML and Markdown variants apart.
+ * - URL-addressed agent documents: `/auth.md`, `.md` twins such as `/index.md`
+ *   and `/pricing.md`, and the structured view at `/?mode=agent`.
+ * - `Accept: text/markdown` (preferred over HTML): Markdown for pages with a
+ *   Markdown version, Markdown 404s for unknown paths, and Markdown 406s for
+ *   pages without one when HTML is not accepted.
+ * - HTML document responses get `Vary: Accept`, and the homepage and pricing
+ *   pages advertise their Markdown twins and the sitemap in Link headers.
  */
 const agentNegotiation = createMiddleware({ type: 'request' }).server(
   async ({ request, next }) => {
@@ -22,19 +26,31 @@ const agentNegotiation = createMiddleware({ type: 'request' }).server(
       return next()
     }
 
-    const pathname = new URL(request.url).pathname
-    const decision = decideAgentResponse({
-      accept: request.headers.get('accept'),
-      pathname,
+    const url = new URL(request.url)
+    const pathDecision = decidePathResponse({
+      pathname: url.pathname,
+      search: url.search,
       isKnownRoute,
     })
+    if (pathDecision.kind !== 'pass') {
+      return buildAgentResponse(pathDecision, request.method)
+    }
 
-    if (decision.kind === 'markdown') {
-      return buildMarkdownResponse(decision, request.method)
+    const decision = decideAgentResponse({
+      accept: request.headers.get('accept'),
+      pathname: url.pathname,
+      isKnownRoute,
+    })
+    if (decision.kind !== 'pass') {
+      return buildAgentResponse(decision, request.method)
     }
 
     const result = await next()
-    return { ...result, response: withVaryAccept(result.response) }
+    const response = withDiscoveryLinks(
+      withVaryAccept(result.response),
+      url.pathname,
+    )
+    return { ...result, response }
   },
 )
 

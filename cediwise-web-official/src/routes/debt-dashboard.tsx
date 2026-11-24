@@ -2,12 +2,14 @@ import { TrendingDown } from '@hugeicons/core-free-icons'
 import { createFileRoute } from '@tanstack/react-router'
 import { FeatureInsightLayout } from '@/components/features/FeatureInsightLayout'
 import { absoluteUrl, createPageHead } from '@/lib/seo'
+import { markdownAlternateLinks } from '@/lib/agent/twins'
 
 export const Route = createFileRoute('/debt-dashboard')({
   component: DebtDashboardPage,
   head: () =>
     createPageHead({
       path: '/debt-dashboard',
+      extraLinks: markdownAlternateLinks('/debt-dashboard'),
       title: 'Eliminate debt faster',
       description:
         'Track loans, balances, monthly repayments, and payoff dates in one place. See what extra payments save you.',

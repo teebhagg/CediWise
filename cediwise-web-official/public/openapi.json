@@ -1,0 +1,96 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "CediWise NLWeb ask API",
+    "version": "0.55",
+    "description": "Keyword search over public CediWise pages (NLWeb protocol v0.55). Read-only. No authentication."
+  },
+  "servers": [{ "url": "https://www.cediwise.app" }],
+  "paths": {
+    "/ask": {
+      "post": {
+        "operationId": "ask",
+        "summary": "Ask a question about CediWise",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/AskRequest" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "An answer with results, or a failure described by error.code. With prefer.streaming, a text/event-stream of start, result, error, and complete events.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AskResponse" } },
+              "text/event-stream": { "schema": { "type": "string" } }
+            }
+          },
+          "400": {
+            "description": "Malformed request, such as a body that is not a JSON object or a missing query.text.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/AskResponse" } }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AskRequest": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": {
+            "type": "object",
+            "required": ["text"],
+            "properties": {
+              "text": { "type": "string", "minLength": 1, "maxLength": 500 }
+            }
+          },
+          "prefer": {
+            "type": "object",
+            "properties": {
+              "streaming": { "type": "boolean" },
+              "response_format": { "type": "string", "enum": ["conversational_search"] },
+              "mode": { "type": "string", "enum": ["list"] }
+            }
+          }
+        }
+      },
+      "AskResponse": {
+        "type": "object",
+        "required": ["_meta"],
+        "properties": {
+          "_meta": {
+            "type": "object",
+            "required": ["response_type", "version"],
+            "properties": {
+              "response_type": { "type": "string", "enum": ["answer", "failure"] },
+              "version": { "type": "string" }
+            }
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "@type": { "type": "string" },
+                "name": { "type": "string" },
+                "url": { "type": "string", "format": "uri" },
+                "description": { "type": "string" }
+              }
+            }
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

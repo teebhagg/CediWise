@@ -2,12 +2,14 @@ import { ChartLineDataIcon } from '@hugeicons/core-free-icons'
 import { createFileRoute } from '@tanstack/react-router'
 import { FeatureInsightLayout } from '@/components/features/FeatureInsightLayout'
 import { absoluteUrl, createPageHead } from '@/lib/seo'
+import { markdownAlternateLinks } from '@/lib/agent/twins'
 
 export const Route = createFileRoute('/budgeting-tool')({
   component: BudgetingToolPage,
   head: () =>
     createPageHead({
       path: '/budgeting-tool',
+      extraLinks: markdownAlternateLinks('/budgeting-tool'),
       title: 'Budget with clarity',
       description:
         'See where your money goes, how much you can spend today, and when cash might run low. Ghana budgeting app in cedis.',

@@ -116,8 +116,10 @@ export function createPageHead(options: {
   title: string
   description: string
   schemas?: SchemaGenerator[]
+  /** Extra `<link>` tags, such as a Markdown alternate or a discovery manifest. */
+  extraLinks?: Array<{ rel: string; href: string; type?: string }>
 }) {
-  const { path, title, description, schemas = [] } = options
+  const { path, title, description, schemas = [], extraLinks = [] } = options
   const url = absoluteUrl(path)
   return {
     meta: [
@@ -131,7 +133,7 @@ export function createPageHead(options: {
       { name: 'twitter:description', content: description },
       { name: 'twitter:image', content: OG_IMAGE },
     ],
-    links: [{ rel: 'canonical', href: url }],
+    links: [{ rel: 'canonical', href: url }, ...extraLinks],
     scripts: schemas.map((schema) => ({
       type: 'application/ld+json',
       children: JSON.stringify(schema.generate()),

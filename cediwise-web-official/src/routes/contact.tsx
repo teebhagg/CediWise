@@ -11,12 +11,14 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
+import { markdownAlternateLinks } from '@/lib/agent/twins'
 
 export const Route = createFileRoute('/contact')({
   component: ContactPage,
   head: () =>
     createPageHead({
       path: '/contact',
+      extraLinks: markdownAlternateLinks('/contact'),
       title: 'Contact',
       description:
         'Email, support, or reach Joshua Ansah. Questions about PAYE, budgeting, or the app.',

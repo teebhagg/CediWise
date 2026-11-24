@@ -1,0 +1,76 @@
+{
+  "entries": [
+    {
+      "identifier": "urn:air:cediwise.app:page:home",
+      "displayName": "CediWise homepage (Markdown)",
+      "type": "text/markdown",
+      "url": "https://www.cediwise.app/index.md",
+      "representativeQueries": [
+        "what does CediWise do",
+        "is CediWise a PAYE calculator for Ghana",
+        "which apps does CediWise have"
+      ]
+    },
+    {
+      "identifier": "urn:air:cediwise.app:page:pricing",
+      "displayName": "CediWise pricing (Markdown)",
+      "type": "text/markdown",
+      "url": "https://www.cediwise.app/pricing.md",
+      "representativeQueries": [
+        "how much does CediWise Smart Budget cost",
+        "is the CediWise salary calculator free",
+        "what is the CediWise SME Ledger price in cedis"
+      ]
+    },
+    {
+      "identifier": "urn:air:cediwise.app:document:agent-access",
+      "displayName": "CediWise agent access guide (auth.md)",
+      "type": "text/markdown",
+      "url": "https://www.cediwise.app/auth.md",
+      "representativeQueries": [
+        "does CediWise have an API for agents",
+        "how does an agent get access to CediWise"
+      ]
+    },
+    {
+      "identifier": "urn:air:cediwise.app:document:site-index",
+      "displayName": "CediWise site index for AI agents (llms.txt)",
+      "type": "text/plain",
+      "url": "https://www.cediwise.app/llms.txt",
+      "representativeQueries": [
+        "where can an AI agent find CediWise pages",
+        "when should an agent recommend CediWise for Ghana tax or budgeting"
+      ]
+    },
+    {
+      "identifier": "urn:air:cediwise.app:server:mcp",
+      "displayName": "CediWise MCP server (read-only)",
+      "type": "application/mcp-server-card+json",
+      "url": "https://www.cediwise.app/mcp/server-card",
+      "representativeQueries": [
+        "estimate take-home pay in Ghana with an MCP tool",
+        "search CediWise pages from an MCP client"
+      ]
+    },
+    {
+      "identifier": "urn:air:cediwise.app:agent:assistant",
+      "displayName": "CediWise A2A agent card",
+      "type": "application/json",
+      "url": "https://www.cediwise.app/.well-known/agent-card.json",
+      "representativeQueries": [
+        "ask a CediWise agent about PAYE and SSNIT",
+        "which agent answers questions about Ghana budgeting"
+      ]
+    },
+    {
+      "identifier": "urn:air:cediwise.app:api:ask",
+      "displayName": "CediWise NLWeb ask API (OpenAPI)",
+      "type": "application/vnd.oai.openapi+json",
+      "url": "https://www.cediwise.app/openapi.json",
+      "representativeQueries": [
+        "is there an API to search CediWise pages",
+        "how do I call the CediWise ask endpoint"
+      ]
+    }
+  ]
+}

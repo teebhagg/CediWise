@@ -2,12 +2,14 @@ import { ContentPageLayout } from '@/components/layout/ContentPageLayout'
 import { Footer } from '@/components/layout/Footer'
 import { createPageHead } from '@/lib/seo'
 import { createFileRoute } from '@tanstack/react-router'
+import { markdownAlternateLinks } from '@/lib/agent/twins'
 
 export const Route = createFileRoute('/terms')({
   component: TermsPage,
   head: () =>
     createPageHead({
       path: '/terms',
+      extraLinks: markdownAlternateLinks('/terms'),
       title: 'Terms of Service',
       description:
         'Terms for using CediWise website and app. Salary tools, budgeting, optional MoMo SMS import, and SME ledger for Ghana.',

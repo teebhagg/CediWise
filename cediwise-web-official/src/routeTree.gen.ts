@@ -19,6 +19,7 @@ import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as FinancialLiteracyRouteImport } from './routes/financial-literacy'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as ReportRouteImport } from './routes/report'
 import { Route as SmeLedgerRouteImport } from './routes/sme-ledger'
 import { Route as SpendingInsightsRouteImport } from './routes/spending-insights'
 import { Route as TermsRouteImport } from './routes/terms'
@@ -78,6 +79,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
   path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReportRoute = ReportRouteImport.update({
+  id: '/report',
+  path: '/report',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SmeLedgerRoute = SmeLedgerRouteImport.update({
   id: '/sme-ledger',
   path: '/sme-ledger',
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/financial-literacy': typeof FinancialLiteracyRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/report': typeof ReportRoute
   '/sme-ledger': typeof SmeLedgerRoute
   '/spending-insights': typeof SpendingInsightsRoute
   '/terms': typeof TermsRoute
@@ -152,6 +159,7 @@ export interface FileRoutesByTo {
   '/financial-literacy': typeof FinancialLiteracyRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/report': typeof ReportRoute
   '/sme-ledger': typeof SmeLedgerRoute
   '/spending-insights': typeof SpendingInsightsRoute
   '/terms': typeof TermsRoute
@@ -173,6 +181,7 @@ export interface FileRoutesById {
   '/financial-literacy': typeof FinancialLiteracyRoute
   '/pricing': typeof PricingRoute
   '/privacy': typeof PrivacyRoute
+  '/report': typeof ReportRoute
   '/sme-ledger': typeof SmeLedgerRoute
   '/spending-insights': typeof SpendingInsightsRoute
   '/terms': typeof TermsRoute
@@ -195,6 +204,7 @@ export interface FileRouteTypes {
     | '/financial-literacy'
     | '/pricing'
     | '/privacy'
+    | '/report'
     | '/sme-ledger'
     | '/spending-insights'
     | '/terms'
@@ -215,6 +225,7 @@ export interface FileRouteTypes {
     | '/financial-literacy'
     | '/pricing'
     | '/privacy'
+    | '/report'
     | '/sme-ledger'
     | '/spending-insights'
     | '/terms'
@@ -235,6 +246,7 @@ export interface FileRouteTypes {
     | '/financial-literacy'
     | '/pricing'
     | '/privacy'
+    | '/report'
     | '/sme-ledger'
     | '/spending-insights'
     | '/terms'
@@ -256,6 +268,7 @@ export interface RootRouteChildren {
   FinancialLiteracyRoute: typeof FinancialLiteracyRoute
   PricingRoute: typeof PricingRoute
   PrivacyRoute: typeof PrivacyRoute
+  ReportRoute: typeof ReportRoute
   SmeLedgerRoute: typeof SmeLedgerRoute
   SpendingInsightsRoute: typeof SpendingInsightsRoute
   TermsRoute: typeof TermsRoute
@@ -338,6 +351,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/report': {
+      id: '/report'
+      path: '/report'
+      fullPath: '/report'
+      preLoaderRoute: typeof ReportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sme-ledger': {
       id: '/sme-ledger'
       path: '/sme-ledger'
@@ -408,6 +428,7 @@ const rootRouteChildren: RootRouteChildren = {
   FinancialLiteracyRoute: FinancialLiteracyRoute,
   PricingRoute: PricingRoute,
   PrivacyRoute: PrivacyRoute,
+  ReportRoute: ReportRoute,
   SmeLedgerRoute: SmeLedgerRoute,
   SpendingInsightsRoute: SpendingInsightsRoute,
   TermsRoute: TermsRoute,

@@ -39,6 +39,7 @@ import {
   UserGroupIcon,
   Invoice01Icon,
   AlertCircleIcon,
+  Flag01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import Link from "next/link";
@@ -53,6 +54,7 @@ const navItems = [
   { href: "/subscriptions", label: "Subscriptions", icon: Invoice01Icon },
   { href: "/learning-data", label: "Learning Data", icon: BookOpen01Icon },
   { href: "/feedback", label: "App Feedback", icon: MessageQuestionIcon },
+  { href: "/reports", label: "Reports", icon: Flag01Icon },
   { href: "/emails", label: "Emails", icon: Mail01Icon },
   { href: "/notifications", label: "Notifications", icon: Notification01Icon },
   { href: "/tax-config", label: "Tax Configuration", icon: Invoice01Icon },

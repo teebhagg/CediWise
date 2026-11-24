@@ -64,7 +64,8 @@ function PrivacyPage() {
             </li>
             <li>
               <strong>Communications:</strong> emails you send, newsletter
-              sign-ups, and support responses.
+              sign-ups, support responses, and reports you send through the
+              Report an issue page.
             </li>
             <li>
               <strong>Optional MoMo SMS import (mobile, opt-in):</strong> if you
@@ -152,7 +153,8 @@ function PrivacyPage() {
             We use trusted providers: <strong>Supabase</strong> (database/auth),{' '}
             <strong>Firebase</strong> (analytics), <strong>Google</strong>{' '}
             (Sign-In), <strong>Arkesel</strong> (SMS OTP),{' '}
-            <strong>Vercel/GitHub</strong> (hosting). We only share the minimum
+            <strong>Resend</strong> (email delivery, including report and
+            newsletter emails), <strong>Vercel/GitHub</strong> (hosting). We only share the minimum
             data required. Refer to each provider&apos;s privacy policies for
             details.
           </p>

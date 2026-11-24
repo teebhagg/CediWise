@@ -12,6 +12,7 @@ import { useMemo, useState } from 'react'
 import type { FeedbackCategory } from '@/serverFns/feedback.functions'
 import { submitFeedback } from '@/serverFns/feedback.functions'
 import { Footer } from '@/components/layout/Footer'
+import { LeaveReviewButton } from '@/components/feedback/LeaveReviewButton'
 import { Button } from '@/components/ui/button'
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -165,6 +166,37 @@ function FeedbackPage() {
               Honest notes help most.
             </p>
           </motion.header>
+
+          <motion.section
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.02 }}
+            className="mb-6 grid gap-4 sm:grid-cols-2"
+          >
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-sm">
+              <h2 className="text-lg font-semibold text-white">Enjoying CediWise?</h2>
+              <p className="mt-2 text-sm text-zinc-400">
+                A short review helps other people find the app.
+              </p>
+              <div className="mt-5">
+                <LeaveReviewButton />
+              </div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 backdrop-blur-sm">
+              <h2 className="text-lg font-semibold text-white">Something not right?</h2>
+              <p className="mt-2 text-sm text-zinc-400">
+                Report a problem with the app, your account, or our content.
+              </p>
+              <div className="mt-5">
+                <Link
+                  to="/report"
+                  className="inline-flex h-11 items-center justify-center rounded-xl border border-white/15 px-6 text-sm font-medium text-zinc-100 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  Report an issue
+                </Link>
+              </div>
+            </div>
+          </motion.section>
 
           <motion.section
             initial={{ opacity: 0, y: 16 }}

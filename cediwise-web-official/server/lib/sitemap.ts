@@ -14,7 +14,7 @@ export const SITEMAP_ENTRIES: ReadonlyArray<SitemapEntry> = [
   { path: '/about', lastmod: '2026-06-16', priority: '0.8' },
   { path: '/contact', lastmod: '2026-06-16', priority: '0.8' },
   { path: '/pricing', lastmod: '2026-11-24', priority: '0.8' },
-  { path: '/privacy', lastmod: '2026-11-20', priority: '0.8' },
+  { path: '/privacy', lastmod: '2026-11-24', priority: '0.8' },
   { path: '/terms', lastmod: '2026-07-07', priority: '0.8' },
   { path: '/salary-calculator', lastmod: '2026-11-24', priority: '0.8' },
   { path: '/try-salary-calculator', lastmod: '2026-11-24', priority: '0.8' },

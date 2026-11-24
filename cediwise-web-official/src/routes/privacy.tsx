@@ -64,7 +64,8 @@ function PrivacyPage() {
             </li>
             <li>
               <strong>Communications:</strong> emails you send, newsletter
-              sign-ups, and support responses.
+              sign-ups, support responses, and reports you send through the
+              Report an issue page.
             </li>
             <li>
               <strong>Optional MoMo SMS import (mobile, opt-in):</strong> if you

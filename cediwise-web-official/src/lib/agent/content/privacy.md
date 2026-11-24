@@ -18,7 +18,7 @@ Data controller: CediWise. For privacy inquiries, contact joshua.ansah@cediwise.
 - Financial and usage data: salary inputs, budgets, small and medium enterprise (SME) ledger entries, and transactions you enter (stored to provide the service).
 - Device and technical data: device model, OS version, app version, IP address, and crash reports (for troubleshooting and analytics).
 - Analytics and telemetry: usage patterns via Firebase Analytics to improve the app.
-- Communications: emails you send, newsletter sign-ups, and support responses.
+- Communications: emails you send, newsletter sign-ups, support responses, and reports you send through the Report an issue page.
 - Optional MoMo SMS import (mobile, opt-in): if you enable Mobile Money (MoMo) import, Android permissions let CediWise read or receive SMS on this device. CediWise filters for MTN MoMo, Telecel Cash, and AT Money alerts on the device. Matching message text, sender, time, and parsed transaction details may be sent to CediWise's API hosted by Vercel and processed or stored by Supabase to identify, deduplicate, and add budget transactions. Import logs containing message text are retained for up to 180 days. Unrelated SMS are not sent. You may also paste a single MoMo SMS manually. On iOS, a similar import may use Apple Shortcuts you configure (optional, when available).
 
 ## 4. MoMo SMS auto-tracking (optional)

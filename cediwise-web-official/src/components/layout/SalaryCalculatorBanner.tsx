@@ -1,6 +1,6 @@
 'use client'
 
-import { Link } from '@tanstack/react-router'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -10,6 +10,9 @@ const DISMISS_STORAGE_KEY = 'cediwise:salary-banner-dismissed'
 export function SalaryCalculatorBanner() {
   const bannerRef = useRef<HTMLDivElement>(null)
   const [visible, setVisible] = useState(false)
+  const isPricingPage = useRouterState({
+    select: (state) => state.location.pathname === '/pricing',
+  })
 
   useEffect(() => {
     try {
@@ -24,7 +27,7 @@ export function SalaryCalculatorBanner() {
   useEffect(() => {
     const root = document.documentElement
 
-    if (!visible) {
+    if (!visible || isPricingPage) {
       root.style.setProperty('--salary-banner-height', '0px')
       return
     }
@@ -44,7 +47,7 @@ export function SalaryCalculatorBanner() {
       observer.disconnect()
       root.style.setProperty('--salary-banner-height', '0px')
     }
-  }, [visible])
+  }, [isPricingPage, visible])
 
   const dismiss = () => {
     try {
@@ -55,7 +58,7 @@ export function SalaryCalculatorBanner() {
     setVisible(false)
   }
 
-  if (!visible) return null
+  if (!visible || isPricingPage) return null
 
   return (
     <div

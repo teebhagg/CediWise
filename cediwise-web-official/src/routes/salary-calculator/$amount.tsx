@@ -66,7 +66,7 @@ function DynamicSalaryPage() {
           Calculate {formattedAmount} take-home
         </p>
         <p className="text-sm text-zinc-300 leading-relaxed mb-4">
-          Instant breakdown: SSNIT, PAYE, net salary. Five free checks per day on the web.
+          Instant breakdown: SSNIT, PAYE, net salary. Three free checks per day on the web.
         </p>
         <Link
           to="/try-salary-calculator/$amount"

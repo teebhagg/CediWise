@@ -164,7 +164,6 @@ export const listFeedback = createServerFn({ method: 'POST' })
   .handler(async ({ data }) => {
     const filters = FeedbackListFiltersSchema.parse(data)
     const from = (filters.page - 1) * filters.pageSize
-    const to = from + filters.pageSize - 1
 
     const searchParams: Record<string, string> = {
       select: 'id,category,rating,feedback_text,email,is_beta,version,source,created_at',

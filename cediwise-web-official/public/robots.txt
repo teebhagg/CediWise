@@ -25,8 +25,8 @@ Allow: /
 User-agent: CCBot
 Disallow: /
 
-Sitemap: https://cediwise.app/sitemap.xml
+Sitemap: https://www.cediwise.app/sitemap.xml
 
 # LLM content overview
-# https://cediwise.app/llms.txt
-# https://cediwise.app/llms-full.txt
+# https://www.cediwise.app/llms.txt
+# https://www.cediwise.app/llms-full.txt

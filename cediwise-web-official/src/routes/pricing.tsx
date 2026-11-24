@@ -2,9 +2,14 @@
 
 import { DownloadAppDialog } from '@/components/download/DownloadAppDialog'
 import { Footer } from '@/components/layout/Footer'
+import { PricingPass } from '@/components/landing/PricingPass'
 import { createPageHead } from '@/lib/seo'
 import { cn } from '@/lib/utils'
-import { ArrowLeft01Icon, Cancel01Icon, Tick02Icon } from '@hugeicons/core-free-icons'
+import {
+  ArrowRight01Icon,
+  Cancel01Icon,
+  Tick02Icon,
+} from '@hugeicons/core-free-icons'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
@@ -17,7 +22,7 @@ export const Route = createFileRoute('/pricing')({
       path: '/pricing',
       title: 'Pricing',
       description:
-        'Free salary calculator. Smart Budget from GHS 15/mo. SME Ledger from GHS 25/mo. 30-day free trial on paid plans.',
+        'Free salary calculator. Smart Budget from GH¢ 15/mo. SME Ledger from GH¢ 25/mo. 30-day free trial on paid plans.',
     }),
 })
 
@@ -43,7 +48,7 @@ const comparisonFeatures = [
     category: 'Business',
     features: [
       { name: 'Sales & expenses ledger', free: false, budget: false, sme: true },
-      { name: 'Auto 20% VAT + GHS 750K alert', free: false, budget: false, sme: true },
+      { name: 'Auto 20% VAT + GH¢ 750K alert', free: false, budget: false, sme: true },
       { name: 'CSV export for accountant', free: false, budget: false, sme: true },
       { name: 'Monthly profit summary', free: false, budget: false, sme: true },
     ]
@@ -55,56 +60,32 @@ function PricingPage() {
   const [downloadPickerOpen, setDownloadPickerOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] text-zinc-50">
-      {/* Background Glows */}
-      <div className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute top-0 right-0 h-[500px] w-[60dvw] rounded-full bg-emerald-500/10 blur-[140px]" />
-        <div className="absolute bottom-1/3 left-0 h-[300px] w-[40dvw] rounded-full bg-emerald-500/5 blur-[100px]" />
-      </div>
-
-      <main className="relative pt-32 pb-24">
-        <div className="max-w-7xl mx-auto px-6">
+    <div data-pricing-page className="min-h-screen bg-zinc-950 text-zinc-50">
+      <main className="relative pb-24 pt-32">
+        <div className="mx-auto max-w-[1120px] px-6 md:px-0">
           <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="mb-8"
-          >
-            <Link
-              to="/"
-              className="inline-flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
-            >
-              <HugeiconsIcon icon={ArrowLeft01Icon} className="size-4" />
-              Back to home
-            </Link>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-16"
+            transition={{ duration: 0.45 }}
+            className="mb-10 flex flex-col gap-7 text-left md:flex-row md:items-end md:justify-between"
           >
-            <h1 className="text-4xl font-bold tracking-tight text-white mb-6 sm:text-5xl">
-              Simple pricing
-            </h1>
-            <p className="text-lg text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-              Salary calculator stays free forever.
-              <br />
-              Smart Budget and SME Ledger include a <span className="font-semibold text-emerald-400">30-day free trial</span>.
-            </p>
-
-            <div className="mt-8 flex items-center justify-center">
-              <div className="inline-flex items-center gap-3 backdrop-blur-md bg-white/5 border border-white/10 text-zinc-300 text-sm px-4 py-2 rounded-full">
-                Cancel anytime · Prices in GHS only
-              </div>
+            <div className="max-w-[620px]">
+              <h1 className="mb-4 text-[48px] font-medium leading-[1.04] tracking-[-0.055em] sm:text-[56px]">
+                Simple pricing
+              </h1>
+              <p className="max-w-[520px] text-base leading-relaxed text-zinc-400">
+                Salary calculator stays free forever.
+                <br />
+                Smart Budget and SME Ledger include a <span className="font-semibold text-emerald-400">30-day free trial</span>.
+              </p>
             </div>
 
-            <div className="mt-10 flex justify-center">
-              <div className="relative flex items-center p-1 bg-white/5 backdrop-blur-md border border-white/10 rounded-full">
+            <div className="flex shrink-0 md:pb-1">
+              <div className="relative flex items-center rounded-full border border-white/10 bg-white/5 p-1">
                 <button
                   onClick={() => setBillingCycle('monthly')}
                   className={cn(
-                    'relative z-10 w-32 py-2 text-sm font-medium transition-colors duration-300',
+                    'relative z-10 w-32 py-2.5 text-sm font-medium transition-colors duration-200',
                     billingCycle === 'monthly' ? 'text-white' : 'text-zinc-400 hover:text-white'
                   )}
                 >
@@ -113,62 +94,51 @@ function PricingPage() {
                 <button
                   onClick={() => setBillingCycle('quarterly')}
                   className={cn(
-                    'relative z-10 w-32 py-2 text-sm font-medium transition-colors duration-300',
+                    'relative z-10 w-32 py-2.5 text-sm font-medium transition-colors duration-200',
                     billingCycle === 'quarterly' ? 'text-white' : 'text-zinc-400 hover:text-white'
                   )}
                 >
                   Quarterly
-                  <span className="absolute -top-3 -right-2 rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2 py-0.5 text-[10px] text-emerald-400">Save 13%</span>
+                  <span className="absolute right-1 -top-3 rounded-full border border-emerald-400/25 bg-emerald-500/15 px-2 py-0.5 text-[10px] text-emerald-300">Save 13%</span>
                 </button>
                 <motion.div
-                  className="absolute top-1 bottom-1 w-32 bg-white/10 rounded-full"
+                  className="absolute bottom-1 top-1 w-32 rounded-full bg-white/10 shadow-[0_1px_3px_rgba(0,0,0,0.24)]"
                   animate={{ left: billingCycle === 'monthly' ? 4 : 132 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 />
               </div>
             </div>
           </motion.div>
 
-          {/* ROI Banner */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.15 }}
-            className="max-w-2xl mx-auto mb-12 text-center"
-          >
-            <div className="inline-flex flex-wrap items-center justify-center gap-x-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-6 py-4 text-sm text-zinc-300 leading-relaxed">
-              <span className="text-emerald-400 font-semibold">Worth it?</span>
-              Smart Budget is GHS 180/year. Catching one wrong PAYE deduction often saves more than that.
-            </div>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          <div className="mx-auto grid max-w-[1120px] gap-6 md:grid-cols-2 lg:grid-cols-3">
             {/* FREE TIER */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="backdrop-blur-md bg-white/5 border border-white/10 rounded-3xl p-8 flex flex-col hover:bg-white/10 hover:border-white/20 transition-all duration-300"
+              className="flex min-h-[760px] flex-col rounded-[28px] border border-white/10 bg-[#101613] p-[30px] pt-9 text-white shadow-[0_16px_40px_rgba(0,0,0,0.25)]"
             >
-              <div className="flex-1">
-                <h3 className="text-2xl font-semibold text-white">Free</h3>
-                <p className="text-zinc-400 mt-2 text-sm">PAYE &amp; SSNIT calculator + lessons</p>
-                <div className="mt-8">
-                  <span className="text-5xl font-bold text-white">GHS 0</span>
-                  <span className="text-zinc-500 font-medium">/forever</span>
+              <PricingPass name="Free" variant="free" />
+              <div className="mt-10 flex flex-1 flex-col">
+                <h2 className="text-[22px] font-medium tracking-[-0.035em]">Free</h2>
+                <div className="mt-5 flex items-baseline gap-2">
+                  <span className="text-5xl font-medium leading-none tracking-[-0.065em]">GH¢ 0</span>
+                  <span className="text-sm text-zinc-400">/forever</span>
                 </div>
-                <ul className="mt-8 space-y-4 text-zinc-300 text-sm">
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> 2026 PAYE &amp; SSNIT calculator</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Financial literacy lessons</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> GRA rate updates</li>
-                  <li className="flex items-center gap-3 text-zinc-500 opacity-60"><HugeiconsIcon icon={Cancel01Icon} className="size-5 text-zinc-600 shrink-0" /> Budget, debt, SME ledger</li>
+                <p className="mt-3 text-sm text-zinc-300">PAYE &amp; SSNIT calculator + lessons</p>
+                <ul className="mt-8 space-y-4 text-sm text-zinc-300">
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 shrink-0 text-emerald-400" /> 2026 PAYE &amp; SSNIT calculator</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 shrink-0 text-emerald-400" /> Financial literacy lessons</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 shrink-0 text-emerald-400" /> GRA rate updates</li>
+                  <li className="flex items-center gap-3 text-zinc-500"><HugeiconsIcon icon={Cancel01Icon} className="size-5 shrink-0 text-zinc-600" /> Budget, debt, SME ledger</li>
                 </ul>
               </div>
               <Link
                 to="/try-salary-calculator"
-                className="mt-10 block w-full cursor-pointer text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-4 rounded-2xl transition-colors"
+                className="mt-auto inline-flex w-full items-center justify-between rounded-full border border-white/10 bg-white/5 px-5 py-4 font-semibold text-white transition-colors hover:bg-white/10"
               >
                 Try free calculator
+                <HugeiconsIcon icon={ArrowRight01Icon} className="size-5" />
               </Link>
             </motion.div>
 
@@ -177,38 +147,38 @@ function PricingPage() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="relative backdrop-blur-xl bg-white/10 border border-emerald-500/30 rounded-3xl p-8 flex flex-col shadow-[0_0_40px_-10px_rgba(16,185,129,0.2)] md:-translate-y-4 hover:-translate-y-6 hover:border-emerald-500/50 transition-all duration-300"
+                  className="flex min-h-[760px] flex-col rounded-[28px] border border-emerald-500/25 bg-[#0b2118] p-[30px] pt-9 text-white shadow-[0_14px_44px_rgba(5,150,105,0.16)]"
             >
-              <div className="absolute -top-4 right-6 bg-linear-to-r from-emerald-500 to-emerald-400 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg">
-                MOST POPULAR
-              </div>
-              <div className="flex-1">
-                <h3 className="text-2xl font-semibold text-white">Smart Budget</h3>
-                <p className="text-zinc-400 mt-2 text-sm">Budget, debt, charts, offline</p>
-                <p className="text-emerald-400/80 mt-1 text-xs">One caught payslip error can cover a year.</p>
-
-                <div className="mt-8 flex items-baseline gap-1">
-                  <span className="text-5xl font-bold text-white">
-                    {billingCycle === 'monthly' ? 'GHS 15' : 'GHS 39'}
+              <PricingPass name="Smart Budget" variant="budget" />
+              <div className="mt-10 flex flex-1 flex-col">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-[22px] font-medium tracking-[-0.035em]">Smart Budget</h2>
+                  <span className="rounded-full border border-emerald-400/25 bg-emerald-500/15 px-2.5 py-1 text-[9px] font-semibold tracking-[0.11em] text-emerald-300">MOST POPULAR</span>
+                </div>
+                <div className="mt-5 flex items-baseline gap-1">
+                  <span className="text-5xl font-medium leading-none tracking-[-0.065em]">
+                    {billingCycle === 'monthly' ? 'GH¢ 15' : 'GH¢ 39'}
                   </span>
-                  <span className="text-zinc-400 font-medium">
+                  <span className="text-sm font-medium text-zinc-400">
                     {billingCycle === 'monthly' ? '/month' : '/quarter'}
                   </span>
                 </div>
-                <div className="text-zinc-400 text-sm mt-1 min-h-[20px]">
+                <div className="mt-2 min-h-[20px] text-sm text-zinc-400">
                   {billingCycle === 'monthly' ? (
-                    <>or <span className="text-emerald-400 font-medium">GHS 39/quarter</span> (save 13%)</>
+                    <>or <span className="font-medium text-emerald-800">GH¢ 39/quarter</span> (save 13%)</>
                   ) : (
                     <>Billed every 3 months</>
                   )}
                 </div>
+                <p className="mt-3 text-sm text-zinc-300">Budget, debt, charts, offline</p>
+                <p className="mt-1 text-xs text-emerald-200/75">One caught payslip error can cover a year.</p>
 
-                <ul className="mt-8 space-y-4 text-zinc-300 text-sm">
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Everything in Free</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Budgeting &amp; safe-to-spend</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Debt dashboard</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Spending charts</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Offline mode</li>
+                <ul className="mt-8 space-y-4 text-sm text-zinc-300">
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 shrink-0 text-emerald-400" /> Everything in Free</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 shrink-0 text-emerald-400" /> Budgeting &amp; safe-to-spend</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 shrink-0 text-emerald-400" /> Debt dashboard</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 shrink-0 text-emerald-400" /> Spending charts</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 shrink-0 text-emerald-400" /> Offline mode</li>
                 </ul>
               </div>
               <button
@@ -216,9 +186,10 @@ function PricingPage() {
                 aria-haspopup="dialog"
                 aria-expanded={downloadPickerOpen}
                 onClick={() => setDownloadPickerOpen(true)}
-                className="mt-10 block w-full cursor-pointer text-center bg-emerald-500 hover:bg-emerald-400 text-white font-semibold py-4 rounded-2xl transition-colors shadow-lg shadow-emerald-500/25"
+                className="mt-auto inline-flex w-full items-center justify-between rounded-full bg-emerald-600 px-5 py-4 font-semibold text-white transition-colors hover:bg-emerald-500"
               >
                 Start 30-day trial
+                <HugeiconsIcon icon={ArrowRight01Icon} className="size-5" />
               </button>
             </motion.div>
 
@@ -227,36 +198,36 @@ function PricingPage() {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.3 }}
-              className="backdrop-blur-md bg-white/5 border border-white/10 rounded-3xl p-8 flex flex-col hover:bg-white/10 hover:border-white/20 transition-all duration-300"
+              className="flex min-h-[760px] flex-col rounded-[28px] border border-white/10 bg-[#101613] p-[30px] pt-9 text-white shadow-[0_16px_40px_rgba(0,0,0,0.25)] md:col-span-2 md:mx-auto md:w-1/2 lg:col-span-1 lg:mx-0 lg:w-full"
             >
-              <div className="flex-1">
-                <h3 className="text-2xl font-semibold text-white">SME Ledger</h3>
-                <p className="text-zinc-400 mt-2 text-sm">Business ledger + everything above</p>
-                <p className="text-emerald-400/80 mt-1 text-xs">One GRA penalty costs more than years of this.</p>
-
-                <div className="mt-8 flex items-baseline gap-1">
-                  <span className="text-5xl font-bold text-white">
-                    {billingCycle === 'monthly' ? 'GHS 25' : 'GHS 65'}
+              <PricingPass name="SME Ledger" variant="sme" />
+              <div className="mt-10 flex flex-1 flex-col">
+                <h2 className="text-[22px] font-medium tracking-[-0.035em]">SME Ledger</h2>
+                <div className="mt-5 flex items-baseline gap-1">
+                  <span className="text-5xl font-medium leading-none tracking-[-0.065em]">
+                    {billingCycle === 'monthly' ? 'GH¢ 25' : 'GH¢ 65'}
                   </span>
-                  <span className="text-zinc-500 font-medium">
+                  <span className="text-sm font-medium text-zinc-400">
                     {billingCycle === 'monthly' ? '/month' : '/quarter'}
                   </span>
                 </div>
-                <div className="text-zinc-400 text-sm mt-1 min-h-[20px]">
+                <div className="mt-2 min-h-[20px] text-sm text-zinc-400">
                   {billingCycle === 'monthly' ? (
-                    <>or <span className="text-emerald-400 font-medium">GHS 65/quarter</span> (save 13%)</>
+                    <>or <span className="font-medium text-emerald-800">GH¢ 65/quarter</span> (save 13%)</>
                   ) : (
                     <>Billed every 3 months</>
                   )}
                 </div>
+                <p className="mt-3 text-sm text-zinc-300">Business ledger + everything above</p>
+                <p className="mt-1 text-xs text-emerald-200/75">One GRA penalty costs more than years of this.</p>
 
-                <ul className="mt-8 space-y-4 text-zinc-300 text-sm">
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Everything in Budget tier</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Sales &amp; expenses ledger</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Auto 20% VAT + GHS 750k alert</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> CSV export for accountant</li>
-                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 shrink-0" /> Monthly P&amp;L summary</li>
-                  <li className="flex items-center gap-3 opacity-60"><HugeiconsIcon icon={Tick02Icon} className="size-5 text-zinc-600 shrink-0" /> Invoices &amp; GRA Export <span className="ml-auto text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">Coming Q2</span></li>
+                <ul className="mt-8 space-y-4 text-sm text-zinc-300">
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 shrink-0 text-emerald-400" /> Everything in Budget tier</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 shrink-0 text-emerald-400" /> Sales &amp; expenses ledger</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 shrink-0 text-emerald-400" /> Auto 20% VAT + GH¢ 750k alert</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 shrink-0 text-emerald-400" /> CSV export for accountant</li>
+                  <li className="flex items-center gap-3"><HugeiconsIcon icon={Tick02Icon} className="size-5 shrink-0 text-emerald-400" /> Monthly P&amp;L summary</li>
+                  <li className="flex items-center gap-3 text-zinc-500"><HugeiconsIcon icon={Tick02Icon} className="size-5 shrink-0 text-zinc-600" /> Invoices &amp; GRA Export <span className="ml-auto rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] text-zinc-400">Coming Q2</span></li>
                 </ul>
               </div>
               <button
@@ -264,11 +235,19 @@ function PricingPage() {
                 aria-haspopup="dialog"
                 aria-expanded={downloadPickerOpen}
                 onClick={() => setDownloadPickerOpen(true)}
-                className="mt-10 block w-full cursor-pointer text-center bg-white/10 hover:bg-white/20 text-white font-semibold py-4 rounded-2xl transition-colors"
+                className="mt-auto inline-flex w-full items-center justify-between rounded-full bg-emerald-600 px-5 py-4 font-semibold text-white transition-colors hover:bg-emerald-500"
               >
                 Start 30-day trial
+                <HugeiconsIcon icon={ArrowRight01Icon} className="size-5" />
               </button>
             </motion.div>
+          </div>
+
+          <div className="mx-auto mt-5 flex max-w-[1120px] flex-col gap-2 text-sm leading-relaxed text-zinc-400 md:flex-row md:justify-between">
+            <p>Cancel anytime · Prices in GH¢ only</p>
+            <p>
+              <span className="font-semibold text-emerald-400">Worth it?</span> Smart Budget is GH¢ 180/year. Catching one wrong PAYE deduction often saves more than that.
+            </p>
           </div>
 
           <DownloadAppDialog
@@ -282,50 +261,50 @@ function PricingPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="mt-24 mb-16 overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-md shadow-2xl"
+            className="mb-16 mt-20 overflow-hidden rounded-[28px] border border-white/10 bg-[#101613] text-white shadow-[0_16px_40px_rgba(0,0,0,0.25)]"
           >
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-white/10 bg-black/40">
-                    <th className="py-6 px-8 text-sm font-semibold text-zinc-400 uppercase tracking-wider w-2/5">Features</th>
-                    <th className="py-6 px-6 text-center text-lg font-semibold text-white w-1/5">Free</th>
-                    <th className="py-6 px-6 text-center text-lg font-semibold text-emerald-400 w-1/5 bg-emerald-500/5">Budget</th>
-                    <th className="py-6 px-6 text-center text-lg font-semibold text-white w-1/5">SME</th>
+                  <tr className="border-b border-white/10 bg-white/5">
+                    <th className="w-2/5 py-6 px-8 text-sm font-semibold uppercase tracking-wider text-zinc-400">Features</th>
+                    <th className="w-1/5 py-6 px-6 text-center text-lg font-semibold text-white">Free</th>
+                    <th className="w-1/5 bg-emerald-500/15 py-6 px-6 text-center text-lg font-semibold text-emerald-300">Budget</th>
+                    <th className="w-1/5 py-6 px-6 text-center text-lg font-semibold text-white">SME</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-white/10">
                   {comparisonFeatures.map((section, idx) => (
                     <React.Fragment key={idx}>
                       <tr className="bg-white/5">
-                        <td colSpan={4} className="py-4 px-8 text-xs font-bold tracking-widest text-emerald-500 uppercase">
+                        <td colSpan={4} className="py-4 px-8 text-xs font-bold uppercase tracking-widest text-emerald-300">
                           {section.category}
                         </td>
                       </tr>
                       {section.features.map((feature, fIdx) => (
-                        <tr key={fIdx} className="hover:bg-white/5 transition-colors duration-200">
+                        <tr key={fIdx} className="transition-colors duration-200 hover:bg-white/5">
                           <td className="py-5 px-8 text-sm font-medium text-zinc-300">
                             {feature.name}
                           </td>
                           <td className="py-5 px-6 text-center">
                             {feature.free ? (
-                              <HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 mx-auto" />
+                              <HugeiconsIcon icon={Tick02Icon} className="mx-auto size-5 text-emerald-400" />
                             ) : (
-                              <HugeiconsIcon icon={Cancel01Icon} className="size-5 text-zinc-600 mx-auto" />
+                              <HugeiconsIcon icon={Cancel01Icon} className="mx-auto size-5 text-zinc-600" />
                             )}
                           </td>
-                          <td className="py-5 px-6 text-center bg-emerald-500/5">
+                          <td className="bg-emerald-500/10 py-5 px-6 text-center">
                             {feature.budget ? (
-                              <HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 mx-auto" />
+                              <HugeiconsIcon icon={Tick02Icon} className="mx-auto size-5 text-emerald-400" />
                             ) : (
-                              <HugeiconsIcon icon={Cancel01Icon} className="size-5 text-zinc-600 mx-auto" />
+                              <HugeiconsIcon icon={Cancel01Icon} className="mx-auto size-5 text-zinc-600" />
                             )}
                           </td>
                           <td className="py-5 px-6 text-center">
                             {feature.sme ? (
-                              <HugeiconsIcon icon={Tick02Icon} className="size-5 text-emerald-500 mx-auto" />
+                              <HugeiconsIcon icon={Tick02Icon} className="mx-auto size-5 text-emerald-400" />
                             ) : (
-                              <HugeiconsIcon icon={Cancel01Icon} className="size-5 text-zinc-600 mx-auto" />
+                              <HugeiconsIcon icon={Cancel01Icon} className="mx-auto size-5 text-zinc-600" />
                             )}
                           </td>
                         </tr>
@@ -345,11 +324,11 @@ function PricingPage() {
             className="relative"
           >
             <div className="absolute inset-0 flex items-center" aria-hidden="true">
-              <div className="w-full border-t border-white/5"></div>
+              <div className="w-full border-t border-white/10"></div>
             </div>
             <div className="relative flex justify-center">
-              <span className="bg-[#0A0A0A] px-4 text-sm text-zinc-500 text-center max-w-xl">
-                <strong className="text-white">30-day free trial</strong> on Smart Budget and SME Ledger.
+              <span className="max-w-xl bg-zinc-950 px-4 text-center text-sm text-zinc-400">
+                <strong className="text-emerald-400">30-day free trial</strong> on Smart Budget and SME Ledger.
                 <br />
                 After that, pay only if you want to keep premium tools. Cancel anytime.
               </span>

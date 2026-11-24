@@ -19,6 +19,7 @@ import { Route as FinancialLiteracyRouteImport } from './routes/financial-litera
 import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as DebtDashboardRouteImport } from './routes/debt-dashboard'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as ChangelogRouteImport } from './routes/changelog'
 import { Route as BudgetingToolRouteImport } from './routes/budgeting-tool'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
@@ -77,6 +78,11 @@ const ContactRoute = ContactRouteImport.update({
   path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChangelogRoute = ChangelogRouteImport.update({
+  id: '/changelog',
+  path: '/changelog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BudgetingToolRoute = BudgetingToolRouteImport.update({
   id: '/budgeting-tool',
   path: '/budgeting-tool',
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/budgeting-tool': typeof BudgetingToolRoute
+  '/changelog': typeof ChangelogRoute
   '/contact': typeof ContactRoute
   '/debt-dashboard': typeof DebtDashboardRoute
   '/feedback': typeof FeedbackRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/budgeting-tool': typeof BudgetingToolRoute
+  '/changelog': typeof ChangelogRoute
   '/contact': typeof ContactRoute
   '/debt-dashboard': typeof DebtDashboardRoute
   '/feedback': typeof FeedbackRoute
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/budgeting-tool': typeof BudgetingToolRoute
+  '/changelog': typeof ChangelogRoute
   '/contact': typeof ContactRoute
   '/debt-dashboard': typeof DebtDashboardRoute
   '/feedback': typeof FeedbackRoute
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/budgeting-tool'
+    | '/changelog'
     | '/contact'
     | '/debt-dashboard'
     | '/feedback'
@@ -198,6 +208,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/budgeting-tool'
+    | '/changelog'
     | '/contact'
     | '/debt-dashboard'
     | '/feedback'
@@ -217,6 +228,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/budgeting-tool'
+    | '/changelog'
     | '/contact'
     | '/debt-dashboard'
     | '/feedback'
@@ -237,6 +249,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   BudgetingToolRoute: typeof BudgetingToolRoute
+  ChangelogRoute: typeof ChangelogRoute
   ContactRoute: typeof ContactRoute
   DebtDashboardRoute: typeof DebtDashboardRoute
   FeedbackRoute: typeof FeedbackRoute
@@ -325,6 +338,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/changelog': {
+      id: '/changelog'
+      path: '/changelog'
+      fullPath: '/changelog'
+      preLoaderRoute: typeof ChangelogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/budgeting-tool': {
       id: '/budgeting-tool'
       path: '/budgeting-tool'
@@ -381,6 +401,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   BudgetingToolRoute: BudgetingToolRoute,
+  ChangelogRoute: ChangelogRoute,
   ContactRoute: ContactRoute,
   DebtDashboardRoute: DebtDashboardRoute,
   FeedbackRoute: FeedbackRoute,
@@ -401,10 +422,11 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
+import type { startInstance } from './start.ts'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }

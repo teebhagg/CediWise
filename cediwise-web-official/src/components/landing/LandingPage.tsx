@@ -1,5 +1,6 @@
 import { BottomCTA } from './BottomCTA'
 import { FeatureSwitcher } from './FeatureSwitcher'
+import { HomeFaq } from './HomeFaq'
 import { Hero } from './Hero'
 import { IntroVideo } from './IntroVideo'
 import { Pricing } from './Pricing'
@@ -13,6 +14,7 @@ export function LandingPage() {
         <IntroVideo />
         <FeatureSwitcher />
         <Pricing />
+        <HomeFaq />
         <BottomCTA />
       </main>
       <Footer />

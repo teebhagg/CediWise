@@ -273,3 +273,10 @@
     will-change: opacity;
   }
 }
+
+/* Give rounded interface surfaces a softer squircle profile where supported. */
+@supports (corner-shape: squircle) {
+  :where([class*="rounded-"]):not(button):not([role="button"]):not(input[type="button"]):not(input[type="submit"]):not(input[type="reset"]):not(a[class*="inline-flex"]):not(a[class*="flex"][class*="px-"][class*="py-"]):not([class*="blur-"]) {
+    corner-shape: squircle;
+  }
+}

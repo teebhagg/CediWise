@@ -2,6 +2,7 @@ import {
   computeGhanaTax2026Monthly,
   GHANA_TAX_FALLBACK_2026,
 } from '../ghanaTax'
+import { describe, expect, it } from 'vitest'
 
 describe('computeGhanaTax2026Monthly', () => {
   it('calculates SSNIT at 5.5% of gross', () => {

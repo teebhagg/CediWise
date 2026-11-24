@@ -13,9 +13,6 @@ import { motion } from 'framer-motion'
 export function BottomCTA() {
   return (
     <section className="relative overflow-hidden py-24 lg:py-40">
-      {/* Background Glows */}
-      <div className="absolute left-1/2 top-1/2 -z-10 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-[120px]" />
-
       <div className="container mx-auto px-6">
         <motion.div
           initial={{ opacity: 0, y: 40 }}
@@ -28,13 +25,13 @@ export function BottomCTA() {
           <div className="absolute -left-10 -top-10 size-40 rounded-full bg-primary/10 blur-3xl" />
           <div className="absolute -right-10 -bottom-10 size-40 rounded-full bg-primary/10 blur-3xl" />
 
-          <div className="relative z-10 mx-auto max-w-3xl">
+          <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center gap-6 text-center">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2, duration: 0.5 }}
-              className="mb-8 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary"
+              className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary"
             >
               Free to start
             </motion.div>
@@ -43,12 +40,12 @@ export function BottomCTA() {
               Don&apos;t guess your take-home
             </h2>
 
-            <p className="mx-auto mt-8 max-w-xl text-lg text-zinc-400">
+            <p className="mx-auto max-w-xl text-lg text-zinc-400">
               About 200 people use CediWise to check PAYE, plan spending, and keep SME records straight.
               Salary check is free on the web. Budgeting and more live in the app.
             </p>
 
-            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 to="/try-salary-calculator"
                 className="inline-flex h-14 items-center justify-center rounded-full bg-emerald-600 px-8 text-lg font-bold text-white transition-colors hover:bg-emerald-500"
@@ -57,7 +54,7 @@ export function BottomCTA() {
               </Link>
             </div>
 
-            <div className="mt-6 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <a
                 href={CEDIWISE_ANDROID_PLAY_STORE_URL}
                 target="_blank"

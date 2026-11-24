@@ -3,7 +3,7 @@ import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import appCss from '../styles.css?url'
 import { Header } from '@/components/layout/Header'
 import { SalaryCalculatorBanner } from '@/components/layout/SalaryCalculatorBanner'
-import { OG_IMAGE, SITE_URL } from '@/lib/seo'
+import { OG_IMAGE, SITE_URL, getOrganizationSchema } from '@/lib/seo'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -73,8 +73,9 @@ export const Route = createRootRoute({
         content: 'CediWise',
       },
     ],
+    // Canonical tags are set per page in createPageHead, so the root does not
+    // add a second one.
     links: [
-      { rel: 'canonical', href: SITE_URL },
       {
         rel: 'stylesheet',
         href: appCss,
@@ -94,15 +95,7 @@ export const Route = createRootRoute({
   shellComponent: RootDocument,
 })
 
-const ORGANIZATION_JSON_LD = {
-  '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: 'CediWise',
-  url: SITE_URL,
-  description:
-    'CediWise is a finance app for Ghana: PAYE and SSNIT checks, budgeting, SME ledger, debt tracking, and money lessons.',
-  areaServed: { '@type': 'Country', name: 'Ghana' },
-}
+const ORGANIZATION_JSON_LD = getOrganizationSchema()
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (

@@ -65,14 +65,6 @@ const features = [
   },
 ]
 
-const FEATURE_RING: Record<string, string> = {
-  'bg-emerald-500': 'ring-emerald-500/35',
-  'bg-primary': 'ring-primary/35',
-  'bg-rose-500': 'ring-rose-500/35',
-  'bg-blue-500': 'ring-blue-500/35',
-  'bg-orange-500': 'ring-orange-500/35',
-}
-
 const DESKTOP_IMAGE_EASE = [0.4, 0, 0.2, 1] as const
 
 function useClosestFeatureOnScroll(itemRefs: React.RefObject<(HTMLDivElement | null)[]>) {
@@ -288,7 +280,6 @@ function FeatureItem({
       <FeatureMobileScreenshot
         image={feature.image}
         title={feature.title}
-        colorClass={feature.color}
       />
 
       <div className="space-y-4">
@@ -334,11 +325,9 @@ function FeatureItem({
 function FeatureMobileScreenshot({
   image,
   title,
-  colorClass,
 }: {
   image: string
   title: string
-  colorClass: string
 }) {
   return (
     <div className="mx-auto w-[48%] max-w-[220px] lg:hidden">

@@ -7,13 +7,14 @@ import {
   CEDIWISE_IOS_APP_STORE_URL,
 } from '@/lib/storeLinks'
 import { cn } from '@/lib/utils'
-import { Link } from '@tanstack/react-router'
+import { Link, useRouterState } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 
 const navItems = [
   { label: 'Pricing', to: '/pricing' },
   { label: 'Feedback', to: '/feedback' },
+  { label: 'Changelog', to: '/changelog' },
   { label: 'About', to: '/about' },
   { label: 'Contact', to: '/contact' },
 ]
@@ -21,6 +22,9 @@ const navItems = [
 export function Header() {
   const [isOpen, setIsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const isPricingPage = useRouterState({
+    select: (state) => state.location.pathname === '/pricing',
+  })
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
@@ -43,19 +47,25 @@ export function Header() {
   return (
     <header
       className={cn(
-        'fixed z-50 w-full transition-all duration-500 ease-in-out top-[calc(var(--salary-banner-height,0px)+1.25rem)]',
-        scrolled ? 'py-3' : 'py-6',
+        'fixed z-50 w-full transition-all duration-500 ease-in-out',
+        isPricingPage ? 'top-0' : 'top-[calc(var(--salary-banner-height,0px)+1.25rem)]',
+        scrolled ? 'py-3' : isPricingPage ? 'py-4' : 'py-6',
       )}
     >
-      <div className=" mx-auto px-6 sm:px-12">
+      <div className={cn('mx-auto px-6 sm:px-12', isPricingPage && 'sm:px-20')}>
         <nav className="relative flex items-center justify-between">
           {/* Desktop Left Nav */}
-          <div className="hidden flex-1 items-center gap-10 lg:flex">
+          <div className={cn('hidden flex-1 items-center gap-10', !isPricingPage && 'lg:flex')}>
             {navItems.slice(0, 2).map((item) => (
               <Link
                 key={item.label}
                 to={item.to}
-                className="group relative text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+                className={cn(
+                  'group relative text-sm font-medium transition-colors',
+                  isPricingPage
+                    ? 'text-zinc-400 hover:text-white'
+                    : 'text-zinc-400 hover:text-white',
+                )}
               >
                 {item.label}
                 <span className="absolute -bottom-1 left-0 h-px w-0 bg-primary transition-all duration-300 group-hover:w-full" />
@@ -66,25 +76,40 @@ export function Header() {
           <Link
             to="/"
             aria-label="CediWise home"
-            className="absolute left-5 lg:left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 cursor-pointer transition-transform duration-300 hover:scale-105 active:scale-95"
+            className={cn(
+              'flex cursor-pointer items-center gap-2 transition-transform duration-300 hover:scale-105 active:scale-95',
+              isPricingPage
+                ? 'absolute left-5 top-1/2 -translate-y-1/2 lg:static lg:translate-y-0'
+                : 'absolute left-5 top-1/2 -translate-x-1/2 -translate-y-1/2 lg:left-1/2',
+            )}
           >
             <div className="flex items-center justify-center gap-2.5 backdrop-blur-md">
               <img
                 src="/cediwise-smooth-light-logo.png"
                 alt="CediWise Logo"
-                className="h-10 w-auto"
+                className={cn('w-auto', isPricingPage ? 'h-9' : 'h-10')}
                 loading="lazy"
               />
+              {isPricingPage ? (
+                <span className="text-sm font-semibold tracking-[-0.03em] text-white">
+                  CediWise
+                </span>
+              ) : null}
             </div>
           </Link>
 
           {/* Desktop Right Nav & CTA */}
           <div className="hidden flex-1 items-center justify-end gap-10 lg:flex">
-            {navItems.slice(2).map((item) => (
+            {(isPricingPage ? navItems : navItems.slice(2)).map((item) => (
               <Link
                 key={item.label}
                 to={item.to}
-                className="group relative text-sm font-medium text-zinc-400 transition-colors hover:text-white"
+                className={cn(
+                  'group relative text-sm font-medium transition-colors',
+                  isPricingPage
+                    ? 'text-zinc-400 hover:text-white'
+                    : 'text-zinc-400 hover:text-white',
+                )}
               >
                 {item.label}
                 <span className="absolute -bottom-1 left-0 h-px w-0 bg-primary transition-all duration-300 group-hover:w-full" />
@@ -98,7 +123,12 @@ export function Header() {
                 aria-label="Get CediWise on Google Play"
                 title="Google Play"
                 className={cn(
-                  'inline-flex size-11 cursor-pointer items-center justify-center rounded-xl border border-white/20 bg-white/10 text-white backdrop-blur-md transition-colors duration-200 hover:border-white/30 hover:bg-white/[0.14] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40',
+                  cn(
+                    'inline-flex size-11 cursor-pointer items-center justify-center rounded-xl backdrop-blur-md transition-colors duration-200 focus-visible:outline-none',
+                    isPricingPage
+                      ? 'border border-white/20 bg-white/10 text-white hover:border-white/30 hover:bg-white/[0.14] focus-visible:ring-2 focus-visible:ring-white/40'
+                      : 'border border-white/20 bg-white/10 text-white hover:border-white/30 hover:bg-white/[0.14] focus-visible:ring-2 focus-visible:ring-white/40',
+                  ),
                 )}
               >
                 <AndroidIcon className="size-5" />
@@ -110,7 +140,12 @@ export function Header() {
                 aria-label="Download CediWise on the App Store"
                 title="App Store"
                 className={cn(
-                  'inline-flex size-11 cursor-pointer items-center justify-center rounded-xl border border-emerald-400/35 bg-emerald-600/25 text-white backdrop-blur-md transition-colors duration-200 hover:border-emerald-400/50 hover:bg-emerald-600/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/50',
+                  cn(
+                    'inline-flex size-11 cursor-pointer items-center justify-center rounded-xl backdrop-blur-md transition-colors duration-200 focus-visible:outline-none',
+                    isPricingPage
+                      ? 'border border-emerald-400/35 bg-emerald-600/25 text-white hover:border-emerald-400/50 hover:bg-emerald-600/35 focus-visible:ring-2 focus-visible:ring-emerald-300/50'
+                      : 'border border-emerald-400/35 bg-emerald-600/25 text-white hover:border-emerald-400/50 hover:bg-emerald-600/35 focus-visible:ring-2 focus-visible:ring-emerald-300/50',
+                  ),
                 )}
               >
                 <AppleIcon className="size-[1.35rem]" />
@@ -122,7 +157,10 @@ export function Header() {
           <div className="lg:hidden ml-auto">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className="group relative z-60 flex size-12 items-center justify-center rounded-2xl bg-white/5 backdrop-blur-md transition-all hover:bg-white/10"
+              className={cn(
+                'group relative z-60 flex size-12 items-center justify-center rounded-2xl backdrop-blur-md transition-all',
+                'bg-white/5 hover:bg-white/10',
+              )}
             >
               <div className="flex flex-col gap-1.5 items-end justify-center">
                 <motion.span
@@ -158,7 +196,12 @@ export function Header() {
       {/* Floating Glass Container background (Aave inspired) */}
       <div
         className={cn(
-          'absolute inset-x-4 top-1 lg:top-0 -z-10 h-16 rounded-3xl border border-white/5 bg-white/2 backdrop-blur-2xl transition-all duration-700 ease-out sm:inset-x-10',
+          cn(
+            'absolute inset-x-4 top-1 lg:top-0 -z-10 h-16 rounded-3xl backdrop-blur-2xl transition-all duration-700 ease-out sm:inset-x-10',
+            isPricingPage
+              ? 'border border-white/5 bg-zinc-950/75'
+              : 'border border-white/5 bg-white/2',
+          ),
           scrolled
             ? 'translate-y-0 opacity-100 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)]'
             : '-translate-y-full opacity-0',

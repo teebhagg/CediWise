@@ -28,7 +28,7 @@ export const Route = createFileRoute('/salary-calculator/')({
           {
             question: 'Can I check my salary for free on the web?',
             answer:
-              'Yes. Use the try salary calculator for five free checks per day. The app offers unlimited checks and saved breakdowns.',
+              'Yes. Use the try salary calculator for three free checks per day. The app offers unlimited checks and saved breakdowns.',
           },
         ]),
       ],
@@ -64,7 +64,7 @@ const highlights = [
   {
     title: 'Free web check',
     description:
-      'Five calculations per day on the website. Unlimited in the app.',
+      'Three calculations per day on the website. Unlimited in the app.',
   },
 ]
 
@@ -86,7 +86,7 @@ function SalaryCalculatorPage() {
           </p>
           <p className="text-sm text-zinc-300 leading-relaxed mb-4">
             Type your gross monthly salary. The calculator shows SSNIT, PAYE, and net pay using 2026
-            GRA tables. Five free runs per day on the web.
+            GRA tables. Three free runs per day on the web.
           </p>
           <Link
             to="/try-salary-calculator"

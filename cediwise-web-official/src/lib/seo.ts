@@ -5,15 +5,61 @@ import {
 
 /**
  * SEO base URL. Override via PUBLIC_SITE_URL env var at build time.
- * @example PUBLIC_SITE_URL=https://cediwise.app
+ *
+ * The default is the host that serves pages directly. `cediwise.app` answers
+ * with a 307 redirect to `www`, so canonical tags, Organization `url`, and
+ * Open Graph URLs must use `www` to match the final URL.
+ * @example PUBLIC_SITE_URL=https://www.cediwise.app
  */
 export const SITE_URL =
   (typeof process !== 'undefined' && process.env?.PUBLIC_SITE_URL) ||
   (typeof import.meta !== 'undefined' &&
     (import.meta as any).env?.PUBLIC_SITE_URL) ||
-  'https://cediwise.app'
+  'https://www.cediwise.app'
+
+/** Public contact address already listed on /contact. */
+export const CONTACT_EMAIL = 'joshua.ansah@cediwise.app'
+
+/** Official social profiles already linked in the site footer. */
+export const SOCIAL_PROFILE_URLS = [
+  'https://x.com/cediwiseapp',
+  'https://www.instagram.com/cediwiseapp/',
+  'https://www.tiktok.com/@cediwiseapp',
+] as const
 
 export const OG_IMAGE = `${SITE_URL}/banner.webp`
+
+/**
+ * Organization entity used by every page. Agents use contactPoint, address,
+ * logo, and sameAs to confirm who runs the service and how to reach them.
+ * `address` only carries the country; add a street address once the business
+ * address is confirmed.
+ */
+export const getOrganizationSchema = (): Record<string, unknown> => ({
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'CediWise',
+  url: SITE_URL,
+  logo: {
+    '@type': 'ImageObject',
+    url: `${SITE_URL}/cediwise-smooth-light-logo.png`,
+  },
+  description:
+    'CediWise is a finance app for Ghana: PAYE and SSNIT checks, budgeting, SME ledger, debt tracking, and money lessons.',
+  areaServed: { '@type': 'Country', name: 'Ghana' },
+  address: {
+    '@type': 'PostalAddress',
+    addressCountry: 'GH',
+  },
+  contactPoint: {
+    '@type': 'ContactPoint',
+    contactType: 'customer support',
+    email: CONTACT_EMAIL,
+    areaServed: 'GH',
+    availableLanguage: 'English',
+  },
+  sameAs: [...SOCIAL_PROFILE_URLS],
+})
 
 export function absoluteUrl(path: string) {
   const clean = path.startsWith('/') ? path : `/${path}`

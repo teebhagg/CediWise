@@ -1,6 +1,11 @@
 'use client'
 
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  type MotionProps,
+} from 'framer-motion'
 import { ReactNode, useEffect, useState, type CSSProperties } from 'react'
 import { AndroidIcon, AppleIcon } from '@/components/icons/StoreBrandIcons'
 import { GlassCard, floatingCardEnterTransition, floatingCardExitTransition } from '@/components/ui/glass-card'
@@ -43,8 +48,8 @@ type HeroFloatingCardConfig = {
   id: string
   className: string
   delay: number
-  initial?: Record<string, unknown>
-  animate?: Record<string, unknown>
+  initial?: MotionProps['initial']
+  animate?: MotionProps['animate']
   label: string
   value: string
   insight: string
@@ -53,13 +58,13 @@ type HeroFloatingCardConfig = {
   icon: ReactNode
 }
 
-const DESKTOP_CARD_CLASS: Record<string, string> = {
+const DESKTOP_CARD_CLASS = {
   income: 'lg:absolute lg:left-[8%] lg:right-auto lg:top-[20%] lg:mx-0 lg:max-w-none',
   savings: 'lg:absolute lg:bottom-[8%] lg:left-auto lg:right-[15%] lg:top-auto lg:mx-0 lg:max-w-none',
   tax: 'lg:absolute lg:left-auto lg:right-[8%] lg:top-[25%] lg:mx-0 lg:max-w-none',
   sme: 'lg:absolute lg:bottom-[20%] lg:left-[10%] lg:right-auto lg:top-auto lg:mx-0 lg:max-w-none',
   budget: 'lg:absolute lg:left-auto lg:right-[4%] lg:top-[55%] lg:mx-0 lg:max-w-none',
-}
+} as const
 
 const HERO_FLOATING_CARDS: HeroFloatingCardConfig[] = [
   {
@@ -151,9 +156,7 @@ const HERO_FLOATING_CARDS: HeroFloatingCardConfig[] = [
 ]
 
 function useMediaQuery(query: string) {
-  const [matches, setMatches] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia(query).matches,
-  )
+  const [matches, setMatches] = useState(false)
 
   useEffect(() => {
     const mq = window.matchMedia(query)
@@ -200,6 +203,7 @@ function HeroFloatingCards() {
         <AnimatePresence mode="popLayout">
           {mobileVisible.map((cardIndex) => {
             const card = HERO_FLOATING_CARDS[cardIndex]
+            if (!card) return null
             const slotClass = MOBILE_SLOT_CLASSES[cardIndex % MOBILE_SLOT_CLASSES.length]
 
             return (

@@ -1,7 +1,6 @@
 'use client'
 
 import {
-  ArrowRight01Icon,
   InstagramIcon,
   NewTwitterIcon,
   TiktokIcon,
@@ -9,6 +8,7 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Link } from '@tanstack/react-router'
 import { motion } from 'framer-motion'
+import { NewsletterSignupForm } from '@/components/newsletter/NewsletterSignupForm'
 
 const footerLinks = [
   {
@@ -21,6 +21,7 @@ const footerLinks = [
       { name: 'SME Ledger', href: '/sme-ledger' },
       { name: 'Financial Literacy', href: '/financial-literacy' },
       { name: 'Feedback', href: '/feedback' },
+      { name: 'Changelog', href: '/changelog' },
     ],
   },
   {
@@ -80,7 +81,7 @@ export function Footer() {
           {/* Links Sections */}
           {footerLinks.map((section) => (
             <div key={section.title} className="lg:col-span-1">
-              <h4 className="text-white font-bold mb-6">{section.title}</h4>
+              <h2 className="text-white font-bold mb-6">{section.title}</h2>
               <ul className="space-y-4">
                 {section.links.map((link) => (
                   <li key={link.name}>
@@ -98,20 +99,11 @@ export function Footer() {
 
           {/* Newsletter Section */}
           <div className="lg:col-span-1">
-            <h4 className="text-white font-bold mb-6">Newsletter</h4>
+            <h2 className="text-white font-bold mb-6">Newsletter</h2>
             <p className="text-zinc-400 text-sm mb-6">
-              Occasional tips on money in Ghana. No spam.
+              A practical weekly brief on PAYE, budgeting, debt, and business money in Ghana.
             </p>
-            <div className="relative group">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-sm text-white placeholder:text-zinc-500 focus:outline-none focus:border-primary/50 transition-all"
-              />
-              <button className="absolute right-2 top-2 size-10 rounded-xl bg-primary flex items-center justify-center text-black hover:bg-primary/90 transition-all">
-                <HugeiconsIcon icon={ArrowRight01Icon} className="size-5" />
-              </button>
-            </div>
+            <NewsletterSignupForm source="footer" compact />
           </div>
         </div>
 

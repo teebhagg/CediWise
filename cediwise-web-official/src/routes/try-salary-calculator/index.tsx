@@ -15,7 +15,7 @@ export const Route = createFileRoute('/try-salary-calculator/')({
       path: '/try-salary-calculator',
       title: 'Try free salary calculator — Ghana 2026',
       description:
-        'Enter gross pay, see SSNIT, PAYE, and net take-home. 2026 GRA rates. Five free checks per day on the web.',
+        'Enter gross pay, see SSNIT, PAYE, and net take-home. 2026 GRA rates. Three free checks per day on the web.',
     }),
 })
 

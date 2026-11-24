@@ -33,7 +33,7 @@ export function HeroRotatingTitle({ className }: { className?: string }) {
     return () => clearInterval(id)
   }, [reduceMotion])
 
-  const headline = HERO_HEADLINES[index]
+  const headline = HERO_HEADLINES[index] ?? HERO_HEADLINES[0]
 
   if (reduceMotion) {
     return <span className={className}>{HERO_HEADLINES[0]}</span>
@@ -59,9 +59,8 @@ export function HeroRotatingTitle({ className }: { className?: string }) {
             delay={0.05}
             accessible={false}
             className="inline"
-          >
-            {headline}
-          </TextAnimate>
+            children={headline}
+          />
         </motion.span>
       </AnimatePresence>
     </span>

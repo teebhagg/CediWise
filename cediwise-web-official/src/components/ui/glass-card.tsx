@@ -1,6 +1,6 @@
 'use client'
 
-import { motion, type Transition } from 'framer-motion'
+import { motion, type MotionProps, type Transition } from 'framer-motion'
 import { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
@@ -26,8 +26,8 @@ interface GlassCardProps {
   iconColor?: string
   className?: string
   delay?: number
-  initial?: Record<string, unknown>
-  animate?: Record<string, unknown>
+  initial?: MotionProps['initial']
+  animate?: MotionProps['animate']
   /** Controlled expand (mobile carousel) */
   expanded?: boolean
   /** Desktop hover expand; disabled on mobile */

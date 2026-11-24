@@ -13,7 +13,7 @@ import type { FeedbackCategory } from '@/serverFns/feedback.functions'
 import { submitFeedback } from '@/serverFns/feedback.functions'
 import { Footer } from '@/components/layout/Footer'
 import { Button } from '@/components/ui/button'
-import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
+import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import {
   Select,

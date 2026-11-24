@@ -1,4 +1,4 @@
-export const DAILY_CALCULATOR_LIMIT = 5
+export const DAILY_CALCULATOR_LIMIT = 3
 export const STORAGE_KEY = 'cediwise_salary_calc_usage'
 
 export type UsageRecord = {

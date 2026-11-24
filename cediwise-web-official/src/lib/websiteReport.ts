@@ -20,6 +20,11 @@ export const WEBSITE_REPORT_CATEGORY_LABELS: Record<WebsiteReportCategory, strin
   other: 'Something else',
 }
 
+/** Counts Unicode code points, the unit PostgreSQL's char_length uses (not UTF-16 units). */
+export function codePointLength(value: string): number {
+  return [...value].length
+}
+
 export const websiteReportSchema = z.object({
   category: z.enum(WEBSITE_REPORT_CATEGORIES, { message: 'Please select a category' }),
   name: z
@@ -42,8 +47,8 @@ export const websiteReportSchema = z.object({
   message: z
     .string()
     .trim()
-    .min(10, 'Please describe the problem in at least 10 characters')
-    .max(3000, 'Message must be at most 3000 characters'),
+    .refine((value) => codePointLength(value) >= 10, 'Please describe the problem in at least 10 characters')
+    .refine((value) => codePointLength(value) <= 3000, 'Message must be at most 3000 characters'),
   /** Honeypot. Hidden from people and autofill; bots that fill it are dropped. */
   do_not_fill: z.string().max(500).optional(),
 })

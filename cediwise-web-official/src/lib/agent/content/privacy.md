@@ -50,7 +50,7 @@ This feature is off by default and requires your explicit consent in the app.
 
 ## 7. Third parties and processors
 
-We use trusted providers: Supabase (database and authentication), Firebase (analytics), Google (Sign-In), Arkesel (SMS one-time codes), and Vercel and GitHub (hosting). We share only the minimum data required. Refer to each provider's privacy policy for details.
+We use trusted providers: Supabase (database and authentication), Firebase (analytics), Google (Sign-In), Arkesel (SMS one-time codes), Resend (email delivery, including report and newsletter emails), and Vercel and GitHub (hosting). We share only the minimum data required. Refer to each provider's privacy policy for details.
 
 ## 8. Data retention
 

@@ -49,6 +49,13 @@ const emailStatusLabel: Record<WebsiteReportEmailStatus, string> = {
   failed: "Email failed",
 };
 
+/** Ghana time for every admin, so server and browser render the same text (no hydration mismatch). */
+const REPORT_TIME_ZONE = "Africa/Accra";
+
+function formatReportTime(iso: string) {
+  return new Date(iso).toLocaleString("en-GB", { timeZone: REPORT_TIME_ZONE });
+}
+
 function senderLabel(report: WebsiteReportRecord) {
   return report.reporter_name ? `${report.reporter_name} <${report.reporter_email}>` : report.reporter_email;
 }
@@ -195,7 +202,7 @@ export function ReportsTable({ reports, total, page, perPage, filters }: Reports
                 reports.map((report) => (
                   <tr key={report.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors align-top">
                     <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">
-                      {new Date(report.created_at).toLocaleString()}
+                      {formatReportTime(report.created_at)}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">{websiteReportCategoryLabel(report.category)}</td>
                     <td className="px-4 py-3 max-w-[220px] truncate" title={senderLabel(report)}>
@@ -255,13 +262,13 @@ export function ReportsTable({ reports, total, page, perPage, filters }: Reports
       </div>
 
       <Dialog open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl max-h-[85dvh] overflow-y-auto">
           {selected ? (
             <>
               <DialogHeader>
                 <DialogTitle>{websiteReportCategoryLabel(selected.category)}</DialogTitle>
                 <DialogDescription>
-                  {senderLabel(selected)} · {new Date(selected.created_at).toLocaleString()}
+                  {senderLabel(selected)} · {formatReportTime(selected.created_at)}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-3 text-sm">

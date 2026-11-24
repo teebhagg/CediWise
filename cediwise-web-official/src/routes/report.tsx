@@ -26,6 +26,7 @@ import { createPageHead } from '@/lib/seo'
 import {
   WEBSITE_REPORT_CATEGORIES,
   WEBSITE_REPORT_CATEGORY_LABELS,
+  codePointLength,
   websiteReportSchema,
 } from '@/lib/websiteReport'
 import { submitReport } from '@/serverFns/report.functions'
@@ -148,7 +149,7 @@ function ReportPage() {
             <h1 className="text-4xl font-bold tracking-tight text-white sm:text-5xl">Report an issue</h1>
             <p className="mt-4 max-w-2xl text-zinc-400">
               Tell us what went wrong with the app, your account, or our content. Your report goes
-              straight to the CediWise team. Add an email if you want a reply.
+              straight to the CediWise team. Add your email so the team can reply to you.
             </p>
           </motion.header>
 
@@ -216,7 +217,7 @@ function ReportPage() {
                     aria-describedby="report-message-help report-message-error"
                   />
                   <p id="report-message-help" className="text-xs text-zinc-500">
-                    Minimum 10 characters. {formState.message.trim().length}/3000
+                    Minimum 10 characters. {codePointLength(formState.message.trim())}/3000
                   </p>
                   <FieldError id="report-message-error">{errors.message}</FieldError>
                 </Field>

@@ -25,15 +25,22 @@ const CATEGORY_VALUES: WebsiteReportCategory[] = [
   "other",
 ];
 
-function parseFilters(searchParams: Record<string, string | undefined>): WebsiteReportFilters {
-  const status = searchParams.status ?? "";
-  const category = searchParams.category as WebsiteReportCategory | undefined;
+type SearchParams = Record<string, string | string[] | undefined>;
+
+/** A repeated query parameter (`?search=a&search=b`) arrives as an array; use the first value. */
+function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function parseFilters(searchParams: SearchParams): WebsiteReportFilters {
+  const status = firstParam(searchParams.status) ?? "";
+  const category = firstParam(searchParams.category) as WebsiteReportCategory | undefined;
 
   return {
     status: isWebsiteReportStatus(status) ? status : undefined,
     category: category && CATEGORY_VALUES.includes(category) ? category : undefined,
-    emailStatus: searchParams.email === "failed" ? "failed" : undefined,
-    search: searchParams.search?.trim() || undefined,
+    emailStatus: firstParam(searchParams.email) === "failed" ? "failed" : undefined,
+    search: firstParam(searchParams.search)?.trim() || undefined,
   };
 }
 
@@ -59,11 +66,11 @@ async function loadReports(
 export default async function ReportsPage({
   searchParams,
 }: {
-  searchParams: Promise<Record<string, string | undefined>>;
+  searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const page = Math.max(1, parseIntParam(params.page, 1));
-  const perPage = Math.min(MAX_PER_PAGE, Math.max(1, parseIntParam(params.perPage, 20)));
+  const page = Math.max(1, parseIntParam(firstParam(params.page), 1));
+  const perPage = Math.min(MAX_PER_PAGE, Math.max(1, parseIntParam(firstParam(params.perPage), 20)));
   const filters = parseFilters(params);
 
   return (

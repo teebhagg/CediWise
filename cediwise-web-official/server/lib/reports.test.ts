@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { websiteReportSchema } from '../../src/lib/websiteReport'
+import { codePointLength, websiteReportSchema } from '../../src/lib/websiteReport'
 import {
   DEFAULT_REPORT_RECIPIENT_EMAIL,
   REPORT_RATE_LIMIT,
@@ -95,6 +95,14 @@ describe('websiteReportSchema', () => {
     expect(parsed.name).toBeNull()
     expect(parsed.page).toBe('/pricing')
     expect(parsed.email).toBe('Reader@Example.com')
+  })
+
+  it('counts the message length in characters, the same rule as the database', () => {
+    // 9 characters, but 10 UTF-16 units: must fail the 10-character minimum.
+    expect(() => websiteReportSchema.parse({ ...validInput, message: 'Crashes 😭' })).toThrow('at least 10')
+    // 10 characters, 20 UTF-16 units: must pass.
+    expect(() => websiteReportSchema.parse({ ...validInput, message: '😭'.repeat(10) })).not.toThrow()
+    expect(codePointLength('😭'.repeat(10))).toBe(10)
   })
 
   it('rejects an unknown category, a bad email, and a short message', () => {

@@ -85,16 +85,25 @@ describe("website report actions", () => {
     expect(calls).toContainEqual(["eq", ["email_status", "failed"]]);
   });
 
-  it("strips filter-breaking characters from the search text", async () => {
+  it("keeps punctuation searchable and escapes the filter and LIKE syntax", async () => {
     const { builder, calls } = chain({ data: [], error: null, count: 0 });
     createAdminClient.mockReturnValue({ from: vi.fn(() => builder) });
 
     await listWebsiteReports({ search: "ama,(drop)*table%" });
 
+    const pattern = String.raw`"%ama,(drop)*table\\%%"`;
     const orCall = calls.find(([name]) => name === "or");
-    expect(orCall?.[1][0]).toBe(
-      "reporter_email.ilike.%ama drop table%,message.ilike.%ama drop table%",
-    );
+    expect(orCall?.[1][0]).toBe(`reporter_email.ilike.${pattern},message.ilike.${pattern}`);
+  });
+
+  it("searches messages that contain parentheses as written", async () => {
+    const { builder, calls } = chain({ data: [], error: null, count: 0 });
+    createAdminClient.mockReturnValue({ from: vi.fn(() => builder) });
+
+    await listWebsiteReports({ search: "Error (code 401)" });
+
+    const orCall = calls.find(([name]) => name === "or");
+    expect(orCall?.[1][0]).toContain('message.ilike."%Error (code 401)%"');
   });
 
   it("updates a report's status and refreshes the dashboard page", async () => {

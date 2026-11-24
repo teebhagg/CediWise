@@ -55,9 +55,15 @@ async function requireAdminUser() {
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Strip characters that would break the PostgREST `or` filter syntax. */
-function sanitizeSearch(value: string) {
-  return value.replace(/[,()*%]/g, " ").replace(/\s+/g, " ").trim();
+/**
+ * Builds a quoted, escaped `ilike` pattern for the PostgREST `or` filter. Punctuation
+ * such as commas and parentheses stays searchable; `%`, `_` and backslashes are
+ * escaped so they match literally.
+ */
+function searchPattern(value: string) {
+  const likeEscaped = value.replace(/[\\%_]/g, (char) => `\\${char}`);
+  const quotedBody = `%${likeEscaped}%`.replace(/["\\]/g, (char) => `\\${char}`);
+  return `"${quotedBody}"`;
 }
 
 export async function listWebsiteReports(
@@ -74,9 +80,10 @@ export async function listWebsiteReports(
   if (filters.category) query = query.eq("category", filters.category);
   if (filters.emailStatus) query = query.eq("email_status", filters.emailStatus);
 
-  const search = filters.search ? sanitizeSearch(filters.search) : "";
+  const search = filters.search?.trim() ?? "";
   if (search) {
-    query = query.or(`reporter_email.ilike.%${search}%,message.ilike.%${search}%`);
+    const pattern = searchPattern(search);
+    query = query.or(`reporter_email.ilike.${pattern},message.ilike.${pattern}`);
   }
 
   const from = (page - 1) * perPage;

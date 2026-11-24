@@ -153,7 +153,8 @@ function PrivacyPage() {
             We use trusted providers: <strong>Supabase</strong> (database/auth),{' '}
             <strong>Firebase</strong> (analytics), <strong>Google</strong>{' '}
             (Sign-In), <strong>Arkesel</strong> (SMS OTP),{' '}
-            <strong>Vercel/GitHub</strong> (hosting). We only share the minimum
+            <strong>Resend</strong> (email delivery, including report and
+            newsletter emails), <strong>Vercel/GitHub</strong> (hosting). We only share the minimum
             data required. Refer to each provider&apos;s privacy policies for
             details.
           </p>

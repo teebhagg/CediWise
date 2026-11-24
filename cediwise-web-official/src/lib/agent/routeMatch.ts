@@ -6,7 +6,7 @@ import { getRouter } from '@/router'
  * treats them as not found.
  */
 export function isKnownRoute(pathname: string): boolean {
-  const { foundRoute, routeParams } = getRouter().getMatchedRoutes(pathname)
+  const [, routeParams, foundRoute] = getRouter().getMatchedRoutes(pathname)
   if (!foundRoute) return false
   return !(foundRoute.path !== '/' && routeParams['**'])
 }
